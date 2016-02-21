@@ -29,8 +29,8 @@ def gen_run_script(args, unknown):
     fo = open(runscript, 'w')
     fo.write('#!/bin/bash\n')
     fo.write('#$ -S /bin/bash\n')
-    if args.activate_script is not None:
-        fo.write("./%s\n" % args.activate_script)
+    if args.activate_cmd is not None:
+        fo.write("%s\n" % args.activate_cmd)
     fo.write("#$ -wd %s\n" % args.working_dir)
     fo.write('source ~/.bashrc\n')
     fo.write('export DMLC_TASK_ID=${SGE_TASK_ID}\n')
@@ -39,25 +39,25 @@ def gen_run_script(args, unknown):
     args.runscript = runscript
     return runscript
 
-def submit_worker(node, pass_envs, args):
+def submit_worker(num, node, pass_envs, args):
     pass_envs['DMLC_ROLE'] = 'worker'
     env_arg = ','.join(['%s=\"%s\"' % (k, str(v)) for k, v in pass_envs.items()])
     cmd = 'qsub -cwd -S /bin/bash'
     cmd += ' -q %s' % node
-    cmd += ' -N %s ' % args.jobname
-    cmd += '-o %s -j y' % args.log_file
+    cmd += ' -N %s-worker-%d' % (args.jobname, num)
+    cmd += ' -o %s -j y' % args.log_file
     cmd += ' -v %s,PATH=${PATH}:.' % env_arg
     cmd += ' %s' % (args.runscript)
     logging.info(cmd)
     subprocess.check_call(cmd, shell=True)
 
 
-def submit_server(node, pass_envs, args):
+def submit_server(num, node, pass_envs, args):
     pass_envs['DMLC_ROLE'] = 'server'
     env_arg = ','.join(['%s=\"%s\"' % (k, str(v)) for k, v in pass_envs.items()])
     cmd = 'qsub -cwd -S /bin/bash'
     cmd += ' -q %s' % args.server_queue
-    cmd += ' -N %s ' % args.jobname
+    cmd += ' -N %s-server-%d ' % (args.jobname, num)
     cmd += ' -e %s -o %s' % (args.logdir, args.logdir)
     cmd += ' -v %s,PATH=${PATH}:.' % env_arg
     cmd += ' %s' % (args.runscript)
@@ -85,10 +85,10 @@ class SgeLauncher(object):
             workerq_l = self.args.worker_queue.split(',')
             print serverq_l, self.args.server_queue
             for i in range(nworker):
-                submit_worker(node=workerq_l[i % len(workerq_l)], pass_envs=pass_envs,
+                submit_worker(num=i, node=workerq_l[i % len(workerq_l)], pass_envs=pass_envs,
                               args=self.args)
             for i in range(nserver):
-                submit_server(node=serverq_l[i % len(serverq_l)], pass_envs=pass_envs,
+                submit_server(num=i, node=serverq_l[i % len(serverq_l)], pass_envs=pass_envs,
                               args=self.args)
             logging.info('Waiting for the jobs to get up...')
 
@@ -126,7 +126,7 @@ def main():
                         help='customize the directory to place the SGE job logs')
     parser.add_argument('-hip', '--host_ip', default='auto', type=str,
                         help='host IP address if cannot be automatically guessed, specify the IP of submission machine')
-    parser.add_argument('--activate-script', default=None, type=str,
+    parser.add_argument('--activate-cmd', default=None, type=str,
                         help='activation script of the running environment')
     parser.add_argument('--jobname', default='auto', help='customize jobname in tracker')
     parser.add_argument('command', nargs='+',
