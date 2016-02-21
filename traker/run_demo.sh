@@ -1,12 +1,26 @@
+#!/bin/bash
+
+source ~/.bashrc
+
 name=cifar10
-n=1
-s=1
+n=2
+s=2
 workerq="all.q@client111,all.q@client112"
 serverq="all.q@client113,all.q@client114"
 wd="/project/dygroup2/xingjian/mxnet/example/image-classification/"
 script="python2.7 /project/dygroup2/xingjian/mxnet/example/image-classification/train_cifar10.py --kv-store dist_sync"
 
 
+#Download CIFAR10 data if no data directory found
 
-python2.7 dmlc_sge.py --log-file ${name}_n${n}_s${s}.out -wd ${wd} --jobname dmlc-${name}-n${n}-s${s} -workerq ${workerq} -serverq ${serverq} -n ${n} -s ${s} $script
+if [ ! -d "cifar10" ]; then
+    mkdir cifar10
+    cd cifar10
+    wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip
+    unzip -u cifar10.zip
+    mv cifar/* . && rm -rf cifar && rm cifar10.zip
+    cd ..
+fi
+
+python dmlc_sge.py --log-file ${name}_n${n}_s${s}.out -wd ${wd} --jobname dmlc-${name}-n${n}-s${s} -workerq ${workerq} -serverq ${serverq} -n ${n} -s ${s} $script
 
