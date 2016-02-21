@@ -3,10 +3,10 @@
 source ~/.bashrc
 
 name=cifar10
-n=2
-s=2
-workerq="all.q@client111,all.q@client112"
-serverq="all.q@client111,all.q@client112"
+n=5
+s=5
+workerq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115"
+serverq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115"
 wd="/project/dygroup2/czeng/mxnet/example/image-classification/"
 activate_cmd="./project/dygroup2/czeng/venv/bin/activate"
 script="python /project/dygroup2/czeng/mxnet/example/image-classification/train_cifar10.py --kv-store dist_sync"
