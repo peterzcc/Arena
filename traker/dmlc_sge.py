@@ -56,7 +56,7 @@ def submit_server(num, node, pass_envs, args):
     pass_envs['DMLC_ROLE'] = 'server'
     env_arg = ','.join(['%s=\"%s\"' % (k, str(v)) for k, v in pass_envs.items()])
     cmd = 'qsub -cwd -S /bin/bash'
-    cmd += ' -q %s' % args.server_queue
+    cmd += ' -q %s' % node
     cmd += ' -N %s-server-%d ' % (args.jobname, num)
     cmd += ' -e %s -o %s' % (args.logdir, args.logdir)
     cmd += ' -v %s,PATH=${PATH}:.' % env_arg
