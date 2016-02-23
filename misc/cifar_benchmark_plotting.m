@@ -22,7 +22,7 @@ plot(node_num_arr, time_cost, 'r-', 'LineWidth', 1.2)
 axis([1 8 20 180]);
 legend('MXNet');
 grid on
-ylabel('Average Epoch Time (ms)')
+ylabel('Average Running Time / Epoch (ms)')
 xlabel('Node Number')
 
 
@@ -33,7 +33,7 @@ plot(node_num_arr, node_num_arr, 'b-.', 'LineWidth', 1.2)
 legend('MXNet','Perfect','Location','northwest');
 axis([1 8 1 8]);
 grid on
-ylabel('Accelerating Ratio')
+ylabel('Speedup')
 xlabel('Node Number')
 hold off
 
