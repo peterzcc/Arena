@@ -29,9 +29,9 @@ def gen_run_script(args, unknown):
     fo = open(runscript, 'w')
     fo.write('#!/bin/bash\n')
     fo.write('#$ -S /bin/bash\n')
+    fo.write("#$ -wd %s\n" % args.working_dir)
     if args.activate_cmd is not None:
         fo.write("%s\n" % args.activate_cmd)
-    fo.write("#$ -wd %s\n" % args.working_dir)
     #fo.write('source ~/.bashrc\n')
     fo.write('export DMLC_TASK_ID=${SGE_TASK_ID}\n')
     fo.write(' '.join(args.command) + ' ' + ' '.join(unknown) + "\n")
