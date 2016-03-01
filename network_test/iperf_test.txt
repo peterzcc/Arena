@@ -1,0 +1,69 @@
+send_parameters:
+{
+    "tcp":    true,
+    "omit":    0,
+    "time":    10,
+    "parallel":    1,
+    "len":    131072,
+    "client_version":    "3.1.2"
+}
+Connecting to host 172.16.30.108, port 5201
+SO_SNDBUF is 16384
+[  4] local 172.16.30.111 port 58841 connected to 172.16.30.108 port 5201
+tcpi_snd_cwnd 364 tcpi_snd_mss 1448 tcpi_rtt 4000
+[ ID] Interval           Transfer     Bandwidth       Retr  Cwnd
+[  4]   0.00-1.00   sec   113 MBytes   949 Mbits/sec    0    515 KBytes
+tcpi_snd_cwnd 400 tcpi_snd_mss 1448 tcpi_rtt 4000
+[  4]   1.00-2.00   sec   113 MBytes   944 Mbits/sec    0    566 KBytes
+tcpi_snd_cwnd 403 tcpi_snd_mss 1448 tcpi_rtt 3750
+[  4]   2.00-3.00   sec   112 MBytes   943 Mbits/sec    0    570 KBytes
+tcpi_snd_cwnd 403 tcpi_snd_mss 1448 tcpi_rtt 3875
+[  4]   3.00-4.00   sec   112 MBytes   938 Mbits/sec    0    570 KBytes
+tcpi_snd_cwnd 403 tcpi_snd_mss 1448 tcpi_rtt 3875
+[  4]   4.00-5.00   sec   112 MBytes   944 Mbits/sec    0    570 KBytes
+tcpi_snd_cwnd 403 tcpi_snd_mss 1448 tcpi_rtt 4500
+[  4]   5.00-6.00   sec   112 MBytes   938 Mbits/sec    0    570 KBytes
+tcpi_snd_cwnd 413 tcpi_snd_mss 1448 tcpi_rtt 4000
+[  4]   6.00-7.00   sec   112 MBytes   944 Mbits/sec    0    584 KBytes
+tcpi_snd_cwnd 426 tcpi_snd_mss 1448 tcpi_rtt 4000
+[  4]   7.00-8.00   sec   112 MBytes   944 Mbits/sec    0    602 KBytes
+tcpi_snd_cwnd 233 tcpi_snd_mss 1448 tcpi_rtt 3000
+[  4]   8.00-9.00   sec   112 MBytes   938 Mbits/sec    4    329 KBytes
+tcpi_snd_cwnd 268 tcpi_snd_mss 1448 tcpi_rtt 3000
+send_results
+{
+    "cpu_util_total":    1.88476,
+    "cpu_util_user":    0.0694189,
+    "cpu_util_system":    1.91424,
+    "sender_has_retransmits":    1,
+    "streams":    [{
+            "id":    1,
+            "bytes":    1178045016,
+            "retransmits":    4,
+            "jitter":    0,
+            "errors":    0,
+            "packets":    0
+        }]
+}
+get_results
+{
+    "cpu_util_total":    0.494436,
+    "cpu_util_user":    0.0333617,
+    "cpu_util_system":    0.464336,
+    "sender_has_retransmits":    -1,
+    "streams":    [{
+            "id":    1,
+            "bytes":    1177002456,
+            "retransmits":    -1,
+            "jitter":    0,
+            "errors":    0,
+            "packets":    0
+        }]
+}
+[  4]   9.00-10.00  sec   112 MBytes   943 Mbits/sec    0    379 KBytes
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bandwidth       Retr
+[  4]   0.00-10.00  sec  1.10 GBytes   942 Mbits/sec    4             sender
+[  4]   0.00-10.00  sec  1.10 GBytes   942 Mbits/sec                  receiver
+
+iperf Done.
