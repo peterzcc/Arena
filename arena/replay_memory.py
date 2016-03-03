@@ -3,6 +3,7 @@ __author__ = 'sxjscience'
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
+import copy
 from defaults import *
 
 
@@ -38,6 +39,30 @@ class ReplayMemory(object):
     @property
     def sample_enabled(self):
         return self.size > self.replay_start_size
+
+    def clear(self):
+        self.states[:] = 0
+        self.actions[:] = 0
+        self.rewards[:] = 0
+        self.terminate_flags[:] = 0
+        self.top = 0
+        self.size = 0
+
+    def copy(self):
+        replay_memory = copy.copy(self)
+        replay_memory.states = numpy.zeros(self.states.shape, dtype=self.states.dtype)
+        replay_memory.actions = numpy.zeros(self.actions.shape, dtype=self.actions.dtype)
+        replay_memory.rewards = numpy.zeros(self.rewards.shape, dtype='float32')
+        replay_memory.terminate_flags = numpy.zeros(self.terminate_flags.shape, dtype='bool')
+        replay_memory.states[numpy.arange(self.top-self.size, self.top), ::] = \
+            self.states[numpy.arange(self.top-self.size, self.top)]
+        replay_memory.actions[numpy.arange(self.top-self.size, self.top)] = \
+            self.actions[numpy.arange(self.top-self.size, self.top)]
+        replay_memory.rewards[numpy.arange(self.top-self.size, self.top)] = \
+            self.rewards[numpy.arange(self.top-self.size, self.top)]
+        replay_memory.terminate_flags[numpy.arange(self.top-self.size, self.top)] = \
+            self.terminate_flags[numpy.arange(self.top-self.size, self.top)]
+        return replay_memory
 
     def append(self, img, action, reward, terminate_flag):
         self.states[self.top, :, :] = img
