@@ -224,4 +224,5 @@ for epoch in xrange(epoch_num):
             logging.info("Avg Q Value:%f/%d" % (episode_q_value / episode_act_step, episode_act_step))
     end = time.time()
     fps = steps_per_epoch / (end - start)
-    logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d")
+    logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d"
+                 %(epoch, fps, epoch_reward/float(episode), episode))
