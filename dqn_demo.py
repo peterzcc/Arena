@@ -215,8 +215,8 @@ for epoch in xrange(epoch_num):
 
         # Update the statistics
         epoch_reward += game.episode_reward
-        logging.info("Episode:%d, Steps Left:%d/%d, Reward:%f, Exploration:%f"
-                     % (episode, steps_left, steps_per_epoch, game.episode_reward,
+        logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, Exploration:%f"
+                     % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
                         eps_curr))
         if episode_update_step > 0:
             logging.info("Avg Loss:%f/%d" % (episode_loss / episode_update_step, episode_update_step))
