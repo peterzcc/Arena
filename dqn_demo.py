@@ -47,8 +47,7 @@ class DQNOutputOp(mx.operator.NDArrayOp):
         dx = in_grad[0]
         dx[:] = 0
         dx[:] = nd.fill_element_0index(dx,
-        #                               nd.clip(nd.choose_element_0index(x, action) - reward, -1, 1),
-                                       nd.choose_element_0index(x, action) - reward,
+                                       nd.clip(nd.choose_element_0index(x, action) - reward, -1, 1),
                                        action)
 
 
@@ -82,12 +81,12 @@ def dqn_sym_nature(action_num, output_op):
     return net
 
 
-class DQNInitializer(mx.initializer.Normal):
+class DQNInitializer(mx.initializer.Xavier):
     def _init_bias(self, _, arr):
         arr[:] = .1
 
 
-replay_start_size = 1000
+replay_start_size = 50000
 max_start_nullops = 30
 replay_memory_size = 1000000
 rows = 84
@@ -95,11 +94,11 @@ cols = 84
 q_ctx = mx.gpu()
 target_q_ctx = mx.gpu()
 
-game = AtariGame(resize_mode='crop', replay_start_size=replay_start_size, resized_rows=rows,
+game = AtariGame(resize_mode='scale', replay_start_size=replay_start_size, resized_rows=rows,
                  resized_cols=cols, max_null_op=max_start_nullops,
                  replay_memory_size=replay_memory_size, display_screen=False)
 
-'''
+
 ##RUN NATURE
 freeze_interval = 10000
 epoch_num = 200
@@ -107,15 +106,7 @@ steps_per_epoch = 250000
 steps_per_test = 125000
 update_interval = 4
 discount = 0.99
-'''
 
-##RUN NATURE
-freeze_interval = 1
-epoch_num = 100
-steps_per_epoch = 50000
-steps_per_test = 10000
-update_interval = 1
-discount = 0.95
 
 eps_start = 1.0
 eps_min = 0.1
@@ -131,7 +122,7 @@ optimizer_params = {'name': 'adam', 'learning_rate': 0.00005,
                     'rescale_grad': 1.0 / float(minibatch_size),
                     'wd': 0}
 dqn_output_op = DQNOutputOp()
-dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
+dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
 qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, optimizer_params=optimizer_params, name='QNet',
               initializer=DQNInitializer(),
               ctx=q_ctx)
@@ -201,8 +192,7 @@ for epoch in xrange(epoch_num):
                     rewards[ind] += discount * numpy.max(target_qval[ind, ...], axis=1)
                 outputs = qnet.fit_target(batch_size=minibatch_size, data=states, dqn_action=actions,
                                           dqn_reward=rewards)
-                #print "Chosed:", nd.choose_element_0index(outputs[0], nd.array(actions, ctx=outputs[0].context)).asnumpy()
-                #print "Rewards:", rewards
+
                 loss = numpy.sqrt(0.5*numpy.square(nd.choose_element_0index(outputs[0],
                             nd.array(actions, ctx=outputs[0].context)).asnumpy() - rewards).mean())
                 episode_loss += loss
