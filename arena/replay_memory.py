@@ -4,7 +4,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import copy
-from defaults import *
+from utils import *
 
 
 #TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
@@ -24,9 +24,6 @@ class ReplayMemory(object):
         self.top = 0
         self.size = 0
 
-    @property
-    def single_state_dim(self):
-        return (self.history_length, self.states.shape[1], self.states)
 
     def latest_slice(self):
         if self.size >= self.history_length:
