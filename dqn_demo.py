@@ -98,7 +98,6 @@ game = AtariGame(resize_mode='scale', replay_start_size=replay_start_size, resiz
                  resized_cols=cols, max_null_op=max_start_nullops,
                  replay_memory_size=replay_memory_size, display_screen=False)
 
-
 ##RUN NATURE
 freeze_interval = 10000
 epoch_num = 200
@@ -106,7 +105,6 @@ steps_per_epoch = 250000
 steps_per_test = 125000
 update_interval = 4
 discount = 0.99
-
 
 eps_start = 1.0
 eps_min = 0.1
@@ -118,7 +116,7 @@ action_num = len(game.action_set)
 
 data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
                'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-optimizer_params = {'name': 'adam', 'learning_rate': 0.00005,
+optimizer_params = {'name': 'adagrad', 'learning_rate': 0.02,
                     'rescale_grad': 1.0 / float(minibatch_size),
                     'wd': 0}
 dqn_output_op = DQNOutputOp()
@@ -126,11 +124,12 @@ dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
 qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, optimizer_params=optimizer_params, name='QNet',
               initializer=DQNInitializer(),
               ctx=q_ctx)
-target_qnet = qnet.copyto("TargetQNet", ctx=target_q_ctx)
+target_qnet = qnet.copy(name="TargetQNet", ctx=target_q_ctx)
 
+qnet.print_stat()
+target_qnet.print_stat()
 # Begin Playing Game
 training_steps = 0
-game.start()
 for epoch in xrange(epoch_num):
     # Run Epoch
     steps_left = steps_per_epoch
@@ -139,6 +138,7 @@ for epoch in xrange(epoch_num):
     epoch_q_value = 0
     epoch_act_step = 0
     start = time.time()
+    game.start()
     while steps_left > 0:
         # Running New Episode
         episode += 1
@@ -162,10 +162,11 @@ for epoch in xrange(epoch_num):
                     current_state = game.current_state()
                     state = nd.array(current_state.reshape((1,) + current_state.shape),
                                      ctx=q_ctx) / float(255.0)
-                    q_score = qnet.calc_score(batch_size=1, data=state)[0].asnumpy()
-                    action = q_score.argmax(axis=1)[0]
-                    episode_q_value += q_score[0, action]
-                    episode_act_step += 1
+                    action = nd.argmax_channel(
+                        qnet.calc_score(batch_size=1, data=state)[0]).asscalar()
+                    # action = q_score.argmax(axis=1)[0]
+                    # episode_q_value += q_score[0, action]
+                    # episode_act_step += 1
             else:
                 action = numpy.random.randint(action_num)
 
@@ -182,20 +183,25 @@ for epoch in xrange(epoch_num):
                     = game.replay_memory.sample(batch_size=minibatch_size)
                 states = nd.array(states, ctx=q_ctx) / float(255.0)
                 next_states = nd.array(next_states, ctx=target_q_ctx) / float(255.0)
-
-                # 3.2 Use the target network to compute the scores and get the corresponding target rewards
+                actions = nd.array(actions, ctx=q_ctx)
+                rewards = nd.array(rewards, ctx=q_ctx)
+                terminate_flags = nd.array(terminate_flags, ctx=q_ctx)
+                # 3.2 Use the target network to compute the scores and
+                #     get the corresponding target rewards
 
                 target_qval = target_qnet.calc_score(batch_size=minibatch_size,
-                                                     data=next_states)[0].asnumpy()
-                ind = (1 - terminate_flags.ravel()).nonzero()[0]
-                if len(ind) > 0:
-                    rewards[ind] += discount * numpy.max(target_qval[ind, ...], axis=1)
-                outputs = qnet.fit_target(batch_size=minibatch_size, data=states, dqn_action=actions,
-                                          dqn_reward=rewards)
+                                                     data=next_states)[0]
+                target_rewards = rewards + float(discount) \
+                                       * nd.choose_element_0index(target_qval,
+                                                            nd.argmax_channel(target_qval))\
+                                       * (1.0 - terminate_flags)
+                outputs = qnet.fit_target(batch_size=minibatch_size, data=states,
+                                          dqn_action=actions,
+                                          dqn_reward=target_rewards)
 
-                loss = numpy.sqrt(0.5*numpy.square(nd.choose_element_0index(outputs[0],
-                            nd.array(actions, ctx=outputs[0].context)).asnumpy() - rewards).mean())
-                episode_loss += loss
+                loss = nd.norm(nd.choose_element_0index(outputs[0], actions)
+                               - target_rewards).asscalar()
+                episode_loss += numpy.sqrt(0.5) * loss
 
                 # 3.3 Update the target network every freeze_interval
                 # (We can do annealing instead of hard copy)
@@ -209,10 +215,10 @@ for epoch in xrange(epoch_num):
                      % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
                         eps_curr))
         if episode_update_step > 0:
-            logging.info("Avg Loss:%f/%d" % (episode_loss / episode_update_step, episode_update_step))
-        if episode_act_step > 0:
-            logging.info("Avg Q Value:%f/%d" % (episode_q_value / episode_act_step, episode_act_step))
+            logging.info(
+                "Avg Loss:%f/%d" % (episode_loss / episode_update_step, episode_update_step))
     end = time.time()
     fps = steps_per_epoch / (end - start)
+    qnet.save_params(dir_path='dqn-model', epoch=epoch)
     logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d"
-                 %(epoch, fps, epoch_reward/float(episode), episode))
+                 % (epoch, fps, epoch_reward / float(episode), episode))
