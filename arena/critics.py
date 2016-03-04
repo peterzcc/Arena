@@ -109,7 +109,7 @@ class Critic(object):
         if ctx is None:
             grads = {k : all_grads[k].copyto(all_grads[k].contenxt) for k in keys}
         else:
-            grads = {k : all_grads[k].copyto(all_grads[k].ctx) for k in keys}
+            grads = {k : all_grads[k].copyto(ctx) for k in keys}
         return grads
 
     def copyto(self, name=None, ctx=None):
