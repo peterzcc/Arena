@@ -116,7 +116,7 @@ action_num = len(game.action_set)
 
 data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
                'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-optimizer_params = {'name': 'adagrad', 'learning_rate': 0.02,
+optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01,
                     'rescale_grad': 1.0 / float(minibatch_size),
                     'wd': 0}
 dqn_output_op = DQNOutputOp()
