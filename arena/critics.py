@@ -147,4 +147,4 @@ class Critic(object):
             logging.info("Aux States: None")
         else:
             logging.info("Aux States: " + ' '.join(["%s:%s" %(str(k), str(v.shape)) for k, v in self.aux_states.items()]))
-        print "Total Parameter Num: " + str(self.total_param_num)
+        logging.info("Total Parameter Num: " + str(self.total_param_num))
