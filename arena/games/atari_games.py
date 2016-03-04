@@ -6,13 +6,15 @@ import numpy
 import cv2
 import logging
 import os
-from ..defaults import *
+from ..utils import *
 from ..replay_memory import ReplayMemory
 
 logger = logging.getLogger(__name__)
 
 _dirname = os.path.dirname(os.path.realpath(__file__))
 _default_rom_path = os.path.join(_dirname, "roms", "breakout.bin")
+
+DEFAULT_MAX_EPISODE_STEP = 1000000
 
 
 def ale_load_from_rom(rom_path, display_screen):
@@ -23,9 +25,6 @@ def ale_load_from_rom(rom_path, display_screen):
     ale.setFloat('repeat_action_probability', 0)
     ale.loadROM(rom_path)
     return ale
-
-
-DEFAULT_MAX_EPISODE_STEP = 1000000
 
 
 class AtariGame(object):
@@ -92,7 +91,7 @@ class AtariGame(object):
 
     @property
     def episode_terminate(self):
-        termination_flag = self.ale.game_over() or self.episode_step > self.max_episode_step
+        termination_flag = self.ale.game_over() or self.episode_step >= self.max_episode_step
         if self.death_end_episode:
             return (self.ale.lives() < self.start_lives) or termination_flag
         else:
