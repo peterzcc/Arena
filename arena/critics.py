@@ -47,7 +47,6 @@ class Critic(object):
             aux_names = sym.list_auxiliary_states()
             param_names = list(set(arg_names) - set(self.data_shapes.keys()))
             arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
-            print arg_shapes, self.data_shapes
             self.arg_name_shape = {k: s for k, s in zip(arg_names, arg_shapes)}
             self.params = {n: nd.empty(self.arg_name_shape[n], ctx=ctx) for n in param_names}
             self.params_grad = {n: nd.empty(self.arg_name_shape[n], ctx=ctx) for n in param_names}
