@@ -116,7 +116,7 @@ action_num = len(game.action_set)
 
 data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
                'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01,
+optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01, 'eps': 0.01,
                     'rescale_grad': 1.0,
                     'wd': 0}
 dqn_output_op = DQNOutputOp()
@@ -130,6 +130,7 @@ qnet.print_stat()
 target_qnet.print_stat()
 # Begin Playing Game
 training_steps = 0
+total_steps = 0
 for epoch in xrange(epoch_num):
     # Run Epoch
     steps_left = steps_per_epoch
@@ -173,10 +174,10 @@ for epoch in xrange(epoch_num):
 
             # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
             game.play(action)
-
+            total_steps += 1
             # 3. Update our Q network if we can start sampling from the replay memory
             #    Also, we update every `update_interval`
-            if game.episode_step % update_interval == 0 and game.replay_memory.sample_enabled:
+            if total_steps % update_interval == 0 and game.replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
                 training_steps += 1
                 episode_update_step += 1
@@ -219,6 +220,6 @@ for epoch in xrange(epoch_num):
                 "Avg Loss:%f/%d" % (episode_loss / episode_update_step, episode_update_step))
     end = time.time()
     fps = steps_per_epoch / (end - start)
-    qnet.save_params(dir_path='dqn-model', epoch=epoch)
+    qnet.save_params(dir_path='dqn-model-norescale-1E-2', epoch=epoch)
     logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d"
                  % (epoch, fps, epoch_reward / float(episode), episode))
