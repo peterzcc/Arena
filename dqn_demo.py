@@ -117,7 +117,7 @@ action_num = len(game.action_set)
 data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
                'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01,
-                    'rescale_grad': 1.0 / float(minibatch_size),
+                    'rescale_grad': 1.0,
                     'wd': 0}
 dqn_output_op = DQNOutputOp()
 dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
@@ -146,6 +146,7 @@ for epoch in xrange(epoch_num):
         episode_update_step = 0
         episode_q_value = 0.0
         episode_act_step = 0
+        time_episode_start = time.time()
         game.begin_episode(steps_left)
         while not game.episode_terminate:
             # 1. We need to choose a new action based on the current game status
@@ -207,12 +208,12 @@ for epoch in xrange(epoch_num):
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
         steps_left -= game.episode_step
-
+        time_episode_end = time.time()
         # Update the statistics
         epoch_reward += game.episode_reward
-        logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, Exploration:%f"
+        logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
                      % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                        eps_curr))
+                        game.episode_step/(time_episode_end - time_episode_start), eps_curr))
         if episode_update_step > 0:
             logging.info(
                 "Avg Loss:%f/%d" % (episode_loss / episode_update_step, episode_update_step))
