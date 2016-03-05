@@ -71,7 +71,7 @@ data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
 dqn_output_op = DQNOutputOp()
 dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
 qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, name='QNet', ctx=q_ctx)
-qnet.load_params(name='QNet', dir_path='dqn-model-backup', epoch=20)
+qnet.load_params(name='QNet', dir_path='dqn-model-backup', epoch=24)
 
 test_steps = 125000
 eps_curr = 0.05
@@ -79,11 +79,11 @@ episode = 0
 total_reward = 0
 
 steps_left = test_steps
-game.start()
 while steps_left > 0:
     # Running New Episode
     episode += 1
     episode_q_value = 0.0
+    game.force_restart()
     game.begin_episode(steps_left)
     start = time.time()
     while not game.episode_terminate:
