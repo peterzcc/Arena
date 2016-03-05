@@ -42,7 +42,7 @@ class DQNOutputOp(mx.operator.NDArrayOp):
 
     def backward(self, out_grad, in_data, out_data, in_grad):
         x = out_data[0]
-        action = in_data[1]  # .astype('int')
+        action = in_data[1]
         reward = in_data[2]
         dx = in_grad[0]
         dx[:] = 0
@@ -191,10 +191,9 @@ for epoch in xrange(epoch_num):
 
                 target_qval = target_qnet.calc_score(batch_size=minibatch_size,
                                                      data=next_states)[0]
-                target_rewards = rewards + float(discount) \
-                                       * nd.choose_element_0index(target_qval,
+                target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                             nd.argmax_channel(target_qval))\
-                                       * (1.0 - terminate_flags)
+                                       * (1.0 - terminate_flags) * discount
                 outputs = qnet.fit_target(batch_size=minibatch_size, data=states,
                                           dqn_action=actions,
                                           dqn_reward=target_rewards)
