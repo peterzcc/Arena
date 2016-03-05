@@ -36,9 +36,9 @@ class Critic(object):
         self.ctx = ctx
         self.data_shapes = data_shapes.copy()
         self.name = name
-        self.optimizer_params = optimizer_params.copy()
         self.optimizer = None
         self.updater = None
+        self.optimizer_params = None
         self.set_optimizer(optimizer_params)
         self.initializer = initializer
         if params is None:
@@ -75,6 +75,7 @@ class Critic(object):
     def set_optimizer(self, optimizer_params=None):
         if optimizer_params is not None:
             # TODO We may need to change here for distributed setting
+            self.optimizer_params = optimizer_params.copy()
             self.optimizer = mx.optimizer.create(**optimizer_params)
             self.updater = mx.optimizer.get_updater(self.optimizer)
 
