@@ -122,7 +122,7 @@ optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01, 'eps': 0.01,
 dqn_output_op = DQNOutputOp()
 dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
 qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, optimizer_params=optimizer_params, name='QNet',
-              initializer=DQNInitializer(),
+              initializer=DQNInitializer(factor_type="in"),
               ctx=q_ctx)
 target_qnet = qnet.copy(name="TargetQNet", ctx=target_q_ctx)
 
