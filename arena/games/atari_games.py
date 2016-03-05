@@ -75,11 +75,14 @@ class AtariGame(object):
         self.max_episode_step = DEFAULT_MAX_EPISODE_STEP
         self.start_lives = self.ale.lives()
 
+    def force_restart(self):
+        self.start()
+        self.replay_memory.clear()
+
     '''
     Call this to begin an episode of a game instance.
     Here, we can play the game for a maximum of `max_episode_step` and after that, we are force to
     '''
-
     def begin_episode(self, max_episode_step=DEFAULT_MAX_EPISODE_STEP):
         # We need to restart the environment if our current counting is larger than the max episode_step
         if self.episode_step > self.max_episode_step or self.ale.game_over():
