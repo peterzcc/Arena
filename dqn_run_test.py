@@ -71,7 +71,7 @@ data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
 dqn_output_op = DQNOutputOp()
 dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
 qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, name='QNet', ctx=q_ctx)
-qnet.load_params(name='QNet', dir_path='dqn-model-backup', epoch=24)
+qnet.load_params(name='QNet', dir_path='dqn-model', epoch=51)
 
 test_steps = 125000
 eps_curr = 0.05
@@ -83,7 +83,6 @@ while steps_left > 0:
     # Running New Episode
     episode += 1
     episode_q_value = 0.0
-    game.force_restart()
     game.begin_episode(steps_left)
     start = time.time()
     while not game.episode_terminate:
@@ -115,4 +114,12 @@ while steps_left > 0:
     print 'Episode:%d, FPS:%s, Steps Left:%d, Reward:%d' \
           %(episode, game.episode_step/(end-start), steps_left, game.episode_reward)
     total_reward += game.episode_reward
-print total_reward/float(episode)
+avg_reward = total_reward/float(episode)
+
+total_q = 0.0
+for i in xrange(100):
+    state, _, _, _, _ = game.replay_memory.sample(batch_size=32)
+    state = nd.array(state, ctx=q_ctx) / float(255.0)
+    total_q += qnet.calc_score(batch_size=32, data=state)[0].asnumpy().max(axis=1).sum()
+avg_q_score = total_q / float(3200)
+print "Avg Reward: %f, Avg Q Score:%f" %(avg_reward, avg_q_score)
