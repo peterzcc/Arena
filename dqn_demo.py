@@ -50,6 +50,37 @@ class DQNOutputOp(mx.operator.NDArrayOp):
                                        nd.clip(nd.choose_element_0index(x, action) - reward, -1, 1),
                                        action)
 
+class DQNOutputNpyOp(mx.operator.NumpyOp):
+    def __init__(self):
+        super(DQNOutputNpyOp, self).__init__(need_top_grad=False)
+
+    def list_arguments(self):
+        return ['data', 'action', 'reward']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        action_shape = (in_shape[0][0],)
+        reward_shape = (in_shape[0][0],)
+        output_shape = in_shape[0]
+        return [data_shape, action_shape, reward_shape], [output_shape]
+
+    def forward(self, in_data, out_data):
+        x = in_data[0]
+        y = out_data[0]
+        y[:] = x
+
+    def backward(self, out_grad, in_data, out_data, in_grad):
+        x = out_data[0]
+        action = in_data[1].astype(numpy.int)
+        reward = in_data[2]
+        dx = in_grad[0]
+        dx[:] = 0
+        dx[numpy.arange(action.shape[0]), action] \
+            = numpy.clip(x[numpy.arange(action.shape[0]), action] - reward, -1, 1)
+
 
 def dqn_sym_nips(action_num, output_op):
     net = mx.symbol.Variable('data')
@@ -188,9 +219,9 @@ for epoch in xrange(epoch_num):
                 actions = nd.array(actions, ctx=q_ctx)
                 rewards = nd.array(rewards, ctx=q_ctx)
                 terminate_flags = nd.array(terminate_flags, ctx=q_ctx)
+
                 # 3.2 Use the target network to compute the scores and
                 #     get the corresponding target rewards
-
                 target_qval = target_qnet.calc_score(batch_size=minibatch_size,
                                                      data=next_states)[0]
                 target_rewards = rewards + nd.choose_element_0index(target_qval,
@@ -200,9 +231,11 @@ for epoch in xrange(epoch_num):
                                           dqn_action=actions,
                                           dqn_reward=target_rewards)
 
-                loss = nd.norm(nd.choose_element_0index(outputs[0], actions)
-                               - target_rewards).asscalar()
-                episode_loss += numpy.sqrt(0.5) * loss
+                # 3.3 Calculate Loss
+                diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
+                quadratic_part = nd.clip(diff, -1, 1)
+                loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
+                episode_loss += loss
 
                 # 3.3 Update the target network every freeze_interval
                 # (We can do annealing instead of hard copy)
