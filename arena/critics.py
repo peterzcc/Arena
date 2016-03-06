@@ -29,7 +29,7 @@ class Critic(object):
 
     """
 
-    def __init__(self, data_shapes, sym, params=None, params_grad=None, aux_states=None,
+    def __init__(self, data_shapes, sym, params=None, aux_states=None,
                  initializer=mx.init.Uniform(0.07), ctx=mx.gpu(),
                  optimizer_params=None, name='CriticNet'):
         self.sym = sym
@@ -58,10 +58,7 @@ class Critic(object):
             self.arg_name_shape = dict(
                 data_shapes.items() + [(k, v.shape) for k, v in params.items()])
             self.params = {k: v.copyto(ctx) for k, v in params.items()}
-            if params_grad is not None:
-                self.params_grad = params_grad
-            else:
-                self.params_grad = {n: nd.empty(v.shape, ctx=ctx)
+            self.params_grad = {n: nd.empty(v.shape, ctx=ctx)
                                     for n, v in self.params.items()}
             if aux_states is not None:
                 self.aux_states = {k: v.copyto(ctx) for k, v in aux_states.items()}
@@ -152,7 +149,7 @@ class Critic(object):
         if name is None:
             name = self.name + '-copy-' + str(ctx)
         return Critic(data_shapes=self.data_shapes, sym=self.sym,
-                      params=self.params, params_grad=self.params_grad,
+                      params=self.params,
                       aux_states=self.aux_states, ctx=ctx,
                       optimizer_params=self.optimizer_params, name=name)
 
