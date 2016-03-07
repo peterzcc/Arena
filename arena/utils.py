@@ -26,13 +26,13 @@ def get_saving_path(prefix="", epoch=None,):
     return sym_saving_path, param_saving_path, misc_saving_path
 
 
-def save_params(dir_path="", epoch=None, name="", params=None, aux_states=None):
+def save_params(dir_path="", epoch=None, name="", params=None, aux_states=None, ctx=mx.cpu()):
     prefix = os.path.join(dir_path, name)
     _, param_saving_path, _ = get_saving_path(prefix, epoch)
     if not os.path.isdir(dir_path) and not (dir_path == ""):
         os.makedirs(dir_path)
-    save_dict = {('arg:%s' % k): v for k, v in params.items()}
-    save_dict.update({('aux:%s' % k): v for k, v in aux_states.items()})
+    save_dict = {('arg:%s' % k): v.copyto(ctx) for k, v in params.items()}
+    save_dict.update({('aux:%s' % k): v.copyto(ctx) for k, v in aux_states.items()})
     nd.save(param_saving_path, save_dict)
     return param_saving_path
 
@@ -47,8 +47,8 @@ def save_misc(dir_path="", epoch=None, name="", **argdict):
 
 def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
-    _, param_saving_path, _ = get_saving_path(prefix, epoch)
-    save_dict = nd.load(param_saving_path)
+    _, param_loading_path, _ = get_saving_path(prefix, epoch)
+    save_dict = nd.load(param_loading_path)
     arg_params = {}
     aux_params = {}
     for k, v in save_dict.items():
@@ -57,7 +57,7 @@ def load_params(dir_path="", epoch=None, name=""):
             arg_params[name] = v
         if tp == 'aux':
             aux_params[name] = v
-    return arg_params, aux_params
+    return arg_params, aux_params, param_loading_path
 
 
 def load_misc(dir_path="", epoch=None, name=""):
