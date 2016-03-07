@@ -82,7 +82,6 @@ class ExecutorBatchSizePool(object):
             self.data_dims[k] = v[1::]
             assert self.init_batch_size == v[0]
         self.exe_pool = {}
-        self.hits = {}
         self.get(self.init_batch_size)
 
     def get(self, batch_size=None):
