@@ -15,7 +15,7 @@ ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 root.addHandler(ch)
-
+mx.random.seed(100)
 
 # TODO Regression Output has none differential for label, we may need to fix that
 class DQNOutputOp(mx.operator.NDArrayOp):
