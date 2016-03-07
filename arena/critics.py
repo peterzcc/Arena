@@ -87,7 +87,8 @@ class Critic(object):
                      self.name, param_saving_path, misc_saving_path)
 
     def load_params(self, name="", dir_path="", epoch=None):
-        params, aux_states = load_params(dir_path=dir_path, epoch=epoch, name=name)
+        params, aux_states, param_loading_path = load_params(dir_path=dir_path, epoch=epoch, name=name)
+        logging.info('Loading params from \"%s\" to %s' %(param_loading_path, self.name))
         for k, v in params.items():
             self.params[k][:] = v
         for k, v in aux_states.items():
