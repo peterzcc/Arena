@@ -71,7 +71,7 @@ class ReplayMemory(object):
             self.size += 1
 
     def sample(self, batch_size):
-        assert self.replay_start_size >= batch_size and self.replay_start_size >= self.history_length
+        assert self.size >= batch_size and self.replay_start_size >= self.history_length
         assert(0 <= self.size <= self.memory_size)
         assert(0 <= self.top <= self.memory_size)
         if self.size <= self.replay_start_size:
