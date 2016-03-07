@@ -102,6 +102,8 @@ class Critic(object):
     """
     def calc_score(self, batch_size=default_batchsize, **input_dict):
         exe = self.executor_pool.get(batch_size)
+        for v in self.params.values():
+            v.wait_to_read()
         for k, v in input_dict.items():
             exe.arg_dict[k][:] = v
         exe.forward(is_train=False)
@@ -127,7 +129,6 @@ class Critic(object):
     """
     Can be used to calculate the gradient of Q(s,a) over a
     """
-
     def get_grads(self, keys, ctx=None, batch_size=default_batchsize, **input_dict):
         if len(input_dict) != 0:
             exe = self.executor_pool.get(batch_size)
@@ -156,6 +157,7 @@ class Critic(object):
     def copy_params_to(self, dst):
         for k, v in self.params.items():
             dst.params[k][:] = v
+            dst.params[k].wait_to_read()
 
     @property
     def total_param_num(self):
