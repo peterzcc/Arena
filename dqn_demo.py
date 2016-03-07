@@ -50,6 +50,7 @@ class DQNOutputOp(mx.operator.NDArrayOp):
                                        nd.clip(nd.choose_element_0index(x, action) - reward, -1, 1),
                                        action)
 
+
 class DQNOutputNpyOp(mx.operator.NumpyOp):
     def __init__(self):
         super(DQNOutputNpyOp, self).__init__(need_top_grad=False)
@@ -246,12 +247,16 @@ for epoch in xrange(epoch_num):
         time_episode_end = time.time()
         # Update the statistics
         epoch_reward += game.episode_reward
-        logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
-                     % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                        game.episode_step/(time_episode_end - time_episode_start), eps_curr))
         if episode_update_step > 0:
-            logging.info(
-                "Avg Loss:%f/%d" % (episode_loss / episode_update_step, episode_update_step))
+            logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
+                         ", Avg Loss:%f/%d"
+                         % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
+                            game.episode_step / (time_episode_end - time_episode_start), eps_curr,
+                            episode_loss / episode_update_step, episode_update_step))
+        else:
+            logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
+                         % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
+                            game.episode_step / (time_episode_end - time_episode_start), eps_curr))
     end = time.time()
     fps = steps_per_epoch / (end - start)
     qnet.save_params(dir_path='dqn-model-norescale-1E-2', epoch=epoch)
