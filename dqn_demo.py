@@ -206,6 +206,7 @@ for epoch in xrange(epoch_num):
             # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
             game.play(action)
             total_steps += 1
+
             # 3. Update our Q network if we can start sampling from the replay memory
             #    Also, we update every `update_interval`
             if total_steps % update_interval == 0 and game.replay_memory.sample_enabled:
