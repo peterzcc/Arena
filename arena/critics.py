@@ -103,6 +103,7 @@ class Critic(object):
     """
     def calc_score(self, batch_size=default_batchsize, **input_dict):
         exe = self.executor_pool.get(batch_size)
+        #TODO `wait_to_read()` here seems unuseful, remove it in the future!
         for v in self.params.values():
             v.wait_to_read()
         for k, v in input_dict.items():
@@ -158,6 +159,7 @@ class Critic(object):
     def copy_params_to(self, dst):
         for k, v in self.params.items():
             dst.params[k][:] = v
+            #TODO `wait_to_read()` here seems unuseful, remove it in the future!
             dst.params[k].wait_to_read()
 
     @property
