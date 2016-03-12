@@ -198,9 +198,6 @@ for epoch in xrange(epoch_num):
                                      ctx=q_ctx) / float(255.0)
                     action = nd.argmax_channel(
                         qnet.calc_score(batch_size=1, data=state)[0]).asscalar()
-                    # action = q_score.argmax(axis=1)[0]
-                    # episode_q_value += q_score[0, action]
-                    # episode_act_step += 1
             else:
                 action = numpy.random.randint(action_num)
 
