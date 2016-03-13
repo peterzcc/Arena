@@ -109,6 +109,7 @@ def main():
     replay_start_size = 50000
     max_start_nullops = 30
     replay_memory_size = 1000000
+    history_length = 4
     rows = 84
     cols = 84
     q_ctx = mx.Context(*ctx[0])
@@ -116,7 +117,8 @@ def main():
 
     game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                      resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
-                     replay_memory_size=replay_memory_size, display_screen=args.visualization)
+                     replay_memory_size=replay_memory_size, display_screen=args.visualization,
+                     history_length=history_length)
 
     ##RUN NATURE
     freeze_interval = 10000
@@ -133,7 +135,7 @@ def main():
     minibatch_size = 32
     action_num = len(game.action_set)
 
-    data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
+    data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
     optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01, 'eps': 0.01,
                         'rescale_grad': 1.0,
