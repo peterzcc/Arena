@@ -109,8 +109,8 @@ def main():
     q_ctx = mx.gpu()
     target_q_ctx = mx.gpu()
 
-    game = AtariGame(resize_mode='scale', replay_start_size=replay_start_size, resized_rows=rows,
-                     resized_cols=cols, max_null_op=max_start_nullops,
+    game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
+                     resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
                      replay_memory_size=replay_memory_size, display_screen=args.visualization)
 
     ##RUN NATURE
