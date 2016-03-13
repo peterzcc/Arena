@@ -6,6 +6,7 @@ from arena.games import AtariGame
 import logging
 import argparse
 import os
+import re
 import sys
 import time
 
@@ -95,19 +96,23 @@ def main():
                         help='Path of the ROM File.')
     parser.add_argument('-v', '--visualization', required=False, type=int, default=0,
                         help='Visualize the runs.')
+    parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
+                        help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
     parser.add_argument('-d', '--dir-path', required=False, type=str, default='',
                         help='Saving directory of model files.')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
         args.dir_path = 'dqn-%s' % rom_name
+    ctx = re.findall('([a-z]+)(\d*)', args.ctx)
+    ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
     replay_start_size = 50000
     max_start_nullops = 30
     replay_memory_size = 1000000
     rows = 84
     cols = 84
-    q_ctx = mx.gpu()
-    target_q_ctx = mx.gpu()
+    q_ctx = mx.Context(*ctx[0])
+    target_q_ctx = mx.Context(*ctx[-1])
 
     game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                      resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
