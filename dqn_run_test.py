@@ -157,6 +157,7 @@ def main():
     holdout_size = 3200
     replay_memory_size = 1000000
     exploartion = 0.05
+    history_length = 4
     rows = 84
     cols = 84
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
@@ -166,15 +167,17 @@ def main():
     epoch_range = [int(n) for n in args.epoch_range.split(',')]
     epochs = range(*epoch_range)
 
-    game = AtariGame(resize_mode='scale', resized_rows=rows, replay_start_size=4,
+    game = AtariGame(rom_path=args.rom, history_length=history_length,
+                     resize_mode='scale', resized_rows=rows, replay_start_size=4,
                      resized_cols=cols, max_null_op=max_start_nullops,
                      replay_memory_size=replay_memory_size,
                      death_end_episode=False,
                      display_screen=args.visualization)
+    ch = raw_input()
     if not args.visualization:
         holdout_samples = collect_holdout_samples(game, sample_num=holdout_size)
     action_num = len(game.action_set)
-    data_shapes = {'data': (minibatch_size, action_num) + (rows, cols),
+    data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
     dqn_output_op = DQNOutputOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
