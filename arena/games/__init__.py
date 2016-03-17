@@ -1,1 +1,1 @@
-from .atari_games import AtariGame
+from .atari_game import AtariGame

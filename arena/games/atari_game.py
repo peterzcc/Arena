@@ -6,8 +6,9 @@ import numpy
 import cv2
 import logging
 import os
-from ..utils import *
-from ..replay_memory import ReplayMemory
+from arena.utils import *
+from arena import ReplayMemory
+from .game import Game
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ def ale_load_from_rom(rom_path, display_screen):
     return ale
 
 
-class AtariGame(object):
+class AtariGame(Game):
     def __init__(self,
                  rom_path=_default_rom_path,
                  frame_skip=4, history_length=4,
