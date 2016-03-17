@@ -1,4 +1,12 @@
+
+DEFAULT_MAX_EPISODE_STEP = 1000000
+
 class Game(object):
+    def __init__(self):
+        self.total_reward = 0
+        self.episode_reward = 0
+        self.episode_step = 0
+        self.max_episode_step = DEFAULT_MAX_EPISODE_STEP
 
     def start(self):
         raise NotImplementedError("Must Implement!")

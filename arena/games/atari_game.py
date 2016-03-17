@@ -9,13 +9,12 @@ import os
 from arena.utils import *
 from arena import ReplayMemory
 from .game import Game
+from .game import DEFAULT_MAX_EPISODE_STEP
 
 logger = logging.getLogger(__name__)
 
 _dirname = os.path.dirname(os.path.realpath(__file__))
 _default_rom_path = os.path.join(_dirname, "roms", "breakout.bin")
-
-DEFAULT_MAX_EPISODE_STEP = 1000000
 
 
 def ale_load_from_rom(rom_path, display_screen):
@@ -37,10 +36,7 @@ class AtariGame(Game):
                  replay_memory_size=1000000,
                  replay_start_size=100,
                  death_end_episode=True):
-        self.total_reward = 0
-        self.episode_reward = 0
-        self.episode_step = 0
-        self.max_episode_step = DEFAULT_MAX_EPISODE_STEP
+        super(AtariGame, self).__init__()
         self.rng = get_numpy_rng()
         self.ale = ale_load_from_rom(rom_path=rom_path, display_screen=display_screen)
         self.start_lives = self.ale.lives()
