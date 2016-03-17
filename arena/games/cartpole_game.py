@@ -72,7 +72,7 @@ class CartPoleGame(Game):
             self.discount_factor = 0.999
 
         self.replay_memory = ReplayMemory(history_length=3, memory_size=replay_memory_size,
-                                          state_dim=(2 + len(pole_scales), ), state_dtype='float32',
+                                          state_dim=(2 + 2*len(pole_scales), ), state_dtype='float32',
                                           action_dtype='uint8')
         self.reward_range = (-1000., 1.*len(pole_scales)) if self.mode == "swingup" else (-1., 1.)
         self.delta_time = 0.02
@@ -102,7 +102,6 @@ class CartPoleGame(Game):
         self.max_episode_step = max_episode_step
         self.episode_reward = 0
         self.episode_step = 0
-
 
     def draw(self):
         r = 0.3
@@ -156,6 +155,8 @@ class CartPoleGame(Game):
             reward = numpy.cos(numpy.abs(self.pole_angle)).sum()
         else:
             reward = -1. if self.episode_terminate else 1.
+        self.replay_memory.append(obs=self.get_observation(), action=a, reward=reward,
+                                  terminate_flag=self.episode_terminate)
         return reward, self.episode_terminate
 
     @property

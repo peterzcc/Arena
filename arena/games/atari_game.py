@@ -113,13 +113,6 @@ class AtariGame(Game):
             return cv2.resize(image, (self.resized_cols, self.resized_rows),
                               interpolation=cv2.INTER_LINEAR)
 
-    @property
-    def state_enabled(self):
-        return self.replay_memory.size >= self.replay_memory.history_length
-
-    def current_state(self):
-        return self.replay_memory.latest_slice()
-
     def play(self, a):
         assert not self.episode_terminate, "Warning, the episode seems to have terminated. " \
                                            "We need to call either game.begin_episode(max_episode_step) to continue a new episode" \
