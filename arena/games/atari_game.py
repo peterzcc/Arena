@@ -57,7 +57,7 @@ class AtariGame(Game):
         self.screen_buffer = numpy.empty((self.screen_buffer_length,
                                           self.ale.getScreenDims()[1], self.ale.getScreenDims()[0]),
                                          dtype='uint8')
-        self.replay_memory = ReplayMemory(rows=resized_rows, cols=resized_cols,
+        self.replay_memory = ReplayMemory(state_dim=(resized_rows, resized_cols),
                                           history_length=history_length,
                                           memory_size=replay_memory_size,
                                           replay_start_size=replay_start_size)

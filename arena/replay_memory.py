@@ -9,13 +9,20 @@ from utils import *
 
 #TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
 class ReplayMemory(object):
-    def __init__(self, rows, cols, history_length, memory_size=1000000,
-                 replay_start_size=100, state_dtype='uint8', action_dtype='uint8',
+    def __init__(self, history_length, memory_size=1000000, replay_start_size=100,
+                 state_dim=(), action_dim=(), state_dtype='uint8', action_dtype='uint8',
                  ctx=mx.gpu()):
         self.rng = get_numpy_rng()
         self.ctx = ctx
-        self.states = numpy.zeros((memory_size, rows, cols), dtype=state_dtype)
-        self.actions = numpy.zeros(memory_size, dtype=action_dtype)
+        assert type(action_dim) is tuple and type(state_dim) is tuple, \
+            "Must set the dimensions of state and action for replay memory"
+        self.state_dim = state_dim
+        if action_dim == (1,):
+            self.action_dim = ()
+        else:
+            self.action_dim = action_dim
+        self.states = numpy.zeros((memory_size,) + state_dim, dtype=state_dtype)
+        self.actions = numpy.zeros((memory_size,) + action_dim, dtype=action_dtype)
         self.rewards = numpy.zeros(memory_size, dtype='float32')
         self.terminate_flags = numpy.zeros(memory_size, dtype='bool')
         self.memory_size = memory_size
@@ -45,6 +52,7 @@ class ReplayMemory(object):
         self.top = 0
         self.size = 0
 
+    #TODO Test the copy function
     def copy(self):
         replay_memory = copy.copy(self)
         replay_memory.states = numpy.zeros(self.states.shape, dtype=self.states.dtype)
@@ -61,8 +69,8 @@ class ReplayMemory(object):
             self.terminate_flags[numpy.arange(self.top-self.size, self.top)]
         return replay_memory
 
-    def append(self, img, action, reward, terminate_flag):
-        self.states[self.top, :, :] = img
+    def append(self, obs, action, reward, terminate_flag):
+        self.states[self.top] = obs
         self.actions[self.top] = action
         self.rewards[self.top] = reward
         self.terminate_flags[self.top] = terminate_flag
@@ -78,12 +86,12 @@ class ReplayMemory(object):
             raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
                              "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
         #TODO Possibly states + inds for less memory access
-        states = numpy.zeros((batch_size, self.history_length, self.states.shape[1], self.states.shape[2]),
+        states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
                              dtype=self.states.dtype)
-        actions = numpy.zeros(batch_size, dtype=self.actions.dtype)
+        actions = numpy.zeros((batch_size,) + self.action_dim, dtype=self.actions.dtype)
         rewards = numpy.zeros(batch_size, dtype='float32')
         terminate_flags = numpy.zeros(batch_size, dtype='bool')
-        next_states = numpy.zeros((batch_size, self.history_length, self.states.shape[1], self.states.shape[2]),
+        next_states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
                                   dtype=self.states.dtype)
         counter = 0
         while counter < batch_size:
@@ -95,10 +103,9 @@ class ReplayMemory(object):
                 # Check if terminates in the middle of the sample!
                 continue
             states[counter] = self.states.take(initial_indices, axis=0, mode='wrap')
-            actions[counter] = self.actions.take(end_index, mode='wrap')
+            actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
             next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
             counter += 1
         return states, actions, rewards, next_states, terminate_flags
-
