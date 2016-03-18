@@ -224,7 +224,7 @@ def main():
                     # 3.3 Update the target network every freeze_interval
                     # (We can do annealing instead of hard copy)
                     if training_steps % freeze_interval == 0:
-                        qnet.0(target_qnet)
+                        qnet.copy_params_to(target_qnet)
             steps_left -= game.episode_step
             time_episode_end = time.time()
             # Update the statistics
