@@ -3,8 +3,8 @@
 #source ~/.bashrc
 . /project/dygroup2/czeng/venv/bin/activate
 name=cifar10
-n=8
-s=8
+n=3
+s=3
 workerq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115,all.q@client108,all.q@client109,all.q@client110"
 serverq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115,all.q@client108,all.q@client109,all.q@client110"
 wd="/csproject/dygroup2/czeng/venv/downloads/mxnet/example/image-classification/"
