@@ -13,7 +13,7 @@ setuptools.setup(
         os.path.abspath(__file__)), 'README.md')).read(),
     license='MIT',
     url='https://github.com/peterzcc/dist_train/tree/arena',
-    install_requires=['numpy', 'scipy', 'pillow'],
+    install_requires=['numpy', 'scipy', 'pillow', 'matplotlib'],
     classifiers=['Development Status :: 2 - Pre-Alpha',
                  'Intended Audience :: Science/Research',
                  'License :: OSI Approved :: MIT License',
