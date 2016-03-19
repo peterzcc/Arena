@@ -84,6 +84,10 @@ class AtariGame(Game):
         # We need to restart the environment if our current counting is larger than the max episode_step
         if self.episode_step > self.max_episode_step or self.ale.game_over():
             self.start()
+        else:
+            for i in range(self.screen_buffer_length):
+                self.ale.act(0)
+                self.ale.getScreenGrayscale(self.screen_buffer[i % self.screen_buffer_length, :, :])
         self.max_episode_step = max_episode_step
         self.start_lives = self.ale.lives()
         self.episode_reward = 0
