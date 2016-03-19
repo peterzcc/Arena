@@ -1,6 +1,5 @@
 import numpy
 from arena import ReplayMemory
-import matplotlib.pyplot as plt
 import math
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
@@ -79,14 +78,19 @@ class CartPoleGame(Game):
         self.max_force = 10.
         self.gravity = -9.8
         self.cart_mass = 1.
-        self.fig = plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
-        ax = self.fig.add_subplot(111)
-        ax.set_xlim([0, 1])
-        ax.set_ylim([0, 1])
-        plt.axis('off')
-        plt.axhspan(xmin=0, xmax=1, ymin=0.305, ymax=0.315, facecolor='b', alpha=0.5)
-        self.l, = ax.plot([], [], lw=10, color='r')
-        self.draw()
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as e:
+            print "Failed to Import Pyplot", e.message
+        else:
+            self.fig = plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
+            ax = self.fig.add_subplot(111)
+            ax.set_xlim([0, 1])
+            ax.set_ylim([0, 1])
+            plt.axis('off')
+            plt.axhspan(xmin=0, xmax=1, ymin=0.305, ymax=0.315, facecolor='b', alpha=0.5)
+            self.l, = ax.plot([], [], lw=10, color='r')
+            self.draw()
 
     def start(self):
         self.cart_location = 0.0
