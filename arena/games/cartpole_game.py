@@ -3,6 +3,7 @@ from arena import ReplayMemory
 import math
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
+from arena.utils import *
 
 
 class CartPoleGame(Game):
@@ -21,6 +22,7 @@ class CartPoleGame(Game):
                  replay_memory_size=1000000, replay_start_size=100,
                  random_start=True, display_screen=False):
         super(CartPoleGame, self).__init__()
+        self.npy_rng = get_numpy_rng()
         self.noise = noise
         self.reward_noise = reward_noise
         self.random_start = random_start
@@ -98,7 +100,7 @@ class CartPoleGame(Game):
         self.pole_angle.fill(0.0)
         self.pole_velocity.fill(0.0)
         if self.random_start:
-            self.pole_angle = (numpy.random.random(self.pole_angle.shape)-0.5)/5.
+            self.pole_angle = (self.npy_rng.rand(*self.pole_angle.shape)-0.5)/5.
 
     def begin_episode(self, max_episode_step=DEFAULT_MAX_EPISODE_STEP):
         if self.episode_step > self.max_episode_step or self.episode_terminate:
@@ -132,7 +134,7 @@ class CartPoleGame(Game):
 
     def play(self, a):
         force = self.max_force if a == 1 else -self.max_force
-        force += self.max_force*numpy.random.normal(scale=self.noise) if self.noise > 0 else 0.0 # Compute noise
+        force += self.max_force*self.npy_rng.normal(scale=self.noise) if self.noise > 0 else 0.0 # Compute noise
 
         for step in range(self.sim_steps):
             cart_accel = force - self.mu_c * numpy.sign(self.cart_velocity) + self.__effective_force()

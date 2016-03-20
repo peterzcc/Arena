@@ -3,6 +3,7 @@ import mxnet.ndarray as nd
 import numpy
 from arena import Critic
 from arena.games import AtariGame
+from arena.utils import *
 import logging
 import argparse
 import os
@@ -19,6 +20,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
+npy_rng = get_numpy_rng()
 
 # TODO Regression Output has none differential for label, we may need to fix that
 class DQNOutputOp(mx.operator.NDArrayOp):
@@ -169,10 +171,10 @@ def main():
             while not game.episode_terminate:
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
-                    do_exploration = (numpy.random.rand() < eps_curr)
+                    do_exploration = (npy_rng.rand() < eps_curr)
                     eps_curr = max(eps_curr - eps_decay, eps_min)
                     if do_exploration:
-                        action = numpy.random.randint(action_num)
+                        action = npy_rng.randint(action_num)
                     else:
                         # TODO Here we can in fact play multiple gaming instances simultaneously and make actions for each
                         # We can simply stack the current_state() of gaming instances and give prediction for all of them
@@ -184,7 +186,7 @@ def main():
                         action = nd.argmax_channel(
                             qnet.calc_score(batch_size=1, data=state)[0]).asscalar()
                 else:
-                    action = numpy.random.randint(action_num)
+                    action = npy_rng.randint(action_num)
 
                 # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
                 game.play(action)

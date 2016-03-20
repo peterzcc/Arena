@@ -19,6 +19,7 @@ ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 root.addHandler(ch)
+npy_rng = get_numpy_rng()
 
 
 class DQNOutputOp(mx.operator.NDArrayOp):
@@ -77,7 +78,7 @@ def collect_holdout_samples(game, num_steps=3200, sample_num=3200):
     for i in xrange(num_steps):
         if game.episode_terminate:
             game.begin_episode()
-        action = numpy.random.randint(len(game.action_set))
+        action = npy_rng.randint(len(game.action_set))
         game.play(action)
     samples, _, _, _, _ = game.replay_memory.sample(batch_size=sample_num)
     print "Done!"
@@ -108,9 +109,9 @@ def calculate_avg_reward(game, qnet, test_steps=125000, exploartion=0.05):
         while not game.episode_terminate:
             # 1. We need to choose a new action based on the current game status
             if game.state_enabled:
-                do_exploration = (numpy.random.rand() < exploartion)
+                do_exploration = (npy_rng.rand() < exploartion)
                 if do_exploration:
-                    action = numpy.random.randint(action_num)
+                    action = npy_rng.randint(action_num)
                 else:
                     # TODO Here we can in fact play multiple gaming instances simultaneously and make actions for each
                     # We can simply stack the current_state() of gaming instances and give prediction for all of them
@@ -122,7 +123,7 @@ def calculate_avg_reward(game, qnet, test_steps=125000, exploartion=0.05):
                     action = nd.argmax_channel(
                         qnet.calc_score(batch_size=1, data=state)[0]).asscalar()
             else:
-                action = numpy.random.randint(action_num)
+                action = npy_rng.randint(action_num)
 
             # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
             game.play(action)
