@@ -98,6 +98,16 @@ def main():
                         help='Path of the ROM File.')
     parser.add_argument('-v', '--visualization', required=False, type=int, default=0,
                         help='Visualize the runs.')
+    parser.add_argument('--lr', required=False, type=float, default=0.01,
+                        help='Learning rate of the AdaGrad optimizer')
+    parser.add_argument('--eps', required=False, type=float, default=0.01,
+                        help='Eps of the AdaGrad optimizer')
+    parser.add_argument('--clip-gradient', required=False, type=float, default=None,
+                        help='Clip threshold of the AdaGrad optimizer')
+    parser.add_argument('--double-q', required=False, type=bool, default=False,
+                        help='Use Double DQN')
+    parser.add_argument('--wd', required=False, type=float, default=0.0,
+                        help='Weight of the L2 Regularizer')
     parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
                         help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
     parser.add_argument('-d', '--dir-path', required=False, type=str, default='',
@@ -139,9 +149,10 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-    optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01, 'eps': 0.01,
+    optimizer_params = {'name': 'adagrad', 'learning_rate': args.lr, 'eps': args.eps,
+                        'clip_gradient': args.clip_gradient,
                         'rescale_grad': 1.0,
-                        'wd': 0}
+                        'wd': args.wd}
     dqn_output_op = DQNOutputOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, optimizer_params=optimizer_params, name='QNet',
@@ -208,10 +219,19 @@ def main():
 
                     # 3.2 Use the target network to compute the scores and
                     #     get the corresponding target rewards
-                    target_qval = target_qnet.calc_score(batch_size=minibatch_size,
+                    if not args.double_q:
+                        target_qval = target_qnet.calc_score(batch_size=minibatch_size,
                                                          data=next_states)[0]
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(target_qval))\
+                                           * (1.0 - terminate_flags) * discount
+                    else:
+                        target_qval = target_qnet.calc_score(batch_size=minibatch_size,
+                                                         data=next_states)[0]
+                        qval = qnet.calc_score(batch_size=minibatch_size, data=next_states)[0]
+
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
                     outputs = qnet.fit_target(batch_size=minibatch_size, data=states,
                                               dqn_action=actions,
