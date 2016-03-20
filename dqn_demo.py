@@ -125,7 +125,6 @@ def main():
     rows = 84
     cols = 84
     q_ctx = mx.Context(*ctx[0])
-    target_q_ctx = mx.Context(*ctx[-1])
 
     game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                      resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
@@ -158,7 +157,7 @@ def main():
     qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, optimizer_params=optimizer_params, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
-    target_qnet = qnet.copy(name="TargetQNet", ctx=target_q_ctx)
+    target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
 
     qnet.print_stat()
     target_qnet.print_stat()
@@ -212,7 +211,7 @@ def main():
                     states, actions, rewards, next_states, terminate_flags \
                         = game.replay_memory.sample(batch_size=minibatch_size)
                     states = nd.array(states, ctx=q_ctx) / float(255.0)
-                    next_states = nd.array(next_states, ctx=target_q_ctx) / float(255.0)
+                    next_states = nd.array(next_states, ctx=q_ctx) / float(255.0)
                     actions = nd.array(actions, ctx=q_ctx)
                     rewards = nd.array(rewards, ctx=q_ctx)
                     terminate_flags = nd.array(terminate_flags, ctx=q_ctx)
