@@ -175,7 +175,9 @@ def main():
             # Running New Episode
             episode += 1
             episode_loss = 0.0
+            episode_q_value = 0.0
             episode_update_step = 0
+            episode_action_step = 0
             time_episode_start = time.time()
             game.begin_episode(steps_left)
             while not game.episode_terminate:
@@ -193,8 +195,10 @@ def main():
                         current_state = game.current_state()
                         state = nd.array(current_state.reshape((1,) + current_state.shape),
                                          ctx=q_ctx) / float(255.0)
-                        action = nd.argmax_channel(
-                            qnet.calc_score(batch_size=1, data=state)[0]).asscalar()
+                        qval_npy = qnet.calc_score(batch_size=1, data=state)[0].asnumpy()
+                        action = numpy.argmax(qval_npy)
+                        episode_q_value += qval_npy[0, action]
+                        episode_action_step += 1
                 else:
                     action = npy_rng.randint(action_num)
 
@@ -250,16 +254,16 @@ def main():
             time_episode_end = time.time()
             # Update the statistics
             epoch_reward += game.episode_reward
+            info_str = "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
+                        % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
+                           game.episode_step / (time_episode_end - time_episode_start), eps_curr)
             if episode_update_step > 0:
-                logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
-                             ", Avg Loss:%f/%d"
-                             % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                game.episode_step / (time_episode_end - time_episode_start), eps_curr,
-                                episode_loss / episode_update_step, episode_update_step))
-            else:
-                logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
-                             % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                game.episode_step / (time_episode_end - time_episode_start), eps_curr))
+                info_str += ", Avg Loss:%f/%d" % (episode_loss / episode_update_step,
+                                                  episode_update_step)
+            if episode_action_step > 0:
+                info_str += ", Avg Q Value:%f/%d" % (episode_q_value / episode_action_step,
+                                                  episode_action_step)
+            logging.info(info_str)
         end = time.time()
         fps = steps_per_epoch / (end - start)
         qnet.save_params(dir_path=args.dir_path, epoch=epoch)
