@@ -82,7 +82,7 @@ class ExecutorBatchSizePool(object):
             self.data_dims[k] = v[1::]
             assert self.init_batch_size == v[0]
         self.exe_pool = {}
-        self.get(self.init_batch_size)
+        self.base_exe = self.get(self.init_batch_size)
 
     def get(self, batch_size=None):
         assert isinstance(batch_size, (int, long))
@@ -96,8 +96,13 @@ class ExecutorBatchSizePool(object):
             inputs_grad = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
                            for k, s in self.data_dims.items()}
             self.inputs_grad_dict[batch_size] = inputs_grad
-            exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
-                                args_grad=dict(self.params_grad.items() + inputs_grad.items()),
-                                aux_states=self.aux_states)
+            if len(self.exe_pool) == 0:
+                exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+                                    args_grad=dict(self.params_grad.items() + inputs_grad.items()),
+                                    aux_states=self.aux_states)
+            else:
+                exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+                                    args_grad=dict(self.params_grad.items() + inputs_grad.items()),
+                                    aux_states=self.aux_states, shared_exec=self.base_exe)
             self.exe_pool[batch_size] = exe
             return exe

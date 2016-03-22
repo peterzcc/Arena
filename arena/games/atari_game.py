@@ -84,6 +84,10 @@ class AtariGame(Game):
         # We need to restart the environment if our current counting is larger than the max episode_step
         if self.episode_step > self.max_episode_step or self.ale.game_over():
             self.start()
+        else:
+            for i in range(self.screen_buffer_length):
+                self.ale.act(0)
+                self.ale.getScreenGrayscale(self.screen_buffer[i % self.screen_buffer_length, :, :])
         self.max_episode_step = max_episode_step
         self.start_lives = self.ale.lives()
         self.episode_reward = 0
@@ -112,13 +116,6 @@ class AtariGame(Game):
         else:
             return cv2.resize(image, (self.resized_cols, self.resized_rows),
                               interpolation=cv2.INTER_LINEAR)
-
-    @property
-    def state_enabled(self):
-        return self.replay_memory.size >= self.replay_memory.history_length
-
-    def current_state(self):
-        return self.replay_memory.latest_slice()
 
     def play(self, a):
         assert not self.episode_terminate, "Warning, the episode seems to have terminated. " \

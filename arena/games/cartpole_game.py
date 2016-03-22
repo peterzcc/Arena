@@ -4,6 +4,7 @@ from arena import ReplayMemory
 import math
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
+from arena.utils import *
 
 
 class CartPoleGame(Game):
@@ -22,6 +23,7 @@ class CartPoleGame(Game):
                  replay_memory_size=1000000, replay_start_size=100,
                  random_start=True, display_screen=False):
         super(CartPoleGame, self).__init__()
+        self.npy_rng = get_numpy_rng()
         self.noise = noise
         self.reward_noise = reward_noise
         self.random_start = random_start
@@ -72,21 +74,26 @@ class CartPoleGame(Game):
             self.discount_factor = 0.999
 
         self.replay_memory = ReplayMemory(history_length=3, memory_size=replay_memory_size,
-                                          state_dim=(2 + len(pole_scales), ), state_dtype='float32',
+                                          state_dim=(2 + 2*len(pole_scales), ), state_dtype='float32',
                                           action_dtype='uint8')
         self.reward_range = (-1000., 1.*len(pole_scales)) if self.mode == "swingup" else (-1., 1.)
         self.delta_time = 0.02
         self.max_force = 10.
         self.gravity = -9.8
         self.cart_mass = 1.
-        self.fig = plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
-        ax = self.fig.add_subplot(111)
-        ax.set_xlim([0, 1])
-        ax.set_ylim([0, 1])
-        plt.axis('off')
-        plt.axhspan(xmin=0, xmax=1, ymin=0.305, ymax=0.315, facecolor='b', alpha=0.5)
-        self.l, = ax.plot([], [], lw=10, color='r')
-        self.draw()
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError as e:
+            print "Failed to Import Pyplot", e.message
+        else:
+            self.fig = plt.figure(num=None, figsize=(8, 6), dpi=80, facecolor='w', edgecolor='k')
+            ax = self.fig.add_subplot(111)
+            ax.set_xlim([0, 1])
+            ax.set_ylim([0, 1])
+            plt.axis('off')
+            plt.axhspan(xmin=0, xmax=1, ymin=0.305, ymax=0.315, facecolor='b', alpha=0.5)
+            self.l, = ax.plot([], [], lw=10, color='r')
+            self.draw()
 
     def start(self):
         self.cart_location = 0.0
@@ -94,7 +101,7 @@ class CartPoleGame(Game):
         self.pole_angle.fill(0.0)
         self.pole_velocity.fill(0.0)
         if self.random_start:
-            self.pole_angle = (numpy.random.random(self.pole_angle.shape)-0.5)/5.
+            self.pole_angle = (self.npy_rng.rand(*self.pole_angle.shape)-0.5)/5.
 
     def begin_episode(self, max_episode_step=DEFAULT_MAX_EPISODE_STEP):
         if self.episode_step > self.max_episode_step or self.episode_terminate:
@@ -102,7 +109,6 @@ class CartPoleGame(Game):
         self.max_episode_step = max_episode_step
         self.episode_reward = 0
         self.episode_step = 0
-
 
     def draw(self):
         r = 0.3
@@ -129,7 +135,7 @@ class CartPoleGame(Game):
 
     def play(self, a):
         force = self.max_force if a == 1 else -self.max_force
-        force += self.max_force*numpy.random.normal(scale=self.noise) if self.noise > 0 else 0.0 # Compute noise
+        force += self.max_force*self.npy_rng.normal(scale=self.noise) if self.noise > 0 else 0.0 # Compute noise
 
         for step in range(self.sim_steps):
             cart_accel = force - self.mu_c * numpy.sign(self.cart_velocity) + self.__effective_force()
@@ -156,6 +162,8 @@ class CartPoleGame(Game):
             reward = numpy.cos(numpy.abs(self.pole_angle)).sum()
         else:
             reward = -1. if self.episode_terminate else 1.
+        self.replay_memory.append(obs=self.get_observation(), action=a, reward=reward,
+                                  terminate_flag=self.episode_terminate)
         return reward, self.episode_terminate
 
     @property

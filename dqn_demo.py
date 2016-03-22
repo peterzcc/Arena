@@ -3,6 +3,7 @@ import mxnet.ndarray as nd
 import numpy
 from arena import Critic
 from arena.games import AtariGame
+from arena.utils import *
 import logging
 import argparse
 import os
@@ -19,6 +20,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
+npy_rng = get_numpy_rng()
 
 # TODO Regression Output has none differential for label, we may need to fix that
 class DQNOutputOp(mx.operator.NDArrayOp):
@@ -96,6 +98,16 @@ def main():
                         help='Path of the ROM File.')
     parser.add_argument('-v', '--visualization', required=False, type=int, default=0,
                         help='Visualize the runs.')
+    parser.add_argument('--lr', required=False, type=float, default=0.01,
+                        help='Learning rate of the AdaGrad optimizer')
+    parser.add_argument('--eps', required=False, type=float, default=0.01,
+                        help='Eps of the AdaGrad optimizer')
+    parser.add_argument('--clip-gradient', required=False, type=float, default=None,
+                        help='Clip threshold of the AdaGrad optimizer')
+    parser.add_argument('--double-q', required=False, type=bool, default=False,
+                        help='Use Double DQN')
+    parser.add_argument('--wd', required=False, type=float, default=0.0,
+                        help='Weight of the L2 Regularizer')
     parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
                         help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
     parser.add_argument('-d', '--dir-path', required=False, type=str, default='',
@@ -113,7 +125,6 @@ def main():
     rows = 84
     cols = 84
     q_ctx = mx.Context(*ctx[0])
-    target_q_ctx = mx.Context(*ctx[-1])
 
     game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                      resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
@@ -137,15 +148,16 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-    optimizer_params = {'name': 'adagrad', 'learning_rate': 0.01, 'eps': 0.01,
+    optimizer_params = {'name': 'adagrad', 'learning_rate': args.lr, 'eps': args.eps,
+                        'clip_gradient': args.clip_gradient,
                         'rescale_grad': 1.0,
-                        'wd': 0}
+                        'wd': args.wd}
     dqn_output_op = DQNOutputOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, optimizer_params=optimizer_params, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
-    target_qnet = qnet.copy(name="TargetQNet", ctx=target_q_ctx)
+    target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
 
     qnet.print_stat()
     target_qnet.print_stat()
@@ -163,16 +175,18 @@ def main():
             # Running New Episode
             episode += 1
             episode_loss = 0.0
+            episode_q_value = 0.0
             episode_update_step = 0
+            episode_action_step = 0
             time_episode_start = time.time()
             game.begin_episode(steps_left)
             while not game.episode_terminate:
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
-                    do_exploration = (numpy.random.rand() < eps_curr)
+                    do_exploration = (npy_rng.rand() < eps_curr)
                     eps_curr = max(eps_curr - eps_decay, eps_min)
                     if do_exploration:
-                        action = numpy.random.randint(action_num)
+                        action = npy_rng.randint(action_num)
                     else:
                         # TODO Here we can in fact play multiple gaming instances simultaneously and make actions for each
                         # We can simply stack the current_state() of gaming instances and give prediction for all of them
@@ -181,10 +195,12 @@ def main():
                         current_state = game.current_state()
                         state = nd.array(current_state.reshape((1,) + current_state.shape),
                                          ctx=q_ctx) / float(255.0)
-                        action = nd.argmax_channel(
-                            qnet.calc_score(batch_size=1, data=state)[0]).asscalar()
+                        qval_npy = qnet.calc_score(batch_size=1, data=state)[0].asnumpy()
+                        action = numpy.argmax(qval_npy)
+                        episode_q_value += qval_npy[0, action]
+                        episode_action_step += 1
                 else:
-                    action = numpy.random.randint(action_num)
+                    action = npy_rng.randint(action_num)
 
                 # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
                 game.play(action)
@@ -199,17 +215,26 @@ def main():
                     states, actions, rewards, next_states, terminate_flags \
                         = game.replay_memory.sample(batch_size=minibatch_size)
                     states = nd.array(states, ctx=q_ctx) / float(255.0)
-                    next_states = nd.array(next_states, ctx=target_q_ctx) / float(255.0)
+                    next_states = nd.array(next_states, ctx=q_ctx) / float(255.0)
                     actions = nd.array(actions, ctx=q_ctx)
                     rewards = nd.array(rewards, ctx=q_ctx)
                     terminate_flags = nd.array(terminate_flags, ctx=q_ctx)
 
                     # 3.2 Use the target network to compute the scores and
                     #     get the corresponding target rewards
-                    target_qval = target_qnet.calc_score(batch_size=minibatch_size,
+                    if not args.double_q:
+                        target_qval = target_qnet.calc_score(batch_size=minibatch_size,
                                                          data=next_states)[0]
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(target_qval))\
+                                           * (1.0 - terminate_flags) * discount
+                    else:
+                        target_qval = target_qnet.calc_score(batch_size=minibatch_size,
+                                                         data=next_states)[0]
+                        qval = qnet.calc_score(batch_size=minibatch_size, data=next_states)[0]
+
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
                     outputs = qnet.fit_target(batch_size=minibatch_size, data=states,
                                               dqn_action=actions,
@@ -229,16 +254,16 @@ def main():
             time_episode_end = time.time()
             # Update the statistics
             epoch_reward += game.episode_reward
+            info_str = "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
+                        % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
+                           game.episode_step / (time_episode_end - time_episode_start), eps_curr)
             if episode_update_step > 0:
-                logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
-                             ", Avg Loss:%f/%d"
-                             % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                game.episode_step / (time_episode_end - time_episode_start), eps_curr,
-                                episode_loss / episode_update_step, episode_update_step))
-            else:
-                logging.info("Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f"
-                             % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                game.episode_step / (time_episode_end - time_episode_start), eps_curr))
+                info_str += ", Avg Loss:%f/%d" % (episode_loss / episode_update_step,
+                                                  episode_update_step)
+            if episode_action_step > 0:
+                info_str += ", Avg Q Value:%f/%d" % (episode_q_value / episode_action_step,
+                                                  episode_action_step)
+            logging.info(info_str)
         end = time.time()
         fps = steps_per_epoch / (end - start)
         qnet.save_params(dir_path=args.dir_path, epoch=epoch)
