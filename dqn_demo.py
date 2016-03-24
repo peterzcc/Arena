@@ -23,7 +23,7 @@ mx.random.seed(100)
 npy_rng = get_numpy_rng()
 
 # TODO Regression Output has none differential for label, we may need to fix that
-class DQNOutputOp(mx.operator.NDArrayOp):
+class DQNOutputOp(mx.operator.NumpyOp):
     def __init__(self):
         super(DQNOutputOp, self).__init__(need_top_grad=False)
 
@@ -129,7 +129,7 @@ def main():
     game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                      resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
                      replay_memory_size=replay_memory_size, display_screen=args.visualization,
-                     history_length=history_length)
+                     history_length=history_length,death_end_episode=False)
 
     ##RUN NATURE
     freeze_interval = 10000
