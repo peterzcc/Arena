@@ -9,6 +9,7 @@ import logging
 import sys
 from arena import Critic
 from arena.games import AtariGame
+from arena.utils import *
 
 
 root = logging.getLogger()
