@@ -263,7 +263,7 @@ def main():
                                                                 nd.argmax_channel(target_qval))\
                                            * (1.0 - terminate_flags) * discount
                     else:
-                        target_qval = target_qnet.calc_score(batch_size=minibatch_size,
+                        target_qval = target_qnet.forward(batch_size=minibatch_size,
                                                          data=next_states)[0]
                         qval = qnet.forward(batch_size=minibatch_size, data=next_states)[0]
 
