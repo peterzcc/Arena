@@ -21,7 +21,15 @@ def ale_load_from_rom(rom_path, display_screen):
     rng = get_numpy_rng()
     ale = ALEInterface()
     ale.setInt('random_seed', rng.randint(1000))
-    ale.setBool('display_screen', display_screen)
+    if display_screen:
+        import sys
+        if sys.platform == 'darwin':
+            import pygame
+            pygame.init()
+            ale.setBool('sound', False) # Sound doesn't work on OSX
+        ale.setBool('display_screen', True)
+    else:
+        ale.setBool('display_screen', False)
     ale.setFloat('repeat_action_probability', 0)
     ale.loadROM(rom_path)
     return ale
