@@ -107,6 +107,7 @@ class Critic(object):
         for v in self.params.values():
             v.wait_to_read()
         for k, v in input_dict.items():
+            v.wait_to_read()
             exe.arg_dict[k][:] = v
         exe.forward(is_train=False)
         for output in exe.outputs:
@@ -118,7 +119,10 @@ class Critic(object):
                                          "manually, or set the optimizer_params when you create" \
                                          "the object"
         exe = self.executor_pool.get(batch_size)
+        for v in self.params.values():
+            v.wait_to_read()
         for k, v in input_dict.items():
+            v.wait_to_read()
             exe.arg_dict[k][:] = v
         exe.forward(is_train=True)
         for output in exe.outputs:
