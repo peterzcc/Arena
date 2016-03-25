@@ -175,7 +175,7 @@ def main():
                      replay_memory_size=replay_memory_size,
                      death_end_episode=False,
                      display_screen=args.visualization)
-    ch = raw_input()
+
     if not args.visualization:
         holdout_samples = collect_holdout_samples(game, sample_num=holdout_size)
     action_num = len(game.action_set)
