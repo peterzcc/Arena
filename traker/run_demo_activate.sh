@@ -10,9 +10,9 @@ s=2
 workerq="*.q@client112,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
 serverq="*.q@client112,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
 
-wd="/csproject/dygroup2/czeng/dist_dqn"
+wd="/csproject/dygroup2/czeng/dist_dqn/"
 activate_cmd="./project/dygroup2/czeng/venv/bin/activate"
-script="python dqn_dist_demo.py  --double-q 1 -c gpu0 -r /csproject/dygroup2/czeng/dist_dqn/roms/breakout.bin -eps 0.1"
+script="python dqn_dist_demo.py  --double-q 1 -c gpu0 -r roms/breakout.bin -eps 0.1"
 
 
 python dmlc_sge.py --activate-cmd ${activate_cmd} --log-file ${name}_n${n}_s${s}.out -wd ${wd} --jobname dmlc-${name}-n${n}-s${s} -workerq ${workerq} -serverq ${serverq} -n ${n} -s ${s} $script
