@@ -2,7 +2,7 @@
 #$ -S /bin/bash
 #source ~/.bashrc
 . /project/dygroup2/czeng/venv/bin/activate
-name=cifar10
+name=breakout
 n=2
 s=2
 # workerq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115,all.q@client108,all.q@client109,all.q@client110"
