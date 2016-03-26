@@ -61,6 +61,8 @@ class Base(object):
                 self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
             else:
                 self.aux_states = None
+        self.accum_grad = OrderedDict([(n, nd.zeros(v.shape, ctx=ctx))
+                                        for n, v in self.params.items()])
         self.executor_pool = ExecutorBatchSizePool(ctx=self.ctx, sym=self.sym,
                                                    data_shapes=self.data_shapes,
                                                    params=self.params, params_grad=self.params_grad,
@@ -110,6 +112,17 @@ class Base(object):
             k = self.params.keys()[i]
             updater(index=i, grad=params_grad[k], weight=self.params[k])
 
+    def updateAndAccumGrad(self, updater, params_grad=None):
+        if params_grad is None:
+            params_grad = self.params_grad
+        for i in range(len(self.params)):
+            k = self.params.keys()[i]
+            updater(index=i, grad=params_grad[k], weight=self.params[k])
+            self.accum_grad[k] = self.accum_grad[k] + params_grad[k]
+    def resetAccumGrad(self):
+        for i in range(len(self.accum_grad)):
+            k = self.accum_grad.keys()[i]
+            self.accum_grad[k][:] = 0
     """
     Can be used to calculate the gradient of Q(s,a) over a
     """

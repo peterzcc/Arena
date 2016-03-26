@@ -1,5 +1,6 @@
 import mxnet as mx
 import mxnet.ndarray as nd
+from mxnet import kvstore
 import numpy
 from arena import Base
 from arena.games import AtariGame
@@ -56,7 +57,11 @@ class DQNOutputOp(mx.operator.NDArrayOp):
                                        nd.clip(nd.choose_element_0index(x, action) - reward, -1, 1),
                                        action)
 
-
+def update_to_kvstore(kvStore,params,params_grad):
+    for paramIndex in range(len(params)):
+        k=params.keys()[paramIndex]
+        kvStore.push(paramIndex,params_grad[k],priority=-paramIndex)
+        kvStore.pull(paramIndex,params[k],priority=-paramIndex)
 # TODO Regression Output has none differential for label, we may need to fix that
 class DQNOutputNpyOp(mx.operator.NumpyOp):
     def __init__(self):
@@ -146,13 +151,19 @@ def main():
                         help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
     parser.add_argument('-d', '--dir-path', required=False, type=str, default='',
                         help='Saving directory of model files.')
+    parser.add_argument('--start-eps', required=False, type=float, default=1.0,
+                        help='Eps of the epsilon-greedy policy at the beginning')
+    parser.add_argument('--replay-start-size', required=False, type=int, default=50000,
+                        help='The step that the training starts')
+    parser.add_argument('--kvstore-update-period', required=False, type=int, default=1,
+                        help='The period that the worker updates the parameters from the sever')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
         args.dir_path = 'dqn-%s' % rom_name
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
-    replay_start_size = 50000
+    replay_start_size = args.replay_start_size
     max_start_nullops = 30
     replay_memory_size = 1000000
     history_length = 4
@@ -172,9 +183,9 @@ def main():
     update_interval = 4
     discount = 0.99
 
-    eps_start = 1.0
+    eps_start = args.start_eps
     eps_min = 0.1
-    eps_decay = (1.0 - 0.1) / 1000000
+    eps_decay = (eps_start - 0.1) / 1000000
     eps_curr = eps_start
     freeze_interval /= update_interval
     minibatch_size = 32
@@ -192,6 +203,15 @@ def main():
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
+    # Create kvstore
+    kvType = 'dist_async'
+    kvStore = kvstore.create(kvType)
+    #Initialize kvstore
+    for idx,v in enumerate(qnet.params.values()):
+        kvStore.init(idx,v);
+    # Set optimizer on kvstore
+    kvStore.set_optimizer(optimizer)
+    kvstore_update_period = args.kvstore_update_period
 
     qnet.print_stat()
     target_qnet.print_stat()
@@ -270,11 +290,15 @@ def main():
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
-                    outputs = qnet.forward(batch_size=minibatch_size, data=states,
+                    outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
                                               dqn_action=actions,
                                               dqn_reward=target_rewards)
                     qnet.backward(batch_size=minibatch_size)
-                    qnet.update(updater=updater)
+
+                    if total_steps % kvstore_update_period == 0:
+                        update_to_kvstore(kvStore,qnet.params,qnet.accum_grad)
+                        qnet.resetAccumGrad()
+                    qnet.updateAndAccumGrad(updater=updater)
 
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
