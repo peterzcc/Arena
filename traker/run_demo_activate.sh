@@ -5,10 +5,10 @@
 name=breakout
 n=2
 s=2
-# workerq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115,all.q@client108,all.q@client109,all.q@client110"
-# serverq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115,all.q@client108,all.q@client109,all.q@client110"
-workerq="all.q@client112,all.q@client112,all.q@client113,all.q@client114,all.q@client115,all.q@client108,all.q@client109,all.q@client110"
-serverq="all.q@client112,all.q@client112,all.q@client113,all.q@client114,all.q@client115,all.q@client108,all.q@client109,all.q@client110"
+# workerq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
+# serverq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
+workerq="*.q@client112,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
+serverq="*.q@client112,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
 
 wd="/csproject/dygroup2/czeng/dist_dqn"
 activate_cmd="./project/dygroup2/czeng/venv/bin/activate"
