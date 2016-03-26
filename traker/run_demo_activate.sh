@@ -15,4 +15,4 @@ activate_cmd="./project/dygroup2/czeng/venv/bin/activate"
 script="python dqn_dist_demo.py  --double-q 1 -c gpu0 -r roms/breakout.bin -eps 0.1"
 
 
-python dmlc_sge.py --activate-cmd ${activate_cmd} --log-file ${name}_n${n}_s${s}.out -wd ${wd} --jobname dmlc-${name}-n${n}-s${s} -workerq ${workerq} -serverq ${serverq} -n ${n} -s ${s} $script
+python traker/dmlc_sge.py --activate-cmd ${activate_cmd} --log-file ${name}_n${n}_s${s}.out -wd ${wd} --jobname dmlc-${name}-n${n}-s${s} -workerq ${workerq} -serverq ${serverq} -n ${n} -s ${s} $script
