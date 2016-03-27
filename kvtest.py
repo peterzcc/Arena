@@ -204,7 +204,7 @@ def main():
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
     # Create kvstore
-    testShape = (1686180,1)
+    testShape = (1,1686180)
     testParam = nd.ones(testShape,ctx=q_ctx)
     testGrad = nd.zeros(testShape,ctx=q_ctx)
 
