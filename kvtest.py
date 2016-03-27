@@ -61,7 +61,6 @@ def update_to_kvstore(kvStore,params,params_grad):
     for paramIndex in range(len(params)):
         k=params.keys()[paramIndex]
         kvStore.push(paramIndex,params_grad[k],priority=-paramIndex)
-        timeAfterPush = time.time()
         kvStore.pull(paramIndex,params[k],priority=-paramIndex)
 # TODO Regression Output has none differential for label, we may need to fix that
 class DQNOutputNpyOp(mx.operator.NumpyOp):
@@ -208,25 +207,26 @@ def main():
     testShape = (1,1)
     testParam = nd.ones(testShape,ctx=q_ctx)
     testGrad = nd.zeros(testShape,ctx=q_ctx)
-    # # Create kvstore
-    # if args.kv_type != None:
-    #     kvType = args.kv_type
-    #     kvStore = kvstore.create(kvType)
-    #     #Initialize kvstore
-    #     for idx,v in enumerate(qnet.params.values()):
-    #         kvStore.init(idx,v);
-    #     # Set optimizer on kvstore
-    #     kvStore.set_optimizer(optimizer)
-    #     kvstore_update_period = args.kvstore_update_period
-    # else:
-    #     updater = mx.optimizer.get_updater(optimizer)
+
+    # Create kvstore
     if args.kv_type != None:
         kvType = args.kv_type
         kvStore = kvstore.create(kvType)
-        kvStore.init(0,testParam)
-        testOptimizer = mx.optimizer.create(name='sgd', learning_rate=1.0,wd=args.wd)
-        kvStore.set_optimizer(testOptimizer)
+        #Initialize kvstore
+        for idx,v in enumerate(qnet.params.values()):
+            kvStore.init(idx,v);
+        # Set optimizer on kvstore
+        kvStore.set_optimizer(optimizer)
         kvstore_update_period = args.kvstore_update_period
+    else:
+        updater = mx.optimizer.get_updater(optimizer)
+    # if args.kv_type != None:
+    #     kvType = args.kv_type
+    #     kvStore = kvstore.create(kvType)
+    #     kvStore.init(0,testParam)
+    #     testOptimizer = mx.optimizer.create(name='sgd', learning_rate=1.0,wd=args.wd)
+    #     kvStore.set_optimizer(testOptimizer)
+    #     kvstore_update_period = args.kvstore_update_period
 
     updater = mx.optimizer.get_updater(optimizer)
 
@@ -237,9 +237,16 @@ def main():
     total_steps = 0
     while(1):
         time_before_wait = time.time()
-        kvStore.push(0,testGrad,priority=0)
-        kvStore.pull(0,testParam,priority=0)
-        testParam.wait_to_read()
+        # kvStore.push(0,testGrad,priority=0)
+        # kvStore.pull(0,testParam,priority=0)
+        # testParam.wait_to_read()
+
+        for paramIndex in range(len(qnet.params)):
+            k=params.keys()[paramIndex]
+            kvStore.push(paramIndex,qnet.params_grad[k],priority=-paramIndex)
+            kvStore.pull(paramIndex,qnet.params[k],priority=-paramIndex)
+        for v in qnet.params.values():
+            v.wait_to_read()
         logging.info("wait time %f" %(time.time()-time_before_wait))
 
     for epoch in xrange(epoch_num):
