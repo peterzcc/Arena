@@ -302,13 +302,13 @@ def main():
                                               dqn_action=actions,
                                               dqn_reward=target_rewards)
                     qnet.backward(batch_size=minibatch_size)
-
+                    time_before_update = time.time()
                     if args.kv_type != None:
                         if total_steps % kvstore_update_period == 0:
                             update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
                     else:
                         qnet.update(updater=updater)
-
+                    logging.info("update time %f" %(time.time()-time_before_update))
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                     quadratic_part = nd.clip(diff, -1, 1)
