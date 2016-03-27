@@ -229,7 +229,7 @@ def main():
                         current_state = game.current_state()
                         state = nd.array(current_state.reshape((1,) + current_state.shape),
                                          ctx=q_ctx) / float(255.0)
-                        qval_npy = qnet.forward(batch_size=1, data=state)[0].asnumpy()
+                        qval_npy = qnet.forward(is_train=False, batch_size=1, data=state)[0].asnumpy()
                         action = numpy.argmax(qval_npy)
                         episode_q_value += qval_npy[0, action]
                         episode_action_step += 1
@@ -270,7 +270,7 @@ def main():
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
-                    outputs = qnet.forward(batch_size=minibatch_size, data=states,
+                    outputs = qnet.forward(is_train=True, batch_size=minibatch_size, data=states,
                                               dqn_action=actions,
                                               dqn_reward=target_rewards)
                     qnet.backward(batch_size=minibatch_size)
