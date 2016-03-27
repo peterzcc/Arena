@@ -1,7 +1,7 @@
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
-from arena import Base
+from arena import BaseNet
 from arena.games import AtariGame
 from arena.utils import *
 import logging
@@ -188,7 +188,7 @@ def main():
     updater = mx.optimizer.get_updater(optimizer)
     dqn_output_op = DQNOutputNpyOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
-    qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
+    qnet = BaseNet(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
