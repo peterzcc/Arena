@@ -3,7 +3,7 @@
 #source ~/.bashrc
 . /project/dygroup2/czeng/venv/bin/activate
 name=breakout
-n=3
+n=2
 s=2
 # workerq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
 # serverq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
