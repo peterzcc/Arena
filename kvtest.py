@@ -243,7 +243,7 @@ def main():
         # kvStore.pull(0,testParam,priority=0)
         # testParam.wait_to_read()
 
-        for paramIndex in len(qnet.params)):#range(6):#
+        for paramIndex in range(len(qnet.params)):#range(6):#
             k=qnet.params.keys()[paramIndex]
             kvStore.push(paramIndex,qnet.params_grad[k],priority=-paramIndex)
             kvStore.pull(paramIndex,qnet.params[k],priority=-paramIndex)
