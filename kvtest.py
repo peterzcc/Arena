@@ -244,7 +244,11 @@ def main():
         for paramIndex in range(len(qnet.params)):
             k=qnet.params.keys()[paramIndex]
             kvStore.push(paramIndex,qnet.params_grad[k],priority=-paramIndex)
+
+        for paramIndex in range(len(qnet.params)):
+            k=qnet.params.keys()[paramIndex]
             kvStore.pull(paramIndex,qnet.params[k],priority=-paramIndex)
+
         for v in qnet.params.values():
             v.wait_to_read()
         logging.info("wait time %f" %(time.time()-time_before_wait))
