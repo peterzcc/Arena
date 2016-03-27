@@ -115,7 +115,7 @@ class Base(object):
     def update_accum_grad(self):
         for i in range(len(self.params)):
             k = self.params.keys()[i]
-            self.accum_grad[k] = self.accum_grad[k] + params_grad[k]
+            self.accum_grad[k][:] = self.accum_grad[k] + self.params_grad[k]
     def resetAccumGrad(self):
         for i in range(len(self.accum_grad)):
             k = self.accum_grad.keys()[i]

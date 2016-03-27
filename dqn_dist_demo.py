@@ -60,8 +60,12 @@ class DQNOutputOp(mx.operator.NDArrayOp):
 def update_to_kvstore(kvStore,params,params_grad):
     for paramIndex in range(len(params)):
         k=params.keys()[paramIndex]
+        timeBeforePush = time.time()
         kvStore.push(paramIndex,params_grad[k],priority=-paramIndex)
+        timeAfterPush = time.time()
+        logging.info("push time: %f" % (timeAfterPush-timeBeforePush))
         kvStore.pull(paramIndex,params[k],priority=-paramIndex)
+        logging.info("pull time: %f" % (time.time()-timeAfterPush))
 # TODO Regression Output has none differential for label, we may need to fix that
 class DQNOutputNpyOp(mx.operator.NumpyOp):
     def __init__(self):
