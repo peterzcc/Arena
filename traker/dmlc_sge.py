@@ -93,7 +93,7 @@ class SgeLauncher(object):
             for i in range(nserver):
                 submit_server(num=i, node=serverq_l[i % len(serverq_l)], pass_envs=pass_envs,
                               args=self.args)
-            lastCmd = "qsub -cwd -S /bin/bash -q *.q@client114 -N lastCmd  -o server1_breakout_n3_s2.out -j y -v PATH=${PATH}:. /csproject/dygroup2/czeng/run.sh nvidia-smi"
+            lastCmd = "qsub -cwd -S /bin/bash -q *.q@client114 -N lastCmd  -o outout.out -j y -v PATH=${PATH}:. /csproject/dygroup2/czeng/run.sh nvidia-smi"
             subprocess.check_call(lastCmd, shell=True)
             logging.info('Waiting for the jobs to get up...')
 

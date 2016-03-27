@@ -11,7 +11,7 @@ import os
 import re
 import sys
 import time
-
+from collections import OrderedDict
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
@@ -61,7 +61,6 @@ def update_to_kvstore(kvStore,params,params_grad):
     for paramIndex in range(len(params)):
         k=params.keys()[paramIndex]
         kvStore.push(paramIndex,params_grad[k],priority=-paramIndex)
-        timeAfterPush = time.time()
         kvStore.pull(paramIndex,params[k],priority=-paramIndex)
 # TODO Regression Output has none differential for label, we may need to fix that
 class DQNOutputNpyOp(mx.operator.NumpyOp):
@@ -131,6 +130,8 @@ class DQNInitializer(mx.initializer.Xavier):
         arr[:] = .1
 
 
+
+
 def main():
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
     parser.add_argument('-r', '--rom', required=False, type=str,
@@ -142,7 +143,7 @@ def main():
                         help='Learning rate of the AdaGrad optimizer')
     parser.add_argument('--eps', required=False, type=float, default=0.01,
                         help='Eps of the AdaGrad optimizer')
-    parser.add_argument('--clip-gradient', required=False, type=float, default=None,
+    parser.add_argument('--clip-gradient', required=False, type=float, default=1.0,
                         help='Clip threshold of the AdaGrad optimizer')
     parser.add_argument('--double-q', required=False, type=bool, default=False,
                         help='Use Double DQN')
@@ -160,6 +161,10 @@ def main():
                         help='The period that the worker updates the parameters from the sever')
     parser.add_argument('--kv-type', required=False, type=str, default=None,
                         help='type of kvstore, default will not use kvstore, could also be dist_async')
+    parser.add_argument('--optimizer', required=False, type=str, default="adagrad",
+                        help='type of optimizer')
+    parser.add_argument('--momentum', required=False, type=float, default=None,
+                        help='momentum value')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -199,12 +204,18 @@ def main():
 
     easgd_beta = 0.9
     easgd_delta = 0.99
-    easgd_tao = 16
     easgd_p = 4
-    
-    optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
+    easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
+
+    use_easgd = False
+    if args.optimizer != "easgd":
+        optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
+    else:
+        use_easgd = True
+        optimizer = mx.optimizer.Easgd(learning_rate=easgd_alpha)
+        easgd_eta = 0.00025
 
     dqn_output_op = DQNOutputNpyOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
@@ -212,6 +223,8 @@ def main():
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
+    central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+                                    for n, v in qnet.params.items()])
     # Create kvstore
     if args.kv_type != None:
         kvType = args.kv_type
@@ -219,8 +232,12 @@ def main():
         #Initialize kvstore
         for idx,v in enumerate(qnet.params.values()):
             kvStore.init(idx,v);
-        # Set optimizer on kvstore
-        kvStore.set_optimizer(optimizer)
+        if use_easgd == False:
+            # Set optimizer on kvstore
+            kvStore.set_optimizer(optimizer)
+        else:
+            # kvStore.send_updater_to_server(easgd_server_update)
+            kvStore.set_optimizer(optimizer)
         kvstore_update_period = args.kvstore_update_period
     else:
         updater = mx.optimizer.get_updater(optimizer)
@@ -306,18 +323,29 @@ def main():
                                               dqn_action=actions,
                                               dqn_reward=target_rewards)
                     qnet.backward(batch_size=minibatch_size)
-                    # time_before_update = time.time()
+
+
                     if args.kv_type != None:
                         if total_steps % kvstore_update_period == 0:
-                            update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
+                            if use_easgd == False:
+                                update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
+                            else:
+                                for paramIndex in range(len(qnet.params)):
+                                    k=qnet.params.keys()[paramIndex]
+                                    kvStore.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                                    kvStore.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                        if use_easgd:
+                            if args.momentum == None:
+                                for paramIndex in range(len(qnet.params)):
+                                    k=qnet.params.keys()[paramIndex]
+                                    qnet.params[k] += -easgd_eta*nd.clip(qnet.params_grad[k],
+                                                                    -args.clip_gradient,
+                                                                    args.clip_gradient)
                     else:
                         qnet.update(updater=updater)
 
-                    # logging.info("update time %f" %(time.time()-time_before_update))
-                    # time_before_wait = time.time()
-                    # for v in qnet.params.values():
-                    #     v.wait_to_read()
-                    # logging.info("wait time %f" %(time.time()-time_before_wait))
+
 
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
