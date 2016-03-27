@@ -206,13 +206,13 @@ def main():
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
     # Create kvstore
-    testShape = (3,3)
+    testShape = (1,1)
     testParam = nd.ones(testShape,ctx=q_ctx)
     testGrad = nd.zeros(testShape,ctx=q_ctx)
     if args.kv_type != None:
         kvType = args.kv_type
         kvStore = kvstore.create(kvType)
-        kvStore.init(0,testShape)
+        kvStore.init(0,testParam)
         kvStore.set_optimizer(optimizer)
         kvstore_update_period = args.kvstore_update_period
     updater = mx.optimizer.get_updater(optimizer)
