@@ -196,6 +196,7 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
+    
     optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
@@ -311,7 +312,7 @@ def main():
                     # for v in qnet.params.values():
                     #     v.wait_to_read()
                     # logging.info("wait time %f" %(time.time()-time_before_wait))
-                    
+
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                     quadratic_part = nd.clip(diff, -1, 1)
