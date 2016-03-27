@@ -296,9 +296,9 @@ def main():
                     qnet.backward(batch_size=minibatch_size)
 
                     if total_steps % kvstore_update_period == 0:
-                        update_to_kvstore(kvStore,qnet.params,qnet.accum_grad)
-                        qnet.resetAccumGrad()
-                    qnet.updateAndAccumGrad(updater=updater)
+                        update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
+                        #qnet.resetAccumGrad()
+                    #qnet.updateAndAccumGrad(updater=updater)
 
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
