@@ -157,6 +157,8 @@ def main():
                         help='The step that the training starts')
     parser.add_argument('--kvstore-update-period', required=False, type=int, default=1,
                         help='The period that the worker updates the parameters from the sever')
+    parser.add_argument('--kv-type', required=False, type=str, default=None,
+                        help='type of kvstore, default will not use kvstore, could also be dist_async')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -196,7 +198,6 @@ def main():
     optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
-    updater = mx.optimizer.get_updater(optimizer)
     dqn_output_op = DQNOutputNpyOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
@@ -204,14 +205,17 @@ def main():
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
     # Create kvstore
-    kvType = 'dist_async'
-    kvStore = kvstore.create(kvType)
-    #Initialize kvstore
-    for idx,v in enumerate(qnet.params.values()):
-        kvStore.init(idx,v);
-    # Set optimizer on kvstore
-    kvStore.set_optimizer(optimizer)
-    kvstore_update_period = args.kvstore_update_period
+    if args.kv_type != None:
+        kvType = args.kv_type
+        kvStore = kvstore.create(kvType)
+        #Initialize kvstore
+        for idx,v in enumerate(qnet.params.values()):
+            kvStore.init(idx,v);
+        # Set optimizer on kvstore
+        kvStore.set_optimizer(optimizer)
+        kvstore_update_period = args.kvstore_update_period
+    else:
+        updater = mx.optimizer.get_updater(optimizer)
 
     qnet.print_stat()
     target_qnet.print_stat()
@@ -295,10 +299,11 @@ def main():
                                               dqn_reward=target_rewards)
                     qnet.backward(batch_size=minibatch_size)
 
-                    if total_steps % kvstore_update_period == 0:
-                        update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
-                        #qnet.resetAccumGrad()
-                    #qnet.updateAndAccumGrad(updater=updater)
+                    if args.kv_type != None:
+                        if total_steps % kvstore_update_period == 0:
+                            update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
+                    else:
+                        qnet.update(updater=updater)
 
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)

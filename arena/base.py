@@ -112,12 +112,9 @@ class Base(object):
             k = self.params.keys()[i]
             updater(index=i, grad=params_grad[k], weight=self.params[k])
 
-    def updateAndAccumGrad(self, updater, params_grad=None):
-        if params_grad is None:
-            params_grad = self.params_grad
+    def update_accum_grad(self):
         for i in range(len(self.params)):
             k = self.params.keys()[i]
-            updater(index=i, grad=params_grad[k], weight=self.params[k])
             self.accum_grad[k] = self.accum_grad[k] + params_grad[k]
     def resetAccumGrad(self):
         for i in range(len(self.accum_grad)):
