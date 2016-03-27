@@ -196,9 +196,7 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-    optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
-                        clip_gradient=args.clip_gradient,
-                        rescale_grad=1.0, wd=args.wd)
+    optimizer = mx.optimizer.create(name='sgd', learning_rate=args.lr,wd=args.wd)
     dqn_output_op = DQNOutputNpyOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
@@ -209,13 +207,26 @@ def main():
     testShape = (1,1)
     testParam = nd.ones(testShape,ctx=q_ctx)
     testGrad = nd.zeros(testShape,ctx=q_ctx)
+    # Create kvstore
     if args.kv_type != None:
+        kvType = args.kv_type
+        kvStore = kvstore.create(kvType)
+        #Initialize kvstore
+        for idx,v in enumerate(qnet.params.values()):
+            kvStore.init(idx,v);
+        # Set optimizer on kvstore
+        kvStore.set_optimizer(optimizer)
+        kvstore_update_period = args.kvstore_update_period
+    else:
+        updater = mx.optimizer.get_updater(optimizer)
+    '''if args.kv_type != None:
         kvType = args.kv_type
         kvStore = kvstore.create(kvType)
         kvStore.init(0,testParam)
         testOptimizer = mx.optimizer.create(name='sgd', learning_rate=1.0,wd=args.wd)
         kvStore.set_optimizer(testOptimizer)
         kvstore_update_period = args.kvstore_update_period
+    '''
     updater = mx.optimizer.get_updater(optimizer)
 
     qnet.print_stat()
@@ -306,17 +317,25 @@ def main():
                                               dqn_action=actions,
                                               dqn_reward=target_rewards)
                     qnet.backward(batch_size=minibatch_size)
+                    nd.waitall()
                     time_before_update = time.time()
 
-                    qnet.update(updater=updater)
-
+                    if args.kv_type != None:
+                        if total_steps % kvstore_update_period == 0:
+                            update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
+                    else:
+                        qnet.update(updater=updater)
+                    logging.info("update time %f" %(time.time()-time_before_update))
+                    time_before_wait = time.time()
                     nd.waitall()
+                    logging.info("wait time %f" %(time.time()-time_before_wait))
+
+                    '''nd.waitall()
                     time_before_wait = time.time()
                     kvStore.push(0,testGrad,priority=0)
                     kvStore.pull(0,testParam,priority=0)
                     nd.waitall()
-                    logging.info("wait time %f" %(time.time()-time_before_wait))
-
+                    logging.info("wait time %f" %(time.time()-time_before_wait))'''
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                     quadratic_part = nd.clip(diff, -1, 1)
