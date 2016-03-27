@@ -196,7 +196,8 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-    optimizer = mx.optimizer.create(name='sgd', learning_rate=args.lr,wd=args.wd)
+    #optimizer = mx.optimizer.create(name='sgd', learning_rate=args.lr,wd=args.wd)
+    optimizer = mx.optimizer.Nop()
     dqn_output_op = DQNOutputNpyOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
