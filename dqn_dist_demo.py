@@ -305,6 +305,8 @@ def main():
                             update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
                     else:
                         qnet.update(updater=updater)
+                    for v in qnet.params.values():
+                        v.wait_to_read()
                     logging.info("update time %f" %(time.time()-time_before_update))
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
