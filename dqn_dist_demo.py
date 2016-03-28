@@ -368,7 +368,11 @@ def main():
             time_episode_end = time.time()
             # Update the statistics
             epoch_reward += game.episode_reward
-            info_str = "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
+            if args.kv_type != None:
+                info_str="Node[%d]: " %kvStore.rank
+            else:
+                info_str =""
+            info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
                         % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
                            game.episode_step / (time_episode_end - time_episode_start), eps_curr)
             if episode_update_step > 0:
