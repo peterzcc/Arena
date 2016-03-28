@@ -12,8 +12,7 @@ import re
 import sys
 import time
 from collections import OrderedDict
-from arena.operators import *
-
+from arena.sym_factory import *
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
@@ -24,6 +23,7 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
 npy_rng = get_numpy_rng()
+
 
 
 
@@ -60,6 +60,8 @@ def main():
                         help='type of kvstore, default will not use kvstore, could also be dist_async')
     parser.add_argument('--optimizer', required=False, type=str, default="adagrad",
                         help='type of optimizer')
+    parser.add_argument('--momentum', required=False, type=float, default=None,
+                        help='momentum value')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -114,29 +116,35 @@ def main():
         easgd_beta = 0.9
         easgd_p = 4
         easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
-        optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
+        optimizer = mx.optimizer.Easgd(learning_rate=easgd_alpha)
         easgd_eta = 0.00025
         local_optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
         central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
                                         for n, v in qnet.params.items()])
+        if args.momentum != None:
+            easgd_delta = 0.99
+            velocity = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+                                            for n, v in qnet.params.items()])
+            paramsBackup =  OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+                                            for n, v in qnet.params.items()])
     # Create kvstore
     if args.kv_type != None:
         kvType = args.kv_type
-        kv = kvstore.create(kvType)
+        kvStore = kvstore.create(kvType)
         #Initialize kvstore
         for idx,v in enumerate(qnet.params.values()):
-            kv.init(idx,v);
+            kvStore.init(idx,v);
         if use_easgd == False:
             # Set optimizer on kvstore
-            kv.set_optimizer(optimizer)
+            kvStore.set_optimizer(optimizer)
         else:
-            # kv.send_updater_to_server(easgd_server_update)
-            kv.set_optimizer(optimizer)
+            # kvStore.send_updater_to_server(easgd_server_update)
+            kvStore.set_optimizer(optimizer)
             local_updater = mx.optimizer.get_updater(local_optimizer)
         kvstore_update_period = args.kvstore_update_period
-        args.dir_path = args.dir_path + "-"+str(kv.rank)
+        args.dir_path = args.dir_path + "-"+str(kvStore.rank)
     else:
         updater = mx.optimizer.get_updater(optimizer)
 
@@ -217,31 +225,44 @@ def main():
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
+                    if args.momentum == None:
 
-                    outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
-                                              dqn_action=actions,
-                                              dqn_reward=target_rewards)
-                    qnet.backward(batch_size=minibatch_size)
+                        outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
+                                                  dqn_action=actions,
+                                                  dqn_reward=target_rewards)
+                        qnet.backward(batch_size=minibatch_size)
 
 
                     if args.kv_type != None:
                         if total_steps % kvstore_update_period == 0:
                             if use_easgd == False:
-                                update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                                update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
                             else:
                                 for paramIndex in range(len(qnet.params)):
                                     k=qnet.params.keys()[paramIndex]
-                                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                                    kvStore.pull(paramIndex,central_weight[k],priority=-paramIndex)
                                     qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                                    kvStore.push(paramIndex,qnet.params[k],priority=-paramIndex)
                         if use_easgd:
-                            for paramIndex in range(len(qnet.params)):
-                                k=qnet.params.keys()[paramIndex]
-                                '''qnet.params[k][:] += -easgd_eta*nd.clip(qnet.params_grad[k],
-                                                                -args.clip_gradient,
-                                                                args.clip_gradient)'''
-                                local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                                weight=qnet.params[k])
+                            if args.momentum == None:
+                                for paramIndex in range(len(qnet.params)):
+                                    k=qnet.params.keys()[paramIndex]
+                                    '''qnet.params[k][:] += -easgd_eta*nd.clip(qnet.params_grad[k],
+                                                                    -args.clip_gradient,
+                                                                    args.clip_gradient)'''
+                                    local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                                                    weight=qnet.params[k])
+                            else:
+                                for i,k in enumerate(qnet.params.keys()):
+                                    paramsBackup[k][:]=qnet.params[k]
+                                    qnet.params[k][:] += easgd_delta*velocity[k]
+                                outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
+                                                              dqn_action=actions,
+                                                              dqn_reward=target_rewards)
+                                qnet.backward(batch_size=minibatch_size)
+                                for i,k in enumerate(qnet.params.keys()):
+                                    velocity[k][:] = easgd_delta * velocity[k] - args.lr*qnet.params_grad[k]
+                                    qnet.params[k][:] = paramsBackup[k]+velocity[k]-args.wd*qnet.params[k][:]
                     else:
                         qnet.update(updater=updater)
 
@@ -262,7 +283,7 @@ def main():
             # Update the statistics
             epoch_reward += game.episode_reward
             if args.kv_type != None:
-                info_str="Node[%d]: " %kv.rank
+                info_str="Node[%d]: " %kvStore.rank
             else:
                 info_str =""
             info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
