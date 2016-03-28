@@ -158,7 +158,7 @@ def main():
     # Begin Playing Game
     training_steps = 0
     total_steps = 0
-    ave_fps = -1
+    ave_fps = 0
     ave_loss = 0
     time_for_info = time.time()
     for epoch in xrange(epoch_num):
@@ -218,6 +218,10 @@ def main():
                 # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
                 game.play(action)
                 total_steps += 1
+                if total_steps % 1000 == 0:
+                    this_time = time.time()
+                    ave_fps = (1000/(this_time-time_for_info))
+                    time_for_info = this_time
 
                 # 3. Update our Q network if we can start sampling from the replay memory
                 #    Also, we update every `update_interval`
@@ -307,10 +311,7 @@ def main():
                     qnet.copy_params_to(target_qnet)
 
             steps_left -= nactor
-            if total_steps % 1000 == 0:
-                this_time = time.time()
-                ave_fps = (nactor/(this_time-time_for_info))
-                time_for_info = this_time
+
 
 
 
