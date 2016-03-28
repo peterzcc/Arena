@@ -139,3 +139,6 @@ ENV/
 
 # Atari2600
 Atari2600/
+
+### Trained Parameters ###
+*.params
