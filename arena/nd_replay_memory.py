@@ -24,7 +24,7 @@ class NdReplayMemory(object):
         self.states = nd.zeros((memory_size,) + state_dim, dtype=state_dtype,ctx=self.ctx)
         self.actions = numpy.zeros((memory_size,) + action_dim, dtype=action_dtype)
         self.rewards = numpy.zeros(memory_size, dtype='float32')
-        self.terminate_flags = numpy.zeros(memory_size, dtype='bool',ctx=self.ctx)
+        self.terminate_flags = numpy.zeros(memory_size, dtype='bool')
         self.memory_size = memory_size
         self.replay_start_size = replay_start_size
         self.history_length = history_length
@@ -70,7 +70,7 @@ class NdReplayMemory(object):
     #     return replay_memory
 
     def append(self, obs, action, reward, terminate_flag):
-        self.states[self.top] = obs
+        self.states[self.top:(self.top+1)] = obs.reshape((1,)+obs.shape)
         self.actions[self.top] = action
         self.rewards[self.top] = reward
         self.terminate_flags[self.top] = terminate_flag
@@ -85,15 +85,16 @@ class NdReplayMemory(object):
             raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
                              "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
         #TODO Possibly states + inds for less memory access
-        states = nd.empty((batch_size, self.history_length+1) + self.state_dim,
+        states = nd.empty((batch_size, self.history_length) + self.state_dim,
                              dtype=self.states.dtype,ctx=self.ctx)
         actions = numpy.empty((batch_size,) + self.action_dim, dtype=self.actions.dtype)
         rewards = numpy.empty(batch_size, dtype='float32')
         terminate_flags = numpy.empty(batch_size, dtype='bool')
-        # next_states = nd.empty((batch_size, self.history_length) + self.state_dim,
-        #                           dtype=self.states.dtype,ctx=self.ctx)
+        next_states = nd.empty((batch_size, self.history_length) + self.state_dim,
+                                  dtype=self.states.dtype,ctx=self.ctx)
         counter = 0
-        index = self.top - self.history_length + 1
+        index = (self.top - self.history_length + 1) % self.size
+        import pdb; pdb.set_trace() #TODO: debug only
         while counter < batch_size:
             transition_indices = numpy.arange(index, index + self.history_length)
             initial_indices = transition_indices - 1
@@ -101,14 +102,19 @@ class NdReplayMemory(object):
             end_index = index + self.history_length - 1
             if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
                 # Check if terminates in the middle of the sample!
-                index -= 1
+                index
                 continue
-            states[counter] = self.states[ini_id:(ini_id+history_length+1)]
+            target_shape = (1, self.history_length) + self.state_dim
+            states[counter:(counter+1)] = \
+                self.states[ini_id:(ini_id+self.history_length)].reshape(target_shape)
+            next_states[counter:(counter+1)] = \
+                self.states[index:(index+self.history_length)].reshape(target_shape)
+
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
             counter += 1
-        return states, actions, rewards, terminate_flags
+        return states, actions, rewards,next_states, terminate_flags
     def sample(self, batch_size):
         assert self.size >= batch_size and self.replay_start_size >= self.history_length
         assert(0 <= self.size <= self.memory_size)
