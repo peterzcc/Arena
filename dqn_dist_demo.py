@@ -168,7 +168,7 @@ def main():
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
-        args.dir_path = 'dqn-%s' % rom_name
+        args.dir_path = 'dqn-%s-%de_5' % (rom_name,int(args.lr*10**5))
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
     replay_start_size = args.replay_start_size
