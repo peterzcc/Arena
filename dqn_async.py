@@ -155,6 +155,8 @@ def main():
 
     qnet.print_stat()
     target_qnet.print_stat()
+
+    states_buffer_for_act = numpy.zeros((nactor, history_length)+(rows, cols),dtype='uint8')
     # Begin Playing Game
     training_steps = 0
     total_steps = 0
@@ -193,6 +195,17 @@ def main():
 
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
+
+
+            for g, game in enumerate(games):
+                current_state = game.current_state()
+                states[g] = current_state
+
+            states = nd.array(states,ctx=q_ctx) / float(255.0)
+
+            qval_npy = qnet.forward(batch_size=nactor, data=state)[0].asnumpy()
+            actionThatMaxQ = numpy.argmax(qval_npy,axis=1)
+
             for g, game in enumerate(games):
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
@@ -205,11 +218,7 @@ def main():
                         # We can simply stack the current_state() of gaming instances and give prediction for all of them
                         # We need to wait after calling calc_score(.), which makes the program slow
                         # TODO Profiling the speed of this part!
-                        current_state = game.current_state()
-                        state = nd.array(current_state.reshape((1,) + current_state.shape),
-                                         ctx=q_ctx) / float(255.0)
-                        qval_npy = qnet.forward(batch_size=1, data=state)[0].asnumpy()
-                        action = numpy.argmax(qval_npy)
+                        action = actionThatMaxQ[g]
                         episode_stats[g].episode_q_value += qval_npy[0, action]
                         episode_stats[g].episode_action_step += 1
                 else:
