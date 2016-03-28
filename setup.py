@@ -3,7 +3,7 @@ import setuptools
 
 
 setuptools.setup(
-    name='ARENA',
+    name='Arena',
     version="0.1.dev0",
     author="SHI Xingjian, Canceng Zeng",
     author_email="xshiab@cse.ust.hk, czeng@connect.ust.hk",
