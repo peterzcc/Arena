@@ -85,7 +85,7 @@ class ReplayMemory(object):
             raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
                              "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
         #TODO Possibly states + inds for less memory access
-        states = numpy.empty((batch_size, self.history_length) + self.state_dim,
+        states = numpy.empty((batch_size, self.history_length+1) + self.state_dim,
                              dtype=self.states.dtype)
         actions = numpy.empty((batch_size,) + self.action_dim, dtype=self.actions.dtype)
         rewards = numpy.empty(batch_size, dtype='float32')
@@ -95,7 +95,7 @@ class ReplayMemory(object):
         counter = 0
         index = self.top - self.history_length + 1
         while counter < batch_size:
-            transition_indices = numpy.arange(index, index + self.history_length)
+            transition_indices = numpy.arange(index, index + self.history_length+1)
             initial_indices = transition_indices - 1
             end_index = index + self.history_length - 1
             if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
@@ -106,9 +106,9 @@ class ReplayMemory(object):
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
-            next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
+            # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
             counter += 1
-        return states, actions, rewards, next_states, terminate_flags
+        return states, actions, rewards, terminate_flags
     def sample(self, batch_size):
         assert self.size >= batch_size and self.replay_start_size >= self.history_length
         assert(0 <= self.size <= self.memory_size)
