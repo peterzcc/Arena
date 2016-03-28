@@ -157,6 +157,11 @@ def main():
     target_qnet.print_stat()
 
     states_buffer_for_act = numpy.zeros((nactor, history_length)+(rows, cols),dtype='uint8')
+    states_buffer_for_train = numpy.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8')
+    next_states_buffer_for_train = numpy.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8')
+    actions_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='uint8')
+    rewards_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='float32')
+    terminate_flags_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='bool')
     # Begin Playing Game
     training_steps = 0
     total_steps = 0
@@ -196,15 +201,15 @@ def main():
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
 
+            if total_steps > history_length*nactor:
+                for g, game in enumerate(games):
+                    current_state = game.current_state()
+                    states_buffer_for_act[g] = current_state
 
-            for g, game in enumerate(games):
-                current_state = game.current_state()
-                states[g] = current_state
+            states = nd.array(states_buffer_for_act,ctx=q_ctx) / float(255.0)
 
-            states = nd.array(states,ctx=q_ctx) / float(255.0)
-
-            qval_npy = qnet.forward(batch_size=nactor, data=state)[0].asnumpy()
-            actionThatMaxQ = numpy.argmax(qval_npy,axis=1)
+            qval_npy = qnet.forward(batch_size=nactor, data=states)[0].asnumpy()
+            actions_that_max_q = numpy.argmax(qval_npy,axis=1)
 
             for g, game in enumerate(games):
                 # 1. We need to choose a new action based on the current game status
@@ -218,7 +223,7 @@ def main():
                         # We can simply stack the current_state() of gaming instances and give prediction for all of them
                         # We need to wait after calling calc_score(.), which makes the program slow
                         # TODO Profiling the speed of this part!
-                        action = actionThatMaxQ[g]
+                        action = actions_that_max_q[g]
                         episode_stats[g].episode_q_value += qval_npy[0, action]
                         episode_stats[g].episode_action_step += 1
                 else:
@@ -242,22 +247,31 @@ def main():
 
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
-                    if g == 0:
-                        states, actions, rewards, next_states, terminate_flags \
-                            = game.replay_memory.sample(batch_size=minibatch_size/nactor)
-                    else:
-                        nstates, nactions, nrewards, nnext_states, nterminate_flags \
-                            = game.replay_memory.sample(batch_size=minibatch_size/nactor)
-                        states = numpy.concatenate((states,nstates))
-                        actions = numpy.concatenate((actions,nactions))
-                        rewards = numpy.concatenate((rewards,nrewards))
-                        next_states = numpy.concatenate((next_states,nnext_states))
-                        terminate_flags = numpy.concatenate((terminate_flags,nterminate_flags))
-                states = nd.array(states, ctx=q_ctx) / float(255.0)
-                next_states = nd.array(next_states, ctx=q_ctx) / float(255.0)
-                actions = nd.array(actions, ctx=q_ctx)
-                rewards = nd.array(rewards, ctx=q_ctx)
-                terminate_flags = nd.array(terminate_flags, ctx=q_ctx)
+                    single_size = minibatch_size/nactor
+                    state, action, reward, next_state, terminate_flag \
+                        = game.replay_memory.sample(batch_size=single_size)
+                    states_buffer_for_train[(g*single_size):((g+1)*single_size)]= state
+                    next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
+                    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
+                    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
+                    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
+                        terminate_flag
+                    # if g == 0:
+                    #     states, actions, rewards, next_states, terminate_flags \
+                    #         = game.replay_memory.sample(batch_size=minibatch_size/nactor)
+                    # else:
+                    #     nstates, nactions, nrewards, nnext_states, nterminate_flags \
+                    #         = game.replay_memory.sample(batch_size=minibatch_size/nactor)
+                    #     states = numpy.concatenate((states,nstates))
+                    #     actions = numpy.concatenate((actions,nactions))
+                    #     rewards = numpy.concatenate((rewards,nrewards))
+                    #     next_states = numpy.concatenate((next_states,nnext_states))
+                    #     terminate_flags = numpy.concatenate((terminate_flags,nterminate_flags))
+                states = nd.array(states_buffer_for_train, ctx=q_ctx) / float(255.0)
+                next_states = nd.array(next_states_buffer_for_train, ctx=q_ctx) / float(255.0)
+                actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
+                rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
+                terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
 
                 # 3.2 Use the target network to compute the scores and
                 #     get the corresponding target rewards
