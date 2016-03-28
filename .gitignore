@@ -134,3 +134,8 @@ ENV/
 
 # Spyder project settings
 .spyderproject
+
+### Datasets ###
+
+# Atari2600
+Atari2600/
