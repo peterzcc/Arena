@@ -8,6 +8,7 @@ import logging
 import os
 from arena.utils import *
 from arena import ReplayMemory
+from arena.nd_replay_memory import NdReplayMemory
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
 
@@ -43,7 +44,7 @@ class AtariGame(Game):
                  display_screen=False, max_null_op=30,
                  replay_memory_size=1000000,
                  replay_start_size=100,
-                 death_end_episode=True):
+                 death_end_episode=True,nd_replay_memory=False):
         super(AtariGame, self).__init__()
         self.rng = get_numpy_rng()
         self.ale = ale_load_from_rom(rom_path=rom_path, display_screen=display_screen)
@@ -61,10 +62,16 @@ class AtariGame(Game):
         self.screen_buffer = numpy.empty((self.screen_buffer_length,
                                           self.ale.getScreenDims()[1], self.ale.getScreenDims()[0]),
                                          dtype='uint8')
-        self.replay_memory = ReplayMemory(state_dim=(resized_rows, resized_cols),
-                                          history_length=history_length,
-                                          memory_size=replay_memory_size,
-                                          replay_start_size=replay_start_size)
+        if !nd_replay_memory:
+            self.replay_memory = ReplayMemory(state_dim=(resized_rows, resized_cols),
+                                              history_length=history_length,
+                                              memory_size=replay_memory_size,
+                                              replay_start_size=replay_start_size)
+        else:
+            self.replay_memory = NdReplayMemory(state_dim=(resized_rows, resized_cols),
+                                              history_length=history_length,
+                                              memory_size=replay_memory_size,
+                                              replay_start_size=replay_start_size)
         self.start()
 
     def start(self):
