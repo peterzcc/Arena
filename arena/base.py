@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 # TODO Support RNN for sym, refer to the LSTM example
-class BaseNet(object):
+class Base(object):
     """Basic wrapper for the symbols
 
     Parameters
@@ -135,7 +135,7 @@ class BaseNet(object):
             ctx = self.ctx
         if name is None:
             name = self.name + '-copy-' + str(ctx)
-        return BaseNet(data_shapes=self.data_shapes, sym=self.sym,
+        return Base(data_shapes=self.data_shapes, sym=self.sym,
                       params=self.params,
                       aux_states=self.aux_states, ctx=ctx, name=name)
 
