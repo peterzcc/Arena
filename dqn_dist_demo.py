@@ -216,6 +216,9 @@ def main():
         use_easgd = True
         optimizer = mx.optimizer.Easgd(learning_rate=easgd_alpha)
         easgd_eta = 0.00025
+        local_optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
+                        clip_gradient=args.clip_gradient,
+                        rescale_grad=1.0, wd=args.wd)
 
     dqn_output_op = DQNOutputNpyOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
@@ -238,7 +241,9 @@ def main():
         else:
             # kvStore.send_updater_to_server(easgd_server_update)
             kvStore.set_optimizer(optimizer)
+            local_updater = mx.optimizer.get_updater(local_optimizer)
         kvstore_update_period = args.kvstore_update_period
+        args.dir_path = args.dir_path + "-"+str(kvStore.rank)
     else:
         updater = mx.optimizer.get_updater(optimizer)
 
@@ -339,9 +344,11 @@ def main():
                             if args.momentum == None:
                                 for paramIndex in range(len(qnet.params)):
                                     k=qnet.params.keys()[paramIndex]
-                                    qnet.params[k] += -easgd_eta*nd.clip(qnet.params_grad[k],
+                                    '''qnet.params[k] += -easgd_eta*nd.clip(qnet.params_grad[k],
                                                                     -args.clip_gradient,
-                                                                    args.clip_gradient)
+                                                                    args.clip_gradient)'''
+                                    local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                                                    weight=qnet.params[k])
                     else:
                         qnet.update(updater=updater)
 
