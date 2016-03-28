@@ -61,8 +61,7 @@ class Base(object):
                 self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
             else:
                 self.aux_states = None
-        self.accum_grad = OrderedDict([(n, nd.zeros(v.shape, ctx=ctx))
-                                        for n, v in self.params.items()])
+        self.acc_grad = None
         self.executor_pool = ExecutorBatchSizePool(ctx=self.ctx, sym=self.sym,
                                                    data_shapes=self.data_shapes,
                                                    params=self.params, params_grad=self.params_grad,
@@ -108,18 +107,21 @@ class Base(object):
     def update(self, updater, params_grad=None):
         if params_grad is None:
             params_grad = self.params_grad
-        for i in range(len(self.params)):
-            k = self.params.keys()[i]
-            updater(index=i, grad=params_grad[k], weight=self.params[k])
+        assert type(params_grad) is OrderedDict
+        for ind, k in enumerate(self.params.keys()):
+            updater(index=ind, grad=params_grad[k], weight=self.params[k])
 
-    def update_accum_grad(self):
-        for i in range(len(self.params)):
-            k = self.params.keys()[i]
-            self.accum_grad[k][:] = self.accum_grad[k] + self.params_grad[k]
-    def resetAccumGrad(self):
-        for i in range(len(self.accum_grad)):
-            k = self.accum_grad.keys()[i]
-            self.accum_grad[k][:] = 0
+    def update_acc_grad(self):
+        if self.acc_grad is None:
+            self.acc_grad = OrderedDict([(n, nd.zeros(v.shape, ctx=self.ctx))
+                                         for n, v in self.params_grad.items()])
+        for k, v in self.acc_grad.items():
+            v[:] = v + self.params_grad[k]
+
+    def reset_acc_grad(self):
+        for v in self.acc_grad.values():
+            v[:] = 0
+
     """
     Can be used to calculate the gradient of Q(s,a) over a
     """

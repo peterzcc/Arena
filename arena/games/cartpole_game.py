@@ -1,6 +1,5 @@
 import numpy
 from arena import ReplayMemory
-#import matplotlib.pyplot as plt
 import math
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP

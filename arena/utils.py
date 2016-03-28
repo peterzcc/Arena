@@ -3,6 +3,7 @@ import mxnet.ndarray as nd
 import os
 import numpy
 import json
+import re
 
 _ctx = mx.cpu()
 _numpy_rng = numpy.random.RandomState(123456)
@@ -67,11 +68,18 @@ def load_misc(dir_path="", epoch=None, name=""):
         misc = json.load(fp)
     return misc
 
-def update_to_kvstore(kv,params,params_grad):
-    for paramIndex in range(len(params)):
-        k=params.keys()[paramIndex]
-        kv.push(paramIndex,params_grad[k],priority=-paramIndex)
-        kv.pull(paramIndex,params[k],priority=-paramIndex)
+
+def update_on_kvstore(kv, params, params_grad):
+    for ind, k in enumerate(params.keys()):
+        kv.push(ind, params_grad[k], priority=-ind)
+        kv.pull(ind, params[k], priority=-ind)
+
+
+def parse_ctx(ctx_args):
+    ctx = re.findall('([a-z]+)(\d*)', ctx_args)
+    ctx = [(device, int(num)) if len(num) > 0 else (device, 0) for device, num in ctx]
+    return ctx
+
 
 class ExecutorBatchSizePool(object):
     def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):

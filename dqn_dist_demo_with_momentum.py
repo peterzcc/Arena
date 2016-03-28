@@ -25,8 +25,39 @@ mx.random.seed(100)
 npy_rng = get_numpy_rng()
 
 
+def dqn_sym_nips(action_num, output_op):
+    net = mx.symbol.Variable('data')
+    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=16)
+    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=32)
+    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
+    net = mx.symbol.Flatten(data=net)
+    net = mx.symbol.FullyConnected(data=net, name='fc3', num_hidden=256)
+    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
+    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=action_num)
+    net = output_op(data=net, name='dqn')
+    return net
 
 
+def dqn_sym_nature(action_num, output_op):
+    net = mx.symbol.Variable('data')
+    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=32)
+    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=64)
+    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv3', kernel=(3, 3), stride=(1, 1), num_filter=64)
+    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
+    net = mx.symbol.Flatten(data=net)
+    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=512)
+    net = mx.symbol.Activation(data=net, name='relu4', act_type="relu")
+    net = mx.symbol.FullyConnected(data=net, name='fc5', num_hidden=action_num)
+    net = output_op(data=net, name='dqn')
+    return net
+
+
+class DQNInitializer(mx.initializer.Xavier):
+    def _init_bias(self, _, arr):
+        arr[:] = .1
 
 
 def main():
