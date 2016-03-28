@@ -158,7 +158,7 @@ def main():
     # Begin Playing Game
     training_steps = 0
     total_steps = 0
-    ave_fps = 0
+    ave_fps = -1
     ave_loss = 0
     for epoch in xrange(epoch_num):
         # Run Epoch
@@ -184,8 +184,8 @@ def main():
                         info_str =""
                     info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
                                 % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                   (game.episode_step )/ (episode_stats[g].time_episode_end - episode_stats[g].time_episode_start), eps_curr)
-                    info_str += ", Avg Loss:%f" % avg_loss
+                                   ave_fps, eps_curr)
+                    info_str += ", Avg Loss:%f" % ave_loss
                     if episode_stats[g].episode_action_step > 0:
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
                                                           episode_stats[g].episode_action_step)
@@ -296,15 +296,21 @@ def main():
                 diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                 quadratic_part = nd.clip(diff, -1, 1)
                 loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
-
+                if ave_loss == 0:
+                    ave_loss =  loss
+                else:
+                    ave_loss =  0.95*ave_loss + 0.05*loss
 
                 # 3.3 Update the target network every freeze_interval
                 # (We can do annealing instead of hard copy)
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
-                    
-                ave_loss =  0.95*ave_loss+0.05*loss
-                ave_fps = 0.95*ave_fps + 0.05*(nactor/(time.time()-time_start_loop))
+            if ave_fps==-1:
+                ave_fps = (nactor/(time.time()-time_start_loop))
+            else:
+                ave_fps = 1/(0.95*1/ave_fps + 0.05*((time.time()-time_start_loop)/nactor))
+
+
 
         end = time.time()
         fps = steps_per_epoch / (end - start)
