@@ -8,7 +8,6 @@ import logging
 import os
 from arena.utils import *
 from arena import ReplayMemory
-from arena.nd_replay_memory import NdReplayMemory
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
 

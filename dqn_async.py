@@ -13,7 +13,6 @@ import sys
 import time
 from collections import OrderedDict
 from arena.operators import *
-from arena.nd_replay_memory import NdReplayMemory
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
