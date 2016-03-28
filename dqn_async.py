@@ -78,7 +78,7 @@ def main():
 
     replay_start_size = args.replay_start_size
     max_start_nullops = 30
-    replay_memory_size = 500
+    replay_memory_size = 100
     history_length = 4
     rows = 84
     cols = 84
@@ -93,15 +93,15 @@ def main():
 
 
     ##RUN NATURE
-    freeze_interval = 10000
+    freeze_interval = 10000*nactor
     epoch_num = 200
-    steps_per_epoch = 250000
+    steps_per_epoch = 250000*nactor
     update_interval = 4
     discount = 0.99
 
     eps_start = args.start_eps
     eps_min = 0.1
-    eps_decay = (eps_start - 0.1) / 1000000
+    eps_decay = (eps_start - 0.1) / (1000000*nactor)
     eps_curr = eps_start
     freeze_interval /= update_interval
     minibatch_size = nactor * param_update_period
@@ -256,17 +256,6 @@ def main():
                     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
                         terminate_flag
-                    # if g == 0:
-                    #     states, actions, rewards, next_states, terminate_flags \
-                    #         = game.replay_memory.sample(batch_size=minibatch_size/nactor)
-                    # else:
-                    #     nstates, nactions, nrewards, nnext_states, nterminate_flags \
-                    #         = game.replay_memory.sample(batch_size=minibatch_size/nactor)
-                    #     states = numpy.concatenate((states,nstates))
-                    #     actions = numpy.concatenate((actions,nactions))
-                    #     rewards = numpy.concatenate((rewards,nrewards))
-                    #     next_states = numpy.concatenate((next_states,nnext_states))
-                    #     terminate_flags = numpy.concatenate((terminate_flags,nterminate_flags))
                 states = nd.array(states_buffer_for_train, ctx=q_ctx) / float(255.0)
                 next_states = nd.array(next_states_buffer_for_train, ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
