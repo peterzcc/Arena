@@ -45,7 +45,7 @@ def main():
                         help='Learning rate of the AdaGrad optimizer')
     parser.add_argument('--eps', required=False, type=float, default=0.01,
                         help='Eps of the AdaGrad optimizer')
-    parser.add_argument('--clip-gradient', required=False, type=float, default=1.0,
+    parser.add_argument('--clip-gradient', required=False, type=float, default=None,
                         help='Clip threshold of the AdaGrad optimizer')
     parser.add_argument('--double-q', required=False, type=bool, default=False,
                         help='Use Double DQN')
@@ -160,6 +160,7 @@ def main():
     total_steps = 0
     ave_fps = -1
     ave_loss = 0
+    time_for_info = time.time()
     for epoch in xrange(epoch_num):
         # Run Epoch
         steps_left = steps_per_epoch
@@ -172,12 +173,11 @@ def main():
             game.begin_episode()
         episode_stats = [EpisodeStat() for i in range(len(games))]
         while steps_left > 0:
-            time_start_loop = time.time()
+
             for g, game in enumerate(games):
                 if game.episode_terminate:
                     episode += 1
                     epoch_reward += game.episode_reward
-                    steps_left -= game.episode_step
                     if args.kv_type != None:
                         info_str="Node[%d]: " %kv.rank
                     else:
@@ -305,10 +305,13 @@ def main():
                 # (We can do annealing instead of hard copy)
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
-            if ave_fps==-1:
-                ave_fps = (nactor/(time.time()-time_start_loop))
-            else:
-                ave_fps = 1/(0.95*1/ave_fps + 0.05*((time.time()-time_start_loop)/nactor))
+
+            steps_left -= nactor
+            if total_steps % 1000 == 0:
+                this_time = time.time()
+                ave_fps = (nactor/(this_time-time_for_info))
+                time_for_info = this_time
+
 
 
 
