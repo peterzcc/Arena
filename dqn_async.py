@@ -247,9 +247,9 @@ def main():
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
                     single_size = minibatch_size/nactor
-                    state, action, reward, terminate_flag \
-                        = game.replay_memory.sample_last(batch_size=single_size)
-                    states_buffer_for_train[(g*single_size):((g+1)*single_size)]= state
+                    action, reward, terminate_flag \
+                        = game.replay_memory.sample_last(batch_size=single_size,\
+                        states=states_buffer_for_train[(g*single_size):((g+1)*single_size)])
                     # next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
                     actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
                     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
