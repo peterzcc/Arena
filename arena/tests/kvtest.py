@@ -11,8 +11,6 @@ import os
 import re
 import sys
 import time
-from collections import OrderedDict
-from arena.operators import *
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -26,7 +24,110 @@ mx.random.seed(100)
 npy_rng = get_numpy_rng()
 
 
+# TODO NDArrayOP will cause some troubles see `https://github.com/dmlc/mxnet/issues/1720'
+class DQNOutputOp(mx.operator.NDArrayOp):
+    def __init__(self):
+        super(DQNOutputOp, self).__init__(need_top_grad=False)
 
+    def list_arguments(self):
+        return ['data', 'action', 'reward']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        action_shape = (in_shape[0][0],)
+        reward_shape = (in_shape[0][0],)
+        output_shape = in_shape[0]
+        return [data_shape, action_shape, reward_shape], [output_shape]
+
+    def forward(self, in_data, out_data):
+        x = in_data[0]
+        y = out_data[0]
+        y[:] = x
+
+    def backward(self, out_grad, in_data, out_data, in_grad):
+        x = out_data[0]
+        action = in_data[1]
+        reward = in_data[2]
+        dx = in_grad[0]
+        dx[:] = 0
+        dx[:] = nd.fill_element_0index(dx,
+                                       nd.clip(nd.choose_element_0index(x, action) - reward, -1, 1),
+                                       action)
+
+def update_to_kvstore(kvStore,params,params_grad):
+    for paramIndex in range(len(params)):
+        k=params.keys()[paramIndex]
+        kvStore.push(paramIndex,params_grad[k],priority=-paramIndex)
+        kvStore.pull(paramIndex,params[k],priority=-paramIndex)
+# TODO Regression Output has none differential for label, we may need to fix that
+class DQNOutputNpyOp(mx.operator.NumpyOp):
+    def __init__(self):
+        super(DQNOutputNpyOp, self).__init__(need_top_grad=False)
+
+    def list_arguments(self):
+        return ['data', 'action', 'reward']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        action_shape = (in_shape[0][0],)
+        reward_shape = (in_shape[0][0],)
+        output_shape = in_shape[0]
+        return [data_shape, action_shape, reward_shape], [output_shape]
+
+    def forward(self, in_data, out_data):
+        x = in_data[0]
+        y = out_data[0]
+        y[:] = x
+
+    def backward(self, out_grad, in_data, out_data, in_grad):
+        x = out_data[0]
+        action = in_data[1].astype(numpy.int)
+        reward = in_data[2]
+        dx = in_grad[0]
+        dx[:] = 0
+        dx[numpy.arange(action.shape[0]), action] \
+            = numpy.clip(x[numpy.arange(action.shape[0]), action] - reward, -1, 1)
+
+
+def dqn_sym_nips(action_num, output_op):
+    net = mx.symbol.Variable('data')
+    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=16)
+    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=32)
+    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
+    net = mx.symbol.Flatten(data=net)
+    net = mx.symbol.FullyConnected(data=net, name='fc3', num_hidden=256)
+    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
+    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=action_num)
+    net = output_op(data=net, name='dqn')
+    return net
+
+
+def dqn_sym_nature(action_num, output_op):
+    net = mx.symbol.Variable('data')
+    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=32)
+    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=64)
+    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv3', kernel=(3, 3), stride=(1, 1), num_filter=64)
+    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
+    net = mx.symbol.Flatten(data=net)
+    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=512)
+    net = mx.symbol.Activation(data=net, name='relu4', act_type="relu")
+    net = mx.symbol.FullyConnected(data=net, name='fc5', num_hidden=action_num)
+    net = output_op(data=net, name='dqn')
+    return net
+
+
+class DQNInitializer(mx.initializer.Xavier):
+    def _init_bias(self, _, arr):
+        arr[:] = .1
 
 
 def main():
@@ -40,7 +141,7 @@ def main():
                         help='Learning rate of the AdaGrad optimizer')
     parser.add_argument('--eps', required=False, type=float, default=0.01,
                         help='Eps of the AdaGrad optimizer')
-    parser.add_argument('--clip-gradient', required=False, type=float, default=1.0,
+    parser.add_argument('--clip-gradient', required=False, type=float, default=None,
                         help='Clip threshold of the AdaGrad optimizer')
     parser.add_argument('--double-q', required=False, type=bool, default=False,
                         help='Use Double DQN')
@@ -58,12 +159,10 @@ def main():
                         help='The period that the worker updates the parameters from the sever')
     parser.add_argument('--kv-type', required=False, type=str, default=None,
                         help='type of kvstore, default will not use kvstore, could also be dist_async')
-    parser.add_argument('--optimizer', required=False, type=str, default="adagrad",
-                        help='type of optimizer')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
-        args.dir_path = 'dqn-%s-%de_5' % (rom_name,int(args.lr*10**5))
+        args.dir_path = 'dqn-%s' % rom_name
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
     replay_start_size = args.replay_start_size
@@ -96,55 +195,63 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-
+    #optimizer = mx.optimizer.create(name='sgd', learning_rate=args.lr,wd=args.wd)
+    optimizer = mx.optimizer.Nop()
     dqn_output_op = DQNOutputNpyOp()
     dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
-
-    use_easgd = False
-    if args.optimizer != "easgd":
-        optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
-                        clip_gradient=args.clip_gradient,
-                        rescale_grad=1.0, wd=args.wd)
-    else:
-        use_easgd = True
-        easgd_beta = 0.9
-        easgd_p = 4
-        easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
-        optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
-        easgd_eta = 0.00025
-        local_optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
-                        clip_gradient=args.clip_gradient,
-                        rescale_grad=1.0, wd=args.wd)
-        central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
-                                        for n, v in qnet.params.items()])
     # Create kvstore
+    testShape = (1,1686180*100)
+    testParam = nd.ones(testShape,ctx=q_ctx)
+    testGrad = nd.zeros(testShape,ctx=q_ctx)
+
+    # Create kvstore
+
     if args.kv_type != None:
         kvType = args.kv_type
-        kv = kvstore.create(kvType)
+        kvStore = kvstore.create(kvType)
         #Initialize kvstore
         for idx,v in enumerate(qnet.params.values()):
-            kv.init(idx,v);
-        if use_easgd == False:
-            # Set optimizer on kvstore
-            kv.set_optimizer(optimizer)
-        else:
-            # kv.send_updater_to_server(easgd_server_update)
-            kv.set_optimizer(optimizer)
-            local_updater = mx.optimizer.get_updater(local_optimizer)
+            kvStore.init(idx,v);
+        # Set optimizer on kvstore
+        kvStore.set_optimizer(optimizer)
         kvstore_update_period = args.kvstore_update_period
-        args.dir_path = args.dir_path + "-"+str(kv.rank)
     else:
         updater = mx.optimizer.get_updater(optimizer)
+
+    # if args.kv_type != None:
+    #     kvType = args.kv_type
+    #     kvStore = kvstore.create(kvType)
+    #     kvStore.init(0,testParam)
+    #     testOptimizer = mx.optimizer.Nop()
+    #     kvStore.set_optimizer(testOptimizer)
+    #     kvstore_update_period = args.kvstore_update_period
+
 
     qnet.print_stat()
     target_qnet.print_stat()
     # Begin Playing Game
     training_steps = 0
     total_steps = 0
+    while(1):
+        time_before_wait = time.time()
+
+        # kvStore.push(0,testGrad,priority=0)
+        # kvStore.pull(0,testParam,priority=0)
+        # testParam.wait_to_read()
+
+        for paramIndex in range(len(qnet.params)):#range(6):#
+            k=qnet.params.keys()[paramIndex]
+            kvStore.push(paramIndex,qnet.params_grad[k],priority=-paramIndex)
+            kvStore.pull(paramIndex,qnet.params[k],priority=-paramIndex)
+
+        for v in qnet.params.values():
+            v.wait_to_read()
+        logging.info("wait time %f" %(time.time()-time_before_wait))
+
     for epoch in xrange(epoch_num):
         # Run Epoch
         steps_left = steps_per_epoch
@@ -176,7 +283,7 @@ def main():
                         current_state = game.current_state()
                         state = nd.array(current_state.reshape((1,) + current_state.shape),
                                          ctx=q_ctx) / float(255.0)
-                        qval_npy = qnet.forward(is_train=False, batch_size=1, data=state)[0].asnumpy()
+                        qval_npy = qnet.forward(batch_size=1, data=state)[0].asnumpy()
                         action = numpy.argmax(qval_npy)
                         episode_q_value += qval_npy[0, action]
                         episode_action_step += 1
@@ -217,35 +324,29 @@ def main():
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
-                    outputs = qnet.forward(is_train=True, batch_size=minibatch_size, data=states,
+                    outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
                                               dqn_action=actions,
                                               dqn_reward=target_rewards)
                     qnet.backward(batch_size=minibatch_size)
-
+                    nd.waitall()
+                    time_before_update = time.time()
 
                     if args.kv_type != None:
                         if total_steps % kvstore_update_period == 0:
-                            if use_easgd == False:
-                                update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                            else:
-                                for paramIndex in range(len(qnet.params)):
-                                    k=qnet.params.keys()[paramIndex]
-                                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                        if use_easgd:
-                            for paramIndex in range(len(qnet.params)):
-                                k=qnet.params.keys()[paramIndex]
-                                '''qnet.params[k][:] += -easgd_eta*nd.clip(qnet.params_grad[k],
-                                                                -args.clip_gradient,
-                                                                args.clip_gradient)'''
-                                local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                                weight=qnet.params[k])
+                            update_to_kvstore(kvStore,qnet.params,qnet.params_grad)
                     else:
                         qnet.update(updater=updater)
+                    logging.info("update time %f" %(time.time()-time_before_update))
+                    time_before_wait = time.time()
+                    nd.waitall()
+                    logging.info("wait time %f" %(time.time()-time_before_wait))
 
-
-
+                    '''nd.waitall()
+                    time_before_wait = time.time()
+                    kvStore.push(0,testGrad,priority=0)
+                    kvStore.pull(0,testParam,priority=0)
+                    nd.waitall()
+                    logging.info("wait time %f" %(time.time()-time_before_wait))'''
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                     quadratic_part = nd.clip(diff, -1, 1)
@@ -260,11 +361,7 @@ def main():
             time_episode_end = time.time()
             # Update the statistics
             epoch_reward += game.episode_reward
-            if args.kv_type != None:
-                info_str="Node[%d]: " %kv.rank
-            else:
-                info_str =""
-            info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
+            info_str = "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
                         % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
                            game.episode_step / (time_episode_end - time_episode_start), eps_curr)
             if episode_update_step > 0:

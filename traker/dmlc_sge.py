@@ -29,11 +29,12 @@ def gen_run_script(args, unknown):
     fo = open(runscript, 'w')
     fo.write('#!/bin/bash\n')
     fo.write('#$ -S /bin/bash\n')
-    if args.activate_cmd is not None:
-        fo.write("%s\n" % args.activate_cmd)
     fo.write("#$ -wd %s\n" % args.working_dir)
-    fo.write('source ~/.bashrc\n')
-    fo.write('export DMLC_TASK_ID=${SGE_TASK_ID}\n')
+    if args.activate_cmd is not None:
+        #fo.write("%s\n" % args.activate_cmd)
+        fo.write(". /project/dygroup2/czeng/venv/bin/activate\n")
+    #fo.write('source ~/.bashrc\n')
+    #fo.write('export DMLC_TASK_ID=${SGE_TASK_ID}\n')
     fo.write(' '.join(args.command) + ' ' + ' '.join(unknown) + "\n")
     fo.close()
     args.runscript = runscript
@@ -41,11 +42,12 @@ def gen_run_script(args, unknown):
 
 def submit_worker(num, node, pass_envs, args):
     pass_envs['DMLC_ROLE'] = 'worker'
+    pass_envs['DMLC_TASK_ID'] = str(num)
     env_arg = ','.join(['%s=\"%s\"' % (k, str(v)) for k, v in pass_envs.items()])
     cmd = 'qsub -cwd -S /bin/bash'
     cmd += ' -q %s' % node
     cmd += ' -N %s-worker-%d' % (args.jobname, num)
-    cmd += ' -o %s -j y' % args.log_file
+    cmd += ' -o worker%d_%s -j y' % (num,args.log_file)
     cmd += ' -v %s,PATH=${PATH}:.' % env_arg
     cmd += ' %s' % (args.runscript)
     logging.info(cmd)
@@ -54,11 +56,12 @@ def submit_worker(num, node, pass_envs, args):
 
 def submit_server(num, node, pass_envs, args):
     pass_envs['DMLC_ROLE'] = 'server'
+    pass_envs['DMLC_TASK_ID'] = str(num)
     env_arg = ','.join(['%s=\"%s\"' % (k, str(v)) for k, v in pass_envs.items()])
     cmd = 'qsub -cwd -S /bin/bash'
     cmd += ' -q %s' % node
     cmd += ' -N %s-server-%d ' % (args.jobname, num)
-    cmd += ' -e %s -o %s' % (args.logdir, args.logdir)
+    cmd += ' -o server%d_%s -j y' % (num,args.log_file)  #% (args.logdir, args.logdir)
     cmd += ' -v %s,PATH=${PATH}:.' % env_arg
     cmd += ' %s' % (args.runscript)
     logging.info(cmd)
@@ -90,6 +93,8 @@ class SgeLauncher(object):
             for i in range(nserver):
                 submit_server(num=i, node=serverq_l[i % len(serverq_l)], pass_envs=pass_envs,
                               args=self.args)
+            lastCmd = "qsub -cwd -S /bin/bash -q *.q@client114 -N lastCmd  -o outout.out -j y -v PATH=${PATH}:. /csproject/dygroup2/czeng/run.sh nvidia-smi"
+            subprocess.check_call(lastCmd, shell=True)
             logging.info('Waiting for the jobs to get up...')
 
         return sge_submit

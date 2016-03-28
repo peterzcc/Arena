@@ -1,27 +1,18 @@
 #!/bin/bash
+#$ -S /bin/bash
+#source ~/.bashrc
+. /project/dygroup2/czeng/venv/bin/activate
+name=breakout
+n=2
+s=2
+# workerq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
+# serverq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
+workerq="*.q@client112,*.q@client114,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
+serverq="*.q@client112,*.q@client114,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
 
-source ~/.bashrc
-
-name=cifar10
-n=5
-s=5
-workerq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115"
-serverq="all.q@client111,all.q@client112,all.q@client113,all.q@client114,all.q@client115"
-wd="/project/dygroup2/czeng/mxnet/example/image-classification/"
+wd="/csproject/dygroup2/czeng/dist_dqn/"
 activate_cmd="./project/dygroup2/czeng/venv/bin/activate"
-script="python /project/dygroup2/czeng/mxnet/example/image-classification/train_cifar10.py --kv-store dist_sync"
+script="python dqn_dist_demo.py  --double-q 1 -c gpu1 -r roms/breakout.bin -eps 0.1 --kv-type dist_async"
 
 
-#Download CIFAR10 data if no data directory found
-
-if [ ! -d "cifar10" ]; then
-    mkdir cifar10
-    cd cifar10
-    wget http://webdocs.cs.ualberta.ca/~bx3/data/cifar10.zip
-    unzip -u cifar10.zip
-    mv cifar/* . && rm -rf cifar && rm cifar10.zip
-    cd ..
-fi
-
-python dmlc_sge.py --log-file ${name}_n${n}_s${s}.out -wd ${wd} --jobname dmlc-${name}-n${n}-s${s} -workerq ${workerq} -serverq ${serverq} -n ${n} -s ${s} $script
-
+python traker/dmlc_sge.py --activate-cmd ${activate_cmd} --log-file ${name}_n${n}_s${s}.out -wd ${wd} --jobname dmlc-${name}-n${n}-s${s} -workerq ${workerq} -serverq ${serverq} -n ${n} -s ${s} $script

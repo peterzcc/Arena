@@ -27,7 +27,9 @@ def ale_load_from_rom(rom_path, display_screen):
             import pygame
             pygame.init()
             ale.setBool('sound', False) # Sound doesn't work on OSX
-    ale.setBool('display_screen', display_screen)
+        ale.setBool('display_screen', True)
+    else:
+        ale.setBool('display_screen', False)
     ale.setFloat('repeat_action_probability', 0)
     ale.loadROM(rom_path)
     return ale

@@ -1,5 +1,6 @@
 import numpy
 from arena import ReplayMemory
+#import matplotlib.pyplot as plt
 import math
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
@@ -181,4 +182,3 @@ class CartPoleGame(Game):
     def get_observation(self):
         return numpy.array([self.cart_location, self.cart_velocity] +
                            self.pole_angle.tolist() + self.pole_velocity.tolist())
-

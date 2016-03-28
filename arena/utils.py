@@ -67,6 +67,11 @@ def load_misc(dir_path="", epoch=None, name=""):
         misc = json.load(fp)
     return misc
 
+def update_to_kvstore(kv,params,params_grad):
+    for paramIndex in range(len(params)):
+        k=params.keys()[paramIndex]
+        kv.push(paramIndex,params_grad[k],priority=-paramIndex)
+        kv.pull(paramIndex,params[k],priority=-paramIndex)
 
 class ExecutorBatchSizePool(object):
     def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):
