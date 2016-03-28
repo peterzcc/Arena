@@ -202,10 +202,12 @@ def main():
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 
-    easgd_beta = 0.9
-    easgd_delta = 0.99
-    easgd_p = 4
-    easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
+    dqn_output_op = DQNOutputNpyOp()
+    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
+                  initializer=DQNInitializer(factor_type="in"),
+                  ctx=q_ctx)
+    target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
 
     use_easgd = False
     if args.optimizer != "easgd":
@@ -214,20 +216,22 @@ def main():
                         rescale_grad=1.0, wd=args.wd)
     else:
         use_easgd = True
+        easgd_beta = 0.9
+        easgd_p = 4
+        easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
         optimizer = mx.optimizer.Easgd(learning_rate=easgd_alpha)
         easgd_eta = 0.00025
         local_optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
-
-    dqn_output_op = DQNOutputNpyOp()
-    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
-    qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
-                  initializer=DQNInitializer(factor_type="in"),
-                  ctx=q_ctx)
-    target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
-    central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
-                                    for n, v in qnet.params.items()])
+        central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+                                        for n, v in qnet.params.items()])
+        if args.momentum != None:
+            easgd_delta = 0.99
+            velocity = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+                                            for n, v in qnet.params.items()])
+            paramsBackup =  OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+                                            for n, v in qnet.params.items()])
     # Create kvstore
     if args.kv_type != None:
         kvType = args.kv_type
@@ -324,10 +328,12 @@ def main():
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
-                    outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
-                                              dqn_action=actions,
-                                              dqn_reward=target_rewards)
-                    qnet.backward(batch_size=minibatch_size)
+                    if args.momentum == None:
+
+                        outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
+                                                  dqn_action=actions,
+                                                  dqn_reward=target_rewards)
+                        qnet.backward(batch_size=minibatch_size)
 
 
                     if args.kv_type != None:
@@ -344,11 +350,22 @@ def main():
                             if args.momentum == None:
                                 for paramIndex in range(len(qnet.params)):
                                     k=qnet.params.keys()[paramIndex]
-                                    '''qnet.params[k] += -easgd_eta*nd.clip(qnet.params_grad[k],
+                                    '''qnet.params[k][:] += -easgd_eta*nd.clip(qnet.params_grad[k],
                                                                     -args.clip_gradient,
                                                                     args.clip_gradient)'''
                                     local_updater(index = paramIndex,grad=qnet.params_grad[k],
                                                     weight=qnet.params[k])
+                            else:
+                                for i,k in enumerate(qnet.params.keys()):
+                                    paramsBackup[k][:]=qnet.params[k]
+                                    qnet.params[k][:] += easgd_delta*velocity[k]
+                                outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
+                                                              dqn_action=actions,
+                                                              dqn_reward=target_rewards)
+                                qnet.backward(batch_size=minibatch_size)
+                                for i,k in enumerate(qnet.params.keys()):
+                                    velocity[k][:] = easgd_delta * velocity[k] - args.lr*qnet.params_grad[k]
+                                    qnet.params[k][:] = paramsBackup[k]+velocity[k]-args.wd*qnet.params[k][:]
                     else:
                         qnet.update(updater=updater)
 
