@@ -71,7 +71,7 @@ def main():
                         help='Learning rate of the AdaGrad optimizer')
     parser.add_argument('--eps', required=False, type=float, default=0.01,
                         help='Eps of the AdaGrad optimizer')
-    parser.add_argument('--clip-gradient', required=False, type=float, default=1.0,
+    parser.add_argument('--clip-gradient', required=False, type=float, default=None,
                         help='Clip threshold of the AdaGrad optimizer')
     parser.add_argument('--double-q', required=False, type=bool, default=False,
                         help='Use Double DQN')
