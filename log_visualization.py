@@ -13,6 +13,7 @@ def get_loss(logfile, outpath, starting_point=1):
        - step_interval: The steps we for computing a loss for visualization
     """
     assert logfile
+    logfile = os.path.realpath(logfile)
     if outpath == "":
         out_file = sys.stdout
     else:
@@ -30,7 +31,7 @@ def get_loss(logfile, outpath, starting_point=1):
     plt.plot(xrange(len(loss_list) - starting_point), loss_list[starting_point:])
     plt.xlabel('Episode')
     plt.ylabel('Loss')
-    filename, file_extension = os.path.splitext(logfile)
+    filename = os.path.basename(logfile)
     plt.savefig('vis_loss_' + filename + '.pdf', bbox_inches='tight')
     plt.clf()
 
