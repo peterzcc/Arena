@@ -73,7 +73,7 @@ def main():
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
 
     # Async verision
-    nactor= 2
+    nactor= 16
     param_update_period = 5
 
     replay_start_size = args.replay_start_size
@@ -89,7 +89,7 @@ def main():
         games.append(AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                              resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
                              replay_memory_size=replay_memory_size, display_screen=args.visualization,
-                             history_length=history_length,nd_replay_memory=True,ctx=q_ctx))
+                             history_length=history_length))
 
 
     ##RUN NATURE
@@ -156,9 +156,9 @@ def main():
     qnet.print_stat()
     target_qnet.print_stat()
 
-    states_act = nd.zeros((nactor, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
-    states_train = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
-    next_states_train = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
+    states_buffer_for_act = numpy.zeros((nactor, history_length)+(rows, cols),dtype='uint8')
+    states_buffer_for_train = numpy.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8')
+    next_states_buffer_for_train = numpy.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8')
     actions_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='uint8')
     rewards_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='float32')
     terminate_flags_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='bool')
@@ -203,11 +203,12 @@ def main():
 
             if total_steps > history_length*nactor:
                 for g, game in enumerate(games):
-                    current_state = game.current_state() / float(255.0)
+                    current_state = game.current_state()
+                    states_buffer_for_act[g] = current_state
 
-                    states_act[g:(g+1)] = current_state.reshape((1,)+current_state.shape)
+            states = nd.array(states_buffer_for_act,ctx=q_ctx) / float(255.0)
 
-            qval_npy = qnet.forward(batch_size=nactor, data=states_act)[0].asnumpy()
+            qval_npy = qnet.forward(batch_size=nactor, data=states)[0].asnumpy()
             actions_that_max_q = numpy.argmax(qval_npy,axis=1)
 
             for g, game in enumerate(games):
@@ -243,21 +244,20 @@ def main():
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
                 training_steps += nactor
-                
 
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
                     single_size = minibatch_size/nactor
-                    state, action, reward,next_state, terminate_flag \
-                        = game.replay_memory.sample_last(batch_size=single_size)
-                    states_train[(g*single_size):((g+1)*single_size)]= state
-                    next_states_train[(g*single_size):((g+1)*single_size)]= next_state
+                    state, action, reward, next_state, terminate_flag \
+                        = game.replay_memory.sample(batch_size=single_size)
+                    states_buffer_for_train[(g*single_size):((g+1)*single_size)]= state
+                    next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
                     actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
                     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
                         terminate_flag
-                states = states_train
-                next_states = next_states_train
+                states = nd.array(states_buffer_for_train, ctx=q_ctx) / float(255.0)
+                next_states = nd.array(next_states_buffer_for_train, ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
                 rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
                 terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
