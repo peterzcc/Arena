@@ -73,7 +73,7 @@ def main():
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
 
     # Async verision
-    nactor= 2
+    nactor= 16
     param_update_period = 5
 
     replay_start_size = args.replay_start_size
