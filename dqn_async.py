@@ -93,7 +93,7 @@ def main():
 
 
     ##RUN NATURE
-    freeze_interval = 40000
+    freeze_interval = 10000
     epoch_num = 200
     steps_per_epoch = 250000
     update_interval = 4
