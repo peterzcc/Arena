@@ -66,7 +66,7 @@ def main():
                         help='type of optimizer')
     parser.add_argument('--nactor', required=False, type=int, default=16,
                         help='number of actor')
-    parser.add_argument('--exploration-period', required=False, type=int, default=1000000,
+    parser.add_argument('--exploration-period', required=False, type=int, default=4000000,
                         help='length of annealing of epsilon greedy policy')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
@@ -102,9 +102,9 @@ def main():
     update_interval = 1
     discount = 0.99
 
-    eps_start = args.start_eps
-    eps_min = 0.1
-    eps_decay = (eps_start - 0.1) / (args.exploration_period)
+    eps_start = numpy.ones((3,))* args.start_eps
+    eps_min = numpy.array([0.1,0.01,0.5])
+    eps_decay = (eps_start - eps_min) / (args.exploration_period)
     eps_curr = eps_start
     freeze_interval /= update_interval
     minibatch_size = nactor * param_update_period
@@ -192,9 +192,9 @@ def main():
                         info_str="Node[%d]: " %kv.rank
                     else:
                         info_str =""
-                    info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
+                    info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%s" \
                                 % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                   ave_fps, eps_curr)
+                                   ave_fps, str(eps_curr))
                     info_str += ", Avg Loss:%f" % ave_loss
                     if episode_stats[g].episode_action_step > 0:
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
@@ -217,8 +217,15 @@ def main():
             for g, game in enumerate(games):
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
-                    do_exploration = (npy_rng.rand() < eps_curr)
-                    eps_curr = max(eps_curr - eps_decay, eps_min)
+                    eps_rand = npy_rng.rand()
+                    if eps_rand<0.4:
+                        eps_id = 0
+                    elif eps_rand<0.7:
+                        eps_id = 1
+                    else:
+                        eps_id = 2
+                    do_exploration = (npy_rng.rand() < eps_curr[eps_id])
+                    eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
                     if do_exploration:
                         action = npy_rng.randint(action_num)
                     else:
