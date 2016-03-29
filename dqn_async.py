@@ -225,7 +225,6 @@ def main():
                     else:
                         eps_id = 2
                     do_exploration = (npy_rng.rand() < eps_curr[eps_id])
-                    eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
                     if do_exploration:
                         action = npy_rng.randint(action_num)
                     else:
@@ -241,7 +240,7 @@ def main():
 
                 # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
                 game.play(action)
-
+            eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
             total_steps += 1
             if total_steps % 100 == 0:
                 this_time = time.time()
