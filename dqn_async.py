@@ -106,6 +106,9 @@ def main():
     eps_min = numpy.array([0.1,0.01,0.5])
     eps_decay = (eps_start - eps_min) / (args.exploration_period)
     eps_curr = eps_start
+    eps_id = numpy.zeros((nactor,))
+    eps_update_period = 10000
+
     freeze_interval /= update_interval
     minibatch_size = nactor * param_update_period
     action_num = len(games[0].action_set)
@@ -183,7 +186,15 @@ def main():
             game.begin_episode()
         episode_stats = [EpisodeStat() for i in range(len(games))]
         while steps_left > 0:
-
+            if total_steps % eps_update_period == 0:
+                for g in range(nactor):
+                    eps_rand = npy_rng.rand()
+                    if eps_rand<0.4:
+                        eps_id[g] = 0
+                    elif eps_rand<0.7:
+                        eps_id[g] = 1
+                    else:
+                        eps_id[g] = 2
             for g, game in enumerate(games):
                 if game.episode_terminate:
                     episode += 1
@@ -217,14 +228,7 @@ def main():
             for g, game in enumerate(games):
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
-                    eps_rand = npy_rng.rand()
-                    if eps_rand<0.4:
-                        eps_id = 0
-                    elif eps_rand<0.7:
-                        eps_id = 1
-                    else:
-                        eps_id = 2
-                    do_exploration = (npy_rng.rand() < eps_curr[eps_id])
+                    do_exploration = (npy_rng.rand() < eps_curr[eps_id[g]])
                     if do_exploration:
                         action = npy_rng.randint(action_num)
                     else:
