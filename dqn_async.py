@@ -67,7 +67,7 @@ def main():
     parser.add_argument('--nactor', required=False, type=int, default=16,
                         help='number of actor')
     parser.add_argument('--exploration-period', required=False, type=int, default=1000000,
-                        help='length of annealing of epsilon greedy policy)
+                        help='length of annealing of epsilon greedy policy')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
