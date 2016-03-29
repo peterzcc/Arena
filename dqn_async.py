@@ -13,8 +13,7 @@ import sys
 import time
 from collections import OrderedDict
 from arena.operators import *
-from multiprocessing import Pool
-from multiprocessing.dummy import Pool as ThreadPool
+import concurrent.futures
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
@@ -33,8 +32,26 @@ class EpisodeStat(object):
         self.episode_q_value = 0.0
         self.episode_update_step = 0
         self.episode_action_step = 0
-
-
+# def play_game(game, action):
+#     game.play(action)
+#     print "playing game: "+ str(action)
+#     return 0
+def sample_training_data(game,episode_stat,g):
+    global states_buffer_for_train
+    global actions_buffer_for_train
+    global rewards_buffer_for_train
+    global terminate_flags_buffer_for_train
+    global  minibatch_size
+    global nactor
+    episode_stat.episode_update_step += 1
+    single_size = minibatch_size/nactor
+    action, reward, terminate_flag \
+        = game.replay_memory.sample_inplace(batch_size=single_size,\
+        states=states_buffer_for_train,offset=(g*single_size))
+    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
+    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
+    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
+        terminate_flag
 def main():
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
     parser.add_argument('-r', '--rom', required=False, type=str,
@@ -176,6 +193,7 @@ def main():
     ave_fps = 0
     ave_loss = 0
     time_for_info = time.time()
+    parallel_executor = concurrent.futures.ProcessPoolExecutor(nactor)
     for epoch in xrange(epoch_num):
         # Run Epoch
         steps_left = steps_per_epoch
@@ -226,7 +244,7 @@ def main():
 
             qval_npy = qnet.forward(batch_size=nactor, data=states)[0].asnumpy()
             actions_that_max_q = numpy.argmax(qval_npy,axis=1)
-
+            actions = [0]*nactor
             for g, game in enumerate(games):
             # def play_games(g):
                 # 1. We need to choose a new action based on the current game status
@@ -244,12 +262,12 @@ def main():
                         episode_stats[g].episode_action_step += 1
                 else:
                     action = npy_rng.randint(action_num)
-                # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
-                games[g].play(action)
-            # pool_play = ThreadPool(nactor)
-            # pool_play.map(play_games,list(range(nactor)))
-            # pool_play.close()
-            # pool_play.join()
+                actions[g] = action
+            for game,action in zip(games,actions):
+                game.play(action)
+            # for ret in parallel_executor.map(play_game, games, actions):
+            #     print ret
+            # print "finish map"
             eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
             total_steps += 1
             if total_steps % 100 == 0:
@@ -264,32 +282,18 @@ def main():
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
                 training_steps += 1
-                # def sample_training_data(g):
+
+                parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
+                # for g,game in enumerate(games):
                 #     episode_stats[g].episode_update_step += 1
                 #     single_size = minibatch_size/nactor
                 #     action, reward, terminate_flag \
-                #         = games[g].replay_memory.sample(batch_size=single_size,\
+                #         = game.replay_memory.sample_inplace(batch_size=single_size,\
                 #         states=states_buffer_for_train,offset=(g*single_size))
                 #     actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
                 #     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                 #     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
                 #         terminate_flag
-                # pool = ThreadPool(nactor)
-                # pool.map(sample_training_data,list(range(nactor)))
-                # pool.close()
-                # pool.join()
-                for g,game in enumerate(games):
-                    episode_stats[g].episode_update_step += 1
-                    single_size = minibatch_size/nactor
-                    action, reward, terminate_flag \
-                        = game.replay_memory.sample_inplace(batch_size=single_size,\
-                        states=states_buffer_for_train,offset=(g*single_size))
-                    # next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
-
-                    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
-                    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
-                    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
-                        terminate_flag
                 states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
                 next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
