@@ -108,6 +108,7 @@ class ReplayMemory(object):
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
             # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
             counter += 1
+            index -= 1
         return actions, rewards, terminate_flags
     def sample_inplace(self, batch_size,states,offset):
         assert self.size >= batch_size and self.replay_start_size >= self.history_length
