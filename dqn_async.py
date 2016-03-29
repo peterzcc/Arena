@@ -66,6 +66,8 @@ def main():
                         help='type of optimizer')
     parser.add_argument('--nactor', required=False, type=int, default=16,
                         help='number of actor')
+    parser.add_argument('--exploration-period', required=False, type=int, default=1000000,
+                        help='length of annealing of epsilon greedy policy)
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -102,7 +104,7 @@ def main():
 
     eps_start = args.start_eps
     eps_min = 0.1
-    eps_decay = (eps_start - 0.1) / (1000000)
+    eps_decay = (eps_start - 0.1) / (args.exploration_period)
     eps_curr = eps_start
     freeze_interval /= update_interval
     minibatch_size = nactor * param_update_period
