@@ -21,7 +21,7 @@ class ReplayMemory(object):
             self.action_dim = ()
         else:
             self.action_dim = action_dim
-        self.states = nd.zeros((memory_size,) + state_dim, dtype=state_dtype)
+        self.states = nd.zeros((memory_size,) + state_dim, dtype=state_dtype,ctx=self.ctx)
         self.actions = numpy.zeros((memory_size,) + action_dim, dtype=action_dtype)
         self.rewards = numpy.zeros(memory_size, dtype='float32')
         self.terminate_flags = numpy.zeros(memory_size, dtype='bool')
