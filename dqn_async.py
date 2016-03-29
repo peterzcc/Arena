@@ -112,7 +112,7 @@ def main():
         games.append(AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                              resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
                              replay_memory_size=replay_memory_size, display_screen=args.visualization,
-                             history_length=history_length))
+                             history_length=history_length,ctx=mx.cpu()))
 
 
     ##RUN NATURE
@@ -182,9 +182,9 @@ def main():
     qnet.print_stat()
     target_qnet.print_stat()
 
-    states_buffer_for_act = numpy.zeros((nactor, history_length)+(rows, cols),dtype='uint8')
-    states_buffer_for_train = numpy.zeros((minibatch_size, history_length+1)+(rows, cols),dtype='uint8')
-    next_states_buffer_for_train = numpy.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8')
+    states_buffer_for_act = nd.zeros((nactor, history_length)+(rows, cols),dtype='float32')
+    states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32')
+    next_states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32')
     actions_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='uint8')
     rewards_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='float32')
     terminate_flags_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='bool')
@@ -238,12 +238,10 @@ def main():
 
             if total_steps > history_length:
                 for g, game in enumerate(games):
-                    current_state = game.current_state()
-                    states_buffer_for_act[g] = current_state
+                    game.replay_memory.get_latest_slice(obs=states_buffer_for_act[g])
+                states_buffer_for_act /= float(255.0)
 
-            states = nd.array(states_buffer_for_act,ctx=q_ctx) / float(255.0)
-
-            qval_npy = qnet.forward(batch_size=nactor, data=states)[0].asnumpy()
+            qval_npy = qnet.forward(batch_size=nactor, data=states_buffer_for_act)[0].asnumpy()
             actions_that_max_q = numpy.argmax(qval_npy,axis=1)
             actions = [0]*nactor
             for g, game in enumerate(games):
@@ -258,7 +256,7 @@ def main():
                         # We need to wait after calling calc_score(.), which makes the program slow
                         # TODO Profiling the speed of this part!
                         action = actions_that_max_q[g]
-                        episode_stats[g].episode_q_value += qval_npy[0, action]
+                        episode_stats[g].episode_q_value += qval_npy[g, action]
                         episode_stats[g].episode_action_step += 1
                 else:
                     action = npy_rng.randint(action_num)
@@ -287,19 +285,26 @@ def main():
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
                     single_size = single_batch_size
-                    action, reward, terminate_flag \
-                        = game.replay_memory.sample_inplace(batch_size=single_size,\
-                        states=states_buffer_for_train,offset=(g*single_size))
+                    _, action, reward, _, terminate_flag \
+                        = game.replay_memory.fast_sample(batch_size=single_size,
+                            states=states[(g*single_size):((g+1)*single_size)],
+                            next_states=next_states[(g*single_size):((g+1)*single_size)])
+                    # states_buffer_for_train[(g*single_size):((g+1)*single_size)] = states
+                    # next_states_buffer_for_train[(g*single_size):((g+1)*single_size)] = next_states
+                    # action, reward, terminate_flag \
+                    #     = game.replay_memory.sample_inplace(batch_size=single_size,\
+                    #     states=states_buffer_for_train,offset=(g*single_size))
+
+
                     actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
                     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
                         terminate_flag
-                states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
-                next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
+                # states = nd.array(states_buffer_for_train, ctx=q_ctx) / float(255.0)
+                # next_states = nd.array(next_states_buffer_for_train, ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
                 rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
                 terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
-
                 # 3.2 Use the target network to compute the scores and
                 #     get the corresponding target rewards
                 if not args.double_q:

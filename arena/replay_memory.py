@@ -11,7 +11,7 @@ from utils import *
 class ReplayMemory(object):
     def __init__(self, history_length, memory_size=1000000, replay_start_size=100,
                  state_dim=(), action_dim=(), state_dtype='uint8', action_dtype='uint8',
-                 ctx=mx.gpu()):
+                 ctx=mx.cpu()):
         self.rng = get_numpy_rng()
         self.ctx = ctx
         assert type(action_dim) is tuple and type(state_dim) is tuple, \
@@ -21,7 +21,7 @@ class ReplayMemory(object):
             self.action_dim = ()
         else:
             self.action_dim = action_dim
-        self.states = numpy.zeros((memory_size,) + state_dim, dtype=state_dtype)
+        self.states = nd.zeros((memory_size,) + state_dim, dtype=state_dtype)
         self.actions = numpy.zeros((memory_size,) + action_dim, dtype=action_dtype)
         self.rewards = numpy.zeros(memory_size, dtype='float32')
         self.terminate_flags = numpy.zeros(memory_size, dtype='bool')
@@ -31,15 +31,25 @@ class ReplayMemory(object):
         self.top = 0
         self.size = 0
 
-
+    def set_ctx(ctx):
+        self.states.copyto(ctx)
     def latest_slice(self):
         if self.size >= self.history_length:
-            return self.states.take(numpy.arange(self.top - self.history_length, self.top), axis=0, mode="wrap")
+            return self.states.take(numpy.arange(self.top - self.history_length, self.top))
         else:
             assert False, "We can only slice from the replay memory if the " \
                           "replay size is larger than the length of frames we want to take" \
                           "as the input."
-
+    def get_latest_slice(self,obs=None):
+          if self.size >= self.history_length:
+              if obs == None:
+                  obs=nd.empty((self.history_length,)+self.state_dim,dtype='float32',ctx=self.ctx)
+              take(src=self.states,dst=obs, inds=numpy.arange(self.top - self.history_length, self.top))
+              return obs
+          else:
+              assert False, "We can only slice from the replay memory if the " \
+                            "replay size is larger than the length of frames we want to take" \
+                            "as the input."
     @property
     def sample_enabled(self):
         return self.size > self.replay_start_size
@@ -164,10 +174,50 @@ class ReplayMemory(object):
             if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
                 # Check if terminates in the middle of the sample!
                 continue
+            import pdb; pdb.set_trace() #TODO: debug only
             states[counter] = self.states.take(initial_indices, axis=0, mode='wrap')
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
             next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
+            counter += 1
+        return states, actions, rewards, next_states, terminate_flags
+    def fast_sample(self, batch_size,states,next_states):
+        assert self.size >= batch_size and self.replay_start_size >= self.history_length
+        assert(0 <= self.size <= self.memory_size)
+        assert(0 <= self.top <= self.memory_size)
+        if self.size <= self.replay_start_size:
+            raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
+                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
+        #TODO Possibly states + inds for less memory access
+        # states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
+        #                      dtype=self.states.dtype)
+        actions = numpy.zeros((batch_size,) + self.action_dim, dtype=self.actions.dtype)
+        rewards = numpy.zeros(batch_size, dtype='float32')
+        terminate_flags = numpy.zeros(batch_size, dtype='bool')
+        # next_states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
+        #                           dtype=self.states.dtype)
+        state_buffer = nd.empty((self.history_length+1,) + self.state_dim, dtype="float32",ctx=self.ctx)
+        counter = 0
+        while counter < batch_size:
+            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length + 1)
+            transition_indices = numpy.arange(index, index + self.history_length)
+            initial_indices = transition_indices - 1
+            buffer_indices=numpy.arange(index, index + self.history_length+1)-1
+            end_index = index + self.history_length - 1
+            if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
+                # Check if terminates in the middle of the sample!
+                continue
+            # states[counter] = self.states.take(initial_indices, axis=0, mode='wrap')
+            # take(src=self.states,dst=states[counter],inds=initial_indices)
+            actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
+            rewards[counter] = self.rewards.take(end_index, mode='wrap')
+            terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
+            take(src=self.states,dst=state_buffer,inds=buffer_indices)
+            state_buffer /= float(255.0)
+            states[counter] = state_buffer[:(self.history_length)]
+            next_states[counter] = state_buffer[1:]
+            # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
+            # take(src=self.states,dst=next_states[counter],inds=transition_indices)
             counter += 1
         return states, actions, rewards, next_states, terminate_flags
