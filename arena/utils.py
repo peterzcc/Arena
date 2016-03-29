@@ -3,7 +3,7 @@ import mxnet.ndarray as nd
 import os
 import numpy
 import json
-
+from functools import partial
 _ctx = mx.cpu()
 _numpy_rng = numpy.random.RandomState(123456)
 
@@ -72,10 +72,16 @@ def update_to_kvstore(kv,params,params_grad):
         k=params.keys()[paramIndex]
         kv.push(paramIndex,params_grad[k],priority=-paramIndex)
         kv.pull(paramIndex,params[k],priority=-paramIndex)
+def assgn(args,dst=None,src=None,length=None):
+    i,ind = args
+    dst[i]=src[ind % length]
+
 def take(src,dst,inds):
     length = src.shape[0]
-    for i,id in enumerate(numpy.nditer(inds)):
-        dst[i]=src[id % length]
+    assign_src = partial(assgn,dst=dst,src=src,length=length)
+    map(assign_src,enumerate(numpy.nditer(inds)))
+    # for i,id in enumerate(numpy.nditer(inds)):
+    #     dst[i]=src[id % length]
 class ExecutorBatchSizePool(object):
     def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):
         self.ctx = ctx
