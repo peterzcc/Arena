@@ -264,32 +264,32 @@ def main():
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
                 training_steps += 1
-                def sample_training_data(g):
-                    episode_stats[g].episode_update_step += 1
-                    single_size = minibatch_size/nactor
-                    action, reward, terminate_flag \
-                        = games[g].replay_memory.sample(batch_size=single_size,\
-                        states=states_buffer_for_train,offset=(g*single_size))
-                    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
-                    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
-                    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
-                        terminate_flag
-                pool = ThreadPool(nactor)
-                pool.map(sample_training_data,list(range(nactor)))
-                pool.close()
-                pool.join()
-                # for g,game in enumerate(games):
+                # def sample_training_data(g):
                 #     episode_stats[g].episode_update_step += 1
                 #     single_size = minibatch_size/nactor
                 #     action, reward, terminate_flag \
-                #         = game.replay_memory.sample(batch_size=single_size,\
+                #         = games[g].replay_memory.sample(batch_size=single_size,\
                 #         states=states_buffer_for_train,offset=(g*single_size))
-                #     # next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
-                #
                 #     actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
                 #     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                 #     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
                 #         terminate_flag
+                # pool = ThreadPool(nactor)
+                # pool.map(sample_training_data,list(range(nactor)))
+                # pool.close()
+                # pool.join()
+                for g,game in enumerate(games):
+                    episode_stats[g].episode_update_step += 1
+                    single_size = minibatch_size/nactor
+                    action, reward, terminate_flag \
+                        = game.replay_memory.sample(batch_size=single_size,\
+                        states=states_buffer_for_train,offset=(g*single_size))
+                    # next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
+
+                    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
+                    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
+                    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
+                        terminate_flag
                 states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
                 next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
