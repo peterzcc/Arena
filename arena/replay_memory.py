@@ -139,4 +139,4 @@ class ReplayMemory(object):
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
             # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
             counter += 1
-        return states, actions, rewards, next_states, terminate_flags
+        return actions, rewards, terminate_flags
