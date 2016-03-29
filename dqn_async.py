@@ -137,7 +137,7 @@ def main():
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 
     dqn_output_op = DQNOutputNpyOp()
-    dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
+    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
@@ -247,7 +247,6 @@ def main():
             actions_that_max_q = numpy.argmax(qval_npy,axis=1)
             actions = [0]*nactor
             for g, game in enumerate(games):
-            # def play_games(g):
                 # 1. We need to choose a new action based on the current game status
                 if games[g].state_enabled and games[g].replay_memory.sample_enabled:
                     do_exploration = (npy_rng.rand() < eps_curr[eps_id[g]])
