@@ -85,11 +85,18 @@ class Base(object):
             self.aux_states[k][:] = v
 
     @property
+    def internal_sym_names(self):
+        return self.executor_pool.internal_syms.list_outputs()
+
+    @property
     def default_batchsize(self):
         return self.data_shapes.values()[0].shape[0]
 
-    def forward(self, batch_size=default_batchsize, is_train=False, **input_dict):
-        exe = self.executor_pool.get(batch_size)
+    def forward(self, batch_size=default_batchsize, sym_name=None, is_train=False, **input_dict):
+        exe = self.executor_pool.get(batch_size=batch_size, internal_sym_name=sym_name)
+        if sym_name is not None:
+            assert is_train is False, "We can only view the internal symbols using the " \
+                                      "forward function!"
         #TODO `wait_to_read()` here seems unnecessary, remove it in the future!
         for v in self.params.values():
             v.wait_to_read()
@@ -102,6 +109,8 @@ class Base(object):
 
     def backward(self, batch_size=default_batchsize, **arg_dict):
         exe = self.executor_pool.get(batch_size)
+        for k, v in arg_dict.items():
+            exe.arg_dict[k][:] = v
         exe.backward()
 
     def update(self, updater, params_grad=None):

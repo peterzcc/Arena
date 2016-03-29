@@ -4,6 +4,10 @@ import os
 import numpy
 import json
 import re
+from collections import namedtuple, OrderedDict
+
+ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['batch_size', 'sym_name'])
+ExecutorPoolKey.__new__.__defaults__ = (None, None)
 
 _ctx = mx.cpu()
 _numpy_rng = numpy.random.RandomState(123456)
@@ -85,6 +89,7 @@ class ExecutorBatchSizePool(object):
     def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):
         self.ctx = ctx
         self.sym = sym
+        self.internal_syms = self.sym.get_internals()
         self.params = params
         self.params_grad = params_grad
         self.aux_states = aux_states
@@ -97,25 +102,39 @@ class ExecutorBatchSizePool(object):
         self.exe_pool = {}
         self.base_exe = self.get(self.init_batch_size)
 
-    def get(self, batch_size=None):
+    def get(self, batch_size=None, internal_sym_name=None):
         assert isinstance(batch_size, (int, long))
         if batch_size is None:
             batch_size = self.init_batch_size
-        if batch_size in self.exe_pool:
-            return self.exe_pool[batch_size]
+        exe_key = ExecutorPoolKey(batch_size=batch_size, sym_name=internal_sym_name)
+        if exe_key in self.exe_pool:
+            return self.exe_pool[exe_key]
         else:
-            data_inputs = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
-                           for k, s in self.data_dims.items()}
-            inputs_grad = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
-                           for k, s in self.data_dims.items()}
-            self.inputs_grad_dict[batch_size] = inputs_grad
-            if len(self.exe_pool) == 0:
-                exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+            if internal_sym_name is not None:
+                # Compile a forward only executor for internal symbol
+                internal_sym = self.internal_syms[internal_sym_name]
+                data_inputs = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
+                                for k, s in self.data_dims.items()
+                                if k in internal_sym.list_arguments()}
+                params = {k: v for k, v in self.params.items() if k in internal_sym.list_arguments()}
+                aux_states = {k: v for k, v in self.aux_states.items()
+                              if k in internal_sym.list_auxiliary_states()}
+                exe = internal_sym.bind(ctx=self.ctx, args=dict(params, **data_inputs),
+                                            args_grad=None, grad_req='null', aux_states=aux_states)
+                self.exe_pool[exe_key] = exe
+            else:
+                data_inputs = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
+                               for k, s in self.data_dims.items()}
+                inputs_grad = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
+                               for k, s in self.data_dims.items()}
+                self.inputs_grad_dict[batch_size] = inputs_grad
+                if len(self.exe_pool) == 0:
+                    exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
                                     args_grad=dict(self.params_grad.items() + inputs_grad.items()),
                                     aux_states=self.aux_states)
-            else:
-                exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+                else:
+                    exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
                                     args_grad=dict(self.params_grad.items() + inputs_grad.items()),
                                     aux_states=self.aux_states, shared_exec=self.base_exe)
-            self.exe_pool[batch_size] = exe
+                self.exe_pool[exe_key] = exe
             return exe
