@@ -100,7 +100,7 @@ class ReplayMemory(object):
             end_index = index + self.history_length - 1
             if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
                 # Check if terminates in the middle of the sample!
-                index -= 1
+                index -= 4
                 continue
             states[counter+offset] = self.states.take(initial_indices, axis=0, mode='wrap')
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
