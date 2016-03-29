@@ -84,6 +84,10 @@ def main():
                         help='number of actor')
     parser.add_argument('--exploration-period', required=False, type=int, default=4000000,
                         help='length of annealing of epsilon greedy policy')
+    parser.add_argument('--replay-memory-size', required=False, type=int, default=100,
+                        help='size of replay memory')
+    parser.add_argument('--single-batch-size', required=False, type=int, default=5,
+                        help='batch size for every actor')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -97,7 +101,7 @@ def main():
 
     replay_start_size = args.replay_start_size
     max_start_nullops = 30
-    replay_memory_size = 100
+    replay_memory_size = args.replay_memory_size
     history_length = 4
     rows = 84
     cols = 84
@@ -115,7 +119,6 @@ def main():
     freeze_interval = 10000
     epoch_num = 200
     steps_per_epoch = 250000
-    update_interval = 1
     discount = 0.99
 
     eps_start = numpy.ones((3,))* args.start_eps
@@ -125,8 +128,9 @@ def main():
     eps_id = numpy.zeros((nactor,))
     eps_update_period = 10000
 
-    freeze_interval /= update_interval
-    minibatch_size = nactor * param_update_period
+    freeze_interval /= param_update_period
+    single_batch_size = args.single_batch_size
+    minibatch_size = nactor * single_batch_size
     action_num = len(games[0].action_set)
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
@@ -283,7 +287,7 @@ def main():
                 # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
-                    single_size = minibatch_size/nactor
+                    single_size = single_batch_size
                     action, reward, terminate_flag \
                         = game.replay_memory.sample_inplace(batch_size=single_size,\
                         states=states_buffer_for_train,offset=(g*single_size))
