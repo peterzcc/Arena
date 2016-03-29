@@ -227,8 +227,8 @@ def main():
             qval_npy = qnet.forward(batch_size=nactor, data=states)[0].asnumpy()
             actions_that_max_q = numpy.argmax(qval_npy,axis=1)
 
-            # for g, game in enumerate(games):
-            def play_games(g):
+            for g, game in enumerate(games):
+            # def play_games(g):
                 # 1. We need to choose a new action based on the current game status
                 if games[g].state_enabled and games[g].replay_memory.sample_enabled:
                     do_exploration = (npy_rng.rand() < eps_curr[eps_id[g]])
@@ -246,10 +246,10 @@ def main():
                     action = npy_rng.randint(action_num)
                 # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
                 games[g].play(action)
-            pool_play = ThreadPool(nactor)
-            pool_play.map(play_games,list(range(nactor)))
-            pool_play.close()
-            pool_play.join()
+            # pool_play = ThreadPool(nactor)
+            # pool_play.map(play_games,list(range(nactor)))
+            # pool_play.close()
+            # pool_play.join()
             eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
             total_steps += 1
             if total_steps % 100 == 0:
