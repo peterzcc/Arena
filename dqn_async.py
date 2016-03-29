@@ -32,10 +32,7 @@ class EpisodeStat(object):
         self.episode_q_value = 0.0
         self.episode_update_step = 0
         self.episode_action_step = 0
-# def play_game(game, action):
-#     game.play(action)
-#     print "playing game: "+ str(action)
-#     return 0
+
 def sample_training_data(game,episode_stat,g):
     global states_buffer_for_train
     global actions_buffer_for_train
@@ -283,17 +280,17 @@ def main():
                 # 3.1 Draw sample from the replay_memory
                 training_steps += 1
 
-                parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
-                # for g,game in enumerate(games):
-                #     episode_stats[g].episode_update_step += 1
-                #     single_size = minibatch_size/nactor
-                #     action, reward, terminate_flag \
-                #         = game.replay_memory.sample_inplace(batch_size=single_size,\
-                #         states=states_buffer_for_train,offset=(g*single_size))
-                #     actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
-                #     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
-                #     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
-                #         terminate_flag
+                # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
+                for g,game in enumerate(games):
+                    episode_stats[g].episode_update_step += 1
+                    single_size = minibatch_size/nactor
+                    action, reward, terminate_flag \
+                        = game.replay_memory.sample_inplace(batch_size=single_size,\
+                        states=states_buffer_for_train,offset=(g*single_size))
+                    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
+                    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
+                    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
+                        terminate_flag
                 states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
                 next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
