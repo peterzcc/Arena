@@ -282,7 +282,7 @@ def main():
                     episode_stats[g].episode_update_step += 1
                     single_size = minibatch_size/nactor
                     action, reward, terminate_flag \
-                        = game.replay_memory.sample(batch_size=single_size,\
+                        = game.replay_memory.sample_inplace(batch_size=single_size,\
                         states=states_buffer_for_train,offset=(g*single_size))
                     # next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
 
