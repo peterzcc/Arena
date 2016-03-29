@@ -182,9 +182,9 @@ def main():
     qnet.print_stat()
     target_qnet.print_stat()
 
-    states_buffer_for_act = nd.zeros((nactor, history_length)+(rows, cols),dtype='float32')
-    states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32')
-    next_states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32')
+    states_buffer_for_act = nd.zeros((nactor, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
+    states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
+    next_states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
     actions_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='uint8')
     rewards_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='float32')
     terminate_flags_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='bool')
