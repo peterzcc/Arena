@@ -64,6 +64,8 @@ def main():
                         help='type of kvstore, default will not use kvstore, could also be dist_async')
     parser.add_argument('--optimizer', required=False, type=str, default="adagrad",
                         help='type of optimizer')
+    parser.add_argument('--nactor', required=False, type=int, default=16,
+                        help='number of actor')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -72,7 +74,7 @@ def main():
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
 
     # Async verision
-    nactor= 16
+    nactor= args.nactor
     param_update_period = 5
 
     replay_start_size = args.replay_start_size
@@ -92,15 +94,15 @@ def main():
 
 
     ##RUN NATURE
-    freeze_interval = 10000*nactor
+    freeze_interval = 10000
     epoch_num = 200
-    steps_per_epoch = 250000*nactor
-    update_interval = 4
+    steps_per_epoch = 250000
+    update_interval = 1
     discount = 0.99
 
     eps_start = args.start_eps
     eps_min = 0.1
-    eps_decay = (eps_start - 0.1) / (1000000*nactor)
+    eps_decay = (eps_start - 0.1) / (1000000)
     eps_curr = eps_start
     freeze_interval /= update_interval
     minibatch_size = nactor * param_update_period
@@ -200,7 +202,7 @@ def main():
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
 
-            if total_steps > history_length*nactor:
+            if total_steps > history_length:
                 for g, game in enumerate(games):
                     current_state = game.current_state()
                     states_buffer_for_act[g] = current_state
@@ -230,27 +232,29 @@ def main():
 
                 # 2. Play the game for a single mega-step (Inside the game, the action may be repeated for several times)
                 game.play(action)
-                total_steps += 1
-                if total_steps % 1000 == 0:
-                    this_time = time.time()
-                    ave_fps = (1000/(this_time-time_for_info))
-                    time_for_info = this_time
+
+            total_steps += 1
+            if total_steps % 100 == 0:
+                this_time = time.time()
+                ave_fps = (100/(this_time-time_for_info))
+                time_for_info = this_time
 
                 # 3. Update our Q network if we can start sampling from the replay memory
                 #    Also, we update every `update_interval`
-            if total_steps > replay_start_size*nactor and \
-                total_steps % (nactor*param_update_period) == 0 and \
+            if total_steps > replay_start_size and \
+                total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
-                training_steps += nactor
+                training_steps += 1
 
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
                     single_size = minibatch_size/nactor
                     action, reward, terminate_flag \
-                        = game.replay_memory.sample_last(batch_size=single_size,\
-                        states=states_buffer_for_train[(g*single_size):((g+1)*single_size)])
+                        = game.replay_memory.sample(batch_size=single_size,\
+                        states=states_buffer_for_train,offset=g*single_size)
                     # next_states_buffer_for_train[(g*single_size):((g+1)*single_size)]= next_state
+
                     actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
                     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
@@ -321,7 +325,7 @@ def main():
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
 
-            steps_left -= nactor
+            steps_left -= 1
 
 
 
