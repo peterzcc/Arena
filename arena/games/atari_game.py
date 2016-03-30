@@ -10,7 +10,7 @@ from arena.utils import *
 from arena import ReplayMemory
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
-
+import time
 logger = logging.getLogger(__name__)
 
 _dirname = os.path.dirname(os.path.realpath(__file__))
@@ -133,17 +133,12 @@ class AtariGame(Game):
         self.episode_step += 1
         reward = 0.0
         action = self.action_set[a]
-        time_before_play = time.time()
         for i in xrange(self.frame_skip):
             reward += self.ale.act(action)
             self.ale.getScreenGrayscale(self.screen_buffer[i % self.screen_buffer_length, :, :])
-        time_before_get_obs = time.time()
         self.total_reward += reward
         self.episode_reward += reward
         ob = self.get_observation()
         terminate_flag = self.episode_terminate
-        time_before_appaend = time.time()
         self.replay_memory.append(ob, a, numpy.clip(reward, -1, 1), terminate_flag)
-        print "playtime: %f\t resizetime: %f\t appendtime: %f" %((time_before_get_obs-time_beore_play)\
-                (time_before_appaend-time_before_get_obs),(time.time()-time_before_appaend))
         return reward, terminate_flag
