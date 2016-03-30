@@ -133,7 +133,9 @@ class AtariGame(Game):
         self.episode_step += 1
         reward = 0.0
         action = self.action_set[a]
-        for i in xrange(self.frame_skip):
+        for i in xrange(self.frame_skip-2):
+            reward += self.ale.act(action)
+        for i in range(2):
             reward += self.ale.act(action)
             self.ale.getScreenGrayscale(self.screen_buffer[i % self.screen_buffer_length, :, :])
         self.total_reward += reward

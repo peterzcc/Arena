@@ -24,6 +24,9 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
 npy_rng = get_numpy_rng()
+def play_game(args):
+    game,action = args
+    game.play(action)
 
 
 class EpisodeStat(object):
@@ -200,7 +203,7 @@ def main():
     ave_fps = 0
     ave_loss = 0
     time_for_info = time.time()
-    # parallel_executor = concurrent.futures.ProcessPoolExecutor(nactor)
+    parallel_executor = concurrent.futures.ThreadPoolExecutor(nactor)
     for epoch in xrange(epoch_num):
         # Run Epoch
         steps_left = steps_per_epoch
@@ -269,11 +272,11 @@ def main():
                 else:
                     action = npy_rng.randint(action_num)
                 actions[g] = action
-            for game,action in zip(games,actions):
-                game.play(action)
-            # for ret in parallel_executor.map(play_game, games, actions):
-            #     print ret
-            # print "finish map"
+            t0=time.time()
+            # for game,action in zip(games,actions):
+            #     game.play(action)
+            for ret in parallel_executor.map(play_game, zip(games, actions)):
+                pass
             eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
             total_steps += 1
             if total_steps % 100 == 0:
