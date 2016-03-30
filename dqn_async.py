@@ -182,9 +182,12 @@ def main():
     qnet.print_stat()
     target_qnet.print_stat()
 
-    states_buffer_for_act = nd.zeros((nactor, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
-    states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
-    next_states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
+    states_buffer_for_act = nd.zeros((nactor, history_length)+(rows, cols),dtype='uint8',ctx=q_ctx)
+    states_for_act = nd.zeros((nactor, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
+    states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8',ctx=q_ctx)
+    statesf = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
+    next_states = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8',ctx=q_ctx)
+    next_statesf = nd.zeros((minibatch_size, history_length)+(rows, cols),dtype='float32',ctx=q_ctx)
     actions_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='uint8')
     rewards_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='float32')
     terminate_flags_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='bool')
@@ -239,9 +242,9 @@ def main():
             if total_steps > history_length:
                 for g, game in enumerate(games):
                     game.replay_memory.get_latest_slice(obs=states_buffer_for_act[g])
-                states_buffer_for_act /= float(255.0)
+                states_for_act = states_buffer_for_act / float(255.0)
 
-            qval_npy = qnet.forward(batch_size=nactor, data=states_buffer_for_act)[0].asnumpy()
+            qval_npy = qnet.forward(batch_size=nactor, data=states_for_act)[0].asnumpy()
             actions_that_max_q = numpy.argmax(qval_npy,axis=1)
             actions = [0]*nactor
             for g, game in enumerate(games):
@@ -300,7 +303,8 @@ def main():
                     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
                         terminate_flag
-                # states = nd.array(states_buffer_for_train, ctx=q_ctx) / float(255.0)
+                statesf = states / float(255.0)
+                next_statesf = next_states / float(255.0)
                 # next_states = nd.array(next_states_buffer_for_train, ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
                 rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
@@ -309,20 +313,20 @@ def main():
                 #     get the corresponding target rewards
                 if not args.double_q:
                     target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
+                                                     data=next_statesf)[0]
                     target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                             nd.argmax_channel(target_qval))\
                                        * (1.0 - terminate_flags) * discount
                 else:
                     target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
-                    qval = qnet.forward(batch_size=minibatch_size, data=next_states)[0]
+                                                     data=next_statesf)[0]
+                    qval = qnet.forward(batch_size=minibatch_size, data=next_statesf)[0]
 
                     target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                             nd.argmax_channel(qval))\
                                        * (1.0 - terminate_flags) * discount
 
-                outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
+                outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=statesf,
                                           dqn_action=actions,
                                           dqn_reward=target_rewards)
                 qnet.backward(batch_size=minibatch_size)
