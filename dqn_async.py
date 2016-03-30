@@ -281,27 +281,25 @@ def main():
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
-                training_steps += 1
+
 
                 # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
-                    single_size = single_batch_size
+                    start =  g*single_batch_size
+                    end = (g+1)*single_batch_size
                     action, reward, terminate_flag \
-                        = game.replay_memory.sample_last(batch_size=single_size,\
-                        states=states_buffer_for_train,offset=(g*single_size))
-                    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
-                    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
-                    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
+                        = game.replay_memory.sample_last(batch_size=single_batch_size,\
+                        states=states_buffer_for_train,offset=(start))
+                    actions_buffer_for_train[(start):(end)]= action
+                    rewards_buffer_for_train[(start):(end)]= reward
+                    terminate_flags_buffer_for_train[(start):(end)]=\
                         terminate_flag
                 states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
                 next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
                 rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
                 terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
-
-                # 3.2 Use the target network to compute the scores and
-                #     get the corresponding target rewards
                 if not args.double_q:
                     target_qval = target_qnet.forward(batch_size=minibatch_size,
                                                      data=next_states)[0]
@@ -316,44 +314,49 @@ def main():
                     target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                             nd.argmax_channel(qval))\
                                        * (1.0 - terminate_flags) * discount
+                for g,game in enumerate(games):
+                    training_steps += 1
+                    # 3.2 Use the target network to compute the scores and
+                    #     get the corresponding target rewards
+                    start =  g*single_batch_size
+                    end = (g+1)*single_batch_size
+                    outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states[start:end],
+                                              dqn_action=actions[start:end],
+                                              dqn_reward=target_rewards[start:end])
+                    qnet.backward(batch_size=single_batch_size)
 
-                outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
-                                          dqn_action=actions,
-                                          dqn_reward=target_rewards)
-                qnet.backward(batch_size=minibatch_size)
 
-
-                if args.kv_type != None:
-                    if total_steps % kvstore_update_period == 0:
-                        if use_easgd == False:
-                            update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                        else:
+                    if args.kv_type != None:
+                        if total_steps % kvstore_update_period == 0:
+                            if use_easgd == False:
+                                update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                            else:
+                                for paramIndex in range(len(qnet.params)):
+                                    k=qnet.params.keys()[paramIndex]
+                                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                        if use_easgd:
                             for paramIndex in range(len(qnet.params)):
                                 k=qnet.params.keys()[paramIndex]
-                                kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                                qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                    if use_easgd:
-                        for paramIndex in range(len(qnet.params)):
-                            k=qnet.params.keys()[paramIndex]
-                            '''qnet.params[k][:] += -easgd_eta*nd.clip(qnet.params_grad[k],
-                                                            -args.clip_gradient,
-                                                            args.clip_gradient)'''
-                            local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                            weight=qnet.params[k])
-                else:
-                    qnet.update(updater=updater)
+                                '''qnet.params[k][:] += -easgd_eta*nd.clip(qnet.params_grad[k],
+                                                                -args.clip_gradient,
+                                                                args.clip_gradient)'''
+                                local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                                                weight=qnet.params[k])
+                    else:
+                        qnet.update(updater=updater)
 
 
 
-                # 3.3 Calculate Loss
-                diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
-                quadratic_part = nd.clip(diff, -1, 1)
-                loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
-                if ave_loss == 0:
-                    ave_loss =  loss
-                else:
-                    ave_loss =  0.95*ave_loss + 0.05*loss
+                        # 3.3 Calculate Loss
+                    diff = nd.abs(nd.choose_element_0index(outputs[0], actions[start:end]) - target_rewards[start:end])
+                    quadratic_part = nd.clip(diff, -1, 1)
+                    loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
+                    if ave_loss == 0:
+                        ave_loss =  loss
+                    else:
+                        ave_loss =  0.95*ave_loss + 0.05*loss
 
                 # 3.3 Update the target network every freeze_interval
                 # (We can do annealing instead of hard copy)
