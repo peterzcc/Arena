@@ -94,6 +94,8 @@ def main():
 
     parser.add_argument('--symbol', required=False, type=str, default="nature",
                         help='type of network, nature or nips')
+    parser.add_argument('--sample-policy', required=False, type=str, default="recent",
+                        help='minibatch sampling policy, recent or random')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -132,13 +134,12 @@ def main():
     eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
-    eps_update_period = 1000
+    eps_update_period = 2000
 
     freeze_interval /= param_update_period
     single_batch_size = args.single_batch_size
     minibatch_size = nactor * single_batch_size
     action_num = len(games[0].action_set)
-
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 
@@ -295,14 +296,18 @@ def main():
                 # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
-                    single_size = single_batch_size
-                    action, reward, terminate_flag \
-                        = game.replay_memory.sample_last(batch_size=single_size,\
-                        states=states_buffer_for_train,offset=(g*single_size))
-                    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
-                    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
-                    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
-                        terminate_flag
+                    nsample = single_batch_size
+                    i0 = (g*nsample)
+                    i1 = (g+1)*nsample
+                    if args.sample_policy == "recent":
+                        action, reward, terminate_flag=game.replay_memory.sample_last(batch_size=nsample,\
+                            states=states_buffer_for_train,offset=i0)
+                    elif args.sample_policy == "random":
+                        action, reward, terminate_flag=game.replay_memory.sample_inplace(batch_size=nsample,\
+                            states=states_buffer_for_train,offset=i0)
+                    actions_buffer_for_train[i0:i1]= action
+                    rewards_buffer_for_train[i0:i1]= reward
+                    terminate_flags_buffer_for_train[i0:i1]=terminate_flag
                 states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
                 next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
