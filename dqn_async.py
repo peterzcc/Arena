@@ -269,8 +269,10 @@ def main():
                 else:
                     action = npy_rng.randint(action_num)
                 actions[g] = action
+            time_before_play = time.time()
             for game,action in zip(games,actions):
                 game.play(action)
+            logging.info("play time: %f"%(time.time()-time_before_play))
             # for ret in parallel_executor.map(play_game, games, actions):
             #     print ret
             # print "finish map"
