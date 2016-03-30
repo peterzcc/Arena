@@ -200,7 +200,7 @@ def main():
     ave_fps = 0
     ave_loss = 0
     time_for_info = time.time()
-    parallel_executor = concurrent.futures.ProcessPoolExecutor(nactor)
+    # parallel_executor = concurrent.futures.ProcessPoolExecutor(nactor)
     for epoch in xrange(epoch_num):
         # Run Epoch
         steps_left = steps_per_epoch
