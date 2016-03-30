@@ -125,7 +125,7 @@ def main():
 
     eps_start = numpy.ones((3,))* args.start_eps
     eps_min = numpy.array([0.1,0.01,0.5])
-    eps_decay = (eps_start - eps_min) / (args.exploration_period)
+    eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
     eps_update_period = 10000
