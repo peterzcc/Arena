@@ -88,6 +88,8 @@ def main():
                         help='size of replay memory')
     parser.add_argument('--single-batch-size', required=False, type=int, default=5,
                         help='batch size for every actor')
+    parser.add_argument('--symbol', required=False, type=str, default="nature",
+                        help='type of network, nature or nips')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -137,7 +139,10 @@ def main():
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 
     dqn_output_op = DQNOutputNpyOp()
-    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    if args.symbol == "nature":
+        dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    elif args.symbol == "nips":
+        dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
@@ -145,9 +150,14 @@ def main():
 
     use_easgd = False
     if args.optimizer != "easgd":
-        optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
-                        clip_gradient=args.clip_gradient,
-                        rescale_grad=1.0, wd=args.wd)
+        if args.optimizer == 'adagrad':
+            optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
+                            clip_gradient=args.clip_gradient,
+                            rescale_grad=1.0, wd=args.wd)
+        elif args.optimizer == 'rmsprop':
+            optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
+                            clip_gradient=args.clip_gradient,
+                            rescale_grad=1.0, wd=args.wd,gamma2=0.95)
     else:
         use_easgd = True
         easgd_beta = 0.9
