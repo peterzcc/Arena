@@ -154,9 +154,16 @@ def main():
 
     use_easgd = False
     if args.optimizer != "easgd":
-        optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
-                        clip_gradient=args.clip_gradient,
-                        rescale_grad=1.0, wd=args.wd)
+        if args.optimizer == "adagrad":
+            optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
+                            clip_gradient=args.clip_gradient,
+                            rescale_grad=1.0, wd=args.wd)
+        elif args.optimizer == "rmsprop":
+            optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
+                            clip_gradient=args.clip_gradient,gamma2=0,
+                            rescale_grad=1.0, wd=args.wd)
+            lr_decay = (args.lr - 0)/(steps_per_epoch*epoch_num/param_update_period)
+
     else:
         use_easgd = True
         easgd_beta = 0.9
@@ -267,8 +274,6 @@ def main():
                         # We need to wait after calling calc_score(.), which makes the program slow
                         # TODO Profiling the speed of this part!
                         action = actions_that_max_q[g]
-                        import pdb; pdb.set_trace() #TODO: debug only
-
                         episode_stats[g].episode_q_value += qval_npy[g, action]
                         episode_stats[g].episode_action_step += 1
                 else:
@@ -358,8 +363,8 @@ def main():
                                             weight=qnet.params[k])
                 else:
                     qnet.update(updater=updater)
-
-
+                if args.optimizer == "rmsprop":
+                    optimizer.lr -= lr_decay
 
                 # 3.3 Calculate Loss
                 diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
