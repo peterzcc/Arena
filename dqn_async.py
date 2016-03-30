@@ -135,8 +135,8 @@ def main():
     minibatch_size = nactor * single_batch_size
     action_num = len(games[0].action_set)
 
-    data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
-                   'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
+    data_shapes = {'data': (single_batch_size, history_length) + (rows, cols),
+                   'dqn_action': (single_batch_size,), 'dqn_reward': (single_batch_size,)}
 
     dqn_output_op = DQNOutputNpyOp()
     if args.symbol == "nature":
