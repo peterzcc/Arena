@@ -162,9 +162,12 @@ class ReplayMemory(object):
             transition_indices = numpy.arange(index, index + self.history_length)
             initial_indices = transition_indices - 1
             end_index = index + self.history_length - 1
-            if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
+            while numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
                 # Check if terminates in the middle of the sample!
-                continue
+                index -= 1
+                transition_indices = numpy.arange(index, index + self.history_length)
+                initial_indices = transition_indices - 1
+                end_index = index + self.history_length - 1
             states[counter] = self.states.take(initial_indices, axis=0, mode='wrap')
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')

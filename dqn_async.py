@@ -91,7 +91,6 @@ def main():
                         help='size of replay memory')
     parser.add_argument('--single-batch-size', required=False, type=int, default=5,
                         help='batch size for every actor')
-
     parser.add_argument('--symbol', required=False, type=str, default="nature",
                         help='type of network, nature or nips')
     parser.add_argument('--sample-policy', required=False, type=str, default="recent",
@@ -126,7 +125,7 @@ def main():
     ##RUN NATURE
     freeze_interval = 40000/nactor
     epoch_num = 200
-    steps_per_epoch = 250000
+    steps_per_epoch = 4000000/nactor
     discount = 0.99
 
     eps_start = numpy.ones((3,))* args.start_eps
@@ -268,7 +267,9 @@ def main():
                         # We need to wait after calling calc_score(.), which makes the program slow
                         # TODO Profiling the speed of this part!
                         action = actions_that_max_q[g]
-                        episode_stats[g].episode_q_value += qval_npy[0, action]
+                        import pdb; pdb.set_trace() #TODO: debug only
+
+                        episode_stats[g].episode_q_value += qval_npy[g, action]
                         episode_stats[g].episode_action_step += 1
                 else:
                     action = npy_rng.randint(action_num)
