@@ -88,6 +88,9 @@ def main():
                         help='size of replay memory')
     parser.add_argument('--single-batch-size', required=False, type=int, default=5,
                         help='batch size for every actor')
+
+    parser.add_argument('--symbol', required=False, type=str, default="nature",
+                        help='type of network, nature or nips')
     args, unknown = parser.parse_known_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -116,17 +119,17 @@ def main():
 
 
     ##RUN NATURE
-    freeze_interval = 10000
+    freeze_interval = 40000/nactor
     epoch_num = 200
     steps_per_epoch = 250000
     discount = 0.99
 
     eps_start = numpy.ones((3,))* args.start_eps
     eps_min = numpy.array([0.1,0.01,0.5])
-    eps_decay = (eps_start - eps_min) / (args.exploration_period)
+    eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
-    eps_update_period = 10000
+    eps_update_period = 1000
 
     freeze_interval /= param_update_period
     single_batch_size = args.single_batch_size
@@ -137,7 +140,10 @@ def main():
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 
     dqn_output_op = DQNOutputNpyOp()
-    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    if args.symbol == "nature":
+        dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    elif args.symbol == "nips":
+        dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
