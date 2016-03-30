@@ -303,8 +303,8 @@ def main():
                     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
                     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
                         terminate_flag
-                statesf = states / float(255.0)
-                next_statesf = next_states / float(255.0)
+                statesf = states.astype("float32") / float(255.0)
+                next_statesf = next_states.astype("float32") / float(255.0)
                 # next_states = nd.array(next_states_buffer_for_train, ctx=q_ctx) / float(255.0)
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
                 rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)

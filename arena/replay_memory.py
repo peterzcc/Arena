@@ -209,15 +209,16 @@ class ReplayMemory(object):
                 # Check if terminates in the middle of the sample!
                 continue
             # states[counter] = self.states.take(initial_indices, axis=0, mode='wrap')
-            take(src=self.states,dst=states[counter],inds=initial_indices)
+
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
             # take(src=self.states,dst=state_buffer,inds=buffer_indices)
             # state_buffer /= float(255.0)
-            states[counter] = state_buffer[:(self.history_length)]
-            next_states[counter] = state_buffer[1:]
+            # states[counter] = state_buffer[:(self.history_length)]
+            # next_states[counter] = state_buffer[1:]
             # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
+            take(src=self.states,dst=states[counter],inds=initial_indices)
             take(src=self.states,dst=next_states[counter],inds=transition_indices)
             counter += 1
         return states, actions, rewards, next_states, terminate_flags
