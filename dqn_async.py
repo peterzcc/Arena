@@ -118,7 +118,7 @@ def main():
 
 
     ##RUN NATURE
-    freeze_interval = 10000
+    freeze_interval = 40000
     epoch_num = 200
     steps_per_epoch = 250000
     discount = 0.99
@@ -310,29 +310,28 @@ def main():
                 actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
                 rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
                 terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
-                if not args.double_q:
-                    target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                            nd.argmax_channel(target_qval))\
-                                       * (1.0 - terminate_flags) * discount
-                else:
-                    target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
-                    qval = qnet.forward(batch_size=minibatch_size, data=next_states)[0]
-
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                            nd.argmax_channel(qval))\
-                                       * (1.0 - terminate_flags) * discount
+                target_qval = target_qnet.forward(batch_size=minibatch_size,
+                                                 data=next_states)[0]
                 for g,game in enumerate(games):
                     training_steps += 1
+
                     # 3.2 Use the target network to compute the scores and
                     #     get the corresponding target rewards
                     start =  g*single_batch_size
                     end = (g+1)*single_batch_size
+                    if not args.double_q:
+                        target_rewards = rewards[start:end] + nd.choose_element_0index(target_qval[start:end],
+                                                                nd.argmax_channel(target_qval[start:end]))\
+                                           * (1.0 - terminate_flags[start:end]) * discount
+                    else:
+                        qval = qnet.forward(batch_size=single_batch_size, data=next_states[start:end])[0]
+
+                        target_rewards = rewards[start:end] + nd.choose_element_0index(target_qval[start:end],
+                                                                nd.argmax_channel(qval))\
+                                           * (1.0 - terminate_flags[start:end]) * discount
                     outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states[start:end],
                                               dqn_action=actions[start:end],
-                                              dqn_reward=target_rewards[start:end])
+                                              dqn_reward=target_rewards)
                     qnet.backward(batch_size=single_batch_size)
 
 
@@ -360,7 +359,7 @@ def main():
 
 
                         # 3.3 Calculate Loss
-                    diff = nd.abs(nd.choose_element_0index(outputs[0], actions[start:end]) - target_rewards[start:end])
+                    diff = nd.abs(nd.choose_element_0index(outputs[0], actions[start:end]) - target_rewards)
                     quadratic_part = nd.clip(diff, -1, 1)
                     loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
                     if ave_loss == 0:
@@ -368,10 +367,10 @@ def main():
                     else:
                         ave_loss =  0.95*ave_loss + 0.05*loss
 
-                # 3.3 Update the target network every freeze_interval
-                # (We can do annealing instead of hard copy)
-                if training_steps % freeze_interval == 0:
-                    qnet.copy_params_to(target_qnet)
+                    # 3.3 Update the target network every freeze_interval
+                    # (We can do annealing instead of hard copy)
+                    if training_steps % freeze_interval == 0:
+                        qnet.copy_params_to(target_qnet)
 
             steps_left -= 1
 
