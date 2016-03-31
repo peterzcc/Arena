@@ -63,6 +63,8 @@ def main():
                         help='Learning rate of the AdaGrad optimizer')
     parser.add_argument('--eps', required=False, type=float, default=0.01,
                         help='Eps of the AdaGrad optimizer')
+    parser.add_argument('--rms-decay', required=False, type=float, default=0.95,
+                        help='Decay rate of the RMSProp')
     parser.add_argument('--clip-gradient', required=False, type=float, default=None,
                         help='Clip threshold of the AdaGrad optimizer')
     parser.add_argument('--double-q', required=False, type=bool, default=False,
@@ -96,9 +98,12 @@ def main():
     parser.add_argument('--sample-policy', required=False, type=str, default="recent",
                         help='minibatch sampling policy, recent or random')
     args, unknown = parser.parse_known_args()
+
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
-        args.dir_path = 'dqn-%s-%de_5' % (rom_name,int(args.lr*10**5))
+        time_str = time.strftime("%m%d-%H%M", time.gmtime())
+        args.dir_path = ('dqn-%s-%d_' % (rom_name,int(args.lr*10**5)))+time_str
+        logging.info("saving to dir: "+args.dir_path)
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
 
@@ -160,7 +165,7 @@ def main():
                             rescale_grad=1.0, wd=args.wd)
         elif args.optimizer == "rmsprop":
             optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
-                            clip_gradient=args.clip_gradient,gamma2=0,
+                            clip_gradient=args.clip_gradient,gamma1=args.rms_decay,gamma2=0,
                             rescale_grad=1.0, wd=args.wd)
             lr_decay = (args.lr - 0)/(steps_per_epoch*epoch_num/param_update_period)
 
@@ -279,13 +284,13 @@ def main():
                 else:
                     action = npy_rng.randint(action_num)
                 actions[g] = action
-            t0=time.time()
             # for game,action in zip(games,actions):
             #     game.play(action)
             for ret in parallel_executor.map(play_game, zip(games, actions)):
                 pass
             eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
             total_steps += 1
+            steps_left -= 1
             if total_steps % 100 == 0:
                 this_time = time.time()
                 ave_fps = (100/(this_time-time_for_info))
@@ -380,7 +385,7 @@ def main():
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
 
-            steps_left -= 1
+
 
 
 
