@@ -3,6 +3,7 @@ import mxnet.ndarray as nd
 import numpy
 from arena import Base
 from arena.utils import *
+import matplotlib.pyplot as plt
 
 
 '''
@@ -43,12 +44,13 @@ class LogNormalPolicyOut(mx.operator.NDArrayOp):
         score = in_data[2]
         if 1 == var.ndim :
             grad_mu = in_grad[0]
-            grad_mu[:] = (action - mean) * score.reshape((score.shape[0], 1)) / var
+            grad_mu[:] = - (action - mean) * score.reshape((score.shape[0], 1)) / var
         else:
             grad_mu = in_grad[0]
             grad_var = in_grad[1]
-            grad_mu[:] = -(action - mean) * score.reshape((score.shape[0], 1)) / var
-            grad_var[:] = -nd.square(action - mean) / nd.square(var) / 2
+            grad_mu[:] = - (action - mean) * score.reshape((score.shape[0], 1)) / var
+            grad_var[:] = - nd.square(action - mean) * score.reshape((score.shape[0], 1)) \
+                          / nd.square(var) / 2
 
 
 class LogNormalPolicyOutNpy(mx.operator.NumpyOp):
@@ -73,7 +75,11 @@ class LogNormalPolicyOutNpy(mx.operator.NumpyOp):
     def forward(self, in_data, out_data):
         mean = in_data[0]
         var = in_data[1]
-        out_data[0][:] = numpy.sqrt(var) * self.rng.randn(*mean.shape) + mean
+        if 1 == var.ndim:
+            out_data[0][:] = numpy.sqrt(var.reshape((var.shape[0], 1))) \
+                             * self.rng.randn(*mean.shape) + mean
+        else:
+            out_data[0][:] = numpy.sqrt(var) * self.rng.randn(*mean.shape) + mean
 
     def backward(self, out_grad, in_data, out_data, in_grad):
         mean = in_data[0]
@@ -88,9 +94,8 @@ class LogNormalPolicyOutNpy(mx.operator.NumpyOp):
             grad_mu = in_grad[0]
             grad_var = in_grad[1]
             grad_mu[:] = - (action - mean) * score.reshape((score.shape[0], 1)) / var
-            grad_var[:] = - numpy.square(action - mean) / numpy.square(var) / 2
-#            print 'grad_mu:', grad_mu
-#            print 'grad_var', grad_var
+            grad_var[:] = - numpy.square(action - mean) * score.reshape((score.shape[0], 1))\
+                          / numpy.square(var) / 2
 
 class LogSoftmaxPolicyOut(mx.operator.NumpyOp):
     def __init__(self):
@@ -124,51 +129,63 @@ def policy_sym(action_num, output_op):
 
 
 def simple_game(data, action):
-    return - numpy.square(action - data).sum(axis=1)
+    return (numpy.square(action - data*data).sum(axis=1) < 0.5)*1000 + \
+           (numpy.square(action - data*data).sum(axis=1) < 10)*100 + 1
+
+def update_line(hl, fig, ax, new_x, new_y):
+    hl.set_xdata(numpy.append(hl.get_xdata(), new_x))
+    hl.set_ydata(numpy.append(hl.get_ydata(), new_y))
+    ax.relim()
+    ax.autoscale_view()
+    fig.canvas.draw()
+    fig.canvas.flush_events()
 
 
 output_op = LogNormalPolicyOutNpy()
 var = mx.symbol.Variable('var')
 data = mx.symbol.Variable('data')
-#net_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_1', num_hidden=10)
-#net_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_relu_1', num_hidden=10)
-net_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_1', num_hidden=1)
-#net_var = mx.symbol.FullyConnected(data=data, name='fc_var_1', num_hidden=1)
-#net_var = mx.symbol.Activation(data=net_var, name='fc_var_softplus_1', act_type='softrelu')
-net = output_op(mean=net_mean, var=var, name='policy')
+net_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_1', num_hidden=20)
+net_mean = mx.symbol.Activation(data=net_mean, name='fc_mean_relu_1', act_type='relu')
+net_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_2', num_hidden=20)
+net_mean = mx.symbol.Activation(data=net_mean, name='fc_mean_relu_2', act_type='relu')
+net_mean = mx.symbol.FullyConnected(data=net_mean, name='fc_mean_3', num_hidden=10)
+net_var = mx.symbol.FullyConnected(data=data, name='fc_var_1', num_hidden=10)
+net_var = mx.symbol.Activation(data=net_var, name='fc_var_softplus_1', act_type='softrelu')
+net = output_op(mean=net_mean, var=net_var, name='policy')
 ctx = mx.gpu()
-minibatch_size = 1
-data_shapes = {'data': (minibatch_size, 1), 'policy_score': (minibatch_size,), 'var':(minibatch_size,)}
+minibatch_size = 100
+data_shapes = {'data': (minibatch_size, 10), 'policy_score': (minibatch_size,)} #, 'var':(minibatch_size,)}
 qnet = Base(data_shapes=data_shapes, sym=net, name='PolicyNet',
             initializer=mx.initializer.Xavier(factor_type="in", magnitude=1.0),
             ctx=ctx)
 print qnet.internal_sym_names
 
+lr = 0.00001
 optimizer = mx.optimizer.create(name='sgd', learning_rate=0.00001,
                                 clip_gradient=None,
-                                rescale_grad=1.0, wd=1.)
+                                rescale_grad=1.0, wd=0.)
 updater = mx.optimizer.get_updater(optimizer)
-l = []
-for i in range(100000):
+total_iter = 1000000
+stats = numpy.zeros((total_iter, 3), dtype=numpy.float32)
+plt.ion()
+fig, ax = plt.subplots()
+lines, = ax.plot([], [])
+ax.set_autoscaley_on(True)
+baseline = 0
+for i in range(total_iter):
 #    for k, v in qnet.params.items():
 #        print k, v.asnumpy()
-    data = numpy.random.randn(minibatch_size, 1)
-    means = qnet.forward(batch_size=minibatch_size, sym_name="fc_mean_1_output", data=data)
-    vars = qnet.forward(batch_size=minibatch_size, sym_name="fc_var_softplus_1_output", data=data)
-    selected_actions = qnet.forward(batch_size=minibatch_size, sym_name="policy_output", data=data)
-    print 'data=', data
-    print 'means=', means[0].asnumpy()
-    print 'vars=', vars[0].asnumpy()
-    print 'selected actions=', selected_actions[0].asnumpy()
-    outputs = qnet.forward(batch_size=minibatch_size, is_train=False, data=data)
+    data = numpy.random.randn(minibatch_size, 10)
+    means = qnet.forward(batch_size=minibatch_size, sym_name="fc_mean_3_output", data=data)[0].asnumpy()
+    vars = qnet.forward(batch_size=minibatch_size, sym_name="fc_var_softplus_1_output", data=data)[0].asnumpy()
+
+    outputs = qnet.forward(batch_size=minibatch_size, is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
     action = outputs[0].asnumpy()
     score = simple_game(data, action)
-    print score.sum(), score.shape
-    qnet.backward(batch_size=minibatch_size, policy_score=score)
+    baseline = baseline - 0.001 * (baseline - score.mean())
+    print 'score=', score.mean(), 'err=', numpy.square(means - data*data).mean(), 'var=', vars.mean(), 'baseline=', baseline
+    stats[i] = [score.mean(), numpy.square(means - data*data).mean(), vars.mean()]
+    qnet.backward(batch_size=minibatch_size, policy_score=score-baseline)
     qnet.update(updater)
-    #ch = raw_input()
-    #l.append(outputs[0].copyto(ctx))
+    update_line(lines, fig, ax, i, numpy.square(means - data*data).mean())
 
-#for ele in l:
-    #print ele.asnumpy()
-print sum(l).asnumpy()/len(l)
