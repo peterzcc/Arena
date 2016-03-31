@@ -138,7 +138,7 @@ def main():
     eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
-    eps_update_period = 2000
+    eps_update_period = 8000
 
     freeze_interval /= param_update_period
     single_batch_size = args.single_batch_size
@@ -298,7 +298,7 @@ def main():
 
                 # 3. Update our Q network if we can start sampling from the replay memory
                 #    Also, we update every `update_interval`
-            if total_steps > replay_start_size and \
+            if total_steps > minibatch_size and \
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
