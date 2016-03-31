@@ -129,7 +129,7 @@ def policy_sym(action_num, output_op):
 
 
 def simple_game(data, action):
-    return (numpy.square(action - data*data).sum(axis=1) < 0.5)*1000 + \
+    return (numpy.square(action - data*data).sum(axis=1) < 2)*1000 + \
            (numpy.square(action - data*data).sum(axis=1) < 10)*100 + 1
 
 def update_line(hl, fig, ax, new_x, new_y):
