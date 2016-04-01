@@ -97,6 +97,8 @@ def main():
                         help='type of network, nature or nips')
     parser.add_argument('--sample-policy', required=False, type=str, default="recent",
                         help='minibatch sampling policy, recent or random')
+    parser.add_argument('--epoch-num', required=False, type=int, default=200,
+                        help='number of epochs')
     args, unknown = parser.parse_known_args()
 
     if args.dir_path == '':
@@ -129,7 +131,7 @@ def main():
 
     ##RUN NATURE
     freeze_interval = 40000/nactor
-    epoch_num = 50
+    epoch_num = args.epoch_num
     steps_per_epoch = 4000000/nactor
     discount = 0.99
 
@@ -245,9 +247,9 @@ def main():
                         info_str="Node[%d]: " %kv.rank
                     else:
                         info_str =""
-                    info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%s" \
+                    info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
                                 % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                   ave_fps, str(eps_curr))
+                                   ave_fps, (eps_curr[g]))
                     info_str += ", Avg Loss:%f" % ave_loss
                     if episode_stats[g].episode_action_step > 0:
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
