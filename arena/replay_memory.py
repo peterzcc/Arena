@@ -218,7 +218,13 @@ class ReplayMemory(object):
             # states[counter] = state_buffer[:(self.history_length)]
             # next_states[counter] = state_buffer[1:]
             # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
-            take(src=self.states,dst=states[counter],inds=initial_indices)
-            take(src=self.states,dst=next_states[counter],inds=transition_indices)
+            if (transition_indices[-1]) % self.memory_size < self.history_length:
+                take(src=self.states,dst=states[counter],inds=initial_indices)
+                take(src=self.states,dst=next_states[counter],inds=transition_indices)
+            else:
+                i0 = initial_indices[0] % self.memory_size
+                states[counter]=self.states[i0:(i0+self.history_length)]
+                next_states[counter]=self.states[(i0+1):(i0+1+self.history_length)]
+
             counter += 1
         return states, actions, rewards, next_states, terminate_flags
