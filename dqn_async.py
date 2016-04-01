@@ -60,6 +60,15 @@ ave_loss = 0
 optimizer = None
 episode_stats = []
 def main():
+    global steps_left
+    global ave_fps
+    global ave_loss
+    global optimizer
+    global episode_stats
+    global total_steps
+    global episode
+    global epoch_reward
+    global training_steps
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
     parser.add_argument('-r', '--rom', required=False, type=str,
                         default=os.path.join('arena', 'games', 'roms', 'breakout.bin'),
@@ -212,15 +221,7 @@ def main():
 
     qnet.print_stat()
     target_qnet.print_stat()
-    global steps_left
-    global ave_fps
-    global ave_loss
-    global optimizer
-    global episode_stats
-    global total_steps
-    global episode
-    global epoch_reward
-    global training_steps
+
     # Begin Playing Game
     training_steps = 0
     total_steps = 0
@@ -299,7 +300,7 @@ def main():
                         # We can simply stack the current_state() of gaming instances and give prediction for all of them
                         # We need to wait after calling calc_score(.), which makes the program slow
                         # TODO Profiling the speed of this part!
-                        action = actions_that_max_q[g]
+                        action = actions_that_max_q
                         episode_stats[g].episode_q_value += qval_npy[g, action]
                         episode_stats[g].episode_action_step += 1
                 else:
@@ -398,10 +399,10 @@ def main():
                             updater = updater,eps_curr=eps_curr,freeze_interval=freeze_interval,
                             param_update_period=param_update_period,lr_decay=lr_decay,
                             single_batch_size=single_batch_size,history_length=history_length)
-        # for result in parallel_executor.map(run_game,games,[g for g in range(nactor)]):
-        #     pass
-        for g,game in enumerate(games):
-            run_game(game,g)
+        for result in parallel_executor.map(run_game,games,[g for g in range(nactor)]):
+            pass
+        # for g,game in enumerate(games):
+        #     run_game(game,g)
 
 
 
