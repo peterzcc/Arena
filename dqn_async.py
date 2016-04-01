@@ -129,7 +129,7 @@ def main():
 
     ##RUN NATURE
     freeze_interval = 40000/nactor
-    epoch_num = 200
+    epoch_num = 50
     steps_per_epoch = 4000000/nactor
     discount = 0.99
 
