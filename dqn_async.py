@@ -207,11 +207,7 @@ def main():
     target_qnet.print_stat()
 
     states_buffer_for_act = numpy.zeros((nactor, history_length)+(rows, cols),dtype='uint8')
-    states_buffer_for_train = numpy.zeros((minibatch_size, history_length+1)+(rows, cols),dtype='uint8')
-    next_states_buffer_for_train = numpy.zeros((minibatch_size, history_length)+(rows, cols),dtype='uint8')
-    actions_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='uint8')
-    rewards_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='float32')
-    terminate_flags_buffer_for_train = numpy.zeros((minibatch_size, ),dtype='bool')
+
     # Begin Playing Game
     training_steps = 0
     total_steps = 0
@@ -225,14 +221,21 @@ def main():
         episode = 0
         epoch_reward = 0
         start = time.time()
-        #
-        for game in games:
+        episode_stats = [EpisodeStat() for i in range(len(games))]
+        def run_epoch(game,episode_stats,g,qnet=None,target_qnet=None):
+            global steps_left
+            global states_buffer_for_act
+            global ave_fps
+            global ave_loss
+            states_buffer_for_act = numpy.zeros((1, history_length)+(rows, cols),dtype='uint8')
+            states_buffer_for_train = numpy.zeros((single_batch_size, history_length+1)+(rows, cols),dtype='uint8')
+            actions_buffer_for_train = numpy.zeros((single_batch_size, ),dtype='uint8')
+            rewards_buffer_for_train = numpy.zeros((single_batch_size, ),dtype='float32')
+            terminate_flags_buffer_for_train = numpy.zeros((single_batch_size, ),dtype='bool')
             game.start()
             game.begin_episode()
-        episode_stats = [EpisodeStat() for i in range(len(games))]
-        while steps_left > 0:
-            if total_steps % eps_update_period == 0:
-                for g in range(nactor):
+            while steps_left > 0:
+                if total_steps % eps_update_period == 0:
                     eps_rand = npy_rng.rand()
                     if eps_rand<0.4:
                         eps_id[g] = 0
@@ -240,7 +243,6 @@ def main():
                         eps_id[g] = 1
                     else:
                         eps_id[g] = 2
-            for g, game in enumerate(games):
                 if game.episode_terminate:
                     episode += 1
                     epoch_reward += game.episode_reward
@@ -260,19 +262,16 @@ def main():
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
 
-            if total_steps > history_length:
-                for g, game in enumerate(games):
+                if total_steps > history_length:
                     current_state = game.current_state()
-                    states_buffer_for_act[g] = current_state
+                    states_buffer_for_act= current_state
 
-            states = nd.array(states_buffer_for_act,ctx=q_ctx) / float(255.0)
+                states = nd.array(states_buffer_for_act,ctx=q_ctx) / float(255.0)
 
-            qval_npy = qnet.forward(batch_size=nactor, data=states)[0].asnumpy()
-            actions_that_max_q = numpy.argmax(qval_npy,axis=1)
-            actions = [0]*nactor
-            for g, game in enumerate(games):
+                qval_npy = qnet.forward(batch_size=1, data=states)[0].asnumpy()
+                actions_that_max_q = numpy.argmax(qval_npy)
                 # 1. We need to choose a new action based on the current game status
-                if games[g].state_enabled and games[g].replay_memory.sample_enabled:
+                if game.state_enabled and game.replay_memory.sample_enabled:
                     do_exploration = (npy_rng.rand() < eps_curr[eps_id[g]])
                     if do_exploration:
                         action = npy_rng.randint(action_num)
@@ -286,107 +285,98 @@ def main():
                         episode_stats[g].episode_action_step += 1
                 else:
                     action = npy_rng.randint(action_num)
-                actions[g] = action
-            # for game,action in zip(games,actions):
-            #     game.play(action)
-            for ret in parallel_executor.map(play_game, zip(games, actions)):
-                pass
-            eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
-            total_steps += 1
-            steps_left -= 1
-            if total_steps % 100 == 0:
-                this_time = time.time()
-                ave_fps = (100/(this_time-time_for_info))
-                time_for_info = this_time
+                # for game,action in zip(games,actions):
+                game.play(action)
+                eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
+                total_steps += 1
+                steps_left -= 1
+                if total_steps % 100 == 0:
+                    this_time = time.time()
+                    ave_fps = (100/(this_time-time_for_info))
+                    time_for_info = this_time
 
-                # 3. Update our Q network if we can start sampling from the replay memory
-                #    Also, we update every `update_interval`
-            if total_steps > minibatch_size and \
-                total_steps % (param_update_period) == 0 and \
-                games[-1].replay_memory.sample_enabled:
-                # 3.1 Draw sample from the replay_memory
-                training_steps += 1
+                    # 3. Update our Q network if we can start sampling from the replay memory
+                    #    Also, we update every `update_interval`
+                if total_steps > minibatch_size and \
+                    total_steps % (param_update_period) == 0 and \
+                    game.replay_memory.sample_enabled:
+                    # 3.1 Draw sample from the replay_memory
+                    training_steps += 1
 
-                # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
-                for g,game in enumerate(games):
+                    # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
                     episode_stats[g].episode_update_step += 1
                     nsample = single_batch_size
-                    i0 = (g*nsample)
-                    i1 = (g+1)*nsample
                     if args.sample_policy == "recent":
                         action, reward, terminate_flag=game.replay_memory.sample_last(batch_size=nsample,\
-                            states=states_buffer_for_train,offset=i0)
+                            states=states_buffer_for_train,offset=0)
                     elif args.sample_policy == "random":
                         action, reward, terminate_flag=game.replay_memory.sample_inplace(batch_size=nsample,\
-                            states=states_buffer_for_train,offset=i0)
+                            states=states_buffer_for_train,offset=0)
                     actions_buffer_for_train[i0:i1]= action
                     rewards_buffer_for_train[i0:i1]= reward
                     terminate_flags_buffer_for_train[i0:i1]=terminate_flag
-                states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
-                next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
-                actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
-                rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
-                terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
+                    states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
+                    next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
+                    actions = nd.array(actions_buffer_for_train[i0:i1], ctx=q_ctx)
+                    rewards = nd.array(rewards_buffer_for_train[i0:i1], ctx=q_ctx)
+                    terminate_flags = nd.array(terminate_flags_buffer_for_train[i0:i1], ctx=q_ctx)
 
-                # 3.2 Use the target network to compute the scores and
-                #     get the corresponding target rewards
-                if not args.double_q:
-                    target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                            nd.argmax_channel(target_qval))\
-                                       * (1.0 - terminate_flags) * discount
-                else:
-                    target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
-                    qval = qnet.forward(batch_size=minibatch_size, data=next_states)[0]
+                    # 3.2 Use the target network to compute the scores and
+                    #     get the corresponding target rewards
+                    if not args.double_q:
+                        target_qval = target_qnet.forward(batch_size=single_batch_size,
+                                                         data=next_states)[0]
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                nd.argmax_channel(target_qval))\
+                                           * (1.0 - terminate_flags) * discount
+                    else:
+                        target_qval = target_qnet.forward(batch_size=single_batch_size,
+                                                         data=next_states)[0]
+                        qval = qnet.forward(batch_size=single_batch_size, data=next_states)[0]
 
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                            nd.argmax_channel(qval))\
-                                       * (1.0 - terminate_flags) * discount
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                nd.argmax_channel(qval))\
+                                           * (1.0 - terminate_flags) * discount
 
-                outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
-                                          dqn_action=actions,
-                                          dqn_reward=target_rewards)
-                qnet.backward(batch_size=minibatch_size)
+                    outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states,
+                                              dqn_action=actions,
+                                              dqn_reward=target_rewards)
+                    qnet.backward(batch_size=single_batch_size)
 
 
-                if args.kv_type != None:
-                    if total_steps % kvstore_update_period == 0:
-                        if use_easgd == False:
-                            update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                        else:
+                    if args.kv_type != None:
+                        if training_steps % kvstore_update_period == 0:
+                            if use_easgd == False:
+                                update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                            else:
+                                for paramIndex in range(len(qnet.params)):
+                                    k=qnet.params.keys()[paramIndex]
+                                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                        if use_easgd:
                             for paramIndex in range(len(qnet.params)):
                                 k=qnet.params.keys()[paramIndex]
-                                kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                                qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                    if use_easgd:
-                        for paramIndex in range(len(qnet.params)):
-                            k=qnet.params.keys()[paramIndex]
-                            '''qnet.params[k][:] += -easgd_eta*nd.clip(qnet.params_grad[k],
-                                                            -args.clip_gradient,
-                                                            args.clip_gradient)'''
-                            local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                            weight=qnet.params[k])
-                else:
-                    qnet.update(updater=updater)
-                if args.optimizer == "rmsprop":
-                    optimizer.lr -= lr_decay
+                                local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                                                weight=qnet.params[k])
+                    else:
+                        qnet.update(updater=updater)
+                    if args.optimizer == "rmsprop":
+                        optimizer.lr -= lr_decay
 
-                # 3.3 Calculate Loss
-                diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
-                quadratic_part = nd.clip(diff, -1, 1)
-                loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
-                if ave_loss == 0:
-                    ave_loss =  loss
-                else:
-                    ave_loss =  0.95*ave_loss + 0.05*loss
+                    # 3.3 Calculate Loss
+                    diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
+                    quadratic_part = nd.clip(diff, -1, 1)
+                    loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
+                    if ave_loss == 0:
+                        ave_loss =  loss
+                    else:
+                        ave_loss =  0.95*ave_loss + 0.05*loss
 
-                # 3.3 Update the target network every freeze_interval
-                # (We can do annealing instead of hard copy)
-                if training_steps % freeze_interval == 0:
-                    qnet.copy_params_to(target_qnet)
+                    # 3.3 Update the target network every freeze_interval
+                    # (We can do annealing instead of hard copy)
+                    if training_steps % freeze_interval == 0:
+                        qnet.copy_params_to(target_qnet)
 
 
 
