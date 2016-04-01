@@ -399,10 +399,10 @@ def main():
                             updater = updater,eps_curr=eps_curr,freeze_interval=freeze_interval,
                             param_update_period=param_update_period,lr_decay=lr_decay,
                             single_batch_size=single_batch_size,history_length=history_length)
-        for result in parallel_executor.map(run_game,games,[g for g in range(nactor)]):
-            pass
-        # for g,game in enumerate(games):
-        #     run_game(game,g)
+        # for result in parallel_executor.map(run_game,games,[g for g in range(nactor)]):
+        #     pass
+        for g,game in enumerate(games):
+            run_game(game,g)
 
 
 
