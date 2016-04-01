@@ -131,6 +131,7 @@ def main():
 
     ##RUN NATURE
     freeze_interval = 40000/nactor
+    freeze_interval /= param_update_period
     epoch_num = args.epoch_num
     steps_per_epoch = 4000000/nactor
     discount = 0.99
@@ -142,7 +143,7 @@ def main():
     eps_id = numpy.zeros((nactor,))
     eps_update_period = 8000
 
-    freeze_interval /= param_update_period
+
     single_batch_size = args.single_batch_size
     minibatch_size = nactor * single_batch_size
     action_num = len(games[0].action_set)
@@ -249,7 +250,7 @@ def main():
                         info_str =""
                     info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
                                 % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
-                                   ave_fps, (eps_curr[g]))
+                                   ave_fps, (eps_curr[eps_id[g]]))
                     info_str += ", Avg Loss:%f" % ave_loss
                     if episode_stats[g].episode_action_step > 0:
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
