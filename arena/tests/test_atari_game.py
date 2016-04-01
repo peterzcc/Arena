@@ -1,4 +1,4 @@
-from ..games import AtariGame
+from arena.games import AtariGame
 import numpy
 import time
 import mxnet as mx
