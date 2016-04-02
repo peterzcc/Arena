@@ -8,6 +8,7 @@ from utils import *
 
 
 #TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
+#TODO We can use C API to accelerate more (http://blog.debao.me/2013/04/my-first-c-extension-to-numpy/)
 class ReplayMemory(object):
     def __init__(self, history_length, memory_size=1000000, replay_start_size=100,
                  state_dim=(), action_dim=(), state_dtype='uint8', action_dtype='uint8',
