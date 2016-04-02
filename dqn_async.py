@@ -286,8 +286,7 @@ def main():
                 if game.replay_memory.size > history_length:
                     current_state = game.current_state()
                     states = nd.array(current_state.reshape((1,) + current_state.shape),ctx=q_ctx) / float(255.0)
-                    with lock:
-                        qval_npy = qnet.forward(batch_size=1, data=states)[0].asnumpy()
+                    qval_npy = qnet.forward(batch_size=1, data=states)[0].asnumpy()
                     actions_that_max_q = numpy.argmax(qval_npy)
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
