@@ -16,6 +16,7 @@ from arena.operators import *
 import concurrent.futures
 from functools import partial
 from multiprocessing.pool import ThreadPool
+from threading import Lock
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
@@ -26,6 +27,7 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
 npy_rng = get_numpy_rng()
+lock = Lock()
 def play_game(args):
     game,action = args
     game.play(action)
@@ -352,30 +354,30 @@ def main():
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
+                    with lock:
+                        outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states,
+                                                  dqn_action=actions,
+                                                  dqn_reward=target_rewards)
+                        qnet.backward(batch_size=single_batch_size)
 
-                    outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states,
-                                              dqn_action=actions,
-                                              dqn_reward=target_rewards)
-                    qnet.backward(batch_size=single_batch_size)
-
-
-                    if args.kv_type != None:
-                        if training_steps % kvstore_update_period == 0:
-                            if use_easgd == False:
-                                update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                            else:
+                    with lock:
+                        if args.kv_type != None:
+                            if training_steps % kvstore_update_period == 0:
+                                if use_easgd == False:
+                                    update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                                else:
+                                    for paramIndex in range(len(qnet.params)):
+                                        k=qnet.params.keys()[paramIndex]
+                                        kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                                        qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                                        kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                            if use_easgd:
                                 for paramIndex in range(len(qnet.params)):
                                     k=qnet.params.keys()[paramIndex]
-                                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                        if use_easgd:
-                            for paramIndex in range(len(qnet.params)):
-                                k=qnet.params.keys()[paramIndex]
-                                local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                                weight=qnet.params[k])
-                    else:
-                        qnet.update(updater=updater)
+                                    local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                                                    weight=qnet.params[k])
+                        else:
+                            qnet.update(updater=updater)
                     if args.optimizer == "rmsprop":
                         optimizer.lr -= lr_decay
 
@@ -390,8 +392,9 @@ def main():
 
                     # 3.3 Update the target network every freeze_interval
                     # (We can do annealing instead of hard copy)
-                    if training_steps % freeze_interval == 0:
-                        qnet.copy_params_to(target_qnet)
+                    with lock:
+                        if training_steps % freeze_interval == 0:
+                            qnet.copy_params_to(target_qnet)
             return 0
         run_game = partial(run_epoch,qnet=qnet,target_qnet=target_qnet,args=args,use_easgd=use_easgd,
                             updater = updater,eps_curr=eps_curr,freeze_interval=freeze_interval,
