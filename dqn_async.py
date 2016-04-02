@@ -15,6 +15,7 @@ from collections import OrderedDict
 from arena.operators import *
 import concurrent.futures
 from functools import partial
+from multiprocessing.pool import ThreadPool
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
@@ -223,7 +224,7 @@ def main():
     ave_loss = 0
 
 
-    parallel_executor = concurrent.futures.ThreadPoolExecutor(nactor)
+
     for epoch in xrange(epoch_num):
         # Run Epoch
 
@@ -232,7 +233,7 @@ def main():
         epoch_reward = 0
         start = time.time()
         episode_stats = [EpisodeStat() for i in range(len(games))]
-        def run_epoch(game,g,qnet=None,target_qnet=None,args=None,use_easgd=None,
+        def run_epoch(pair,qnet=None,target_qnet=None,args=None,use_easgd=None,
                         updater=None,eps_curr=None,freeze_interval=None,
                         param_update_period=None,single_batch_size=None,
                         lr_decay=None,history_length=None):
@@ -242,6 +243,7 @@ def main():
             global episode
             global epoch_reward
             global training_steps
+            g,game = pair
             local_steps = 0
             ave_fps = 0
             ave_loss = 0
@@ -395,12 +397,23 @@ def main():
                             updater = updater,eps_curr=eps_curr,freeze_interval=freeze_interval,
                             param_update_period=param_update_period,lr_decay=lr_decay,
                             single_batch_size=single_batch_size,history_length=history_length)
-        for result in parallel_executor.map(run_game,games,[g for g in range(nactor)]):
-            pass
+        # for result in parallel_executor.map(run_game,zip([g for g in range(nactor)],games)):
+        #     pass
         # for g,game in enumerate(games):
         #     run_game(game,g)
+        # multi_pool =  Pool(nactor)
+        # multi_pool.map(run_game,zip(games,[g for g in range(nactor)]))
 
-
+        # with concurrent.futures.ThreadPoolExecutor(nactor) as parallel_executor:
+        #     threads = []
+        #     for pair in zip([g for g in range(nactor)],games):
+        #         threads.append(parallel_executor.submit(run_game,pair))
+        #     for thread in threads:
+        #         result = thread.result()
+        p = ThreadPool(nactor)
+        p.map(run_game,zip([g for g in range(nactor)],games))
+        p.close()
+        p.join()
 
 
 
