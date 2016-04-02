@@ -53,16 +53,10 @@ def sample_training_data(game,episode_stat,g):
     rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
     terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
         terminate_flag
-total_steps=0
-steps_left = 0
-ave_fps = 0
-ave_loss = 0
-optimizer = None
-episode_stats = []
+
 def main():
     global steps_left
     global ave_fps
-    global ave_loss
     global optimizer
     global episode_stats
     global total_steps
@@ -146,15 +140,15 @@ def main():
 
 
     ##RUN NATURE
-    freeze_interval = 40000/nactor
+    freeze_interval = 40000
     freeze_interval /= param_update_period
     epoch_num = args.epoch_num
-    steps_per_epoch = 4000000/nactor
+    steps_per_epoch = 4000000
     discount = 0.99
 
     eps_start = numpy.ones((3,))* args.start_eps
     eps_min = numpy.array([0.1,0.01,0.5])
-    eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
+    eps_decay = (eps_start - eps_min) / (args.exploration_period)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
     eps_update_period = 8000
@@ -243,21 +237,22 @@ def main():
                         param_update_period=None,single_batch_size=None,
                         lr_decay=None,history_length=None):
             global steps_left
-            global ave_fps
-            global ave_loss
             global optimizer
-            global episode_stats
             global total_steps
             global episode
             global epoch_reward
             global training_steps
+            local_steps = 0
+            ave_fps = 0
+            ave_loss = 0
             states_buffer_for_act = numpy.zeros((1, history_length)+(rows, cols),dtype='uint8')
             states_buffer_for_train = numpy.zeros((single_batch_size, history_length+1)+(rows, cols),dtype='uint8')
             game.start()
             game.begin_episode()
             time_for_info = time.time()
+            episode_stat = EpisodeStat()
             while steps_left > 0:
-                if total_steps % eps_update_period == 0:
+                if local_steps % eps_update_period == 0:
                     eps_rand = npy_rng.rand()
                     if eps_rand<0.4:
                         eps_id[g] = 0
@@ -272,17 +267,17 @@ def main():
                         info_str="Node[%d]: " %kv.rank
                     else:
                         info_str =""
-                    info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
-                                % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
+                    info_str += "Thread[%d], Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
+                                % (g,epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
                                    ave_fps, (eps_curr[eps_id[g]]))
                     info_str += ", Avg Loss:%f" % ave_loss
-                    if episode_stats[g].episode_action_step > 0:
-                        info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
-                                                          episode_stats[g].episode_action_step)
+                    if episode_stat.episode_action_step > 0:
+                        info_str += ", Avg Q Value:%f/%d" % (episode_stat.episode_q_value / episode_stat.episode_action_step,
+                                                          episode_stat.episode_action_step)
                     logging.info(info_str)
 
                     game.begin_episode(steps_left)
-                    episode_stats[g] = EpisodeStat()
+                    episode_stat = EpisodeStat()
 
                 if game.replay_memory.size > history_length:
                     current_state = game.current_state()
@@ -301,8 +296,8 @@ def main():
                         # We need to wait after calling calc_score(.), which makes the program slow
                         # TODO Profiling the speed of this part!
                         action = actions_that_max_q
-                        episode_stats[g].episode_q_value += qval_npy[g, action]
-                        episode_stats[g].episode_action_step += 1
+                        episode_stat.episode_q_value += qval_npy[g, action]
+                        episode_stat.episode_action_step += 1
                 else:
                     action = npy_rng.randint(action_num)
                 # for game,action in zip(games,actions):
@@ -310,21 +305,22 @@ def main():
                 eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
                 total_steps += 1
                 steps_left -= 1
-                if total_steps % 100 == 0:
+                local_steps += 1
+                if local_steps % 100 == 0:
                     this_time = time.time()
                     ave_fps = (100/(this_time-time_for_info))
                     time_for_info = this_time
 
                     # 3. Update our Q network if we can start sampling from the replay memory
                     #    Also, we update every `update_interval`
-                if total_steps > single_batch_size and \
-                    total_steps % (param_update_period) == 0 and \
+                if local_steps > single_batch_size and \
+                    local_steps % (param_update_period) == 0 and \
                     game.replay_memory.sample_enabled:
                     # 3.1 Draw sample from the replay_memory
                     training_steps += 1
 
                     # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
-                    episode_stats[g].episode_update_step += 1
+                    episode_stat.episode_update_step += 1
                     nsample = single_batch_size
                     if args.sample_policy == "recent":
                         action, reward, terminate_flag=game.replay_memory.sample_last(batch_size=nsample,\
