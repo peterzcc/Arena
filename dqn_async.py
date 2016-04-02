@@ -354,13 +354,10 @@ def main():
                             target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                     nd.argmax_channel(qval))\
                                                * (1.0 - terminate_flags) * discount
-                    with lock:
                         outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states,
                                                   dqn_action=actions,
                                                   dqn_reward=target_rewards)
                         qnet.backward(batch_size=single_batch_size)
-
-                    with lock:
                         if args.kv_type != None:
                             if training_steps % kvstore_update_period == 0:
                                 if use_easgd == False:
@@ -392,8 +389,9 @@ def main():
 
                     # 3.3 Update the target network every freeze_interval
                     # (We can do annealing instead of hard copy)
-                    with lock:
-                        if training_steps % freeze_interval == 0:
+
+                    if training_steps % freeze_interval == 0:
+                        with lock:
                             qnet.copy_params_to(target_qnet)
             return 0
         run_game = partial(run_epoch,qnet=qnet,target_qnet=target_qnet,args=args,use_easgd=use_easgd,
