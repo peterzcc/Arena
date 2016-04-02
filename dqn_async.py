@@ -286,8 +286,8 @@ def main():
                 if game.replay_memory.size > history_length:
                     current_state = game.current_state()
                     states = nd.array(current_state.reshape((1,) + current_state.shape),ctx=q_ctx) / float(255.0)
-
-                    qval_npy = qnet.forward(batch_size=1, data=states)[0].asnumpy()
+                    with lock:
+                        qval_npy = qnet.forward(batch_size=1, data=states)[0].asnumpy()
                     actions_that_max_q = numpy.argmax(qval_npy)
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
@@ -337,23 +337,23 @@ def main():
                     actions = nd.array(action, ctx=q_ctx)
                     rewards = nd.array(reward, ctx=q_ctx)
                     terminate_flags = nd.array(terminate_flag, ctx=q_ctx)
+                    with lock:
+                        # 3.2 Use the target network to compute the scores and
+                        #     get the corresponding target rewards
+                        if not args.double_q:
+                            target_qval = target_qnet.forward(batch_size=single_batch_size,
+                                                             data=next_states)[0]
+                            target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                    nd.argmax_channel(target_qval))\
+                                               * (1.0 - terminate_flags) * discount
+                        else:
+                            target_qval = target_qnet.forward(batch_size=single_batch_size,
+                                                             data=next_states)[0]
+                            qval = qnet.forward(batch_size=single_batch_size, data=next_states)[0]
 
-                    # 3.2 Use the target network to compute the scores and
-                    #     get the corresponding target rewards
-                    if not args.double_q:
-                        target_qval = target_qnet.forward(batch_size=single_batch_size,
-                                                         data=next_states)[0]
-                        target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                                nd.argmax_channel(target_qval))\
-                                           * (1.0 - terminate_flags) * discount
-                    else:
-                        target_qval = target_qnet.forward(batch_size=single_batch_size,
-                                                         data=next_states)[0]
-                        qval = qnet.forward(batch_size=single_batch_size, data=next_states)[0]
-
-                        target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                                nd.argmax_channel(qval))\
-                                           * (1.0 - terminate_flags) * discount
+                            target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                    nd.argmax_channel(qval))\
+                                               * (1.0 - terminate_flags) * discount
                     with lock:
                         outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states,
                                                   dqn_action=actions,
