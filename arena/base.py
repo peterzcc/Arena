@@ -29,7 +29,7 @@ class Base(object):
     """
 
     def __init__(self, data_shapes, sym, params=None, aux_states=None,
-                 initializer=mx.init.Uniform(0.07), ctx=mx.gpu(), name='Net'):
+                 initializer=mx.init.Uniform(0.07), ctx=mx.gpu(), name='Net',shared_params=None):
         self.sym = sym
         self.ctx = ctx
         self.data_shapes = data_shapes.copy()
@@ -43,8 +43,12 @@ class Base(object):
             param_names = [n for n in arg_names if n not in self.data_shapes.keys()]
             arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
             self.arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
-            self.params = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
-                                       for n in param_names])
+            if shared_params == None:
+                self.params = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
+                                           for n in param_names])
+            else:
+                self.params = shared_params
+
             self.params_grad = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
                                             for n in param_names])
             self.aux_states = OrderedDict([(k, nd.empty(s, ctx=ctx))

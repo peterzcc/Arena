@@ -27,7 +27,8 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
 npy_rng = get_numpy_rng()
-lock = Lock()
+updatelock = Lock()
+targetnetlock = Lock()
 def play_game(args):
     game,action = args
     game.play(action)
@@ -168,11 +169,16 @@ def main():
         dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
     elif args.symbol == "nips":
         dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
-    qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
+    central_qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
-    target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
-
+    target_qnet = central_qnet.copy(name="TargetQNet", ctx=q_ctx)
+    qnets = []
+    for i in range(nactor):
+        qnets.append(Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
+                      initializer=DQNInitializer(factor_type="in"),
+                      shared_params=central_qnet.params,
+                      ctx=q_ctx))
     use_easgd = False
     if args.optimizer != "easgd":
         if args.optimizer == "adagrad":
@@ -199,24 +205,25 @@ def main():
                                         for n, v in qnet.params.items()])
     # Create kvstore
     if args.kv_type != None:
-        kvType = args.kv_type
-        kv = kvstore.create(kvType)
-        #Initialize kvstore
-        for idx,v in enumerate(qnet.params.values()):
-            kv.init(idx,v);
-        if use_easgd == False:
-            # Set optimizer on kvstore
-            kv.set_optimizer(optimizer)
-        else:
-            # kv.send_updater_to_server(easgd_server_update)
-            kv.set_optimizer(optimizer)
-            local_updater = mx.optimizer.get_updater(local_optimizer)
-        kvstore_update_period = args.kvstore_update_period
-        args.dir_path = args.dir_path + "-"+str(kv.rank)
+        pass
+        # kvType = args.kv_type
+        # kv = kvstore.create(kvType)
+        # #Initialize kvstore
+        # for idx,v in enumerate(qnet.params.values()):
+        #     kv.init(idx,v);
+        # if use_easgd == False:
+        #     # Set optimizer on kvstore
+        #     kv.set_optimizer(optimizer)
+        # else:
+        #     # kv.send_updater_to_server(easgd_server_update)
+        #     kv.set_optimizer(optimizer)
+        #     local_updater = mx.optimizer.get_updater(local_optimizer)
+        # kvstore_update_period = args.kvstore_update_period
+        # args.dir_path = args.dir_path + "-"+str(kv.rank)
     else:
         updater = mx.optimizer.get_updater(optimizer)
 
-    qnet.print_stat()
+    central_qnet.print_stat()
     target_qnet.print_stat()
 
     # Begin Playing Game
@@ -235,7 +242,7 @@ def main():
         epoch_reward = 0
         start = time.time()
         episode_stats = [EpisodeStat() for i in range(len(games))]
-        def run_epoch(pair,qnet=None,target_qnet=None,args=None,use_easgd=None,
+        def run_epoch(pair,central_qnet=None,target_qnet=None,args=None,use_easgd=None,
                         updater=None,eps_curr=None,freeze_interval=None,
                         param_update_period=None,single_batch_size=None,
                         lr_decay=None,history_length=None):
@@ -245,7 +252,7 @@ def main():
             global episode
             global epoch_reward
             global training_steps
-            g,game = pair
+            g,game,qnet = pair
             local_steps = 0
             ave_fps = 0
             ave_loss = 0
@@ -286,8 +293,7 @@ def main():
                 if game.replay_memory.size > history_length:
                     current_state = game.current_state()
                     states = nd.array(current_state.reshape((1,) + current_state.shape),ctx=q_ctx) / float(255.0)
-                    with lock:
-                        qval_npy = qnet.forward(batch_size=1, data=states)[0].asnumpy()
+                    qval_npy = qnet.forward(batch_size=1, data=states)[0].asnumpy()
                     actions_that_max_q = numpy.argmax(qval_npy)
                 # 1. We need to choose a new action based on the current game status
                 if game.state_enabled and game.replay_memory.sample_enabled:
@@ -353,28 +359,30 @@ def main():
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
-                    with lock:
-                        outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states,
-                                                  dqn_action=actions,
-                                                  dqn_reward=target_rewards)
-                        qnet.backward(batch_size=single_batch_size)
-                        if args.kv_type != None:
-                            if training_steps % kvstore_update_period == 0:
-                                if use_easgd == False:
-                                    update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                                else:
-                                    for paramIndex in range(len(qnet.params)):
-                                        k=qnet.params.keys()[paramIndex]
-                                        kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                                        qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                        kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                            if use_easgd:
-                                for paramIndex in range(len(qnet.params)):
-                                    k=qnet.params.keys()[paramIndex]
-                                    local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                                    weight=qnet.params[k])
-                        else:
-                            qnet.update(updater=updater)
+
+                    outputs = qnet.forward(batch_size=single_batch_size,is_train=True, data=states,
+                                              dqn_action=actions,
+                                              dqn_reward=target_rewards)
+                    qnet.backward(batch_size=single_batch_size)
+                    if args.kv_type != None:
+                        pass
+                        # if training_steps % kvstore_update_period == 0:
+                        #     if use_easgd == False:
+                        #         update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                        #     else:
+                        #         for paramIndex in range(len(qnet.params)):
+                        #             k=qnet.params.keys()[paramIndex]
+                        #             kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                        #             qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                        #             kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                        # if use_easgd:
+                        #     for paramIndex in range(len(qnet.params)):
+                        #         k=qnet.params.keys()[paramIndex]
+                        #         local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                        #                         weight=qnet.params[k])
+                    else:
+                        with updatelock:
+                            central_qnet.update(updater=updater,params_grad=qnet.params_grad)
                     if args.optimizer == "rmsprop":
                         optimizer.lr -= lr_decay
 
@@ -391,10 +399,10 @@ def main():
                     # (We can do annealing instead of hard copy)
 
                     if training_steps % freeze_interval == 0:
-                        with lock:
-                            qnet.copy_params_to(target_qnet)
+                        with targetnetlock:
+                            central_qnet.copy_params_to(target_qnet)
             return 0
-        run_game = partial(run_epoch,qnet=qnet,target_qnet=target_qnet,args=args,use_easgd=use_easgd,
+        run_game = partial(run_epoch,central_qnet=central_qnet,target_qnet=target_qnet,args=args,use_easgd=use_easgd,
                             updater = updater,eps_curr=eps_curr,freeze_interval=freeze_interval,
                             param_update_period=param_update_period,lr_decay=lr_decay,
                             single_batch_size=single_batch_size,history_length=history_length)
@@ -412,7 +420,7 @@ def main():
         #     for thread in threads:
         #         result = thread.result()
         p = ThreadPool(nactor)
-        p.map(run_game,zip([g for g in range(nactor)],games))
+        p.map(run_game,zip([g for g in range(nactor)],games,qnets))
         p.close()
         p.join()
 
