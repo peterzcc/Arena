@@ -230,8 +230,7 @@ class ActorLearnerThread(Thread):
                     #         local_updater(index = paramIndex,grad=qnet.params_grad[k],
                     #                         weight=qnet.params[k])
                 else:
-                    with updatelock:
-                        self.central_qnet.update(updater=self.updater,params_grad=self.qnet.params_grad)
+                    self.central_qnet.update(updater=self.updater,params_grad=self.qnet.params_grad)
                 if self.args.optimizer == "rmsprop":
                     optimizer.lr -= self.lr_decay
 
@@ -248,8 +247,7 @@ class ActorLearnerThread(Thread):
                 # (We can do annealing instead of hard copy)
 
                 if training_steps % self.freeze_interval == 0:
-                    with targetnetlock:
-                        self.central_qnet.copy_params_to(self.target_qnet)
+                    self.central_qnet.copy_params_to(self.target_qnet)
         return 0
 def main():
     global steps_left
@@ -341,7 +339,7 @@ def main():
     freeze_interval = 40000
     freeze_interval /= param_update_period
     epoch_num = args.epoch_num
-    steps_per_epoch = 4000000
+    steps_per_epoch = 4000000/nactor
     discount = 0.99
 
     eps_start = numpy.ones((3,))* args.start_eps
