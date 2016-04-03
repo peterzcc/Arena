@@ -14,6 +14,7 @@ import time
 from collections import OrderedDict
 from arena.operators import *
 import concurrent.futures
+import cv2
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
@@ -99,6 +100,10 @@ def main():
                         help='minibatch sampling policy, recent or random')
     parser.add_argument('--epoch-num', required=False, type=int, default=200,
                         help='number of epochs')
+    parser.add_argument('--param-update-period', required=False, type=int, default=5,
+                        help='Parameter update period')
+    parser.add_argument('--resize-mode', required=False, type=str, default="scale",
+                        help='Resize mode, scale or crop')
     args, unknown = parser.parse_known_args()
 
     if args.dir_path == '':
@@ -111,7 +116,7 @@ def main():
 
     # Async verision
     nactor= args.nactor
-    param_update_period = 5
+    param_update_period = args.param_update_period
 
     replay_start_size = args.replay_start_size
     max_start_nullops = 30
@@ -121,9 +126,8 @@ def main():
     cols = 84
     q_ctx = mx.Context(*ctx[0])
     games = []
-    # TODO:Build a list of games
     for g in range(nactor):
-        games.append(AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
+        games.append(AtariGame(rom_path=args.rom, resize_mode=args.resize_mode, replay_start_size=replay_start_size,
                              resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
                              replay_memory_size=replay_memory_size, display_screen=args.visualization,
                              history_length=history_length))
@@ -305,7 +309,7 @@ def main():
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
-                training_steps += 1
+
 
                 # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
                 for g,game in enumerate(games):
@@ -387,7 +391,12 @@ def main():
                 # (We can do annealing instead of hard copy)
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
-
+                if training_steps % (60*60*2/param_update_period) == 0:
+                    for g in range(nactor):
+                        screen = states_buffer_for_train[(g*single_batch_size),-2,:,:].reshape(
+                                                            states_buffer_for_train.shape[2:])
+                        cv2.imwrite("screen_"+str(g)+".png",screen)
+                training_steps += 1
 
 
 
