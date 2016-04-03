@@ -155,7 +155,7 @@ class ActorLearnerThread(Thread):
                     # We need to wait after calling calc_score(.), which makes the program slow
                     # TODO Profiling the speed of this part!
                     action = actions_that_max_q
-                    episode_stat.episode_q_value += qval_npy[g, action]
+                    episode_stat.episode_q_value += qval_npy[0, action]
                     episode_stat.episode_action_step += 1
             else:
                 action = npy_rng.randint(self.action_num)
