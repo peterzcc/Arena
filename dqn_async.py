@@ -392,6 +392,7 @@ def main():
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
                 if training_steps % (60*60*2/param_update_period) == 0:
+                    logging.info("saving screenshots")
                     for g in range(nactor):
                         screen = states_buffer_for_train[(g*single_batch_size),-2,:,:].reshape(
                                                             states_buffer_for_train.shape[2:])
