@@ -303,7 +303,7 @@ def main():
                         help='type of network, nature or nips')
     parser.add_argument('--sample-policy', required=False, type=str, default="recent",
                         help='minibatch sampling policy, recent or random')
-    parser.add_argument('--epoch-num', required=False, type=int, default=200,
+    parser.add_argument('--epoch-num', required=False, type=int, default=50,
                         help='number of epochs')
     args, unknown = parser.parse_known_args()
 
@@ -339,7 +339,7 @@ def main():
     freeze_interval = 40000
     freeze_interval /= param_update_period
     epoch_num = args.epoch_num
-    steps_per_epoch = 4000000/nactor
+    steps_per_epoch = 4000000
     discount = 0.99
 
     eps_start = numpy.ones((3,))* args.start_eps
