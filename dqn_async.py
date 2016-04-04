@@ -213,27 +213,27 @@ class ActorLearnerThread(Thread):
                                           dqn_action=actions,
                                           dqn_reward=target_rewards)
                 self.qnet.backward(batch_size=self.single_batch_size)
-                if self.args.kv_type != None:
-                    pass
-                    # if training_steps % kvstore_update_period == 0:
-                    #     if use_easgd == False:
-                    #         update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                    #     else:
-                    #         for paramIndex in range(len(qnet.params)):
-                    #             k=qnet.params.keys()[paramIndex]
-                    #             kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                    #             qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                    #             kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                    # if use_easgd:
-                    #     for paramIndex in range(len(qnet.params)):
-                    #         k=qnet.params.keys()[paramIndex]
-                    #         local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                    #                         weight=qnet.params[k])
-                else:
-                    self.central_qnet.update(updater=self.updater,params_grad=self.qnet.params_grad)
+                with updatelock:
+                    if self.args.kv_type != None:
+                        pass
+                        # if training_steps % kvstore_update_period == 0:
+                        #     if use_easgd == False:
+                        #         update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                        #     else:
+                        #         for paramIndex in range(len(qnet.params)):
+                        #             k=qnet.params.keys()[paramIndex]
+                        #             kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                        #             qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                        #             kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                        # if use_easgd:
+                        #     for paramIndex in range(len(qnet.params)):
+                        #         k=qnet.params.keys()[paramIndex]
+                        #         local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                        #                         weight=qnet.params[k])
+                    else:
+                        self.central_qnet.update(updater=self.updater,params_grad=self.qnet.params_grad)
                 if self.args.optimizer == "rmsprop":
                     optimizer.lr -= self.lr_decay
-
                 # 3.3 Calculate Loss
                 diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                 quadratic_part = nd.clip(diff, -1, 1)
@@ -247,7 +247,8 @@ class ActorLearnerThread(Thread):
                 # (We can do annealing instead of hard copy)
 
                 if training_steps % self.freeze_interval == 0:
-                    self.central_qnet.copy_params_to(self.target_qnet)
+                    with targetnetlock:
+                        self.central_qnet.copy_params_to(self.target_qnet)
         return 0
 def main():
     global steps_left
