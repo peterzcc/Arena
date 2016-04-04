@@ -377,6 +377,7 @@ def main():
             optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                             clip_gradient=args.clip_gradient,
                             rescale_grad=1.0, wd=args.wd)
+            lr_decay = 0
         elif args.optimizer == "rmsprop":
             optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                             clip_gradient=args.clip_gradient,gamma1=args.rms_decay,gamma2=0,
