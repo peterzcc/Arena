@@ -93,7 +93,7 @@ class ReplayMemory(object):
         # next_states = numpy.empty((batch_size, self.history_length) + self.state_dim,
         #                           dtype=self.states.dtype)
         counter = 0
-        index = self.top - self.history_length + 1
+        index = self.top - self.history_length
         while counter < batch_size:
             transition_indices = numpy.arange(index, index + self.history_length+1)
             initial_indices = transition_indices - 1
@@ -106,7 +106,6 @@ class ReplayMemory(object):
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
-            # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
             counter += 1
             index -= 1
         return actions, rewards, terminate_flags
@@ -127,7 +126,7 @@ class ReplayMemory(object):
         #                           dtype=self.states.dtype)
         counter = 0
         while counter < batch_size:
-            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length + 1)
+            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length )
             transition_indices = numpy.arange(index, index + self.history_length+1)
             initial_indices = transition_indices - 1
             end_index = index + self.history_length - 1
@@ -158,7 +157,7 @@ class ReplayMemory(object):
                                   dtype=self.states.dtype)
         counter = 0
         while counter < batch_size:
-            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length + 1)
+            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length)
             transition_indices = numpy.arange(index, index + self.history_length)
             initial_indices = transition_indices - 1
             end_index = index + self.history_length - 1
