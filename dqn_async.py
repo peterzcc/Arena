@@ -48,8 +48,7 @@ class EpisodeStat(object):
         self.episode_action_step = 0
 
 class ActorLearnerThread(Thread):
-    def __init__(self,pair,args=None,use_easgd=None,
-                    updater=None,freeze_interval=None,
+    def __init__(self,pair,args=None,use_easgd=None,freeze_interval=None,
                     param_update_period=None,single_batch_size=None,
                     lr_decay=None,history_length=None,rows=None,cols=None,eps_update_period=None,
                     action_num=None,q_ctx=None,discount=None,eps_decay=None,eps_min=None,epoch=None,
@@ -59,6 +58,7 @@ class ActorLearnerThread(Thread):
         Thread.__init__(self)
         g = pair[0]
         self.g = g
+        global central_qnet
         self.game = AtariGame(rom_path=rom_path, resize_mode=resize_mode, replay_start_size=replay_start_size,
                              resized_rows=rows, resized_cols=cols, max_null_op=max_null_op,
                              replay_memory_size=replay_memory_size, display_screen=display_screen,
@@ -69,7 +69,6 @@ class ActorLearnerThread(Thread):
                       ctx=q_ctx)
         self.args = args
         self.use_easgd = use_easgd
-        self.updater = updater
         self.freeze_interval=freeze_interval
         self.param_update_period=param_update_period
         self.single_batch_size=single_batch_size
@@ -227,7 +226,7 @@ class ActorLearnerThread(Thread):
                         #         local_updater(index = paramIndex,grad=qnet.params_grad[k],
                         #                         weight=qnet.params[k])
                     else:
-                        central_qnet.update(updater=self.updater,params_grad=self.qnet.params_grad)
+                        central_qnet.update(updater=updater,params_grad=self.qnet.params_grad)
                 if self.args.optimizer == "rmsprop":
                     optimizer.lr -= self.lr_decay
                 # 3.3 Calculate Loss
@@ -257,6 +256,7 @@ def main():
     global central_qnet
     global target_qnet
     global optimizer
+    global updater
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
     parser.add_argument('-r', '--rom', required=False, type=str,
                         default=os.path.join('arena', 'games', 'roms', 'breakout.bin'),
@@ -303,6 +303,12 @@ def main():
                         help='minibatch sampling policy, recent or random')
     parser.add_argument('--epoch-num', required=False, type=int, default=50,
                         help='number of epochs')
+    parser.add_argument('--steps-per-epoch', required=False, type=int, default=4000000,
+                        help='number of epochs')
+    parser.add_argument('--param-update-period', required=False, type=int, default=5,
+                        help='Parameter update period')
+    parser.add_argument('--resize-mode', required=False, type=str, default="scale",
+                        help='Resize mode, scale or crop')
     args, unknown = parser.parse_known_args()
 
     if args.dir_path == '':
@@ -315,7 +321,7 @@ def main():
 
     # Async verision
     nactor= args.nactor
-    param_update_period = 5
+    param_update_period = args.param_update_period
 
     replay_start_size = args.replay_start_size
     max_start_nullops = 30
@@ -327,7 +333,7 @@ def main():
     games = []
     # TODO:Build a list of games
 
-    games.append(AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
+    games.append(AtariGame(rom_path=args.rom, resize_mode=args.resize_mode, replay_start_size=replay_start_size,
                          resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
                          replay_memory_size=replay_memory_size, display_screen=args.visualization,
                          history_length=history_length))
@@ -337,7 +343,7 @@ def main():
     freeze_interval = 40000
     freeze_interval /= param_update_period
     epoch_num = args.epoch_num
-    steps_per_epoch = 4000000
+    steps_per_epoch = args.steps_per_epoch
     discount = 0.99
 
     eps_start = numpy.ones((3,))* args.start_eps
@@ -430,14 +436,14 @@ def main():
 
         threads = []
         for pair in zip([g for g in range(nactor)]):
-            threads.append(ActorLearnerThread(pair,args=args,use_easgd=use_easgd,
-                                updater = updater,freeze_interval=freeze_interval,
+            threads.append(ActorLearnerThread(pair,args=args,use_easgd=use_easgd,freeze_interval=freeze_interval,
                                 param_update_period=param_update_period,lr_decay=lr_decay,
                                 single_batch_size=single_batch_size,history_length=history_length,
                                 rows=rows,cols=cols,eps_update_period=eps_update_period,
                                 action_num=action_num,q_ctx=q_ctx,discount=discount,eps_decay=eps_decay,
-                                eps_min=eps_min,epoch=epoch,steps_per_epoch=steps_per_epoch,rom_path=args.rom, resize_mode='scale',
-                                replay_start_size=replay_start_size,max_null_op=max_start_nullops,
+                                eps_min=eps_min,epoch=epoch,steps_per_epoch=steps_per_epoch,rom_path=args.rom,
+                                resize_mode=args.resize_mode,replay_start_size=replay_start_size,
+                                max_null_op=max_start_nullops,
                                 replay_memory_size=replay_memory_size, display_screen=args.visualization,
                                 data_shapes=data_shapes, sym=dqn_sym))
             threads[-1].daemon = True
