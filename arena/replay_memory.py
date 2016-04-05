@@ -93,7 +93,7 @@ class ReplayMemory(object):
         # next_states = numpy.empty((batch_size, self.history_length) + self.state_dim,
         #                           dtype=self.states.dtype)
         counter = 0
-        index = self.top - self.history_length + 1
+        index = self.top - self.history_length
         while counter < batch_size:
             transition_indices = numpy.arange(index, index + self.history_length+1)
             initial_indices = transition_indices - 1
