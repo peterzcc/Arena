@@ -92,8 +92,8 @@ class Base(object):
     def forward(self, batch_size=default_batchsize, is_train=False, **input_dict):
         exe = self.executor_pool.get(batch_size)
         #TODO `wait_to_read()` here seems unnecessary, remove it in the future!
-        for v in self.params.values():
-            v.wait_to_read()
+        # for v in self.params.values():
+        #     v.wait_to_read()
         for k, v in input_dict.items():
             exe.arg_dict[k][:] = v
         exe.forward(is_train=is_train)

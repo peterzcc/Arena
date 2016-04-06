@@ -139,14 +139,14 @@ def main():
     epoch_num = args.epoch_num
     steps_per_epoch = 4000000/nactor
     discount = 0.99
-
+    save_screens = False
     eps_start = numpy.ones((3,))* args.start_eps
     eps_min = numpy.array([0.1,0.01,0.5])
     eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
     eps_update_period = 8000
-
+    eps_update_count = 0
 
     single_batch_size = args.single_batch_size
     minibatch_size = nactor * single_batch_size
@@ -170,7 +170,7 @@ def main():
             optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                             clip_gradient=args.clip_gradient,
                             rescale_grad=1.0, wd=args.wd)
-        elif args.optimizer == "rmsprop":
+        elif args.optimizer == "rmsprop" or args.optimizer == "rmspropnoncentered":
             optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                             clip_gradient=args.clip_gradient,gamma1=args.rms_decay,gamma2=0,
                             rescale_grad=1.0, wd=args.wd)
@@ -233,17 +233,16 @@ def main():
         for game in games:
             game.start()
             game.begin_episode()
+            eps_rand = npy_rng.rand()
+            if eps_rand<0.4:
+                eps_id[g] = 0
+            elif eps_rand<0.7:
+                eps_id[g] = 1
+            else:
+                eps_id[g] = 2
+            eps_update_count += 1
         episode_stats = [EpisodeStat() for i in range(len(games))]
         while steps_left > 0:
-            if total_steps % eps_update_period == 0:
-                for g in range(nactor):
-                    eps_rand = npy_rng.rand()
-                    if eps_rand<0.4:
-                        eps_id[g] = 0
-                    elif eps_rand<0.7:
-                        eps_id[g] = 1
-                    else:
-                        eps_id[g] = 2
             for g, game in enumerate(games):
                 if game.episode_terminate:
                     episode += 1
@@ -260,6 +259,15 @@ def main():
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
                                                           episode_stats[g].episode_action_step)
                     logging.info(info_str)
+                    if eps_update_count * eps_update_period > total_steps:
+                        eps_rand = npy_rng.rand()
+                        if eps_rand<0.4:
+                            eps_id[g] = 0
+                        elif eps_rand<0.7:
+                            eps_id[g] = 1
+                        else:
+                            eps_id[g] = 2
+                        eps_update_count += 1
 
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
@@ -391,7 +399,7 @@ def main():
                 # (We can do annealing instead of hard copy)
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
-                if training_steps % (60*60*2/param_update_period) == 0:
+                if save_screens and training_steps % (60*60*2/param_update_period) == 0:
                     logging.info("saving screenshots")
                     for g in range(nactor):
                         screen = states_buffer_for_train[(g*single_batch_size),-2,:,:].reshape(
