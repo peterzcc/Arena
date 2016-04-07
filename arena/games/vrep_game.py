@@ -77,50 +77,7 @@ class VREPGame(Game):
                                           memory_size=replay_memory_size,
                                           replay_start_size=replay_start_size)
 
-    def start(self):
-        vrep.simxFinish(-1)  # just in case, close all opened connections
-        self.client_id = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5)
-        if self.client_id == -1:
-            print "Failed connecting to remote API server"
-            exit(0)
-        # enable the synchronous mode on the client
-        vrep.simxSynchronous(self.client_id, True)
 
-        # get object handles
-        _, self.quadcopter_handle = vrep.simxGetObjectHandle(
-            self.client_id, 'Quadricopter_base',vrep.simx_opmode_oneshot_wait)
-        _, self.target_handle = vrep.simxGetObjectHandle(
-            self.client_id, 'Bill', vrep.simx_opmode_oneshot_wait)
-        _, self.camera_handle = vrep.simxGetObjectHandle(
-            self.client_id, 'Quadricopter_frontSensor', vrep.simx_opmode_oneshot_wait)
-
-        # start the simulation, in blocking mode
-        vrep.simxStartSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
-
-        # enable streaming of state values and the observation image
-        _, _, self.image = vrep.simxGetVisionSensorImage(
-            self.client_id, self.camera_handle, 0, vrep.simx_opmode_streaming)
-        _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
-            self.client_id, self.quadcopter_handle, vrep.simx_opmode_streaming)
-        _, self.quadcopter_pos = vrep.simxGetObjectPosition(
-            self.client_id, self.quadcopter_handle, -1, vrep.simx_opmode_streaming)
-        _, self.quadcopter_orientation = vrep.simxGetObjectOrientation(
-            self.client_id, self.quadcopter_handle, -1, vrep.simx_opmode_streaming)
-        _, self.target_pos = vrep.simxGetObjectPosition(
-            self.client_id, self.target_handle, -1, vrep.simx_opmode_streaming)
-
-        _, self.quadcopter_angular_variation = vrep.simxGetStringSignal(
-            self.client_id, 'angular_variations', vrep.simx_opmode_streaming)
-        self.quadcopter_angular_variation = vrep.simxUnpackFloats(
-            self.quadcopter_angular_variation)
-        _, self.quadcopter_quaternion = vrep.simxGetStringSignal(self.client_id, 'quaternion', vrep.simx_opmode_streaming)
-        self.quadcopter_quaternion = vrep.simxUnpackFloats(
-            self.quadcopter_quaternion)
-
-        self.total_reward = 0
-        self.episode_reward = 0
-        self.episode_step = 0
-        self.max_episode_step = DEFAULT_MAX_EPISODE_STEP
 
     def _read_camera_image(self):
         _, self.resolution, self.image = vrep.simxGetVisionSensorImage(
@@ -202,7 +159,7 @@ class VREPGame(Game):
         reward += max(abs(self.quadcopter_angular_variation[0]) - penalty_boundary, 0) * shaking_penalty + \
                   max(abs(self.quadcopter_angular_variation[1]) - penalty_boundary, 0) * shaking_penalty
 
-        # let the quadcopter keep moving
+        # encourage the quadcopter keep moving
         reward += 0.1 * (abs(self.linear_velocity_b[0]) + abs(self.linear_velocity_b[1]))
 
         width = self.resolution[0]
@@ -212,6 +169,51 @@ class VREPGame(Game):
         # TODO tracking position part
         reward += 0
         return reward
+
+    def start(self):
+        vrep.simxFinish(-1)  # just in case, close all opened connections
+        self.client_id = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5)
+        if self.client_id == -1:
+            print "Failed connecting to remote API server"
+            exit(0)
+        # enable the synchronous mode on the client
+        vrep.simxSynchronous(self.client_id, True)
+
+        # get object handles
+        _, self.quadcopter_handle = vrep.simxGetObjectHandle(
+            self.client_id, 'Quadricopter_base',vrep.simx_opmode_oneshot_wait)
+        _, self.target_handle = vrep.simxGetObjectHandle(
+            self.client_id, 'Bill', vrep.simx_opmode_oneshot_wait)
+        _, self.camera_handle = vrep.simxGetObjectHandle(
+            self.client_id, 'Quadricopter_frontSensor', vrep.simx_opmode_oneshot_wait)
+
+        # start the simulation, in blocking mode
+        vrep.simxStartSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
+
+        # enable streaming of state values and the observation image
+        _, _, self.image = vrep.simxGetVisionSensorImage(
+            self.client_id, self.camera_handle, 0, vrep.simx_opmode_streaming)
+        _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
+            self.client_id, self.quadcopter_handle, vrep.simx_opmode_streaming)
+        _, self.quadcopter_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.quadcopter_handle, -1, vrep.simx_opmode_streaming)
+        _, self.quadcopter_orientation = vrep.simxGetObjectOrientation(
+            self.client_id, self.quadcopter_handle, -1, vrep.simx_opmode_streaming)
+        _, self.target_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_handle, -1, vrep.simx_opmode_streaming)
+
+        _, self.quadcopter_angular_variation = vrep.simxGetStringSignal(
+            self.client_id, 'angular_variations', vrep.simx_opmode_streaming)
+        self.quadcopter_angular_variation = vrep.simxUnpackFloats(
+            self.quadcopter_angular_variation)
+        _, self.quadcopter_quaternion = vrep.simxGetStringSignal(self.client_id, 'quaternion', vrep.simx_opmode_streaming)
+        self.quadcopter_quaternion = vrep.simxUnpackFloats(
+            self.quadcopter_quaternion)
+
+        self.total_reward = 0
+        self.episode_reward = 0
+        self.episode_step = 0
+        self.max_episode_step = DEFAULT_MAX_EPISODE_STEP
 
     def begin_episode(self, max_episode_step=DEFAULT_MAX_EPISODE_STEP):
         if self.episode_step > self.max_episode_step or self.episode_terminate():
