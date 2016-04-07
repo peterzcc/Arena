@@ -102,7 +102,6 @@ class ReplayMemory(object):
             terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
             counter += 1
             first_index -= 1
-            import pdb;pdb.set_trace() #TODO
         return actions, rewards, terminate_flags
     def sample_inplace(self, batch_size,states,offset):
         assert self.size >= batch_size and self.replay_start_size >= self.history_length
