@@ -275,7 +275,7 @@ def main():
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                     quadratic_part = nd.clip(diff, -1, 1)
-                    loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
+                    loss = 0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)
                     episode_loss += loss
 
                     # 3.3 Update the target network every freeze_interval
