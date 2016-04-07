@@ -146,7 +146,7 @@ def main():
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
     eps_update_period = 8000
-    eps_update_count = 0
+    eps_update_count = numpy.zeros((nactor,))
 
     single_batch_size = args.single_batch_size
     minibatch_size = nactor * single_batch_size
@@ -230,7 +230,7 @@ def main():
         epoch_reward = 0
         start = time.time()
         #
-        for game in games:
+        for g,game in enumerate(games):
             game.start()
             game.begin_episode()
             eps_rand = npy_rng.rand()
@@ -240,7 +240,6 @@ def main():
                 eps_id[g] = 1
             else:
                 eps_id[g] = 2
-            eps_update_count += 1
         episode_stats = [EpisodeStat() for i in range(len(games))]
         while steps_left > 0:
             for g, game in enumerate(games):
@@ -259,7 +258,7 @@ def main():
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
                                                           episode_stats[g].episode_action_step)
                     logging.info(info_str)
-                    if eps_update_count * eps_update_period > total_steps:
+                    if eps_update_count[g] * eps_update_period > total_steps:
                         eps_rand = npy_rng.rand()
                         if eps_rand<0.4:
                             eps_id[g] = 0
@@ -267,7 +266,7 @@ def main():
                             eps_id[g] = 1
                         else:
                             eps_id[g] = 2
-                        eps_update_count += 1
+                        eps_update_count[g] += 1
 
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
