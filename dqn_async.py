@@ -98,7 +98,7 @@ def main():
                         help='type of network, nature or nips')
     parser.add_argument('--sample-policy', required=False, type=str, default="recent",
                         help='minibatch sampling policy, recent or random')
-    parser.add_argument('--epoch-num', required=False, type=int, default=200,
+    parser.add_argument('--epoch-num', required=False, type=int, default=50,
                         help='number of epochs')
     parser.add_argument('--param-update-period', required=False, type=int, default=5,
                         help='Parameter update period')
