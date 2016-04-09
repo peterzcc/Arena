@@ -298,10 +298,11 @@ def main():
                 else:
                     action = npy_rng.randint(action_num)
                 actions[g] = action
-            # for game,action in zip(games,actions):
-            #     game.play(action)
+            t0=time.time()
             for ret in parallel_executor.map(play_game, zip(games, actions)):
                 pass
+            t1=time.time()
+            logging.info("play time: %f" % (t1-t0)
             eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
             total_steps += 1
             steps_left -= 1
@@ -316,9 +317,6 @@ def main():
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
                 # 3.1 Draw sample from the replay_memory
-
-
-                # parallel_executor.map(sample_training_data,games,episode_stats,list(range(nactor)))
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
                     nsample = single_batch_size
@@ -405,7 +403,7 @@ def main():
                                                             states_buffer_for_train.shape[2:])
                         cv2.imwrite("screen_"+str(g)+".png",screen)
                 training_steps += 1
-
+                logging.log("train time: %f"%(time.time()-t1)
 
 
 
