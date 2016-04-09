@@ -302,7 +302,7 @@ def main():
             for ret in parallel_executor.map(play_game, zip(games, actions)):
                 pass
             t1=time.time()
-            logging.info("play time: %f" % (t1-t0)
+            logging.info("play time: %f" % (t1-t0))
             eps_curr = numpy.maximum(eps_curr - eps_decay, eps_min)
             total_steps += 1
             steps_left -= 1
@@ -403,7 +403,7 @@ def main():
                                                             states_buffer_for_train.shape[2:])
                         cv2.imwrite("screen_"+str(g)+".png",screen)
                 training_steps += 1
-                logging.log("train time: %f"%(time.time()-t1)
+                logging.info("train time: %f"%(time.time()-t1))
 
 
 
