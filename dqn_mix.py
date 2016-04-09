@@ -97,7 +97,7 @@ def main():
     parser.add_argument('--symbol', required=False, type=str, default="nature",
                         help='type of network, nature or nips')
     parser.add_argument('--sample-policy', required=False, type=str, default="recent",
-                        help='minibatch sampling policy, recent or random')
+                        help='minibatch sampling policy, recent,mix or random')
     parser.add_argument('--epoch-num', required=False, type=int, default=50,
                         help='number of epochs')
     parser.add_argument('--param-update-period', required=False, type=int, default=5,
@@ -174,7 +174,7 @@ def main():
             optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                             clip_gradient=args.clip_gradient,gamma1=args.rms_decay,gamma2=0,
                             rescale_grad=1.0, wd=args.wd)
-            lr_decay = (args.lr - 0)/(steps_per_epoch*epoch_num/param_update_period)
+            lr_decay = (args.lr - 0)/(steps_per_epoch*epoch_num)
 
     else:
         use_easgd = True
@@ -316,92 +316,97 @@ def main():
             if total_steps > minibatch_size and \
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
-                # 3.1 Draw sample from the replay_memory
-                for g,game in enumerate(games):
-                    episode_stats[g].episode_update_step += 1
-                    nsample = single_batch_size
-                    i0 = (g*nsample)
-                    i1 = (g+1)*nsample
-                    if args.sample_policy == "recent":
-                        action, reward, terminate_flag=game.replay_memory.sample_last(batch_size=nsample,\
-                            states=states_buffer_for_train,offset=i0)
-                    elif args.sample_policy == "random":
-                        action, reward, terminate_flag=game.replay_memory.sample_inplace(batch_size=nsample,\
-                            states=states_buffer_for_train,offset=i0)
-                    actions_buffer_for_train[i0:i1]= action
-                    rewards_buffer_for_train[i0:i1]= reward
-                    terminate_flags_buffer_for_train[i0:i1]=terminate_flag
-                states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
-                next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
-                actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
-                rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
-                terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
+                for current_sample_id in npy_rng.permutation(param_update_period):
+                    # 3.1 Draw sample from the replay_memory
+                    for g,game in enumerate(games):
+                        episode_stats[g].episode_update_step += 1
+                        nsample = single_batch_size
+                        i0 = (g*nsample)
+                        i1 = (g+1)*nsample
+                        if args.sample_policy == "recent":
+                            action, reward, terminate_flag=game.replay_memory.sample_last(batch_size=nsample,\
+                                states=states_buffer_for_train,offset=i0)
+                        elif args.sample_policy == "random":
+                            action, reward, terminate_flag=game.replay_memory.sample_inplace(batch_size=nsample,\
+                                states=states_buffer_for_train,offset=i0)
+                        elif args.sample_policy == "mix":
+                            action, reward, terminate_flag=game.replay_memory.sample_mix(batch_size=nsample,\
+                                states=states_buffer_for_train,offset=i0,
+                                current_index=-1-current_sample_id)
+                        actions_buffer_for_train[i0:i1]= action
+                        rewards_buffer_for_train[i0:i1]= reward
+                        terminate_flags_buffer_for_train[i0:i1]=terminate_flag
+                    states = nd.array(states_buffer_for_train[:,:-1], ctx=q_ctx) / float(255.0)
+                    next_states = nd.array(states_buffer_for_train[:,1:], ctx=q_ctx) / float(255.0)
+                    actions = nd.array(actions_buffer_for_train, ctx=q_ctx)
+                    rewards = nd.array(rewards_buffer_for_train, ctx=q_ctx)
+                    terminate_flags = nd.array(terminate_flags_buffer_for_train, ctx=q_ctx)
 
-                # 3.2 Use the target network to compute the scores and
-                #     get the corresponding target rewards
-                if not args.double_q:
-                    target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                            nd.argmax_channel(target_qval))\
-                                       * (1.0 - terminate_flags) * discount
-                else:
-                    target_qval = target_qnet.forward(batch_size=minibatch_size,
-                                                     data=next_states)[0]
-                    qval = qnet.forward(batch_size=minibatch_size, data=next_states)[0]
+                    # 3.2 Use the target network to compute the scores and
+                    #     get the corresponding target rewards
+                    if not args.double_q:
+                        target_qval = target_qnet.forward(batch_size=minibatch_size,
+                                                         data=next_states)[0]
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                nd.argmax_channel(target_qval))\
+                                           * (1.0 - terminate_flags) * discount
+                    else:
+                        target_qval = target_qnet.forward(batch_size=minibatch_size,
+                                                         data=next_states)[0]
+                        qval = qnet.forward(batch_size=minibatch_size, data=next_states)[0]
 
-                    target_rewards = rewards + nd.choose_element_0index(target_qval,
-                                                            nd.argmax_channel(qval))\
-                                       * (1.0 - terminate_flags) * discount
+                        target_rewards = rewards + nd.choose_element_0index(target_qval,
+                                                                nd.argmax_channel(qval))\
+                                           * (1.0 - terminate_flags) * discount
 
-                outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
-                                          dqn_action=actions,
-                                          dqn_reward=target_rewards)
-                qnet.backward(batch_size=minibatch_size)
+                    outputs = qnet.forward(batch_size=minibatch_size,is_train=True, data=states,
+                                              dqn_action=actions,
+                                              dqn_reward=target_rewards)
+                    qnet.backward(batch_size=minibatch_size)
 
 
-                if args.kv_type != None:
-                    if total_steps % kvstore_update_period == 0:
-                        if use_easgd == False:
-                            update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                        else:
+                    if args.kv_type != None:
+                        if total_steps % kvstore_update_period == 0:
+                            if use_easgd == False:
+                                update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                            else:
+                                for paramIndex in range(len(qnet.params)):
+                                    k=qnet.params.keys()[paramIndex]
+                                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+                        if use_easgd:
                             for paramIndex in range(len(qnet.params)):
                                 k=qnet.params.keys()[paramIndex]
-                                kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                                qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                    if use_easgd:
-                        for paramIndex in range(len(qnet.params)):
-                            k=qnet.params.keys()[paramIndex]
-                            local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                            weight=qnet.params[k])
-                else:
-                    qnet.update(updater=updater)
-                if args.optimizer == "rmsprop":
-                    optimizer.lr -= lr_decay
+                                local_updater(index = paramIndex,grad=qnet.params_grad[k],
+                                                weight=qnet.params[k])
+                    else:
+                        qnet.update(updater=updater)
 
-                # 3.3 Calculate Loss
-                diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
-                quadratic_part = nd.clip(diff, -1, 1)
-                loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
-                if ave_loss == 0:
-                    ave_loss =  loss
-                else:
-                    ave_loss =  0.95*ave_loss + 0.05*loss
 
-                # 3.3 Update the target network every freeze_interval
-                # (We can do annealing instead of hard copy)
-                if training_steps % freeze_interval == 0:
-                    qnet.copy_params_to(target_qnet)
-                if save_screens and training_steps % (60*60*2/param_update_period) == 0:
-                    logging.info("saving screenshots")
-                    for g in range(nactor):
-                        screen = states_buffer_for_train[(g*single_batch_size),-2,:,:].reshape(
-                                                            states_buffer_for_train.shape[2:])
-                        cv2.imwrite("screen_"+str(g)+".png",screen)
-                training_steps += 1
-                # logging.info("train time: %f"%(time.time()-t1))
+                    # 3.3 Calculate Loss
+                    diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
+                    quadratic_part = nd.clip(diff, -1, 1)
+                    loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
+                    if ave_loss == 0:
+                        ave_loss =  loss
+                    else:
+                        ave_loss =  0.95*ave_loss + 0.05*loss
 
+                    # 3.3 Update the target network every freeze_interval
+                    # (We can do annealing instead of hard copy)
+                    if training_steps % freeze_interval == 0:
+                        qnet.copy_params_to(target_qnet)
+                    if save_screens and training_steps % (60*60*2/param_update_period) == 0:
+                        logging.info("saving screenshots")
+                        for g in range(nactor):
+                            screen = states_buffer_for_train[(g*single_batch_size),-2,:,:].reshape(
+                                                                states_buffer_for_train.shape[2:])
+                            cv2.imwrite("screen_"+str(g)+".png",screen)
+                    training_steps += 1
+
+            if args.optimizer == "rmsprop":
+                optimizer.lr -= lr_decay
 
 
 
