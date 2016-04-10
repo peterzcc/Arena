@@ -109,6 +109,10 @@ namespace mxnet {
 #if DMLC_USE_CXX11
     class SpatialGlimpseProp : public OperatorProperty {
     public:
+      std::vector<std::string> ListArguments() const override {
+        return{ "data", "center", "size" };
+      }
+
       void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
         param_.Init(kwargs);
       }
