@@ -33,6 +33,8 @@ def load_image(path, height=360, width=480, num=100):
 def pyramid_glimpse(data, roi, depth, scale, output_shape, name):
     l = []
     curr_scale = 1.0
+    if type(roi) is tuple:
+        roi = mx.symbol.Concat(*roi, num_args=depth)
     for i in range(depth):
         l.append(mx.symbol.SpatialGlimpse(data=data, roi=roi,
                                           output_shape=output_shape,
@@ -43,11 +45,13 @@ def pyramid_glimpse(data, roi, depth, scale, output_shape, name):
 
 ctx = mx.cpu()
 data = mx.symbol.Variable('data')
+center = mx.symbol.Variable('center')
+size = mx.symbol.Variable('size')
 roi = mx.symbol.Variable('roi')
 print type(data)
 depth = 3
 scale = 1.5
-net = pyramid_glimpse(data=data, roi=roi, depth=depth, scale=scale, output_shape=(224, 224),
+net = pyramid_glimpse(data=data, roi=roi, depth=depth, scale=scale, output_shape=(103, 103),
                       name='spatial_glimpse')
 batch_size = 180
 
