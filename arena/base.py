@@ -35,32 +35,32 @@ class Base(object):
         self.data_shapes = data_shapes.copy()
         self.name = name
         self.initializer = initializer
+        arg_names = sym.list_arguments()
+        aux_names = sym.list_auxiliary_states()
+        param_names = [n for n in arg_names if n not in self.data_shapes.keys()]
+        arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
+        self.arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
         if params is None:
-            arg_names = sym.list_arguments()
-            aux_names = sym.list_auxiliary_states()
-            param_names = [n for n in arg_names if n not in self.data_shapes.keys()]
-            assert initializer is not None, 'We must set the initializer if we donnot initialize' \
-                                            'manually the free parameters of the network!!'
-            arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
-            self.arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
             self.params = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
                                        for n in param_names])
             self.params_grad = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
                                             for n in param_names])
-            self.aux_states = OrderedDict([(k, nd.empty(s, ctx=ctx))
-                                           for k, s in zip(aux_names, aux_shapes)])
+            if len(self.params) > 0:
+                assert initializer is not None, 'We must set the initializer if we donnot initialize' \
+                                                'manually the free parameters of the network!!'
             for k, v in self.params.items():
                 initializer(k, v)
         else:
-            self.arg_name_shape = OrderedDict(data_shapes.items() + [(k, v.shape)
+            assert set(self.arg_name_shape.items()) == set(data_shapes.items() + [(k, v.shape)
                                                                      for k, v in params.items()])
             self.params = OrderedDict([(k, v.copyto(ctx)) for k, v in params.items()])
             self.params_grad = OrderedDict([(n, nd.empty(v.shape, ctx=ctx))
                                             for n, v in self.params.items()])
-            if aux_states is not None:
-                self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
-            else:
-                self.aux_states = None
+        if aux_states is not None:
+            self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
+        else:
+            self.aux_states = OrderedDict([(k, nd.empty(s, ctx=ctx))
+                                           for k, s in zip(aux_names, aux_shapes)])
         self.acc_grad = None
         self.executor_pool = ExecutorBatchSizePool(ctx=self.ctx, sym=self.sym,
                                                    data_shapes=self.data_shapes,
