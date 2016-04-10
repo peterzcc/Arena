@@ -21,8 +21,7 @@ namespace mxnet {
 
     MXNET_REGISTER_OP_PROPERTY(SpatialGlimpse, SpatialGlimpseProp)
       .add_argument("data", "Symbol", "Input data to the spatial glimpse operator.")
-      .add_argument("center", "Symbol", "Center of the spatial glimpse. Shape is (nroi, 2), each row contains (cx, cy).")
-      .add_argument("size", "Symbol", "Initial Size of the spatial glimpse. Shape is (nroi, 2), each row contains (sx, sy).")
+      .add_argument("roi", "Symbol", "ROI of the spatial glimpse. Shape is (nroi, 2), each row contains (cx, cy, sx, sy).")
       .add_arguments(SpatialGlimpseParam::__FIELDS__())
       .describe("Perform spatial glimpse on the inputs.");
 

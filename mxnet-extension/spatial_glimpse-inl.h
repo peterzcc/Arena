@@ -22,7 +22,7 @@ namespace mxnet {
   namespace op {
 
     namespace spatial_glimpse_enum {
-      enum SpatialGlimpseOpInputs { kData, kCenter, kSize};
+      enum SpatialGlimpseOpInputs { kData, kROI};
       enum SpatialGlimpseOpOutputs { kOut };
     }  // namespace spatial_glimpse_enum
 
@@ -53,23 +53,20 @@ namespace mxnet {
         const std::vector<TBlob> &aux_args) {
         using namespace mshadow;
         using namespace mshadow::expr;
-        CHECK_EQ(in_data.size(), 3);
+        CHECK_EQ(in_data.size(), 2);
         CHECK_EQ(out_data.size(), 1);
         Stream<xpu> *s = ctx.get_stream<xpu>();
         Tensor<xpu, 4> data = in_data[spatial_glimpse_enum::kData].get<xpu, 4, real_t>(s);
-        Tensor<xpu, 2> center = in_data[spatial_glimpse_enum::kCenter].get<xpu, 2, real_t>(s);
-        Tensor<xpu, 2> size = in_data[spatial_glimpse_enum::kSize].get<xpu, 2, real_t>(s);
+        Tensor<xpu, 2> roi = in_data[spatial_glimpse_enum::kROI].get<xpu, 2, real_t>(s);
         Tensor<xpu, 4> out = out_data[spatial_glimpse_enum::kOut].get<xpu, 4, real_t>(s);
-        CHECK(center.shape_[1] == 2)
-          << "Spatial Glimpse only supports center shape: (nroi, 2)";
-        CHECK(size.shape_[1] == 2)
-          << "Spatial Glimpse only supports size shape: (nroi, 2)";
-        CHECK(out.shape_[0] == data.shape_[0] && data.shape_[0] == center.shape_[0] && center.shape_[0] == size.shape_[0])
+        CHECK(roi.shape_[1] == 4)
+          << "Spatial Glimpse only supports roi shape: (nroi, 4)";
+        CHECK(out.shape_[0] == data.shape_[0] && data.shape_[0] == roi.shape_[0])
           << "The batchsize of all inputs must be the same";
         index_t dst_height = out.shape_[2];
         index_t dst_width = out.shape_[3];
         Assign(out, req[spatial_glimpse_enum::kOut],
-          bilinear_resample(data, concat<1>(center, size), dst_height, dst_width, param_.scale));
+          bilinear_resample(data, roi, dst_height, dst_width, param_.scale));
       }
 
       virtual void Backward(const OpContext &ctx,
@@ -82,20 +79,19 @@ namespace mxnet {
         using namespace mshadow;
         using namespace mshadow::expr;
         CHECK_EQ(out_grad.size(), 1);
-        CHECK_EQ(in_data.size(), 3);
+        CHECK_EQ(in_data.size(), 2);
         CHECK_EQ(out_data.size(), 1);
         CHECK_EQ(req.size(), 1);
         CHECK_EQ(in_grad.size(), 1);
         Stream<xpu> *s = ctx.get_stream<xpu>();
         Tensor<xpu, 4> grad = out_grad[spatial_glimpse_enum::kOut].get<xpu, 4, real_t>(s);
         Tensor<xpu, 4> data = in_data[spatial_glimpse_enum::kData].get<xpu, 4, real_t>(s);
-        Tensor<xpu, 2> center = in_data[spatial_glimpse_enum::kCenter].get<xpu, 2, real_t>(s);
-        Tensor<xpu, 2> size = in_data[spatial_glimpse_enum::kSize].get<xpu, 2, real_t>(s);
+        Tensor<xpu, 2> roi = in_data[spatial_glimpse_enum::kROI].get<xpu, 2, real_t>(s);
         Tensor<xpu, 4> output_data = out_data[spatial_glimpse_enum::kOut].get<xpu, 4, real_t>(s);
         Tensor<xpu, 4> input_grad = in_grad[spatial_glimpse_enum::kData].get<xpu, 4, real_t>(s);
 
         Assign(input_grad, req[spatial_glimpse_enum::kData],
-          bilinear_resample_grad(grad, data, concat<1>(center, size), param_.scale));
+          bilinear_resample_grad(grad, data, roi, param_.scale));
       }
 
     private:
@@ -110,7 +106,7 @@ namespace mxnet {
     class SpatialGlimpseProp : public OperatorProperty {
     public:
       std::vector<std::string> ListArguments() const override {
-        return{ "data", "center", "size" };
+        return{ "data", "roi"};
       }
 
       void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -124,16 +120,13 @@ namespace mxnet {
       bool InferShape(std::vector<TShape> *in_shape,
         std::vector<TShape> *out_shape,
         std::vector<TShape> *aux_shape) const override {
-        CHECK_EQ(in_shape->size(), 3);
+        CHECK_EQ(in_shape->size(), 2);
         const TShape &data_shape = (*in_shape)[0];
-        const TShape &center_shape = (*in_shape)[1];
-        const TShape &size_shape = (*in_shape)[2];
+        const TShape &roi_shape = (*in_shape)[1];
         CHECK_EQ(data_shape.ndim(), 4) << \
           "SpatialGlimpse: Input data should be 4D in (batch, channel, H, W)";
-        CHECK_EQ(center_shape.ndim(), 2) << \
-          "SpatialGlimpse: Center data should be 2D in (batch, 2), each element is (cx, cy)";
-        CHECK_EQ(size_shape.ndim(), 2) << \
-          "SpatialGlimpse: Size data should be 2D in (batch, 2), each element is (sx, sy)";
+        CHECK_EQ(roi_shape.ndim(), 2) << \
+          "SpatialGlimpse: ROI data should be 2D in (batch, 4), each element is (cx, cy, sx, sy)";
         TShape oshape = data_shape;
         oshape[2] = param_.output_shape[0];
         oshape[3] = param_.output_shape[1];
@@ -157,7 +150,7 @@ namespace mxnet {
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ out_grad[spatial_glimpse_enum::kOut], in_data[spatial_glimpse_enum::kData], in_data[spatial_glimpse_enum::kCenter], in_data[spatial_glimpse_enum::kSize] };
+        return{ out_grad[spatial_glimpse_enum::kOut], in_data[spatial_glimpse_enum::kData], in_data[spatial_glimpse_enum::kROI] };
       }
 
       Operator* CreateOperator(Context ctx) const override;
