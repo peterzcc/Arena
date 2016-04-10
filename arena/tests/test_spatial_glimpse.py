@@ -29,10 +29,26 @@ def load_image(path, height=360, width=480, num=100):
         b, g, r = cv2.split(bgr_img)  # get b,g,r
         data_npy[i, :, :, :] = numpy.rollaxis(cv2.merge([r, g, b]), 2, 0)
     return data_npy
+
+def pyramid_glimpse(data, roi, depth, scale, output_shape, name):
+    l = []
+    curr_scale = 1.0
+    for i in range(depth):
+        l.append(mx.symbol.SpatialGlimpse(data=data, roi=roi,
+                                          output_shape=output_shape,
+                                          scale=curr_scale, name="%s-%d" %(name, i)))
+        curr_scale *= scale
+    ret = mx.symbol.Concat(*l, num_args=depth, name="%s-concat" %name)
+    return ret
+
 ctx = mx.cpu()
 data = mx.symbol.Variable('data')
 roi = mx.symbol.Variable('roi')
-net = mx.symbol.SpatialGlimpse(data=data, roi=roi, output_shape=(224, 224), scale=1.0, name='spatial_glimpse')
+print type(data)
+depth = 3
+scale = 1.5
+net = pyramid_glimpse(data=data, roi=roi, depth=depth, scale=scale, output_shape=(224, 224),
+                      name='spatial_glimpse')
 batch_size = 180
 
 data_arr = nd.array(load_image(path="D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\bag",
@@ -54,10 +70,11 @@ end = time.time()
 print 'Time:', end-start
 print out_imgs.shape
 for i in range(batch_size):
-    r, g, b = cv2.split(numpy.rollaxis(out_imgs[i], 0, 3))
-    reshaped_img = cv2.merge([b,g,r])
-    cv2.imshow('image', reshaped_img/255.0)
-    cv2.waitKey(0)
+    for j in range(depth):
+        r, g, b = cv2.split(numpy.rollaxis(out_imgs[i, j*3:(j+1)*3], 0, 3))
+        reshaped_img = cv2.merge([b,g,r])
+        cv2.imshow('image', reshaped_img/255.0)
+        cv2.waitKey(0)
 #
 # shapes = []
 #
