@@ -36,11 +36,11 @@ class Base(object):
         self.name = name
         self.initializer = initializer
         if params is None:
-            assert initializer is not None, 'We must set the initializer if we donnot give the ' \
-                                            'initial params!'
             arg_names = sym.list_arguments()
             aux_names = sym.list_auxiliary_states()
             param_names = [n for n in arg_names if n not in self.data_shapes.keys()]
+            assert initializer is not None, 'We must set the initializer if we donnot initialize' \
+                                            'manually the free parameters of the network!!'
             arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
             self.arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
             self.params = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
