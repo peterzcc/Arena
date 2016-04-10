@@ -3,49 +3,61 @@ import mxnet.ndarray as nd
 import numpy
 from arena import Base
 import cv2
+import time
 from arena.utils import *
 
 
-def load_bb(path):
+def load_roi(path, height=360, width=480, num=100):
     a = numpy.loadtxt(path)
     cx = a[:, ::2].mean(axis=1)
     cy = a[:, 1::2].mean(axis=1)
     sx = a[:, ::2].max(axis=1) - a[:, ::2].min(axis=1) + 1
     sy = a[:, 1::2].max(axis=1) - a[:, 1::2].min(axis=1) + 1
-    cx = cx / 480 * 2 -1
-    cy = cy / 360 * 2 - 1
-    sx = sx / 480 * 2 - 1
-    sy = sy / 360 * 2 - 1
-    return numpy.vstack((cx, cy)).T, numpy.vstack((sx, sy)).T
+    cx = cx / width * 2 -1
+    cy = cy / height * 2 - 1
+    sx = sx / width * 2 - 1
+    sy = sy / height * 2 - 1
+    rois = numpy.vstack((cx, cy, sx, sy)).T
+    return rois[:num, :]
 
+def load_image(path, height=360, width=480, num=100):
+    data_npy = numpy.zeros((num, 3, height, width), dtype=numpy.float32)
+    for i in range(num):
+        image_path = path + "\\%08d.jpg" % (i+1)
+        print image_path
+        bgr_img = cv2.imread(image_path)
+        b, g, r = cv2.split(bgr_img)  # get b,g,r
+        data_npy[i, :, :, :] = numpy.rollaxis(cv2.merge([r, g, b]), 2, 0)
+    return data_npy
+ctx = mx.cpu()
 data = mx.symbol.Variable('data')
-center = mx.symbol.Variable('center')
-size = mx.symbol.Variable('size')
-net = mx.symbol.SpatialGlimpse(data=data, center=center, size=size, output_shape=(224, 224), scale=1.0, name='spatial_glimpse')
+roi = mx.symbol.Variable('roi')
+net = mx.symbol.SpatialGlimpse(data=data, roi=roi, output_shape=(224, 224), scale=1.0, name='spatial_glimpse')
+batch_size = 180
 
-bgr_img = cv2.imread('D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\bag\\00000001.jpg')
-b, g, r = cv2.split(bgr_img)       # get b,g,r
-rgb_img = cv2.merge([r,g,b])     # switch it to rgb
+data_arr = nd.array(load_image(path="D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\bag",
+                               num=batch_size), ctx=ctx)
 
-data_npy = numpy.rollaxis(rgb_img, 2, 0).reshape((1, 3, 360, 480))
+roi_arr = nd.array(load_roi("D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\bag\\groundtruth_parsed.txt",
+                            num=batch_size), ctx=ctx)
 
-center_npy, size_npy = load_bb("D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\bag\\groundtruth_parsed.txt")
+print data_arr.shape
+print roi_arr.shape
+data_shapes = {'data': (batch_size, 3, 360, 480),
+               'roi': (batch_size, 4)}
 
-center_npy = center_npy[:1, :]
-size_npy = size_npy[:1, :]
-data_shapes = {'data': (1, 3, 360, 480),
-               'center': (1, 2),
-               'size': (1, 2)}
+glimpse_test_net = Base(data_shapes=data_shapes, sym=net, name='GlimpseTest', ctx=ctx)
 
-glimpse_test_net = Base(data_shapes=data_shapes, sym=net, name='GlimpseTest', ctx=mx.gpu())
-
-out_img = glimpse_test_net.forward(batch_size=1, data=nd.array(data_npy, ctx=mx.gpu()),
-                                   center=nd.array(center_npy, ctx=mx.gpu()), size=nd.array(size_npy, ctx=mx.gpu()))[0].asnumpy()
-r, g, b = cv2.split(numpy.rollaxis(out_img.reshape((3, 224, 224)), 0, 3))
-reshaped_img = cv2.merge([b,g,r])
-
-cv2.imshow('image', reshaped_img/255.0)
-cv2.waitKey(0)
+start = time.time()
+out_imgs = glimpse_test_net.forward(batch_size=batch_size, data=data_arr, roi=roi_arr)[0].asnumpy()
+end = time.time()
+print 'Time:', end-start
+print out_imgs.shape
+for i in range(batch_size):
+    r, g, b = cv2.split(numpy.rollaxis(out_imgs[i], 0, 3))
+    reshaped_img = cv2.merge([b,g,r])
+    cv2.imshow('image', reshaped_img/255.0)
+    cv2.waitKey(0)
 #
 # shapes = []
 #
