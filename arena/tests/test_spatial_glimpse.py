@@ -8,7 +8,7 @@ from arena.utils import *
 
 
 def load_roi(path, height=360, width=480, num=100):
-    a = numpy.loadtxt(path)
+    a = numpy.loadtxt(path, delimiter=',')
     cx = a[:, ::2].mean(axis=1)
     cy = a[:, 1::2].mean(axis=1)
     sx = a[:, ::2].max(axis=1) - a[:, ::2].min(axis=1) + 1
@@ -51,19 +51,22 @@ roi = mx.symbol.Variable('roi')
 print type(data)
 depth = 3
 scale = 1.5
-net = pyramid_glimpse(data=data, roi=roi, depth=depth, scale=scale, output_shape=(103, 103),
+rows = 720
+cols = 1280
+path= "D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\ball1"
+net = pyramid_glimpse(data=data, roi=roi, depth=depth, scale=scale, output_shape=(107, 107),
                       name='spatial_glimpse')
-batch_size = 180
+batch_size = 50
 
-data_arr = nd.array(load_image(path="D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\bag",
-                               num=batch_size), ctx=ctx)
+data_arr = nd.array(load_image(path=path,
+                               num=batch_size, height=rows, width=cols), ctx=ctx)
 
-roi_arr = nd.array(load_roi("D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\bag\\groundtruth_parsed.txt",
-                            num=batch_size), ctx=ctx)
+roi_arr = nd.array(load_roi(path=path + "\\groundtruth.txt",
+                            num=batch_size, height=rows, width=cols), ctx=ctx)
 
 print data_arr.shape
 print roi_arr.shape
-data_shapes = {'data': (batch_size, 3, 360, 480),
+data_shapes = {'data': (batch_size, 3, rows, cols),
                'roi': (batch_size, 4)}
 
 glimpse_test_net = Base(data_shapes=data_shapes, sym=net, name='GlimpseTest', ctx=ctx)
