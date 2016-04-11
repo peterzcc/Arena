@@ -116,6 +116,10 @@ class AtariGame(Game):
         else:
             return termination_flag
 
+    @property
+    def state_enabled(self):
+        return self.replay_memory.size >= self.replay_memory.history_length
+
     def get_observation(self):
         image = self.screen_buffer.max(axis=0)
         if 'crop' == self.resize_mode:
