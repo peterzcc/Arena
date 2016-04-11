@@ -37,22 +37,6 @@ class EpisodeStat(object):
         self.episode_update_step = 0
         self.episode_action_step = 0
 
-def sample_training_data(game,episode_stat,g):
-    global states_buffer_for_train
-    global actions_buffer_for_train
-    global rewards_buffer_for_train
-    global terminate_flags_buffer_for_train
-    global  minibatch_size
-    global nactor
-    episode_stat.episode_update_step += 1
-    single_size = minibatch_size/nactor
-    action, reward, terminate_flag \
-        = game.replay_memory.sample_inplace(batch_size=single_size,\
-        states=states_buffer_for_train,offset=(g*single_size))
-    actions_buffer_for_train[(g*single_size):((g+1)*single_size)]= action
-    rewards_buffer_for_train[(g*single_size):((g+1)*single_size)]= reward
-    terminate_flags_buffer_for_train[(g*single_size):((g+1)*single_size)]=\
-        terminate_flag
 def main():
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
     parser.add_argument('-r', '--rom', required=False, type=str,
@@ -105,6 +89,7 @@ def main():
     parser.add_argument('--resize-mode', required=False, type=str, default="scale",
                         help='Resize mode, scale or crop')
     args, unknown = parser.parse_known_args()
+    logging.info(str(args))
 
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
