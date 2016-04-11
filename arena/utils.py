@@ -84,6 +84,13 @@ def parse_ctx(ctx_args):
     ctx = [(device, int(num)) if len(num) > 0 else (device, 0) for device, num in ctx]
     return ctx
 
+'''
+Function: get_npy_list
+Description:
+    Get a numpy-array list from a ndarray list
+'''
+def get_npy_list(ndarray_list):
+    return [v.asnumpy() for v in ndarray_list]
 
 class ExecutorBatchSizePool(object):
     def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):
