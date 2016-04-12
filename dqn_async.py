@@ -188,7 +188,6 @@ def main():
         else:
             kv.set_optimizer(optimizer)
         kvstore_update_period = args.kvstore_update_period
-        args.dir_path = args.dir_path + "-"+str(kv.rank)
     else:
         updater = mx.optimizer.get_updater(optimizer)
 
