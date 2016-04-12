@@ -88,6 +88,8 @@ def main():
                         help='Parameter update period')
     parser.add_argument('--resize-mode', required=False, type=str, default="scale",
                         help='Resize mode, scale or crop')
+    parser.add_argument('--eps-update-period', required=False, type=int, default=8000,
+                        help='eps greedy policy update period')
     args, unknown = parser.parse_known_args()
     logging.info(str(args))
 
@@ -130,7 +132,7 @@ def main():
     eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
-    eps_update_period = 8000
+    eps_update_period = args.eps_update_period
     eps_update_count = numpy.zeros((nactor,))
 
     single_batch_size = args.single_batch_size
