@@ -43,6 +43,7 @@ def gen_run_script(args, unknown):
 def submit_worker(num, node, pass_envs, args,ctx="cpu"):
     pass_envs['DMLC_ROLE'] = 'worker'
     pass_envs['DMLC_TASK_ID'] = str(num)
+    pass_envs['CTX'] = ctx
     env_arg = ','.join(['%s=\"%s\"' % (k, str(v)) for k, v in pass_envs.items()])
     cmd = 'qsub -cwd -S /bin/bash'
     cmd += ' -q %s' % node
@@ -50,7 +51,6 @@ def submit_worker(num, node, pass_envs, args,ctx="cpu"):
     cmd += ' -o worker%d_%s -j y' % (num,args.log_file)
     cmd += ' -v %s,PATH=${PATH}:.' % env_arg
     cmd += ' %s' % (args.runscript)
-    cmd += ' -c %s' % (ctx)
     logging.info(cmd)
     subprocess.check_call(cmd, shell=True)
 

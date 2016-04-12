@@ -56,7 +56,7 @@ def main():
                         help='Use Double DQN')
     parser.add_argument('--wd', required=False, type=float, default=0.0,
                         help='Weight of the L2 Regularizer')
-    parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
+    parser.add_argument('-c', '--ctx', required=False, type=str, default=None,
                         help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
     parser.add_argument('-d', '--dir-path', required=False, type=str, default='',
                         help='Saving directory of model files.')
@@ -100,6 +100,8 @@ def main():
         time_str = time.strftime("%m%d_%H%M_%S", time.localtime())
         args.dir_path = ('dqn-%s-%d_' % (rom_name,int(args.lr*10**5)))+time_str
         logging.info("saving to dir: "+args.dir_path)
+    if args.ctx == None:
+        args.ctx = os.environ.get('CTX')
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
 
