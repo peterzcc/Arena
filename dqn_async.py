@@ -102,6 +102,7 @@ def main():
         logging.info("saving to dir: "+args.dir_path)
     if args.ctx == None:
         args.ctx = os.environ.get('CTX')
+    logging.info("Context: %s" % args.ctx)
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
 
