@@ -74,7 +74,7 @@ def update_to_kvstore(kv,params,params_grad):
         kv.pull(paramIndex,params[k],priority=-paramIndex)
 
 class ExecutorBatchSizePool(object):
-    def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):
+    def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states,share_execs=True):
         self.ctx = ctx
         self.sym = sym
         self.params = params
@@ -87,6 +87,7 @@ class ExecutorBatchSizePool(object):
             self.data_dims[k] = v[1::]
             assert self.init_batch_size == v[0]
         self.exe_pool = {}
+        self.share_execs = share_execs
         self.base_exe = self.get(self.init_batch_size)
 
     def get(self, batch_size=None):
@@ -106,8 +107,13 @@ class ExecutorBatchSizePool(object):
                                     args_grad=dict(self.params_grad.items() + inputs_grad.items()),
                                     aux_states=self.aux_states)
             else:
-                exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
-                                    args_grad=dict(self.params_grad.items() + inputs_grad.items()),
-                                    aux_states=self.aux_states, shared_exec=self.base_exe)
+                if self.share_execs ==True:
+                    exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+                                        args_grad=dict(self.params_grad.items() + inputs_grad.items()),
+                                        aux_states=self.aux_states, shared_exec=self.base_exe)
+                else:
+                    exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+                                        args_grad=dict(self.params_grad.items() + inputs_grad.items()),
+                                        aux_states=self.aux_states)
             self.exe_pool[batch_size] = exe
             return exe

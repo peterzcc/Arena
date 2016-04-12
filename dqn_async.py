@@ -64,7 +64,7 @@ def main():
                         help='Eps of the epsilon-greedy policy at the beginning')
     parser.add_argument('--replay-start-size', required=False, type=int, default=50000,
                         help='The step that the training starts')
-    parser.add_argument('--kvstore-update-period', required=False, type=int, default=1,
+    parser.add_argument('--kvstore-update-period', required=False, type=int, default=16,
                         help='The period that the worker updates the parameters from the sever')
     parser.add_argument('--kv-type', required=False, type=str, default=None,
                         help='type of kvstore, default will not use kvstore, could also be dist_async')
@@ -90,6 +90,8 @@ def main():
                         help='Resize mode, scale or crop')
     parser.add_argument('--eps-update-period', required=False, type=int, default=8000,
                         help='eps greedy policy update period')
+    parser.add_argument('--server-optimizer', required=False, type=str, default="easgd",
+                        help='type of server optimizer')
     args, unknown = parser.parse_known_args()
     logging.info(str(args))
 
@@ -151,44 +153,37 @@ def main():
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
 
-    use_easgd = False
-    if args.optimizer != "easgd":
-        if args.optimizer == "adagrad":
-            optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
-                            clip_gradient=args.clip_gradient,
-                            rescale_grad=1.0, wd=args.wd)
-        elif args.optimizer == "rmsprop" or args.optimizer == "rmspropnoncentered":
-            optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
-                            clip_gradient=args.clip_gradient,gamma1=args.rms_decay,gamma2=0,
-                            rescale_grad=1.0, wd=args.wd)
-            lr_decay = (args.lr - 0)/(steps_per_epoch*epoch_num/param_update_period)
-
-    else:
-        use_easgd = True
-        easgd_beta = 0.9
-        easgd_p = 4
-        easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
-        optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
-        easgd_eta = 0.00025
-        local_optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
+    if args.optimizer == "adagrad":
+        optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
-        central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
-                                        for n, v in qnet.params.items()])
+    elif args.optimizer == "rmsprop" or args.optimizer == "rmspropnoncentered":
+        optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
+                        clip_gradient=args.clip_gradient,gamma1=args.rms_decay,gamma2=0,
+                        rescale_grad=1.0, wd=args.wd)
+        lr_decay = (args.lr - 0)/(steps_per_epoch*epoch_num/param_update_period)
+
     # Create kvstore
+    use_easgd = False
     if args.kv_type != None:
         kvType = args.kv_type
         kv = kvstore.create(kvType)
         #Initialize kvstore
         for idx,v in enumerate(qnet.params.values()):
-            kv.init(idx,v);
-        if use_easgd == False:
-            # Set optimizer on kvstore
-            kv.set_optimizer(optimizer)
+            kv.init(idx,v)
+        if args.server_optimizer == "easgd":
+            use_easgd = True
+            easgd_beta = 0.9
+            easgd_p = 4
+            easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
+            server_optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
+            easgd_eta = 0.00025
+            central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+                                            for n, v in qnet.params.items()])
+            kv.set_optimizer(server_optimizer)
+            updater = mx.optimizer.get_updater(optimizer)
         else:
-            # kv.send_updater_to_server(easgd_server_update)
             kv.set_optimizer(optimizer)
-            local_updater = mx.optimizer.get_updater(local_optimizer)
         kvstore_update_period = args.kvstore_update_period
         args.dir_path = args.dir_path + "-"+str(kv.rank)
     else:
@@ -298,8 +293,15 @@ def main():
                 ave_fps = (100/(this_time-time_for_info))
                 time_for_info = this_time
 
-                # 3. Update our Q network if we can start sampling from the replay memory
-                #    Also, we update every `update_interval`
+            if use_easgd and total_steps % kvstore_update_period == 0 and \
+                                    games[-1].replay_memory.sample_enabled:
+                for paramIndex in range(len(qnet.params)):
+                    k=qnet.params.keys()[paramIndex]
+                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+            # 3. Update our Q network if we can start sampling from the replay memory
+            #    Also, we update every `update_interval`
             if total_steps > minibatch_size and \
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
@@ -346,26 +348,10 @@ def main():
                                           dqn_reward=target_rewards)
                 qnet.backward(batch_size=minibatch_size)
 
-
-                if args.kv_type != None:
-                    if total_steps % kvstore_update_period == 0:
-                        if use_easgd == False:
-                            update_to_kvstore(kv,qnet.params,qnet.params_grad)
-                        else:
-                            for paramIndex in range(len(qnet.params)):
-                                k=qnet.params.keys()[paramIndex]
-                                kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                                qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                                kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
-                    if use_easgd:
-                        for paramIndex in range(len(qnet.params)):
-                            k=qnet.params.keys()[paramIndex]
-                            local_updater(index = paramIndex,grad=qnet.params_grad[k],
-                                            weight=qnet.params[k])
-                else:
+                if args.kv_type == None or use_easgd:
                     qnet.update(updater=updater)
-                if args.optimizer == "rmsprop":
-                    optimizer.lr -= lr_decay
+                else:
+                    update_to_kvstore(kv,qnet.params,qnet.params_grad)
 
                 # 3.3 Calculate Loss
                 diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
@@ -380,6 +366,10 @@ def main():
                 # (We can do annealing instead of hard copy)
                 if training_steps % freeze_interval == 0:
                     qnet.copy_params_to(target_qnet)
+
+                if args.optimizer == "rmsprop" or args.optimizer == "rmspropnoncentered":
+                    optimizer.lr -= lr_decay
+
                 if save_screens and training_steps % (60*60*2/param_update_period) == 0:
                     logging.info("saving screenshots")
                     for g in range(nactor):
@@ -387,7 +377,6 @@ def main():
                                                             states_buffer_for_train.shape[2:])
                         cv2.imwrite("screen_"+str(g)+".png",screen)
                 training_steps += 1
-                # logging.info("train time: %f"%(time.time()-t1))
 
 
 
