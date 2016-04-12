@@ -7,8 +7,8 @@ import copy
 from utils import *
 
 
-#TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
-#TODO We can use C API to accelerate more (http://blog.debao.me/2013/04/my-first-c-extension-to-numpy/)
+# TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
+# TODO We can use C API to accelerate more (http://blog.debao.me/2013/04/my-first-c-extension-to-numpy/)
 class ReplayMemory(object):
     def __init__(self, history_length, memory_size=1000000, replay_start_size=100,
                  state_dim=(), action_dim=(), state_dtype='uint8', action_dtype='uint8',
@@ -32,7 +32,6 @@ class ReplayMemory(object):
         self.top = 0
         self.size = 0
 
-
     def latest_slice(self):
         if self.size >= self.history_length:
             return self.states.take(numpy.arange(self.top - self.history_length, self.top), axis=0, mode="wrap")
@@ -53,21 +52,21 @@ class ReplayMemory(object):
         self.top = 0
         self.size = 0
 
-    #TODO Test the copy function
+    # TODO Test the copy function
     def copy(self):
         replay_memory = copy.copy(self)
         replay_memory.states = numpy.zeros(self.states.shape, dtype=self.states.dtype)
         replay_memory.actions = numpy.zeros(self.actions.shape, dtype=self.actions.dtype)
         replay_memory.rewards = numpy.zeros(self.rewards.shape, dtype='float32')
         replay_memory.terminate_flags = numpy.zeros(self.terminate_flags.shape, dtype='bool')
-        replay_memory.states[numpy.arange(self.top-self.size, self.top), ::] = \
-            self.states[numpy.arange(self.top-self.size, self.top)]
-        replay_memory.actions[numpy.arange(self.top-self.size, self.top)] = \
-            self.actions[numpy.arange(self.top-self.size, self.top)]
-        replay_memory.rewards[numpy.arange(self.top-self.size, self.top)] = \
-            self.rewards[numpy.arange(self.top-self.size, self.top)]
-        replay_memory.terminate_flags[numpy.arange(self.top-self.size, self.top)] = \
-            self.terminate_flags[numpy.arange(self.top-self.size, self.top)]
+        replay_memory.states[numpy.arange(self.top - self.size, self.top), ::] = \
+            self.states[numpy.arange(self.top - self.size, self.top)]
+        replay_memory.actions[numpy.arange(self.top - self.size, self.top)] = \
+            self.actions[numpy.arange(self.top - self.size, self.top)]
+        replay_memory.rewards[numpy.arange(self.top - self.size, self.top)] = \
+            self.rewards[numpy.arange(self.top - self.size, self.top)]
+        replay_memory.terminate_flags[numpy.arange(self.top - self.size, self.top)] = \
+            self.terminate_flags[numpy.arange(self.top - self.size, self.top)]
         return replay_memory
 
     def append(self, obs, action, reward, terminate_flag):
@@ -80,13 +79,14 @@ class ReplayMemory(object):
             self.size += 1
 
     def sample(self, batch_size):
-        assert self.size >= batch_size and self.replay_start_size >= self.history_length
-        assert(0 <= self.size <= self.memory_size)
-        assert(0 <= self.top <= self.memory_size)
+        assert self.size >= batch_size and self.replay_start_size \
+                                           >= self.history_length
+        assert (0 <= self.size <= self.memory_size)
+        assert (0 <= self.top <= self.memory_size)
         if self.size <= self.replay_start_size:
             raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
-                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
-        #TODO Possibly states + inds for less memory access
+                             "start_size! Currently, size=%d, start_size=%d" % (self.size, self.replay_start_size))
+        # TODO Possibly states + inds for less memory access
         states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
                              dtype=self.states.dtype)
         actions = numpy.zeros((batch_size,) + self.action_dim, dtype=self.actions.dtype)
@@ -110,3 +110,51 @@ class ReplayMemory(object):
             next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
             counter += 1
         return states, actions, rewards, next_states, terminate_flags
+
+    '''
+    sampling n step transition samples trajectories, do not consider the history length
+    state_trajectory, n step states
+    action_trajectory, n step actions
+    reward_trajectory, n step rewards
+    terminate_flag, indicate whether the n+1 step state is an terminal state
+    note that n is not always equal to episode_length
+    '''
+    def sample_trajectory(self, episode_length):
+        assert self.replay_start_size >= 1 + episode_length
+        assert (0 <= self.size <= self.memory_size)
+        assert (0 <= self.top <= self.memory_size)
+        if self.size <= self.replay_start_size:
+            raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
+                             "start_size! Currently, size=%d, start_size=%d" % (self.size, self.replay_start_size))
+
+        '''
+        sample a trajectory of T states with T actions and T rewards
+        s_1:s_{T}, a_2:a_{T+1}, r_2:r_{T+1}
+        '''
+        # make sure the consecutive T+1 states s_1:s_{T+1} do not cross the top position,
+        #  which means that s_{T+1} is placed before or at s_{top}
+        index = self.rng.randint(low=self.top - self.size + 1, high=self.top - episode_length + 1)  # index + (e) <= top
+        # make sure the initial sampled state do not include terminal state
+        while self.terminate_flags.take(index, mode='wrap'):
+            index = self.rng.randint(low=self.top - self.size + 1,
+                                     high=self.top - episode_length + 1)
+        # check if there are any states with terminal flag
+        flag_trajectory = self.terminate_flags.take(numpy.arange(index, index+episode_length), mode='wrap')
+        if numpy.any(flag_trajectory):
+            # get the first t samples until s_{t+1} is with terminal flag
+            end_index = index + numpy.flatnonzero(flag_trajectory)[0]
+        else:
+            end_index = index + episode_length
+        episode_indices = numpy.arange(index, end_index)
+        state_trajectory = self.states.take(episode_indices, axis=0, mode='wrap')
+        action_trajectory = self.actions.take(episode_indices+1, axis=0, mode='wrap')
+        reward_trajectory = self.rewards.take(episode_indices+1, mode='wrap')
+        terminate_flag = self.terminate_flags.take(end_index, mode='wrap')
+
+        # if terminate_flag:
+        #     print 'size %d, top %d, current episode_length %d' %(self.size, self.top, state_trajectory.shape[0])
+        #     print 'index %d, end_index %d' %(index, end_index)
+        #     print flag_trajectory
+
+        return state_trajectory, action_trajectory, reward_trajectory, terminate_flag
+
