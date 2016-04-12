@@ -40,7 +40,7 @@ def gen_run_script(args, unknown):
     args.runscript = runscript
     return runscript
 
-def submit_worker(num, node, pass_envs, args):
+def submit_worker(num, node, pass_envs, args,ctx="cpu"):
     pass_envs['DMLC_ROLE'] = 'worker'
     pass_envs['DMLC_TASK_ID'] = str(num)
     env_arg = ','.join(['%s=\"%s\"' % (k, str(v)) for k, v in pass_envs.items()])
@@ -50,6 +50,7 @@ def submit_worker(num, node, pass_envs, args):
     cmd += ' -o worker%d_%s -j y' % (num,args.log_file)
     cmd += ' -v %s,PATH=${PATH}:.' % env_arg
     cmd += ' %s' % (args.runscript)
+    cmd += ' -c %s' % (ctx)
     logging.info(cmd)
     subprocess.check_call(cmd, shell=True)
 
@@ -86,15 +87,14 @@ class SgeLauncher(object):
             """
             serverq_l = self.args.server_queue.split(',')
             workerq_l = self.args.worker_queue.split(',')
+            ctxs = self.args.ctx.split(',')
             print serverq_l, self.args.server_queue
             for i in range(nworker):
                 submit_worker(num=i, node=workerq_l[i % len(workerq_l)], pass_envs=pass_envs,
-                              args=self.args)
+                              args=self.args,ctx = ctxs[i])
             for i in range(nserver):
                 submit_server(num=i, node=serverq_l[i % len(serverq_l)], pass_envs=pass_envs,
                               args=self.args)
-            lastCmd = "qsub -cwd -S /bin/bash -q *.q@client114 -N lastCmd  -o outout.out -j y -v PATH=${PATH}:. /csproject/dygroup2/czeng/run.sh nvidia-smi"
-            subprocess.check_call(lastCmd, shell=True)
             logging.info('Waiting for the jobs to get up...')
 
         return sge_submit
@@ -122,6 +122,9 @@ def main():
     parser.add_argument('-workerq', '--worker-queue', default='all.q@client110,all.q@client111',
                         type=str,
                         help='the queue we want to submit our worker jobs to')
+    parser.add_argument('-c', '--ctx', default='gpu1',
+                        type=str,
+                        help='the context for mxnet')
     parser.add_argument('--log-level', default='INFO', type=str,
                         choices=['INFO', 'DEBUG'],
                         help='logging level')
