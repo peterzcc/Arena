@@ -5,11 +5,11 @@
 name=breakout
 n=8
 s=4
-workerq="*.q@client111,*.q@client113,*.q@client114,*.q@client115,*.q@client115,*.q@client114,*.q@client113,*.q@client111"
-serverq="*.q@client111,*.q@client113,*.q@client114,*.q@client115,*.q@client115,*.q@client114,*.q@client113,*.q@client111"
+workerq="*.q@client111,*.q@client113,*.q@client114,*.q@client115,*.q@client111,*.q@client113,*.q@client114,*.q@client115"
+serverq="*.q@client111,*.q@client113,*.q@client114,*.q@client115,*.q@client111,*.q@client113,*.q@client114,*.q@client115"
 # workerq="*.q@client108,*.q@client109,*.q@client110,*.q@client111,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
 # serverq="*.q@client108,*.q@client109,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110"
-CTX="gpu1,gpu1,gpu1,gpu1,gpu0,gpu0,gpu0,gpu0,gpu1,gpu1"
+CTX="gpu1,gpu1,gpu1,gpu1,gpu1,gpu0,gpu0,gpu1"
 wd="/csproject/dygroup2/czeng/dist_dqn/"
 activate_cmd="./project/dygroup2/czeng/venv/bin/activate"
 script="python dqn_async.py -r roms/breakout.bin --replay-start-size 90 --optimizer rmspropnoncentered --lr 0.001 --eps 0.1 --symbol nips --sample-policy recent --rms-decay 0.99 --nactor 16 --single-batch-size 5 --param-update-period 5 --eps-update-period 1000 --kv-type dist_async"
