@@ -35,7 +35,7 @@ class VREPGame(Game):
         self.history_length = history_length
 
         # members about the vrep environment
-        self.client_id = 0
+        self.client_id = -1
         self.quadcopter_handle = None
         self.target_handle = None
         self.camera_handle = None
@@ -171,7 +171,7 @@ class VREPGame(Game):
         return reward
 
     def start(self):
-        vrep.simxFinish(-1)  # just in case, close all opened connections
+        vrep.simxFinish(self.client_id)  # just in case, close all opened connections
         self.client_id = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5)
         if self.client_id == -1:
             print "Failed connecting to remote API server"
@@ -217,7 +217,7 @@ class VREPGame(Game):
 
     def begin_episode(self, max_episode_step=DEFAULT_MAX_EPISODE_STEP):
         if self.episode_step > self.max_episode_step or self.episode_terminate():
-            vrep.simxStopSimulation(self.client_id, vrep.simx_opmode_oneshot)
+            vrep.simxStopSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
             self.start()
         self.max_episode_step = max_episode_step
         self.episode_reward = 0
