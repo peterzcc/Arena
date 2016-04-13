@@ -251,7 +251,7 @@ def main():
                         else:
                             eps_id[g] = 2
                         eps_update_count[g] += 1
-                    logging.info("Agent[%d] eps: %f" % (g,eps_curr[eps_id[g]]))
+                        logging.info("Agent[%d] eps: %f" % (g,eps_curr[eps_id[g]]))
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
 

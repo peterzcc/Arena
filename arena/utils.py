@@ -3,7 +3,7 @@ import mxnet.ndarray as nd
 import os
 import numpy
 import json
-
+import time
 _ctx = mx.cpu()
 _numpy_rng = numpy.random.RandomState(123456)
 
@@ -48,6 +48,8 @@ def save_misc(dir_path="", epoch=None, name="", **argdict):
 def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
     _, param_loading_path, _ = get_saving_path(prefix, epoch)
+    while not os.path.isfile(param_loading_path):
+        time.sleep(60)
     save_dict = nd.load(param_loading_path)
     arg_params = {}
     aux_params = {}
