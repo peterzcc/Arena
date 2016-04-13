@@ -242,7 +242,7 @@ def main():
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
                                                           episode_stats[g].episode_action_step)
                     logging.info(info_str)
-                    if eps_update_count[g] * eps_update_period > total_steps:
+                    if eps_update_count[g] * eps_update_period < total_steps:
                         eps_rand = npy_rng.rand()
                         if eps_rand<0.4:
                             eps_id[g] = 0
