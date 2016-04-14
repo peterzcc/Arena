@@ -49,7 +49,6 @@ def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
     _, param_loading_path, _ = get_saving_path(prefix, epoch)
     while not os.path.isfile(param_loading_path):
-        print ">"
         time.sleep(60)
     save_dict = nd.load(param_loading_path)
     arg_params = {}
