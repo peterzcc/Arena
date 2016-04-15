@@ -3,6 +3,8 @@ import cv2
 import re
 import time
 from utils import *
+import matplotlib.pyplot as plt
+import mxnet.ndarray as nd
 
 '''
 A simple data iteration wrapper for tracking sequence data, speed can be optimized.
@@ -23,7 +25,7 @@ output_size: desired size after resize
 
 
 class TrackingIterator(object):
-    def __init__(self, video_list, output_size=(100, 100)):
+    def __init__(self, video_list, output_size=(100, 100), resize=True):
         self.rng = get_numpy_rng()
         self.img_lists = []
         self.roi_lists = []
@@ -35,28 +37,35 @@ class TrackingIterator(object):
 
         self.output_size = output_size
         self.video_num = len(self.img_lists)
+        self.resize = resize
 
     def sample(self, batch_size, length, interval_step=1):
-        data_batch = numpy.zeros((batch_size, length, 3) + self.output_size)
-        roi_batch = numpy.zeros((batch_size, length, 4))
+        video_index = self.rng.randint(0, self.video_num)
+        im_shape = cv2.imread(self.img_lists[video_index][0]).shape
+        if self.resize:
+            data_batch = numpy.zeros((batch_size, length, 3) + self.output_size, dtype=numpy.uint8)
+        else:
+            data_batch = numpy.zeros((batch_size, length, 3) + (im_shape[0], im_shape[1]), dtype=numpy.uint8)
+        roi_batch = numpy.zeros((batch_size, length, 4), dtype=numpy.float32)
         counter = 0
         while counter < batch_size:
-            video_index = self.rng.randint(0, self.video_num)
             start_index = self.rng.randint(0, len(self.img_lists[video_index]) - (length - 1)*interval_step)
             for i in xrange(length):
-                im = cv2.imread(self.img_lists[video_index][start_index])
-                im = cv2.resize(im, self.output_size, interpolation=cv2.INTER_LINEAR)
+                im = cv2.imread(self.img_lists[video_index][start_index+i])
+                if self.resize:
+                    im = cv2.resize(im, (self.output_size[1], self.output_size[0]),
+                                interpolation=cv2.INTER_LINEAR)
                 if im.ndim == 2:
                     im = numpy.tile(im.reshape((1, 3, 3)), (3, 1, 1))
                 else:
-                    im = numpy.swapaxes(im, 0, 2)
-                    im = numpy.swapaxes(im, 1, 2)
+                    im = numpy.rollaxis(im, 2)
                 data_batch[counter, i, :, :, :] = im
             roi_batch[counter] = numpy.asarray(
                 self.roi_lists[video_index][start_index:start_index+length])
             counter += 1
 
-        return data_batch, roi_batch
+        # return data_batch, roi_batch
+        return nd.array(data_batch, ctx=mx.gpu()).asnumpy(), nd.array(roi_batch, ctx=mx.gpu()).asnumpy()
 
     def _read_image_list(self, file_path):
         img_list = []
@@ -71,12 +80,21 @@ class TrackingIterator(object):
 
         return img_list, roi_list
 
-track_iter = TrackingIterator('/home/sliay/Documents/OTB100/tmp/video.lst', (100, 100))
+track_iter = TrackingIterator('/home/sliay/Documents/OTB100/tmp/video.lst', output_size=(240, 320), resize=True)
 
 start = time.time()
 for i in xrange(20):
     data_batch, roi_batch = track_iter.sample(batch_size=32, length=10, interval_step=2)
     print data_batch.shape, roi_batch.shape
+    # for k in xrange(10):
+    #     print roi_batch[0, k]
+    #     cur_img = data_batch[0, k]
+    #     cur_img = numpy.swapaxes(cur_img, 0, 2)
+    #     cur_img = numpy.swapaxes(cur_img, 1, 0)
+    #     print cur_img.shape
+    #     plt.imshow(cur_img)
+    #     plt.show()
+    # print roi_batch[0, :, :]
 
 end = time.time()
 print 'time per minibatch is %f' % ((end - start) / 20.0)
