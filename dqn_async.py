@@ -100,7 +100,8 @@ def main():
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
         time_str = time.strftime("%m%d_%H%M_%S", time.localtime())
-        args.dir_path = ('dqn-%s-%d_' % (rom_name,int(args.lr*10**5)))+time_str
+        args.dir_path = ('dqn-%s-%d_' % (rom_name,int(args.lr*10**5)))+time_str \
+                        + "_" + os.environ.get('DMLC_TASK_ID')
         logging.info("saving to dir: "+args.dir_path)
     if args.ctx == None:
         args.ctx = os.environ.get('CTX')
