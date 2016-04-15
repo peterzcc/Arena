@@ -6,7 +6,7 @@ import json
 import re
 from collections import namedtuple, OrderedDict
 
-ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['batch_size', 'sym_name'])
+ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['data_shapes_items', 'sym_name'])
 ExecutorPoolKey.__new__.__defaults__ = (None, None)
 
 _ctx = mx.cpu()
@@ -92,7 +92,7 @@ Description:
 def get_npy_list(ndarray_list):
     return [v.asnumpy() for v in ndarray_list]
 
-class ExecutorBatchSizePool(object):
+class ExecutorDataShapePool(object):
     def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):
         self.ctx = ctx
         self.sym = sym
@@ -100,28 +100,33 @@ class ExecutorBatchSizePool(object):
         self.params = params
         self.params_grad = params_grad
         self.aux_states = aux_states
-        self.data_dims = {}
         self.inputs_grad_dict = {}
-        self.init_batch_size = data_shapes.values()[0][0]
-        for k, v in data_shapes.items():
-            self.data_dims[k] = v[1::]
-            assert self.init_batch_size == v[0]
+        self.basic_data_shapes = data_shapes.copy()
         self.exe_pool = {}
-        self.base_exe = self.get(self.init_batch_size)
+        self.base_exe = self.get()
 
-    def get(self, batch_size=None, internal_sym_name=None):
-        assert isinstance(batch_size, (int, long))
-        if batch_size is None:
-            batch_size = self.init_batch_size
-        exe_key = ExecutorPoolKey(batch_size=batch_size, sym_name=internal_sym_name)
+    def get(self, batch_size=None, data_shapes=None, internal_sym_name=None):
+        if batch_size is None and data_shapes is None:
+            data_shapes_items = tuple(self.basic_data_shapes.items())
+        elif data_shapes is not None:
+            # The `data_shapes` field will not be used if `batch_size` is specified.
+            new_data_shapes = self.basic_data_shapes.copy()
+            for k, v in data_shapes.items():
+                new_data_shapes[k] = v
+            data_shapes_items = tuple(new_data_shapes.items())
+        else:
+            assert isinstance(batch_size, (int, long))
+            data_shapes_items = tuple([(k, (batch_size,) + v[1:]) for k, v in
+                               self.basic_data_shapes.items()])
+        exe_key = ExecutorPoolKey(data_shapes_items=data_shapes_items, sym_name=internal_sym_name)
         if exe_key in self.exe_pool:
             return self.exe_pool[exe_key]
         else:
             if internal_sym_name is not None:
                 # Compile a forward only executor for internal symbol
                 internal_sym = self.internal_syms[internal_sym_name]
-                data_inputs = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
-                                for k, s in self.data_dims.items()
+                data_inputs = {k: mx.nd.empty(v, ctx=self.ctx)
+                               for k, v in data_shapes_items
                                 if k in internal_sym.list_arguments()}
                 params = {k: v for k, v in self.params.items() if k in internal_sym.list_arguments()}
                 aux_states = {k: v for k, v in self.aux_states.items()
@@ -130,11 +135,11 @@ class ExecutorBatchSizePool(object):
                                             args_grad=None, grad_req='null', aux_states=aux_states)
                 self.exe_pool[exe_key] = exe
             else:
-                data_inputs = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
-                               for k, s in self.data_dims.items()}
-                inputs_grad = {k: mx.nd.empty((batch_size,) + s, ctx=self.ctx)
-                               for k, s in self.data_dims.items()}
-                self.inputs_grad_dict[batch_size] = inputs_grad
+                data_inputs = {k: mx.nd.empty(v, ctx=self.ctx)
+                               for k, v in data_shapes_items}
+                inputs_grad = {k: mx.nd.empty(v, ctx=self.ctx)
+                               for k, v in data_shapes_items}
+                self.inputs_grad_dict[data_shapes_items] = inputs_grad
                 if len(self.exe_pool) == 0:
                     exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
                                     args_grad=dict(self.params_grad.items() + inputs_grad.items()),

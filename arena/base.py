@@ -62,7 +62,7 @@ class Base(object):
             self.aux_states = OrderedDict([(k, nd.empty(s, ctx=ctx))
                                            for k, s in zip(aux_names, aux_shapes)])
         self.acc_grad = None
-        self.executor_pool = ExecutorBatchSizePool(ctx=self.ctx, sym=self.sym,
+        self.executor_pool = ExecutorDataShapePool(ctx=self.ctx, sym=self.sym,
                                                    data_shapes=self.data_shapes,
                                                    params=self.params, params_grad=self.params_grad,
                                                    aux_states=self.aux_states)
@@ -92,8 +92,9 @@ class Base(object):
     def default_batchsize(self):
         return self.data_shapes.values()[0].shape[0]
 
-    def forward(self, batch_size=default_batchsize, sym_name=None, is_train=False, **input_dict):
-        exe = self.executor_pool.get(batch_size=batch_size, internal_sym_name=sym_name)
+    def forward(self, batch_size=default_batchsize, data_shapes=None, sym_name=None, is_train=False, **input_dict):
+        exe = self.executor_pool.get(batch_size=batch_size, data_shapes=data_shapes,
+                                     internal_sym_name=sym_name)
         if sym_name is not None:
             assert is_train is False, "We can only view the internal symbols using the " \
                                       "forward function!"
@@ -107,8 +108,9 @@ class Base(object):
             output.wait_to_read()
         return exe.outputs
 
-    def backward(self, batch_size=default_batchsize, **arg_dict):
-        exe = self.executor_pool.get(batch_size)
+    def backward(self, batch_size=default_batchsize, data_shapes=None, **arg_dict):
+        exe = self.executor_pool.get(batch_size=batch_size,
+                                     data_shapes=data_shapes)
         for k, v in arg_dict.items():
             exe.arg_dict[k][:] = v
         exe.backward()

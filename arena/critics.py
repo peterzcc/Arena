@@ -64,7 +64,7 @@ class Critic(object):
                 self.aux_states = {k: v.copyto(ctx) for k, v in aux_states.items()}
             else:
                 self.aux_states = None
-        self.executor_pool = ExecutorBatchSizePool(ctx=self.ctx, sym=self.sym,
+        self.executor_pool = ExecutorDataShapePool(ctx=self.ctx, sym=self.sym,
                                                    data_shapes=self.data_shapes,
                                                    params=self.params, params_grad=self.params_grad,
                                                    aux_states=self.aux_states)
