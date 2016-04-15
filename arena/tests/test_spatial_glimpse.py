@@ -53,7 +53,7 @@ depth = 3
 scale = 1.5
 rows = 720
 cols = 1280
-path= "D:\\HKUST\\tracking\\vot-workshop\\sequences\\sequences\\ball1"
+path= "D:\\HKUST\\advanced\\vot-workshop\\sequences\\sequences\\ball1"
 net = pyramid_glimpse(data=data, roi=roi, depth=depth, scale=scale, output_shape=(107, 107),
                       name='spatial_glimpse')
 batch_size = 50

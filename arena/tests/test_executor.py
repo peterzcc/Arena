@@ -1,4 +1,4 @@
-from ..utils import ExecutorBatchSizePool
+from ..utils import ExecutorDataShapePool
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
@@ -26,11 +26,11 @@ params = {n: nd.ones(arg_name_shape[n], ctx=ctx)*0.0001 for n in param_names}
 params_grad = {n: nd.empty(arg_name_shape[n], ctx=ctx) for n in param_names}
 aux_states = {k: nd.empty(s, ctx=ctx) for k, s in zip(aux_names, aux_shapes)}
 
-exe_pool = ExecutorBatchSizePool(ctx=ctx, sym=net, data_shapes=data_shapes,
+exe_pool = ExecutorDataShapePool(ctx=ctx, sym=net, data_shapes=data_shapes,
                                  params=params, params_grad=params_grad, aux_states=aux_states)
 
 
-new_exe_pool = ExecutorBatchSizePool(ctx=ctx, sym=net, data_shapes=data_shapes,
+new_exe_pool = ExecutorDataShapePool(ctx=ctx, sym=net, data_shapes=data_shapes,
                                  params=params, params_grad=params_grad, aux_states=aux_states)
 
 print exe_pool.get(32).arg_dict['data']
