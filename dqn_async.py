@@ -189,6 +189,7 @@ def main():
         else:
             kv.set_optimizer(optimizer)
         kvstore_update_period = args.kvstore_update_period
+        npy_rng = numpy.random.RandomState(123456+kv.rank)
     else:
         updater = mx.optimizer.get_updater(optimizer)
 
@@ -242,7 +243,7 @@ def main():
                     if episode_stats[g].episode_action_step > 0:
                         info_str += ", Avg Q Value:%f/%d" % (episode_stats[g].episode_q_value / episode_stats[g].episode_action_step,
                                                           episode_stats[g].episode_action_step)
-                    logging.info(info_str)
+                    if g == 0: logging.info(info_str)
                     if eps_update_count[g] * eps_update_period < total_steps:
                         eps_rand = npy_rng.rand()
                         if eps_rand<0.4:
@@ -252,7 +253,6 @@ def main():
                         else:
                             eps_id[g] = 2
                         eps_update_count[g] += 1
-                        logging.info("Agent[%d] eps: %f" % (g,eps_curr[eps_id[g]]))
                     game.begin_episode(steps_left)
                     episode_stats[g] = EpisodeStat()
 
