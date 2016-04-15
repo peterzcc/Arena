@@ -1,7 +1,6 @@
 import mxnet as mx
 import numpy
 from collections import namedtuple
-from arena.operators import *
 
 Memory = namedtuple("Memory", ["numerators", "denominators", "counter", "pointer"])
 
