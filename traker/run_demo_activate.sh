@@ -7,7 +7,7 @@ n=14
 s=5
 
 workerq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115,*.q@client108,*.q@client109,*.q@client110,*.q@client111,*.q@client113,*.q@client114,*.q@client115"
-serverq="*.q@client111,*.q@client113,*.q@client114,*.q@client115"
+serverq="*.q@client111,*.q@client112,*.q@client113,*.q@client114,*.q@client115"
 CTX="gpu1,gpu1,gpu1,gpu1,gpu1,gpu1,gpu1,gpu1,gpu0,gpu0,gpu0,gpu0,gpu0,gpu0,gpu0,gpu0"
 wd="/csproject/dygroup2/czeng/dist_dqn/"
 activate_cmd="./project/dygroup2/czeng/venv/bin/activate"
