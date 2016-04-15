@@ -92,6 +92,8 @@ def main():
                         help='eps greedy policy update period')
     parser.add_argument('--server-optimizer', required=False, type=str, default="easgd",
                         help='type of server optimizer')
+    parser.add_argument('--nworker', required=False, type=int, default=1,
+                        help='number of kv worker')
     args, unknown = parser.parse_known_args()
     logging.info(str(args))
 
@@ -177,11 +179,10 @@ def main():
         if args.server_optimizer == "easgd":
             use_easgd = True
             easgd_beta = 0.9
-            easgd_p = 4
-            easgd_alpha = easgd_beta/(args.kvstore_update_period*easgd_p)
+            easgd_alpha = easgd_beta/(args.kvstore_update_period*args.nworker)
             server_optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
             easgd_eta = 0.00025
-            central_weight = OrderedDict([(n, nd.zeros(v.shape, ctx=q_ctx))
+            central_weight = OrderedDict([(n, v.copyto(q_ctx))
                                             for n, v in qnet.params.items()])
             kv.set_optimizer(server_optimizer)
             updater = mx.optimizer.get_updater(optimizer)
@@ -295,18 +296,18 @@ def main():
                 ave_fps = (100/(this_time-time_for_info))
                 time_for_info = this_time
 
-            if use_easgd and total_steps % kvstore_update_period == 0 and \
-                                    games[-1].replay_memory.sample_enabled:
-                for paramIndex in range(len(qnet.params)):
-                    k=qnet.params.keys()[paramIndex]
-                    kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-                    qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
-                    kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
+
             # 3. Update our Q network if we can start sampling from the replay memory
             #    Also, we update every `update_interval`
             if total_steps > minibatch_size and \
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
+                if use_easgd and training_steps % kvstore_update_period == 0:
+                    for paramIndex in range(len(qnet.params)):
+                        k=qnet.params.keys()[paramIndex]
+                        kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
+                        qnet.params[k][:] -= easgd_alpha*(qnet.params[k]-central_weight[k])
+                        kv.push(paramIndex,qnet.params[k],priority=-paramIndex)
                 # 3.1 Draw sample from the replay_memory
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
