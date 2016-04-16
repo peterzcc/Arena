@@ -10,7 +10,7 @@ AttentionElement = namedtuple("AttentionElement", ["attention_center", "attentio
 '''
 pyramid_glimpse: Generate a spatial pyramid of glimpse sectors, padding zero if necessary
 '''
-def pyramid_glimpse(data, roi, initial_scale, scale_multiple, depth, output_shape, name):
+def pyramid_glimpse(data, roi, initial_scale, scale_multiple, depth, output_shape, timestamp=0):
     glimpses = []
     curr_scale = initial_scale
     if type(roi) is tuple:
@@ -23,7 +23,8 @@ def pyramid_glimpse(data, roi, initial_scale, scale_multiple, depth, output_shap
     for i in range(depth):
         attention_data = mx.symbol.SpatialGlimpse(data=data, roi=roi,
                                           output_shape=output_shape,
-                                          scale=curr_scale, name="%s-scale%g" %(name, curr_scale))
+                                          scale=curr_scale, name="spatial-glimpse-scale%g-t%d"
+                                                                 %(curr_scale, timestamp))
         attention_center = center
         attention_size = size * curr_scale
         object_size = size

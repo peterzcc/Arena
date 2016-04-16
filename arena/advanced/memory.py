@@ -112,12 +112,12 @@ class MemoryControlOp(mx.operator.NumpyOp):
         flags[:] = 0
         new_counter[:] = counter
         new_pointer[:] = pointer
-        if control_flag == 1:
+        if 1 == control_flag :
             flags[pointer] = 1
-        elif control_flag == 2:
+        elif 2 == control_flag:
             new_pointer[:] = numpy.argmin(counter)
             flags[new_pointer] = 2
-            new_counter[new_pointer] = 0
+            new_counter[new_pointer] = 1
         assert control_flag == 0 or control_flag == 1 or control_flag == 2, \
             "Control Flag Must be 0, 1 or 2, received %d" % control_flag
 
