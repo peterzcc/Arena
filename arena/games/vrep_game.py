@@ -42,7 +42,7 @@ class VREPGame(Game):
         # width by height ie column by row
         self.resolution = None
         # image observation
-        self.image = None
+        # self.image = None
         # linear and angular velocity of quadcopter in the absolute frame
         self.linear_velocity_g = None
         self.angular_velocity_g = None
@@ -90,7 +90,7 @@ class VREPGame(Game):
 
 
     def _read_vrep_data(self):
-        self._read_camera_image()
+        # self._read_camera_image()
         _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
             self.client_id, self.quadcopter_handle, vrep.simx_opmode_buffer)
         _, self.quadcopter_pos = vrep.simxGetObjectPosition(
@@ -162,10 +162,10 @@ class VREPGame(Game):
         # encourage the quadcopter keep moving
         reward += 0.1 * (abs(self.linear_velocity_b[0]) + abs(self.linear_velocity_b[1]))
 
-        width = self.resolution[0]
-        height = self.resolution[1]
-        # define a center area where we should keep the target in
-        center_area = numpy.round([width*0.5, height*0.7, width*0.35, height*0.35])
+        # width = self.resolution[0]
+        # height = self.resolution[1]
+        # # define a center area where we should keep the target in
+        # center_area = numpy.round([width*0.5, height*0.7, width*0.35, height*0.35])
         # TODO tracking position part
         reward += 0
         return reward
@@ -191,8 +191,8 @@ class VREPGame(Game):
         vrep.simxStartSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
 
         # enable streaming of state values and the observation image
-        _, _, self.image = vrep.simxGetVisionSensorImage(
-            self.client_id, self.camera_handle, 0, vrep.simx_opmode_streaming)
+        # _, _, self.image = vrep.simxGetVisionSensorImage(
+        #     self.client_id, self.camera_handle, 0, vrep.simx_opmode_streaming)
         _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
             self.client_id, self.quadcopter_handle, vrep.simx_opmode_streaming)
         _, self.quadcopter_pos = vrep.simxGetObjectPosition(
