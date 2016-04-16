@@ -166,6 +166,10 @@ class CartPoleGame(Game):
         return reward, self.episode_terminate
 
     @property
+    def state_enabled(self):
+        return self.replay_memory.size >= self.replay_memory.history_length
+
+    @property
     def episode_terminate(self):
         """Indicates whether or not the episode should terminate.
         Returns:

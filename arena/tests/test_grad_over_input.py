@@ -1,7 +1,7 @@
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
-from ..utils import ExecutorBatchSizePool
+from ..utils import ExecutorDataShapePool
 
 
 input_num = 2
@@ -32,7 +32,7 @@ for k, v in params.items():
     if k == 'fc_weight':
         v[:] = numpy.asarray([[1, 1], [1, 1]])
 
-executor_pool = ExecutorBatchSizePool(ctx=ctx, sym=net,
+executor_pool = ExecutorDataShapePool(ctx=ctx, sym=net,
                                       data_shapes=data_shapes,
                                       params=params, params_grad=params_grad,
                                       aux_states=aux_states)

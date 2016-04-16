@@ -35,34 +35,34 @@ class Base(object):
         self.data_shapes = data_shapes.copy()
         self.name = name
         self.initializer = initializer
+        arg_names = sym.list_arguments()
+        aux_names = sym.list_auxiliary_states()
+        param_names = [n for n in arg_names if n not in self.data_shapes.keys()]
+        arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
+        self.arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
         if params is None:
-            assert initializer is not None, 'We must set the initializer if we donnot give the ' \
-                                            'initial params!'
-            arg_names = sym.list_arguments()
-            aux_names = sym.list_auxiliary_states()
-            param_names = [n for n in arg_names if n not in self.data_shapes.keys()]
-            arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
-            self.arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
             self.params = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
                                        for n in param_names])
             self.params_grad = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
                                             for n in param_names])
-            self.aux_states = OrderedDict([(k, nd.empty(s, ctx=ctx))
-                                           for k, s in zip(aux_names, aux_shapes)])
+            if len(self.params) > 0:
+                assert initializer is not None, 'We must set the initializer if we donnot initialize' \
+                                                'manually the free parameters of the network!!'
             for k, v in self.params.items():
                 initializer(k, v)
         else:
-            self.arg_name_shape = OrderedDict(data_shapes.items() + [(k, v.shape)
+            assert set(self.arg_name_shape.items()) == set(data_shapes.items() + [(k, v.shape)
                                                                      for k, v in params.items()])
             self.params = OrderedDict([(k, v.copyto(ctx)) for k, v in params.items()])
             self.params_grad = OrderedDict([(n, nd.empty(v.shape, ctx=ctx))
                                             for n, v in self.params.items()])
-            if aux_states is not None:
-                self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
-            else:
-                self.aux_states = None
+        if aux_states is not None:
+            self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
+        else:
+            self.aux_states = OrderedDict([(k, nd.empty(s, ctx=ctx))
+                                           for k, s in zip(aux_names, aux_shapes)])
         self.acc_grad = None
-        self.executor_pool = ExecutorBatchSizePool(ctx=self.ctx, sym=self.sym,
+        self.executor_pool = ExecutorDataShapePool(ctx=self.ctx, sym=self.sym,
                                                    data_shapes=self.data_shapes,
                                                    params=self.params, params_grad=self.params_grad,
                                                    aux_states=self.aux_states)
@@ -92,8 +92,9 @@ class Base(object):
     def default_batchsize(self):
         return self.data_shapes.values()[0].shape[0]
 
-    def forward(self, batch_size=default_batchsize, sym_name=None, is_train=False, **input_dict):
-        exe = self.executor_pool.get(batch_size=batch_size, internal_sym_name=sym_name)
+    def forward(self, batch_size=default_batchsize, data_shapes=None, sym_name=None, is_train=False, **input_dict):
+        exe = self.executor_pool.get(batch_size=batch_size, data_shapes=data_shapes,
+                                     internal_sym_name=sym_name)
         if sym_name is not None:
             assert is_train is False, "We can only view the internal symbols using the " \
                                       "forward function!"
@@ -107,8 +108,9 @@ class Base(object):
             output.wait_to_read()
         return exe.outputs
 
-    def backward(self, batch_size=default_batchsize, **arg_dict):
-        exe = self.executor_pool.get(batch_size)
+    def backward(self, batch_size=default_batchsize, data_shapes=None, **arg_dict):
+        exe = self.executor_pool.get(batch_size=batch_size,
+                                     data_shapes=data_shapes)
         for k, v in arg_dict.items():
             exe.arg_dict[k][:] = v
         exe.backward()
