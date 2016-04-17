@@ -84,7 +84,7 @@ struct Plan<ChooseTensorExp<SrcExp, IndExp, DType>, DType> {
     i /= src_height_;
     const index_t c = i % src_channel_;
     const index_t b = i / src_channel_;
-    const index_t b_src = ind_.Eval(b, 0);
+    const index_t b_src = ind_.Eval(0, b);
     return src_.Eval((b_src * src_channel_ + c) * src_height_ + y, j);
   }
 
