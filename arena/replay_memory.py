@@ -131,13 +131,13 @@ class ReplayMemory(object):
         sample a trajectory of T states with T actions and T rewards
         s_1:s_{T}, a_2:a_{T+1}, r_2:r_{T+1}
         '''
-        # make sure the consecutive T+1 states s_1:s_{T+1} do not cross the top position,
-        #  which means that s_{T+1} is placed before or at s_{top}
-        index = self.rng.randint(low=self.top - self.size + 1, high=self.top - episode_length + 1)  # index + (e) <= top
+        # make sure the consecutive T+1 states s_1:s_{T+1} do not cross the top-1 position,
+        #  which means that s_{T+1} is placed before or at s_{top-1}
+        index = self.rng.randint(low=self.top - self.size + 1, high=self.top - episode_length)  # index + (e) <= top-1
         # make sure the initial sampled state do not include terminal state
         while self.terminate_flags.take(index, mode='wrap'):
             index = self.rng.randint(low=self.top - self.size + 1,
-                                     high=self.top - episode_length + 1)
+                                     high=self.top - episode_length)
         # check if there are any states with terminal flag
         flag_trajectory = self.terminate_flags.take(numpy.arange(index, index+episode_length), mode='wrap')
         if numpy.any(flag_trajectory):
