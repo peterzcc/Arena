@@ -4,6 +4,9 @@ import numpy
 import pyfftw
 import time
 import mxnet.ndarray as nd
+import cv2
+from arena.advanced.tracking import gaussian_map_fft
+
 
 a = mx.symbol.Variable('a')
 b = mx.symbol.Variable('b')
@@ -41,3 +44,18 @@ for i in range(100):
     print numpy.square(output_mxnet - output_fftw.real).sum()
 print cpu_time
 print gpu_time
+
+
+
+attention_size = mx.symbol.Variable('attention_size')
+object_size = mx.symbol.Variable('object_size')
+map_fft = gaussian_map_fft(attention_size=attention_size, object_size=object_size, timestamp=0,
+                           sigma_factor=10, rows=64, cols=64)
+map_recons = mx.symbol.IFFT2D(data=map_fft, output_shape=(64, 64))
+map_fft = mx.symbol.BlockGrad(map_fft)
+data_shapes = {'attention_size': (1, 2), 'object_size': (1, 2)}
+net = Base(sym=map_recons, data_shapes=data_shapes)
+output = net.forward(data_shapes=data_shapes, attention_size=numpy.array([[0.5, 0.5]]),
+            object_size=numpy.array([[0.3, 0.3]]))[0].asnumpy()
+cv2.imshow('image', output[0,0,:,:])
+cv2.waitKey()
