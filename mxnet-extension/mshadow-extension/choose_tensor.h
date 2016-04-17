@@ -113,4 +113,4 @@ struct ExpInfo<ChooseTensorExp<SrcExp, IndExp, DType> > {
 
 }  // namespace expr
 }  // namespace mshadow
-#endif  // MSHADOW_EXTENSION_COMPLEX_HADAMARD_PRODUCT_H_
+#endif  // MSHADOW_EXTENSION_CHOOSE_TENSOR_H_
