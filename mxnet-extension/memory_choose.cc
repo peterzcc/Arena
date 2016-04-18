@@ -1,6 +1,6 @@
 /*!
 * Copyright (c) 2016 by Contributors
-* \file fft.cc
+* \file memory_choose.cc
 * \brief
 * \author Xingjian Shi
 */
