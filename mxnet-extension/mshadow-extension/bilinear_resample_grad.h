@@ -8,6 +8,7 @@
 #define MSHADOW_EXTENSION_BILINEAR_RESAMPLE_GRAD_H_
 #include <algorithm>
 #include "../extension.h"
+
 namespace mshadow {
   namespace expr {
     /*!
