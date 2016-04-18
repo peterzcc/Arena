@@ -57,11 +57,12 @@ class EasgdThread(Thread):
                 alpha = 1
             else:
                 alpha = self.easgd_alpha * self.t_update / (training_steps - prev_t)
-            for paramIndex in xrange(len(self.local_weight)):
-                k=self.local_weight.keys()[paramIndex]
-                with self.weight_write_lock:
+            with self.weight_write_lock:
+                for paramIndex in xrange(len(self.local_weight)):
+                    k=self.local_weight.keys()[paramIndex]
                     self.local_weight[k][:] -= alpha*(self.local_weight[k]-self.central_weight[k])
-                self.kv.push(paramIndex,self.local_weight[k],priority=-paramIndex)
+                    self.kv.push(paramIndex,self.local_weight[k],priority=-paramIndex)
+            logging.info("update steps: %f" %(training_steps-prev_t))
             prev_t=training_steps
             time.sleep(self.update_period)
 class EpisodeStat(object):
@@ -73,6 +74,7 @@ class EpisodeStat(object):
 
 def main():
     global training_steps
+    training_steps = 0
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
     parser.add_argument('-r', '--rom', required=False, type=str,
                         default=os.path.join('arena', 'games', 'roms', 'breakout.bin'),
@@ -131,6 +133,9 @@ def main():
                         help='number of kv worker')
     parser.add_argument('--easgd-update-period', required=False, type=float, default=0.3,
                         help='Update period of easgd')
+    parser.add_argument('--easgd-beta', required=False, type=float, default=0.9,
+                        help='beta parameter of easgd')
+
     args, unknown = parser.parse_known_args()
     logging.info(str(args))
 
@@ -218,7 +223,7 @@ def main():
             kv.init(idx,v)
         if args.server_optimizer == "easgd":
             use_easgd = True
-            easgd_beta = 0.9
+            easgd_beta = args.easgd_beta
             easgd_alpha = easgd_beta/(args.kvstore_update_period*args.nworker)
             server_optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
             easgd_eta = 0.00025
