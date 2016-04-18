@@ -94,9 +94,7 @@ struct Plan<SelectAmongThreeExp<Src1Exp, Src2Exp, Src3Exp, FlagExp, DType>, DTyp
   MSHADOW_XINLINE DType Eval(index_t i, index_t j) const {
     using namespace std;
     DType res = 0;
-    i /= src_height_;
-    const index_t c = i % src_channel_;
-    const index_t b = i / src_channel_;
+    const index_t b = (i / src_height_) / src_channel_;
     const index_t l = flag_.Eval(0, b);
     if (l == 0) {
       res = src1_.Eval(i, j);
