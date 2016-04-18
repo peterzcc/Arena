@@ -62,7 +62,6 @@ class EasgdThread(Thread):
                     k=self.local_weight.keys()[paramIndex]
                     self.local_weight[k][:] -= alpha*(self.local_weight[k]-self.central_weight[k])
                     self.kv.push(paramIndex,self.local_weight[k],priority=-paramIndex)
-            logging.info("update steps: %f" %(training_steps-prev_t))
             prev_t=training_steps
             time.sleep(self.update_period)
 class EpisodeStat(object):
