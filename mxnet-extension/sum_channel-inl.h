@@ -31,7 +31,7 @@ namespace mxnet {
       int dim;
       DMLC_DECLARE_PARAMETER(SumChannelParam) {
         DMLC_DECLARE_FIELD(dim).set_range(0, 4).set_default(1)
-          .describe("the dimension to be concated.");
+          .describe("the dimension to take sum.");
       }
     };
 
@@ -82,9 +82,6 @@ namespace mxnet {
         const std::vector<TBlob> &aux_args) {
         using namespace mshadow;
         using namespace mshadow::expr;
-        CHECK_EQ(out_grad.size(), 1);
-        CHECK(in_data.size() == 1 && in_grad.size() == 1);
-        CHECK_EQ(req.size(), 1);
         // LOG(FATAL) << "Backward not implemented yet!";
       }
 
