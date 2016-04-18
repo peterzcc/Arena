@@ -31,21 +31,10 @@ def play_game(args):
     game,action = args
     game.play(action)
 
-def easgd_update(kv,central_weight,local_weight,easgd_alpha,lock = None):
-    for paramIndex in xrange(len(local_weight)):
-        k=local_weight.keys()[paramIndex]
-        kv.pull(paramIndex,central_weight[k],priority=-paramIndex)
-    for paramIndex in xrange(len(local_weight)):
-        k=local_weight.keys()[paramIndex]
-        central_weight[k].wait_to_read()
-        if lock != None:
-            with lock:
-                local_weight[k][:] -= easgd_alpha*(local_weight[k]-central_weight[k])
-        else:
-            local_weight[k][:] -= easgd_alpha*(local_weight[k]-central_weight[k])
-        kv.push(paramIndex,local_weight[k],priority=-paramIndex)
+
+
 class EasgdThread(Thread):
-    def __init__(self,kv,central_weight,local_weight,easgd_alpha,weight_write_lock,update_period):
+    def __init__(self,kv,central_weight,local_weight,easgd_alpha,weight_write_lock,update_period,t_update):
         Thread.__init__(self)
         self.kv = kv
         self.central_weight = central_weight
@@ -53,10 +42,27 @@ class EasgdThread(Thread):
         self.easgd_alpha = easgd_alpha
         self.weight_write_lock = weight_write_lock
         self.update_period = update_period
+        self.t_update = t_update
     def run(self):
+        global training_steps
+        prev_t = 0
         while (True):
-            easgd_update(self.kv,self.central_weight,self.local_weight,
-                            self.easgd_alpha,lock=self.weight_write_lock)
+            for paramIndex in xrange(len(self.local_weight)):
+                k=self.local_weight.keys()[paramIndex]
+                self.kv.pull(paramIndex,self.central_weight[k],priority=-paramIndex)
+            for paramIndex in xrange(len(self.local_weight)):
+                k=self.local_weight.keys()[paramIndex]
+                self.central_weight[k].wait_to_read()
+            if training_steps == prev_t:
+                alpha = 1
+            else:
+                alpha = self.easgd_alpha * self.t_update / (training_steps - prev_t)
+            for paramIndex in xrange(len(self.local_weight)):
+                k=self.local_weight.keys()[paramIndex]
+                with self.weight_write_lock:
+                    self.local_weight[k][:] -= alpha*(self.local_weight[k]-self.central_weight[k])
+                self.kv.push(paramIndex,self.local_weight[k],priority=-paramIndex)
+            prev_t=training_steps
             time.sleep(self.update_period)
 class EpisodeStat(object):
     def __init__(self):
@@ -66,6 +72,7 @@ class EpisodeStat(object):
         self.episode_action_step = 0
 
 def main():
+    global training_steps
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
     parser.add_argument('-r', '--rom', required=False, type=str,
                         default=os.path.join('arena', 'games', 'roms', 'breakout.bin'),
@@ -218,7 +225,7 @@ def main():
             kv.set_optimizer(server_optimizer)
             updater = mx.optimizer.get_updater(optimizer)
             easgd_update_thread = EasgdThread(kv,central_weight,qnet.params,easgd_alpha,
-                            weight_write_lock,args.easgd_update_period)
+                            weight_write_lock,args.easgd_update_period,args.param_update_period)
             easgd_update_thread.start()
         else:
             kv.set_optimizer(optimizer)
@@ -338,8 +345,6 @@ def main():
             if total_steps > minibatch_size and \
                 total_steps % (param_update_period) == 0 and \
                 games[-1].replay_memory.sample_enabled:
-                if use_easgd and training_steps % kvstore_update_period == 0:
-                    easgd_update(kv,central_weight,qnet.params,easgd_alpha)
                 # 3.1 Draw sample from the replay_memory
                 for g,game in enumerate(games):
                     episode_stats[g].episode_update_step += 1
