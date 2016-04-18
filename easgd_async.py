@@ -139,7 +139,9 @@ def main():
         time_str = time.strftime("%m%d_%H%M_%S", time.localtime())
         args.dir_path = ('dqn-%s-%d_' % (rom_name,int(args.lr*10**5)))+time_str \
                         + "_" + os.environ.get('DMLC_TASK_ID')
-        logging.info("saving to dir: "+args.dir_path)
+    else:
+        args.dir_path =  args.dir_path + "_" + os.environ.get('DMLC_TASK_ID')
+    logging.info("saving to dir: "+args.dir_path)
     if args.ctx == None:
         args.ctx = os.environ.get('CTX')
     logging.info("Context: %s" % args.ctx)
