@@ -7,7 +7,7 @@
 #ifndef MSHADOW_EXTENSION_COMPLEX_CONJUGATE_H_
 #define MSHADOW_EXTENSION_COMPLEX_CONJUGATE_H_
 #include <algorithm>
-#include <mshadow\expr_engine-inl.h>
+#include "../extension.h"
 
 namespace mshadow {
   namespace expr {
