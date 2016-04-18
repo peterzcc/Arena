@@ -16,27 +16,27 @@ namespace expr {
  * \tparam SrcExp type of source tensor expression, shape: (N, C, H, W*2)
  * \tparam DType the content data type
  */
-template<typename SrcExp, typename DType>
+template<typename Src1Exp, typename Src2Exp, typename DType>
 struct ComplexHadamardProductExp:
-  public Exp<ComplexHadamardProductExp<SrcExp, DType>, DType, type::kChainer> {
+  public Exp<ComplexHadamardProductExp<Src1Exp, Src2Exp, DType>, DType, type::kChainer> {
   /*! \brief left source operand */
-  const SrcExp &lsrc_;
+  const Src1Exp &lsrc_;
   /*! \brief right source operand */
-  const SrcExp &rsrc_;
+  const Src2Exp &rsrc_;
   /*! \brief constructor */
-  ComplexHadamardProductExp(const SrcExp &lsrc, const SrcExp &rsrc)
+  ComplexHadamardProductExp(const Src1Exp &lsrc, const Src2Exp &rsrc)
       : lsrc_(lsrc), rsrc_(rsrc) {}
 };
 
 
-template<int dim, typename SrcExp, typename DType>
-struct ShapeCheck<dim, ComplexHadamardProductExp<SrcExp, DType> > {
+template<int dim, typename Src1Exp, typename Src2Exp, typename DType>
+struct ShapeCheck<dim, ComplexHadamardProductExp<Src1Exp, Src2Exp, DType> > {
   inline static Shape<dim>
-    Check(const ComplexHadamardProductExp<SrcExp, DType> &t) {
+    Check(const ComplexHadamardProductExp<Src1Exp, Src2Exp, DType> &t) {
     CHECK(dim == 4)
       << "ComplexHadamardProductExp: Dimension of the src tensor must be 4.";
-    Shape<4> lsrc_shape = ShapeCheck<4, SrcExp>::Check(t.lsrc_);
-    Shape<4> rsrc_shape = ShapeCheck<4, SrcExp>::Check(t.rsrc_);
+    Shape<4> lsrc_shape = ShapeCheck<4, Src1Exp>::Check(t.lsrc_);
+    Shape<4> rsrc_shape = ShapeCheck<4, Src2Exp>::Check(t.rsrc_);
     CHECK_EQ(lsrc_shape, rsrc_shape)
       << "ComplexHadamardProductExp: Shape of the two inputs must be equal!";
     CHECK_EQ(lsrc_shape[3]%2, 0)
@@ -53,22 +53,22 @@ struct ShapeCheck<dim, ComplexHadamardProductExp<SrcExp, DType> > {
  * \tparam e1 type of source expression
  * \tparam e2 type of roi expression
  */
-template<typename SrcExp, typename DType, int e1, int e2>
-inline ComplexHadamardProductExp<SrcExp, DType>
-complex_hadamard_product(const Exp<SrcExp, DType, e1> &lsrc, const Exp<SrcExp, DType, e2> &rsrc) {
-  TypeCheckPass<ExpInfo<SrcExp>::kDim == 4>
+template<typename Src1Exp, typename Src2Exp, typename DType, int e1, int e2>
+inline ComplexHadamardProductExp<Src1Exp, Src2Exp, DType>
+complex_hadamard_product(const Exp<Src1Exp, DType, e1> &lsrc, const Exp<Src2Exp, DType, e2> &rsrc) {
+  TypeCheckPass<ExpInfo<Src1Exp>::kDim == 4 && ExpInfo<Src2Exp>::kDim == 4>
       ::Error_Expression_Does_Not_Meet_Dimension_Req();
-  return ComplexHadamardProductExp<SrcExp, DType>(lsrc.self(), rsrc.self());
+  return ComplexHadamardProductExp<Src1Exp, Src2Exp, DType>(lsrc.self(), rsrc.self());
 }
 
 
 //----------------------
 // Execution plan
 //----------------------
-template<typename SrcExp, typename DType>
-struct Plan<ComplexHadamardProductExp<SrcExp, DType>, DType> {
+template<typename Src1Exp, typename Src2Exp, typename DType>
+struct Plan<ComplexHadamardProductExp<Src1Exp, Src2Exp, DType>, DType> {
  public:
-   explicit Plan(const ComplexHadamardProductExp<SrcExp, DType> &e)
+   explicit Plan(const ComplexHadamardProductExp<Src1Exp, Src2Exp, DType> &e)
      : lsrc_(MakePlan(e.lsrc_)), rsrc_(MakePlan(e.rsrc_)) {}
   MSHADOW_XINLINE DType Eval(index_t i, index_t j) const {
     using namespace std;
@@ -84,21 +84,21 @@ struct Plan<ComplexHadamardProductExp<SrcExp, DType>, DType> {
   }
 
  private:
-  expr::Plan<SrcExp, DType> lsrc_;
-  expr::Plan<SrcExp, DType> rsrc_;
+  expr::Plan<Src1Exp, DType> lsrc_;
+  expr::Plan<Src2Exp, DType> rsrc_;
 };
 
-template<typename SrcExp, typename DType>
-inline Plan<ComplexHadamardProductExp<SrcExp, DType>, DType>
-MakePlan(const ComplexHadamardProductExp<SrcExp, DType> &exp) {
-  return Plan<ComplexHadamardProductExp<SrcExp, DType>, DType>(exp);
+template<typename Src1Exp, typename Src2Exp, typename DType>
+inline Plan<ComplexHadamardProductExp<Src1Exp, Src2Exp, DType>, DType>
+MakePlan(const ComplexHadamardProductExp<Src1Exp, Src2Exp, DType> &exp) {
+  return Plan<ComplexHadamardProductExp<Src1Exp, Src2Exp, DType>, DType>(exp);
 }
 
 
-template<typename SrcExp, typename DType>
-struct ExpInfo<ComplexHadamardProductExp<SrcExp, DType> > {
+template<typename Src1Exp, typename Src2Exp, typename DType>
+struct ExpInfo<ComplexHadamardProductExp<Src1Exp, Src2Exp, DType> > {
   static const int kDim = 4;
-  static const int kDevMask = ExpInfo<SrcExp>::kDevMask;
+  static const int kDevMask = ExpInfo<Src1Exp>::kDevMask & ExpInfo<Src2Exp>::kDevMask;
 };
 
 }  // namespace expr
