@@ -53,10 +53,10 @@ namespace mxnet {
         using namespace mshadow::expr;
         CHECK_EQ(in_data.size(), 2);
         CHECK_EQ(out_data.size(), 1);
-        Stream<gpu> *s = ctx.get_stream<gpu>();
-        Tensor<gpu, 4> ldata = in_data[complex_hadamard::kLData].get<gpu, 4, real_t>(s);
-        Tensor<gpu, 4> rdata = in_data[complex_hadamard::kRData].get<gpu, 4, real_t>(s);
-        Tensor<gpu, 4> out = out_data[complex_hadamard::kOut].get<gpu, 4, real_t>(s);
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Tensor<xpu, 4> ldata = in_data[complex_hadamard::kLData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> rdata = in_data[complex_hadamard::kRData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> out = out_data[complex_hadamard::kOut].get<xpu, 4, real_t>(s);
         Assign(out, req[complex_hadamard::kOut], complex_hadamard_product(ldata, rdata));
       }
 

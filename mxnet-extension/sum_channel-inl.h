@@ -55,9 +55,9 @@ namespace mxnet {
         using namespace mshadow::expr;
         CHECK_EQ(in_data.size(), 1);
         CHECK_EQ(out_data.size(), 1);
-        Stream<gpu> *s = ctx.get_stream<gpu>();
-        Tensor<gpu, 4> data = in_data[sum_channel::kData].get<gpu, 4, real_t>(s);
-        Tensor<gpu, 4> out = out_data[sum_channel::kOut].get<gpu, 4, real_t>(s);
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Tensor<xpu, 4> data = in_data[sum_channel::kData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> out = out_data[sum_channel::kOut].get<xpu, 4, real_t>(s);
         Shape<5> broadcasting_shape;
         for (int i = 0; i < 5; i++) {
           if (i < param_.dim + 1){

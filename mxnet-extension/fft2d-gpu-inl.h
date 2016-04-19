@@ -61,9 +61,9 @@ namespace mxnet {
         using namespace mshadow::expr;
         CHECK_EQ(in_data.size(), 1);
         CHECK_EQ(out_data.size(), 1);
-        Stream<gpu> *s = ctx.get_stream<gpu>();
-        Tensor<gpu, 4> data = in_data[fft2d::kData].get<gpu, 4, real_t>(s);
-        Tensor<gpu, 4> out = out_data[fft2d::kOut].get<gpu, 4, real_t>(s);
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Tensor<xpu, 4> data = in_data[fft2d::kData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> out = out_data[fft2d::kOut].get<xpu, 4, real_t>(s);
         CHECK_EQ(data.CheckContiguous(), true);
         CHECK_EQ(out.CheckContiguous(), true);
         if (!init_cufft_) {
@@ -88,13 +88,13 @@ namespace mxnet {
       }
 
     private:
-      inline void Init(mshadow::Stream<gpu> *s,
+      inline void Init(mshadow::Stream<xpu> *s,
         const std::vector<TBlob> &in_data,
         const std::vector<TBlob> &out_data) {
         using namespace mshadow;
         using namespace mshadow::expr;
-        Tensor<gpu, 4> data = in_data[fft2d::kData].get<gpu, 4, real_t>(s);
-        Tensor<gpu, 4> out = out_data[fft2d::kOut].get<gpu, 4, real_t>(s);
+        Tensor<xpu, 4> data = in_data[fft2d::kData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> out = out_data[fft2d::kOut].get<xpu, 4, real_t>(s);
         int n[2] = { data.shape_[2], data.shape_[3] };
         // TODO This part may be memory-consuming
         CHECK_EQ(cufftPlanMany(&plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_R2C, data.shape_[0] * data.shape_[1]), CUFFT_SUCCESS);

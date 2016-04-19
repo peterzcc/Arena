@@ -53,9 +53,9 @@ namespace mxnet {
         using namespace mshadow::expr;
         CHECK_EQ(in_data.size(), 1);
         CHECK_EQ(out_data.size(), 1);
-        Stream<gpu> *s = ctx.get_stream<gpu>();
-        Tensor<gpu, 4> data = in_data[conjugate::kData].get<gpu, 4, real_t>(s);
-        Tensor<gpu, 4> out = out_data[conjugate::kOut].get<gpu, 4, real_t>(s);
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Tensor<xpu, 4> data = in_data[conjugate::kData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> out = out_data[conjugate::kOut].get<xpu, 4, real_t>(s);
         Assign(out, req[conjugate::kOut], complex_conjugate(data))
       }
 
