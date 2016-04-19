@@ -46,6 +46,8 @@ class EasgdThread(Thread):
     def run(self):
         global training_steps
         prev_t = 0
+        time_before = time.time()
+        average_step = 0
         while (True):
             for paramIndex in xrange(len(self.local_weight)):
                 k=self.local_weight.keys()[paramIndex]
@@ -62,7 +64,12 @@ class EasgdThread(Thread):
                     k=self.local_weight.keys()[paramIndex]
                     self.local_weight[k][:] -= alpha*(self.local_weight[k]-self.central_weight[k])
                     self.kv.push(paramIndex,self.local_weight[k],priority=-paramIndex)
+            average_step = average_step*0.99 + (training_steps-prev_t)*0.01
             prev_t=training_steps
+            time_current = time.time()
+            if time_current > time_before + 10:
+                logging.info("average step: %f" % average_step)
+                time_before = time_current
             time.sleep(self.update_period)
 class EpisodeStat(object):
     def __init__(self):
