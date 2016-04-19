@@ -3,7 +3,6 @@ import numpy
 import cv2
 from arena import Base
 import time
-import pyfftw
 from arena.advanced.memory import IncreaseElementOp, MemoryStatUpdateOp
 
 def memory_stat_read_write():
