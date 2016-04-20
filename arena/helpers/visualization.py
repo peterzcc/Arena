@@ -31,7 +31,7 @@ def visualize_weights(data):
     plt.imshow(data); plt.axis('off')
 
 
-param = vgg_m()
-conv1 = param['arg:conv1_weight'].asnumpy()
-visualize_weights(conv1.transpose(0, 2, 3, 1))
-plt.show()
+# param = vgg_m()
+# conv1 = param['arg:conv1_weight'].asnumpy()
+# visualize_weights(conv1.transpose(0, 2, 3, 1))
+# plt.show()
