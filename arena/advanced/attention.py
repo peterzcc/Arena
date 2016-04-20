@@ -2,7 +2,7 @@ import mxnet as mx
 from collections import namedtuple
 
 '''
-ROI is the basic attentional element of the tracker
+ImagePatch stores the basic information of the patch the basic attentional element of the tracker
 '''
 
 ImagePatch = namedtuple("ImagePatch", ["center", "size", "data"])
@@ -26,7 +26,7 @@ class GlimpseHandler(object):
             patch_data = mx.symbol.SpatialGlimpse(data=img, roi=roi,
                                              output_shape=self.output_shape,
                                              scale=curr_scale,
-                                             name="glimpse%d(%g)-t%d-step%d"
+                                             name="glimpse%d(%g)_t%d_step%d"
                                                   %(i, curr_scale, timestamp, attention_step))
             glimpse.append(ImagePatch(center=center, size=size*curr_scale, data=patch_data))
             curr_scale *= self.scale_mult
