@@ -63,8 +63,8 @@ namespace mxnet {
         Tensor<xpu, 1, real_t> flag = in_data[memory_update::kFlag].get<xpu, 1, real_t>(s);
         Tensor<xpu, 1, real_t> factor = in_data[memory_update::kFactor].get<xpu, 1, real_t>(s);
         Tensor<xpu, 4, real_t> out = out_data[memory_update::kOut].get<xpu, 4, real_t>(s);
-        Assign(out, req[memory_update::kData], select_among_three(data, (1 - Broadcast_Scalar(factor, data.shape_)) * data + 
-          Broadcast_Scalar(factor, data.shape_) * Broadcast_Samedim(update, data.shape_, 0),
+        Assign(out, req[memory_update::kData], select_among_three(data, (1 - broadcast_scalar(factor, data.shape_)) * data +
+          broadcast_scalar(factor, data.shape_) * Broadcast_Samedim(update, data.shape_, 0),
           Broadcast_Samedim(update, data.shape_, 0), flag));
       }
 

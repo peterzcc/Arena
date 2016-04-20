@@ -2,36 +2,32 @@ import mxnet as mx
 from collections import namedtuple
 
 '''
-AttentionElement is the basic attentional element of the tracker
+ROI is the basic attentional element of the tracker
 '''
-AttentionElement = namedtuple("AttentionElement", ["attention_center", "attention_size",
-                                                   "object_size", "attention_data"])
 
-'''
-pyramid_glimpse: Generate a spatial pyramid of glimpse sectors, padding zero if necessary
-'''
-def pyramid_glimpse(data, roi, initial_scale, scale_multiple, depth, output_shape, timestamp=0):
-    glimpses = []
-    curr_scale = initial_scale
-    if type(roi) is tuple:
-        # If roi is a tuple then the roi = (center, size)
-        center = roi[0]
-        size = roi[1]
-        roi = mx.symbol.Concat(*roi, num_args=2, dim=1)
-    else:
-        center, size = mx.symbol.SliceChannel(roi, num_outputs=2, axis=1)
-    for i in range(depth):
-        attention_data = mx.symbol.SpatialGlimpse(data=data, roi=roi,
-                                          output_shape=output_shape,
-                                          scale=curr_scale, name="spatial-glimpse-scale%g-t%d"
-                                                                 %(curr_scale, timestamp))
-        attention_center = center
-        attention_size = size * curr_scale
-        object_size = size
-        glimpses.append(AttentionElement(attention_data=attention_data,
-                                         attention_center=attention_center,
-                                         attention_size=attention_size,
-                                         object_size=object_size))
-        curr_scale *= scale_multiple
-    return glimpses
+ImagePatch = namedtuple("ImagePatch", ["center", "size", "data"])
 
+
+class GlimpseHandler(object):
+    def __init__(self, scale_mult, depth, output_shape):
+        super(GlimpseHandler, self).__init__()
+        self.scale_mult = scale_mult
+        self.depth = depth
+        self.output_shape = output_shape
+
+    '''
+    pyramid_glimpse: Generate a spatial pyramid of glimpse sectors, padding zero if necessary
+    '''
+    def pyramid_glimpse(self, img, center, size, timestamp=0, attention_step=0):
+        glimpse = []
+        curr_scale = 1.0
+        roi = mx.symbol.Concat(center, size, num_args=2, dim=1)
+        for i in range(self.depth):
+            patch_data = mx.symbol.SpatialGlimpse(data=img, roi=roi,
+                                             output_shape=self.output_shape,
+                                             scale=curr_scale,
+                                             name="glimpse%d(%g)-t%d-step%d"
+                                                  %(i, curr_scale, timestamp, attention_step))
+            glimpse.append(ImagePatch(center=center, size=size*curr_scale, data=patch_data))
+            curr_scale *= self.scale_mult
+        return glimpse
