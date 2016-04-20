@@ -94,8 +94,8 @@ def main():
                         help='type of server optimizer')
     parser.add_argument('--nworker', required=False, type=int, default=1,
                         help='number of kv worker')
-    parser.add_argument('--eps3', required=False, type=float, default=0.5,
-                        help='Eps of the third epsilon-greedy policy in the distribution')
+    parser.add_argument('--easgd-alpha', required=False, type=float, default=0.01,
+                        help='easgd alpha')
     args, unknown = parser.parse_known_args()
     logging.info(str(args))
 
@@ -138,7 +138,7 @@ def main():
     discount = 0.99
     save_screens = False
     eps_start = numpy.ones((3,))* args.start_eps
-    eps_min = numpy.array([0.1,0.01,args.eps3])
+    eps_min = numpy.array([0.1,0.01,0.5])
     eps_decay = (eps_start - eps_min) / (args.exploration_period/nactor)
     eps_curr = eps_start
     eps_id = numpy.zeros((nactor,))
@@ -182,7 +182,7 @@ def main():
         if args.server_optimizer == "easgd":
             use_easgd = True
             easgd_beta = 0.9
-            easgd_alpha = 0.1
+            easgd_alpha = args.easgd_alpha
             server_optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
             easgd_eta = 0.00025
             central_weight = OrderedDict([(n, v.copyto(q_ctx))
