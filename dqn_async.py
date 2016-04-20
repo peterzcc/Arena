@@ -182,7 +182,7 @@ def main():
         if args.server_optimizer == "easgd":
             use_easgd = True
             easgd_beta = 0.9
-            easgd_alpha = args.kvstore_update_period*easgd_beta/(args.nworker)
+            easgd_alpha = 0.1
             server_optimizer = mx.optimizer.create(name="ServerEasgd",learning_rate=easgd_alpha)
             easgd_eta = 0.00025
             central_weight = OrderedDict([(n, v.copyto(q_ctx))
