@@ -10,6 +10,10 @@ _dirname = os.path.dirname(os.path.realpath(__file__))
 def update_extension_header(mshadow_path, new_headers):
     extension_path= os.path.join(mshadow_path, "extension.h")
     backup_path = os.path.join(mshadow_path, "extension.h.arena.bak")
+    if os.path.exists(backup_path):
+        shutil.move(backup_path, extension_path)
+        print "[mshadow-ext] Find previous backup file, moving %s to %s" \
+              % (backup_path, extension_path)
     shutil.move(extension_path, backup_path)
     print "[mshadow-ext] moving %s to %s" %(extension_path, backup_path)
     extf = open(extension_path, 'w')
@@ -31,7 +35,8 @@ def recover_extension_header(mshadow_path, new_headers):
 
 parser = argparse.ArgumentParser(description='Script to install the patch for MXNet.')
 parser.add_argument('-p', '--path', required=True, type=str, help='Path of MXNet.')
-parser.add_argument('-t', '--type', choices=['install', 'uninstall'], default='install')
+parser.add_argument('-t', '--type', required=True, type=str,
+                    choices=['install', 'uninstall'], help='Install or uninstall the extension')
 args, unknown = parser.parse_known_args()
 mxnet_path = os.path.realpath(args.path)
 mxnet_operator_path = os.path.join(mxnet_path, "src", "operator")
