@@ -16,7 +16,7 @@ For example:
     /pathtovideo/car2.lst
     ...
     car1.lst
-    /pathtoimg/00001.jpeg cx cy sx sy
+    /pathtoimg/00001.jpeg x y sx sy
     ...
     Note that the roi format is the left top coordinates with the box width and height, which is consistent with the OTB100 data format.
 
@@ -65,11 +65,13 @@ class TrackingIterator(object):
                     im = numpy.tile(im.reshape((1, 3, 3)), (3, 1, 1))
                 else:
                     im = numpy.rollaxis(im, 2)
-                seq_data_batch[counter, i, :, :, :] = im
+                seq_data_batch[counter, i, :, :, :] = im[::-1, :, :]
             seq_roi_batch[counter] = numpy.asarray(
                 self.roi_lists[video_index][start_index:start_index+length], dtype=numpy.float32)
             counter += 1
-        # return data_batch, roi_batch
+        seq_roi_batch[:, :, 0:2] += seq_roi_batch[:, :, 2:4]/2
+        seq_roi_batch[:, :, ::2] = 2 *((seq_roi_batch[:, :, ::2])/im_shape[1]) - 1
+        seq_roi_batch[:, :, 1::2] = 2 * (seq_roi_batch[:, :, 1::2]/im_shape[0]) - 1
         return seq_data_batch, seq_roi_batch
 
     def _read_image_list(self, file_path):
