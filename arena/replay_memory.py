@@ -132,11 +132,14 @@ class ReplayMemory(object):
                              "start_size! Currently, size=%d, start_size=%d" % (self.size, self.replay_start_size))
 
         # make sure the consecutive T+1 states s_1:s_{T+1} do not cross the top-1 position,
-        #  which means that s_{T+1} is placed before or at s_{top-1}
-        index = self.rng.randint(low=self.top - self.size, high=self.top - episode_length)  # index + (e) <= top-1
+        #  which means that s_{T+1} is placed before or at s_{top-1},
+        # also make sure the history representation do not include terminal flag
+        # index = self.rng.randint(low=self.top - self.size, high=self.top - episode_length)  # index + (e) <= top-1
+        index = self.rng.randint(low=self.top - self.size + self.history_length - 1, high=self.top - episode_length)  # index + (e) <= top-1
         # make sure the initial sampled state do not include terminal state
-        while self.terminate_flags.take(index, mode='wrap'):
-            index = self.rng.randint(low=self.top - self.size,
+        while numpy.any(self.terminate_flags.take(numpy.arange(
+                                index-self.history_length+1, index+1), mode='wrap')):
+            index = self.rng.randint(low=self.top - self.size + self.history_length - 1,
                                      high=self.top - episode_length)
         # check if there are any states with terminal flag
         flag_trajectory = self.terminate_flags.take(numpy.arange(index, index+episode_length), mode='wrap')
@@ -146,7 +149,8 @@ class ReplayMemory(object):
         else:
             end_index = index + episode_length
         episode_indices = numpy.arange(index, end_index)
-        state_trajectory = self.states.take(episode_indices, axis=0, mode='wrap')
+        # state_trajectory = self.states.take(episode_indices, axis=0, mode='wrap')
+        state_trajectory = self.states.take(numpy.arange(index-self.history_length+1, end_index), axis=0, mode='wrap')
         action_trajectory = self.actions.take(episode_indices+1, axis=0, mode='wrap')
         reward_trajectory = self.rewards.take(episode_indices+1, mode='wrap')
         terminate_flag = self.terminate_flags.take(end_index, mode='wrap')
@@ -156,5 +160,5 @@ class ReplayMemory(object):
         #     print 'index %d, end_index %d' %(index, end_index)
         #     print flag_trajectory
 
-        return state_trajectory, action_trajectory, reward_trajectory, terminate_flag
+        return state_trajectory, action_trajectory, reward_trajectory, terminate_flag, action_trajectory.shape[0]
 
