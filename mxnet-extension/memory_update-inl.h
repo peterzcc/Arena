@@ -55,7 +55,7 @@ namespace mxnet {
         const std::vector<TBlob> &aux_args) {
         using namespace mshadow;
         using namespace mshadow::expr;
-        CHECK_EQ(req[memory_update::kOut], kWriteTo);
+        CHECK(req[memory_update::kOut] == kWriteTo || req[memory_update::kOut] == kWriteInplace);
         CHECK_EQ(in_data.size(), 4);
         CHECK_EQ(out_data.size(), 1);
         Stream<xpu> *s = ctx.get_stream<xpu>();

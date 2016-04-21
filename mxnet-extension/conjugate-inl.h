@@ -51,7 +51,6 @@ namespace mxnet {
         const std::vector<TBlob> &aux_args) {
         using namespace mshadow;
         using namespace mshadow::expr;
-        CHECK_EQ(req[conjugate::kOut], kWriteTo);
         CHECK_EQ(in_data.size(), 1);
         CHECK_EQ(out_data.size(), 1);
         Stream<xpu> *s = ctx.get_stream<xpu>();
