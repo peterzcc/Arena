@@ -70,7 +70,7 @@ class TrackingIterator(object):
                 self.roi_lists[video_index][start_index:start_index+length], dtype=numpy.float32)
             counter += 1
         seq_roi_batch[:, :, 0:2] += seq_roi_batch[:, :, 2:4]/2
-        seq_roi_batch[:, :, ::2] = 2 *((seq_roi_batch[:, :, ::2])/im_shape[1]) - 1
+        seq_roi_batch[:, :, ::2] = 2 *((seq_roi_batch[:, :, ::2] - 1)/im_shape[1]) - 1
         seq_roi_batch[:, :, 1::2] = 2 * (seq_roi_batch[:, :, 1::2]/im_shape[0]) - 1
         return seq_data_batch, seq_roi_batch
 
