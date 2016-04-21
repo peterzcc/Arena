@@ -16,7 +16,8 @@ class GlimpseHandler(object):
         self.output_shape = output_shape
 
     '''
-    pyramid_glimpse: Generate a spatial pyramid of glimpse sectors, padding zero if necessary
+    pyramid_glimpse: Generate a spatial pyramid of glimpse sectors, pad zero if necessary.
+                     Here, center = (cx, cy) and size = (sx, sy)
     '''
     def pyramid_glimpse(self, img, center, size, timestamp=0, attention_step=0):
         glimpse = []
