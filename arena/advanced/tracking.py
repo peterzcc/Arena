@@ -64,6 +64,26 @@ class GaussianMapGeneratorOp(mx.operator.NumpyOp):
             gaussian_map[i, 0, :, :] = numpy.exp(-self.distance / 2 /
                                                  numpy.square(ratio * self.sigma_factor))
 
+class HannWindowGeneratorOp(mx.operator.NumpyOp):
+    def __init__(self, rows, cols):
+        super(HannWindowGeneratorOp, self).__init__(need_top_grad=False)
+        self.rows = rows
+        self.cols = cols
+        self.hann_window = numpy.dot(numpy.hanning(rows).reshape((rows, 1)),
+                                     numpy.hanning(cols).reshape((1, cols)))
+    def list_arguments(self):
+        return []
+
+    def list_outputs(self):
+        return ['hanning_window']
+
+    def infer_shape(self, in_shape):
+        return [], [(1,1) + self.hann_window.shape]
+
+    def forward(self, in_data, out_data):
+        hanning_map = out_data[0]
+        hanning_map[:] = self.hann_window
+
 
 def gaussian_map_fft(attention_size, object_size, sigma_factor, rows, cols, postfix=""):
     gaussian_map_op = GaussianMapGeneratorOp(sigma_factor=sigma_factor, rows=rows, cols=cols)
@@ -74,13 +94,19 @@ def gaussian_map_fft(attention_size, object_size, sigma_factor, rows, cols, post
 
 
 class CorrelationFilterHandler(object):
-    def __init__(self, rows, cols, gaussian_sigma_factor, regularizer, perception_handler=None):
+    def __init__(self, rows, cols, gaussian_sigma_factor, regularizer, perception_handler,
+                 batch_size=1):
         super(CorrelationFilterHandler, self).__init__()
         self.rows = rows
         self.cols = cols
         self.sigma_factor = gaussian_sigma_factor
         self.regularizer = regularizer
+        self.batch_size = batch_size
         self.perception_handler = perception_handler
+        hannmap_op = HannWindowGeneratorOp(rows=self.rows, cols=self.cols)
+        self.hannmap = hannmap_op()
+        self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=0, size=self.batch_size)
+        self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=1, size=self.channel_size)
 
     @property
     def channel_size(self):
@@ -91,7 +117,8 @@ class CorrelationFilterHandler(object):
         features = []
         for i, image_patch in enumerate(glimpse):
             postfix = "scale%d_t%d_step%d" % (i, timestamp, attention_step)
-            features.append(self.perception_handler.perceive(image_patch.data, postfix))
+            features.append(self.perception_handler.perceive(image_patch.data, postfix) *
+                            self.hannmap)
         feature_ffts = mx.symbol.FFT2D(mx.symbol.Concat(*features, dim=0))
         feature_ffts = mx.symbol.SliceChannel(feature_ffts, num_outputs=len(glimpse), axis=0)
 
@@ -102,6 +129,7 @@ class CorrelationFilterHandler(object):
                                             sigma_factor=self.sigma_factor,
                                             rows=self.rows, cols=self.cols,
                                             postfix=postfix)
+            gaussian_map = mx.symbol.BroadcastChannel(gaussian_map, dim=1, size=self.channel_size)
             numerator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(gaussian_map),
                                                   feature_ffts[i])
             denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(feature_ffts[i]),
@@ -118,7 +146,8 @@ class CorrelationFilterHandler(object):
         features = []
         for i, image_patch in enumerate(glimpse):
             postfix = "scale%d_t%d_step%d" % (i, timestamp, attention_step)
-            features.append(self.perception_handler.perceive(image_patch.data, postfix))
+            features.append(self.perception_handler.perceive(image_patch.data, postfix) *
+                            self.hannmap)
         feature_ffts = mx.symbol.FFT2D(mx.symbol.Concat(*features, dim=0))
         feature_ffts = mx.symbol.SliceChannel(feature_ffts, num_outputs=len(glimpse), axis=0)
 
@@ -128,7 +157,8 @@ class CorrelationFilterHandler(object):
             postfix = "scale%d_t%d_step%d" % (i, timestamp, attention_step)
             numerators.append(template.numerator)
             denominators.append(mx.symbol.BroadcastChannel(data=template.denominator +
-                                                           self.regularizer, dim=1))
+                                                           self.regularizer, dim=1,
+                                                           size=self.channel_size))
         processed_template = mx.symbol.Concat(*numerators, dim=0)/\
                              mx.symbol.Concat(*denominators, dim=0)
         scores = mx.symbol.IFFT2D(mx.symbol.Conjugate(processed_template) * feature_ffts)
@@ -156,6 +186,11 @@ class PerceptionHandler(object):
             raise NotImplementedError
         return params, params_sym
 
+    def set_params(self, params):
+        for k, v in params.items():
+            if k == 'arg:conv1_weight' or k == 'arg:conv1_bias':
+                v[:] = self.params_data[k]
+
     @property
     def channel_size(self):
         if 'VGG-M' == self.net_type:
@@ -174,7 +209,7 @@ class PerceptionHandler(object):
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
                                               stride=(2, 2), num_filter=96,
                                               name="%s-Perceive%s" % (self.net_type, postfix))
-                conv1 = mx.symbol.Block(data=conv1, name="perception%s")
+                conv1 = mx.symbol.BlockGrad(data=conv1, name="perception%s")
 
             return conv1
         else:
