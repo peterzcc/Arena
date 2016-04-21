@@ -8,14 +8,15 @@ import logging
 '''
 Function: visualize_weights
 Description:
-    Take an numpy array of shape (n, height, width) or (n, height, width, 3)
+    Take an numpy array of shape (n, height, width) or (n, 3, height, width)
     Visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
 '''
 
 
-def visualize_weights(data):
+def visualize_weights(data, delay=0):
+    if 4 == data.ndim:
+        data = data.transpose(0, 2, 3, 1)
     data = (data - data.min()) / (data.max() - data.min())
-
     n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
     padding = (((0, n ** 2 - data.shape[0]),
                 (0, 1), (0, 1))
@@ -26,10 +27,12 @@ def visualize_weights(data):
     data = data.reshape((n, n) + data.shape[1:]).transpose(
         (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
     data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
-
-    plt.imshow(data)
-    plt.axis('off')
-    plt.show()
+    win = cv2.namedWindow("Weight", cv2.WINDOW_NORMAL)
+    if 3 == data.ndim:
+        cv2.imshow("Weight", data[:, :, ::-1])
+    else:
+        cv2.imshow("Weight", data[:, :])
+    cv2.waitKey(delay)
 
 
 '''
@@ -50,7 +53,8 @@ def draw_track_res(im, roi, delay=0):
     im2 = numpy.zeros(im.shape)
     im2[:] = im
     cv2.rectangle(im2, pt1, pt2, (0, 0, 255), 1)
-    cv2.imshow('image', im2[:, :, ::-1] / 255.0)
+    win = cv2.namedWindow("Tracking", cv2.WINDOW_NORMAL)
+    cv2.imshow('Tracking', im2[:, :, ::-1] / 255.0)
     cv2.waitKey(delay)
 
 
@@ -63,9 +67,9 @@ if __name__ == '__main__':
 
     param = vgg_m()
     conv1 = param['arg:conv1_weight'].asnumpy()
-    visualize_weights(conv1.transpose(0, 2, 3, 1))
+    visualize_weights(conv1)
 
-    track_iter = TrackingIterator('/home/sliay/Documents/OTB100/tmp/video.lst',
+    track_iter = TrackingIterator('D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
                                   output_size=(240, 320), resize=True)
 
     data_batch, roi_batch = track_iter.sample(batch_size=32, length=10, interval_step=2)
