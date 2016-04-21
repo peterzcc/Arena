@@ -16,7 +16,7 @@ For example:
     /pathtovideo/car2.lst
     ...
     car1.lst
-    /pathtoimg/00001.jpeg x y width height
+    /pathtoimg/00001.jpeg x y sx sy
     ...
     Note that the roi format is the left top coordinates with the box width and height, which is consistent with the OTB100 data format.
 
@@ -39,14 +39,20 @@ class TrackingIterator(object):
         self.video_num = len(self.img_lists)
         self.resize = resize
 
-    def sample(self, batch_size, length, interval_step=1):
+
+    '''
+    Choose a video and draw minibatch samples from this video.
+
+    '''
+    def sample(self, length=20, batch_size=1, interval_step=1):
         video_index = self.rng.randint(0, self.video_num)
         im_shape = cv2.imread(self.img_lists[video_index][0]).shape
         if self.resize:
-            data_batch = numpy.zeros((batch_size, length, 3) + self.output_size, dtype=numpy.uint8)
+            seq_data_batch = numpy.zeros((batch_size, length, 3) + self.output_size, dtype=numpy.uint8)
         else:
-            data_batch = numpy.zeros((batch_size, length, 3) + (im_shape[0], im_shape[1]), dtype=numpy.uint8)
-        roi_batch = numpy.zeros((batch_size, length, 4), dtype=numpy.float32)
+            seq_data_batch = numpy.zeros((batch_size, length, 3) + (im_shape[0], im_shape[1]),
+                                         dtype=numpy.uint8)
+        seq_roi_batch = numpy.zeros((batch_size, length, 4), dtype=numpy.float32)
         counter = 0
         while counter < batch_size:
             start_index = self.rng.randint(0, len(self.img_lists[video_index]) - (length - 1)*interval_step)
@@ -59,13 +65,14 @@ class TrackingIterator(object):
                     im = numpy.tile(im.reshape((1, 3, 3)), (3, 1, 1))
                 else:
                     im = numpy.rollaxis(im, 2)
-                data_batch[counter, i, :, :, :] = im
-            roi_batch[counter] = numpy.asarray(
-                self.roi_lists[video_index][start_index:start_index+length])
+                seq_data_batch[counter, i, :, :, :] = im[::-1, :, :]
+            seq_roi_batch[counter] = numpy.asarray(
+                self.roi_lists[video_index][start_index:start_index+length], dtype=numpy.float32)
             counter += 1
-
-        # return data_batch, roi_batch
-        return nd.array(data_batch, ctx=mx.gpu()).asnumpy(), nd.array(roi_batch, ctx=mx.gpu()).asnumpy()
+        seq_roi_batch[:, :, 0:2] += seq_roi_batch[:, :, 2:4]/2
+        seq_roi_batch[:, :, ::2] = 2 *((seq_roi_batch[:, :, ::2])/im_shape[1]) - 1
+        seq_roi_batch[:, :, 1::2] = 2 * (seq_roi_batch[:, :, 1::2]/im_shape[0]) - 1
+        return seq_data_batch, seq_roi_batch
 
     def _read_image_list(self, file_path):
         img_list = []
@@ -80,21 +87,26 @@ class TrackingIterator(object):
 
         return img_list, roi_list
 
-track_iter = TrackingIterator('/home/sliay/Documents/OTB100/tmp/video.lst', output_size=(240, 320), resize=True)
+'''
+Simple test for the performance of the tracking iterator.
+'''
+if __name__ == '__main__':
+    track_iter = TrackingIterator('D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
+                                  output_size=(240, 320), resize=False)
 
-start = time.time()
-for i in xrange(20):
-    data_batch, roi_batch = track_iter.sample(batch_size=32, length=10, interval_step=2)
-    print data_batch.shape, roi_batch.shape
-    # for k in xrange(10):
-    #     print roi_batch[0, k]
-    #     cur_img = data_batch[0, k]
-    #     cur_img = numpy.swapaxes(cur_img, 0, 2)
-    #     cur_img = numpy.swapaxes(cur_img, 1, 0)
-    #     print cur_img.shape
-    #     plt.imshow(cur_img)
-    #     plt.show()
-    # print roi_batch[0, :, :]
+    start = time.time()
+    for i in xrange(20):
+        data_batch, roi_batch = track_iter.sample(batch_size=1, length=20, interval_step=2)
+        print data_batch.shape, roi_batch.shape
+        # for k in xrange(10):
+        #     print roi_batch[0, k]
+        #     cur_img = data_batch[0, k]
+        #     cur_img = numpy.swapaxes(cur_img, 0, 2)
+        #     cur_img = numpy.swapaxes(cur_img, 1, 0)
+        #     print cur_img.shape
+        #     plt.imshow(cur_img)
+        #     plt.show()
+        # print roi_batch[0, :, :]
 
-end = time.time()
-print 'time per minibatch is %f' % ((end - start) / 20.0)
+    end = time.time()
+    print 'time per minibatch is %f' % ((end - start) / 20.0)
