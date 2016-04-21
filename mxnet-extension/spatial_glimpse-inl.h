@@ -53,6 +53,7 @@ namespace mxnet {
         const std::vector<TBlob> &aux_args) {
         using namespace mshadow;
         using namespace mshadow::expr;
+        CHECK_EQ(req[spatial_glimpse_enum::kOut], kWriteTo);
         CHECK_EQ(in_data.size(), 2);
         CHECK_EQ(out_data.size(), 1);
         Stream<xpu> *s = ctx.get_stream<xpu>();
