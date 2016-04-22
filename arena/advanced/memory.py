@@ -4,7 +4,7 @@ from collections import namedtuple
 
 Memory = namedtuple("Memory", ["numerators", "denominators", "stat"])
 
-MemoryElement = namedtuple("MemoryElement", ["numerator", "denominator"])
+MemoryElement = namedtuple("MemoryElement", ["numerators", "denominators"])
 
 MemoryStat = namedtuple("MemoryStat", ["counter", "visiting_timestamp"])
 

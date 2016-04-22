@@ -97,8 +97,8 @@ class CorrelationFilterHandler(object):
     def __init__(self, rows, cols, gaussian_sigma_factor, regularizer, perception_handler,
                  batch_size=1):
         super(CorrelationFilterHandler, self).__init__()
-        self.rows = rows
-        self.cols = cols
+        self.rows = numpy.int32(rows)
+        self.cols = numpy.int32(cols)
         self.sigma_factor = gaussian_sigma_factor
         self.regularizer = regularizer
         self.batch_size = batch_size
@@ -161,7 +161,8 @@ class CorrelationFilterHandler(object):
                                                            size=self.channel_size))
         processed_template = mx.symbol.Concat(*numerators, dim=0)/\
                              mx.symbol.Concat(*denominators, dim=0)
-        scores = mx.symbol.IFFT2D(mx.symbol.Conjugate(processed_template) * feature_ffts)
+        scores = mx.symbol.IFFT2D(mx.symbol.Conjugate(processed_template) * feature_ffts,
+                                  output_shape=(204, 220))
         scores = mx.symbol.SliceChannel(scores, num_outputs=len(glimpse), axis=0)
         score_maps = []
         for i in range(len(glimpse)):
