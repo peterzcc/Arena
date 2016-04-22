@@ -55,6 +55,10 @@ class TrackingIterator(object):
     '''
     def sample(self, length=20, batch_size=1, interval_step=1):
         video_index = self.rng.randint(0, self.video_num)
+        # make sure choose video have enough frames
+        while len(self.img_lists[video_index]) < length * interval_step:
+            video_index = self.rng.randint(0, self.video_num)
+        print 'sampled image from video %s\n' % self.img_lists[video_index][0]
         im_shape = cv2.imread(self.img_lists[video_index][0]).shape
         if self.resize:
             seq_data_batch = numpy.zeros((batch_size, length, 3) + self.output_size, dtype=numpy.uint8)
