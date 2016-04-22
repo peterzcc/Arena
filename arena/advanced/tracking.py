@@ -130,10 +130,12 @@ class CorrelationFilterHandler(object):
                                             rows=self.rows, cols=self.cols,
                                             postfix=postfix)
             gaussian_map = mx.symbol.BroadcastChannel(gaussian_map, dim=1, size=self.channel_size)
-            numerator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(gaussian_map),
-                                                  feature_ffts[i])
+            numerator = mx.symbol.ComplexHadamard(gaussian_map,
+                                                  mx.symbol.Conjugate(feature_ffts[i]))
             denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(feature_ffts[i]),
-                                                    feature_ffts[i])
+                                                    feature_ffts[i]) + \
+                          mx.symbol.ComplexHadamard(feature_ffts[i],
+                                                    mx.symbol.ComplexExchange(feature_ffts[i]))
             denominator = mx.symbol.SumChannel(denominator)
             numerator = mx.symbol.BlockGrad(numerator, name='numerator' + postfix)
             denominator = mx.symbol.BlockGrad(denominator, name='denominator' + postfix)
@@ -161,8 +163,8 @@ class CorrelationFilterHandler(object):
                                                            size=self.channel_size))
         processed_template = mx.symbol.Concat(*numerators, dim=0)/\
                              mx.symbol.Concat(*denominators, dim=0)
-        scores = mx.symbol.IFFT2D(mx.symbol.Conjugate(processed_template) * feature_ffts,
-                                  output_shape=(204, 220))
+        scores = mx.symbol.IFFT2D(mx.symbol.ComplexHadamard(processed_template, feature_ffts),
+                                  output_shape=(self.rows, self.cols))
         scores = mx.symbol.SliceChannel(scores, num_outputs=len(glimpse), axis=0)
         score_maps = []
         for i in range(len(glimpse)):
