@@ -13,7 +13,9 @@ from arena.helpers.visualization import *
 
 sample_length = 20
 
-tracking_iterator = TrackingIterator('D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst', resize=False)
+tracking_iterator = TrackingIterator('D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
+                                     output_size=(480, 540),
+                                     resize=True)
 glimpse_handler = GlimpseHandler(scale_mult=1.8, depth=3, output_shape=(133, 133))
 perception_handler = PerceptionHandler(net_type='VGG-M')
 cf_handler = CorrelationFilterHandler(rows=64, cols=64, gaussian_sigma_factor=10, regularizer=0.01,
@@ -28,28 +30,35 @@ data_sizes = mx.symbol.SliceChannel(data_rois[1], num_outputs=sample_length, axi
 
 
 multiscale_template_l = []
+score_maps_l = []
 for i in range(sample_length):
     glimpse_pyramid = glimpse_handler.pyramid_glimpse(img=data_images[i], center=data_centers[i],
                                            size=data_sizes[i], timestamp=i)
     multiscale_template = cf_handler.get_multiscale_template(glimpse=glimpse_pyramid,
                                                              object_size=glimpse_pyramid[0].size,
                                                              timestamp=i)
-    multiscale_template_l.append([template.numerator for template in multiscale_template])
+    score_maps = cf_handler.get_joint_embedding(multiscale_template=multiscale_template,
+                                                glimpse=glimpse_pyramid, timestamp=i)
+    multiscale_template_l.append(multiscale_template)
+    score_maps_l.append(score_maps)
 
-templates = mx.symbol.Group(symbols=sum(multiscale_template_l, []))
+net_sym = mx.symbol.Group(symbols=sum(score_maps_l, []))
 
 data_shapes = {'data_images':(1, sample_length, 3, 360, 480), 'data_rois': (1, sample_length, 4)}
 
-net = Base(sym=templates, data_shapes=data_shapes)
+net = Base(sym=net_sym, data_shapes=data_shapes)
 perception_handler.set_params(net.params)
 
 start = time.time()
-for i in range(10):
+for i in range(100):
     seq_images, seq_rois = tracking_iterator.sample(length=sample_length)
     outputs = net.forward(data_shapes={'data_images': seq_images.shape, 'data_rois': seq_rois.shape},
             data_images=seq_images, data_rois=seq_rois)
     for output in outputs:
         print output.asnumpy().shape
-        visualize_weights(output.asnumpy()[0])
+        #visualize_weights(output.asnumpy()[0])
+        for i in range(output.asnumpy().shape[1]):
+            cv2.imshow("image", output.asnumpy()[0, i]/output.asnumpy()[0,i].max())
+            cv2.waitKey()
 end = time.time()
 print end-start
