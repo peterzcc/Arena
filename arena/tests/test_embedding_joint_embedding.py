@@ -21,11 +21,11 @@ gaussian_map = mx.symbol.FFT2D(gaussian_map)
 gaussian_map = mx.symbol.BroadcastChannel(gaussian_map, dim=1, size=channel_size)
 
 numerator = mx.symbol.ComplexHadamard(gaussian_map, mx.symbol.Conjugate(feature_ffts))
-denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(feature_ffts), feature_ffts)
+denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(feature_ffts), feature_ffts) + \
+              mx.symbol.ComplexHadamard(feature_ffts, mx.symbol.ComplexExchange(feature_ffts))
 denominator = mx.symbol.SumChannel(denominator)
 denominator = mx.symbol.BroadcastChannel(data=denominator + regularizer, dim=1, size=channel_size)
-template = numerator/denominator
-scores = mx.symbol.ComplexHadamard(template, mx.symbol.FFT2D(second_feature))
+scores = mx.symbol.ComplexHadamard(numerator / denominator, mx.symbol.FFT2D(second_feature))
 scores = mx.symbol.IFFT2D(data=scores, output_shape=(numpy.int32(rows), numpy.int32(cols)))
 
 
