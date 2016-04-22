@@ -151,7 +151,6 @@ class CorrelationFilterHandler(object):
             features.append(self.perception_handler.perceive(image_patch.data, postfix) *
                             self.hannmap)
         feature_ffts = mx.symbol.FFT2D(mx.symbol.Concat(*features, dim=0))
-        feature_ffts = mx.symbol.SliceChannel(feature_ffts, num_outputs=len(glimpse), axis=0)
 
         numerators = []
         denominators = []
@@ -163,7 +162,7 @@ class CorrelationFilterHandler(object):
                                                            size=self.channel_size))
         processed_template = mx.symbol.Concat(*numerators, dim=0)/\
                              mx.symbol.Concat(*denominators, dim=0)
-        scores = mx.symbol.IFFT2D(mx.symbol.ComplexHadamard(processed_template, feature_ffts),
+        scores = mx.symbol.IFFT2D(data=mx.symbol.ComplexHadamard(processed_template, feature_ffts),
                                   output_shape=(self.rows, self.cols))
         scores = mx.symbol.SliceChannel(scores, num_outputs=len(glimpse), axis=0)
         score_maps = []
