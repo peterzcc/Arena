@@ -125,6 +125,19 @@ def complex_conjugate():
     print output_npy
     print output_npy.shape
 
+def complex_exchange():
+    data = mx.symbol.Variable('data')
+    conjugate = mx.symbol.ComplexExchange(data=data)
+    conjugate = mx.symbol.BlockGrad(data=conjugate)
+    data_shapes = {'data': (1, 1, 4, 4)}
+    net = Base(sym=conjugate, data_shapes=data_shapes)
+    data_npy = numpy.random.rand(1, 1, 4, 4)
+    output_npy = net.forward(data_shapes=data_shapes, data=data_npy)[0].asnumpy()
+    net.backward(data_shapes=data_shapes, data=data_npy)
+    print data_npy
+    print output_npy
+    print output_npy.shape
+
 def broadcast_channel():
     data = mx.symbol.Variable('data')
     broadcast = mx.symbol.BroadcastChannel(data=data, dim=0, size=10)
@@ -137,6 +150,9 @@ def broadcast_channel():
     print output_npy
     print output_npy.shape
 
+
+complex_exchange()
+'''
 broadcast_channel()
 complex_conjugate()
 complex_hadamard_test()
@@ -144,3 +160,4 @@ sum_channel_test()
 memory_update_test()
 memory_choose_test()
 memory_stat_read_write()
+'''
