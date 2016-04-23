@@ -137,59 +137,6 @@ class MemoryStatUpdateOp(mx.operator.NumpyOp):
             raise NotImplementedError
 
 
-'''
-Function: memory_read
-Description: Read from the memory
-'''
-
-
-def memory_read(memory, ind, timestamp=0):
-    numerator_chosen = mx.symbol.MemoryChoose(data=memory.numerators, index=ind,
-                                              name="memory_read_numerator_t%d" % timestamp)
-    denominator_chosen = mx.symbol.MemoryChoose(data=memory.denominators, index=ind,
-                                                name="memory_read_denominator_t%d" % timestamp)
-    memory_read_control_op = MemoryStatUpdateOp(mode='read')
-    l = memory_read_control_op(counter=memory.counter,
-                               visiting_timestamp=memory.visiting_timestamp,
-                               control_flag=memory.control_flag,
-                               name="memory_read_stat_t%d" % timestamp)
-    new_stat = MemoryStat(l[0], l[1])
-    return MemoryElement(numerator=numerator_chosen, denominator=denominator_chosen), \
-           Memory(numerators=memory.numerators, denominators=memory.denominators,
-                  stat=new_stat)
-
-
-'''
-Function: memory_write
-Description: Update the memory content
-'''
-
-
-def memory_write(memory, memory_element, control_flag, update_factor, timestamp=0):
-    new_numerators = []
-    new_denominators = []
-    # 1. Update numerators and denominators
-    memory_write_control_op = MemoryStatUpdateOp(mode='write')
-    l = memory_write_control_op(counter=memory.counter, pointer=memory.pointer,
-                                control_flag=control_flag,
-                                name="memory_write_control_status_t%d" % timestamp)
-    flags = mx.symbol.SliceChannel(flags, num_outputs=len(memory.numerators), axis=0)
-    for i, (numerator, denominator, flag) in enumerate(
-            zip(memory.numerators, memory.denominators, flags)):
-        updated_numerator = mx.symbol.MemoryElementUpdate(data=numerator,
-                                                          update_data=memory_element,
-                                                          control_flag=control_flag,
-                                                          update_factor=update_factor,
-                                                          name="memory_write_numerator_t%d" % timestamp)
-        updated_denominator = mx.symbol.MemoryElementUpdate(data=denominator, flag=flag,
-                                                            update_factor=update_factor,
-                                                            name="memory_write_denominator_t%d" % timestamp)
-        new_numerators.append(updated_numerator)
-        new_denominators.append(updated_denominator)
-    return Memory(numerators=new_numerators, denominators=new_denominators,
-                  counter=new_counter, pointer=new_pointer)
-
-
 class MemoryHandler(object):
     def __init__(self, cf_handler, score_map_processor, scale_num=1, memory_size=4,
                  lstm_layer_props=None):
@@ -201,6 +148,7 @@ class MemoryHandler(object):
         self.write_params = self._init_write_params()
         self.read_params = self._init_read_params()
         self.state_transition_params = self._init_state_transition_params()
+        self.update_factor = mx.symbol.Variable(self.name + ':update_factor')
 
     def _init_write_params(self):
         params = {}
@@ -260,7 +208,7 @@ class MemoryHandler(object):
     def name(self):
         return "MemoryHandler"
 
-    def write(self, memory, cf_template, tracking_state,
+    def write(self, memory, update_multiscale_template, tracking_state,
               timestamp=0, attention_step=0, blocked=False, deterministic=False):
         prefix = self.name + '-write'
         postfix = '_t%d_step%d' % (timestamp, attention_step)
@@ -293,8 +241,44 @@ class MemoryHandler(object):
                                name=prefix + ':fc2' + postfix)
         control_flag_policy_op = LogSoftmaxPolicy(deterministic=deterministic)
         control_flag = control_flag_policy_op(data=fc2)
+        #TODO Change the updating logic (Train the update factor using Reinforcement Unit like Beta-Policy)
+        #TODO Enable actor-critic (Like the Async RL paper)
 
-        return new_memory
+        # 3. Update the multiscale templates
+        new_multiscale_templates = []
+        new_multiscale_template = []
+        for j in range(self.scale_num):
+            numerator_l = []
+            denominator_l = []
+            for i in range(self.memory_size):
+                numerator_l.append(memory.multiscale_template[i][j].numerator)
+                denominator_l.append(memory.multiscale_template[i][j].denominator)
+            numerators = mx.symbol.Concat(*numerator_l, dim=0)
+            denominators = mx.symbol.Concat(*denominator_l, dim=0)
+            new_numerators = mx.symbol.MemoryUpdate(data=numerators,
+                                                    update=update_multiscale_template[j].numerator,
+                                                    flag=control_flag, factor=self.update_factor)
+            new_denominators = mx.symbol.MemoryUpdate(data=denominators,
+                                                      update=update_multiscale_template[j].denominator,
+                                                      flag=control_flag, factor=self.update_factor)
+            new_numerators = mx.symbol.SliceChannel(new_numerators, num_outputs=self.memory_size, axis=0)
+            new_denominators = mx.symbol.SliceChannel(new_denominators, num_outputs=self.memory_size, axis=0)
+            for i in range(self.memory_size):
+                new_multiscale_template.append(CFTemplate(numerator=new_numerators[i],
+                                                          denominator=new_denominators[i]))
+            new_multiscale_templates.append(new_multiscale_template)
+
+        # 4. Update the memory status
+        memory_write_control_op = MemoryStatUpdateOp(mode='write')
+        new_status = memory_write_control_op(counter=memory.stat.counter,
+                                             visiting_timestamp=memory.stat.visiting_timestamp,
+                                             control_flag=control_flag,
+                                             name="memory_write_stat_t%d" % timestamp)
+
+        new_memory = Memory(multiscale_templates=new_multiscale_template, state=new_memory_state,
+                            status=new_status)
+
+        return new_memory, control_flag
 
     def read(self, memory, glimpse, timestamp=0, attention_step=0, blocked=False, deterministic=False):
         prefix = self.name + '-read'
@@ -356,4 +340,4 @@ class MemoryHandler(object):
             index=chosen_ind)
         chosen_multiscale_template = CFTemplate(numerator=chosen_numerator,
                                                 denominator=chosen_denominator)
-        return chosen_multiscale_template, new_memory
+        return new_memory, chosen_multiscale_template, chosen_ind
