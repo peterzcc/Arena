@@ -112,8 +112,8 @@ class ReplayMemory(object):
         return states, actions, rewards, next_states, terminate_flags
 
     '''
-    sampling n step transition samples trajectories, do not consider the history length
-    state_trajectory, n step states
+    sampling n step transition samples trajectories
+    state_trajectory, n+1 step states
     action_trajectory, n step actions
     reward_trajectory, n step rewards
     terminate_flag, indicate whether the n+1 step state is an terminal state
@@ -121,7 +121,7 @@ class ReplayMemory(object):
     '''
     '''
     sample a trajectory of T states with T actions and T rewards
-    s_1:s_{T}, a_2:a_{T+1}, r_2:r_{T+1}
+    s_1:s_{T+1}, a_2:a_{T+1}, r_2:r_{T+1}
     '''
     def sample_trajectory(self, episode_length):
         assert self.replay_start_size >= 1 + episode_length
@@ -150,7 +150,7 @@ class ReplayMemory(object):
             end_index = index + episode_length
         episode_indices = numpy.arange(index, end_index)
         # state_trajectory = self.states.take(episode_indices, axis=0, mode='wrap')
-        state_trajectory = self.states.take(numpy.arange(index-self.history_length+1, end_index), axis=0, mode='wrap')
+        state_trajectory = self.states.take(numpy.arange(index-self.history_length+1, end_index+1), axis=0, mode='wrap')
         action_trajectory = self.actions.take(episode_indices+1, axis=0, mode='wrap')
         reward_trajectory = self.rewards.take(episode_indices+1, mode='wrap')
         terminate_flag = self.terminate_flags.take(end_index, mode='wrap')
