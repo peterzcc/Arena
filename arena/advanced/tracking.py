@@ -146,7 +146,7 @@ class CorrelationFilterHandler(object):
             multiscale_template.append(CFTemplate(numerator, denominator))
         return multiscale_template
 
-    def get_joint_embedding(self, multiscale_template, glimpse, timestamp=0, attention_step=0):
+    def get_score_maps(self, multiscale_template, glimpse, timestamp=0, attention_step=0):
         assert len(multiscale_template) == len(glimpse)
         scores = []
         features = []
