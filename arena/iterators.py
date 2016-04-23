@@ -25,7 +25,7 @@ output_size: desired size after resize
 
 
 class TrackingIterator(object):
-    def __init__(self, video_list, output_size=(100, 100), resize=True):
+    def __init__(self, video_list, output_size=(100, 100), resize=True, ctx=get_default_ctx()):
         self.rng = get_numpy_rng()
         self.img_lists = []
         self.roi_lists = []
@@ -38,7 +38,16 @@ class TrackingIterator(object):
         self.output_size = output_size
         self.video_num = len(self.img_lists)
         self.resize = resize
+        self.ctx = ctx
 
+    '''
+    Get the image mean, shape should be (batch, timestep, channel, height, width)
+    '''
+    def img_mean(self, shape):
+        nd_mean = nd.array([123.68, 116.779, 103.939], ctx=self.ctx)
+        nd_mean = nd_mean.reshape((1, 1, 3, 1, 1))
+        nd_mean = nd_mean.broadcast_to(shape)
+        return nd_mean
 
     '''
     Choose a video and draw minibatch samples from this video.
@@ -74,8 +83,11 @@ class TrackingIterator(object):
                 self.roi_lists[video_index][start_index:start_index+length], dtype=numpy.float32)
             counter += 1
         seq_roi_batch[:, :, 0:2] += seq_roi_batch[:, :, 2:4]/2
-        seq_roi_batch[:, :, ::2] = 2 *((seq_roi_batch[:, :, ::2])/im_shape[1]) - 1
+        seq_roi_batch[:, :, ::2] = 2 *((seq_roi_batch[:, :, ::2] - 1)/im_shape[1]) - 1
         seq_roi_batch[:, :, 1::2] = 2 * (seq_roi_batch[:, :, 1::2]/im_shape[0]) - 1
+        seq_data_batch = nd.array(seq_data_batch, ctx=self.ctx)
+        seq_data_batch -= self.img_mean(seq_data_batch.shape)
+        seq_roi_batch = nd.array(seq_roi_batch, ctx=self.ctx)
         return seq_data_batch, seq_roi_batch
 
     def _read_image_list(self, file_path):
