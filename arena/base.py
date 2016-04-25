@@ -137,9 +137,9 @@ class Base(object):
     Can be used to calculate the gradient of Q(s,a) over a
     """
     #TODO Test this part!
-    def get_grads(self, keys, ctx=None, batch_size=default_batchsize, **input_dict):
+    def get_grads(self, keys, ctx=None, batch_size=None, data_shapes=None, **input_dict):
         if len(input_dict) != 0:
-            exe = self.executor_pool.get(batch_size)
+            exe = self.executor_pool.get(batch_size, data_shapes)
             for k, v in input_dict.items():
                 exe.arg_dict[k][:] = v
                 exe.forward(is_train=True)
