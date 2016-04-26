@@ -230,10 +230,11 @@ class AttentionHandler(object):
                         name=self.name + ':' + roi_type + postfix)
         return roi, roi_mean, roi_var
 
-    def attend(self, img, init_glimpse, multiscale_template, memory_states, ground_truth_roi=None,
+    def attend(self, img, init_glimpse, multiscale_template, memory, ground_truth_roi=None,
                deterministic=False, timestamp=0):
         glimpse = init_glimpse
-        memory_code = mx.symbol.Concat(*memory_states, num_args=len(memory_states), dim=1)
+        memory_code = mx.symbol.Concat(*[state.h for state in memory.states],
+                                       num_args=len(memory.states), dim=1)
         tracking_states = self.init_lstm_states
         next_step_init_center = None
         next_step_init_size = None

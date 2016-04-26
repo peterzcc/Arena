@@ -112,6 +112,8 @@ class CorrelationFilterHandler(object):
         super(CorrelationFilterHandler, self).__init__()
         self.rows = numpy.int32(rows)
         self.cols = numpy.int32(cols)
+        self.out_rows = self.rows
+        self.out_cols = (self.cols /2 + 1) * 2
         self.sigma_factor = gaussian_sigma_factor
         self.regularizer = regularizer
         self.scale_num = scale_num
