@@ -127,12 +127,12 @@ def roi_transform_inv(anchor_center, anchor_size, transformed_roi):
 
 
 class AttentionHandler(object):
-    def __init__(self, glimpse_handler=None, cf_handler=None, score_map_processor=None,
+    def __init__(self, glimpse_handler=None, cf_handler=None, scoremap_processor=None,
                  total_steps=None, lstm_layer_props=None):
         super(AttentionHandler, self).__init__()
         self.glimpse_handler = glimpse_handler
         self.cf_handler = cf_handler
-        self.score_map_processor = score_map_processor
+        self.scoremap_processor = scoremap_processor
         self.lstm_layer_props = lstm_layer_props
         self.roi_encoding_params = self._init_roi_encoding_params()
         self.lstm_params, self.init_lstm_states = self._init_lstm_params()
@@ -230,8 +230,8 @@ class AttentionHandler(object):
                         name=self.name + ':' + roi_type + postfix)
         return roi, roi_mean, roi_var
 
-    def attend(self, img, init_glimpse, multiscale_template, memory_states, deterministic=False,
-               timestamp=0):
+    def attend(self, img, init_glimpse, multiscale_template, memory_states, ground_truth_roi=None,
+               deterministic=False, timestamp=0):
         glimpse = init_glimpse
         memory_code = mx.symbol.Concat(*memory_states, num_args=len(memory_states), dim=1)
         tracking_states = self.init_lstm_states
@@ -247,7 +247,7 @@ class AttentionHandler(object):
             scoremap = \
                 self.cf_handler.get_multiscale_scoremap(multiscale_template=multiscale_template,
                                                         glimpse=glimpse, postfix=postfix)
-            processed_scoremap = self.score_map_processor.scoremap_processing(scoremap, postfix)
+            processed_scoremap = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             flatten_map = mx.symbol.Flatten(data=processed_scoremap)
             roi_code = self.roi_encoding(glimpse)
             aggregate_input = mx.symbol.Concat(flatten_map, roi_code, memory_code, num_args=3,
@@ -282,10 +282,18 @@ class AttentionHandler(object):
                     roi_transform_inv(glimpse.center, glimpse.size, pred_roi)
                 rl_sym_out[self.name + ':pred_roi' + postfix] = next_step_init_roi
                 bb_regress_op = BoundingBoxRegressionOp()
-                bb_regress_roi = \
-                    bb_regress_op(anchor=mx.symbol.Concat(glimpse.center, glimpse.size, num_args=2, dim=1),
-                                  transformation=pred_roi_mean,
-                                  name=self.name + ':pred_roi_bb_regress_t%d' %timestamp)
+                if ground_truth_roi is not None:
+                    bb_regress_roi = \
+                        bb_regress_op(
+                            anchor=mx.symbol.Concat(glimpse.center, glimpse.size, num_args=2, dim=1),
+                            transformation=pred_roi_mean,
+                            truth=ground_truth_roi,
+                            name=self.name + ':pred_roi_bb_regress_t%d' % timestamp)
+                else:
+                    bb_regress_roi = \
+                        bb_regress_op(anchor=mx.symbol.Concat(glimpse.center, glimpse.size, num_args=2, dim=1),
+                                      transformation=pred_roi_mean,
+                                      name=self.name + ':pred_roi_bb_regress_t%d' %timestamp)
                 regression_sym_out[self.name + ':pred_roi_bb_regress' + postfix] = bb_regress_roi
             tracking_states = new_states
 

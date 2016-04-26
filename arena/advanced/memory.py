@@ -13,13 +13,15 @@ numerators: (num_memory, scale_num * channel of single template, row, col)
 denominators: (num_memory, scale_num * channel of single template, row, col)
 state: list of LSTMState (Multiple layers)
 status: Status like reading times and visiting timestamp of each memory cell
-
-MemoryStat --> The statistical variables of the memory
-counter: Counter of the memory
-visiting_timestamp: The recorded visiting timestamp of the memory elements
 '''
 
 Memory = namedtuple("Memory", ["numerators", "denominators", "states", "status"])
+
+'''
+MemoryStat --> The statistical variables of the memory
+counter: Counter of the memory, (1, memory_size)
+visiting_timestamp: The recorded visiting timestamp of the memory elements, (1, memory_size)
+'''
 
 MemoryStat = namedtuple("MemoryStat", ["counter", "visiting_timestamp"])
 
@@ -139,17 +141,20 @@ class MemoryStatUpdateOp(mx.operator.NumpyOp):
 
 
 class MemoryHandler(object):
-    def __init__(self, cf_handler, scoremap_processor, scale_num=1, memory_size=4,
+    def __init__(self, cf_handler, scoremap_processor, memory_size=4,
                  lstm_layer_props=None):
-        self.scale_num = scale_num
         self.memory_size = memory_size
         self.lstm_layer_props = lstm_layer_props
         self.cf_handler = cf_handler
         self.scoremap_processor = scoremap_processor
         self.write_params = self._init_write_params()
         self.read_params = self._init_read_params()
-        self.state_transition_params, self.init_memory_state = self._init_state_transition_params()
+        self.state_transition_params = self._init_state_transition_params()
         self.update_factor = mx.symbol.Variable(self.name + ':update_factor')
+
+    @property
+    def scale_num(self):
+        return self.cf_handler.scale_num
 
     def _init_write_params(self):
         params = OrderedDict()
@@ -172,7 +177,6 @@ class MemoryHandler(object):
 
     def _init_state_transition_params(self):
         params = OrderedDict()
-        init_memory_state = []
         prefix = self.name + ':state_transition'
         for i in range(len(self.lstm_layer_props)):
             # The i-th LSTM layer
@@ -181,10 +185,7 @@ class MemoryHandler(object):
                           i2h_bias=mx.symbol.Variable(prefix + ':lstm%d_i2h_bias' % i),
                           h2h_weight=mx.symbol.Variable(prefix + ':lstm%d_h2h_weight' % i),
                           h2h_bias=mx.symbol.Variable(prefix + ':lstm%d_h2h_bias' % i))
-            init_memory_state.append(
-                LSTMState(c=mx.symbol.Variable(prefix + ':init_lstm%d_c' % i),
-                          h=mx.symbol.Variable(prefix + ':init_lstm%d_h' % i)))
-        return params, init_memory_state
+        return params
 
     def init_memory(self):
         prefix = self.name + ':memory_init'
@@ -193,29 +194,44 @@ class MemoryHandler(object):
         init_memory_status = \
             MemoryStat(counter=mx.symbol.Variable(prefix + ':counter'),
                        visiting_timestamp=mx.symbol.Variable(prefix + ':visiting_timestamp'))
+        init_memory_states = []
+        for i in range(len(self.lstm_layer_props)):
+            init_memory_states.append(
+                LSTMState(c=mx.symbol.Variable(prefix + ':lstm%d_c' % i),
+                          h=mx.symbol.Variable(prefix + ':lstm%d_h' % i)))
+
+        data_shapes = OrderedDict()
+        data_shapes[prefix + ':numerators'] =\
+            (self.memory_size, self.cf_handler.scale_num * self.cf_handler.channel_size,
+             self.cf_handler.rows, self.cf_handler.cols)
+        data_shapes[prefix + ':denominators'] = \
+            (self.memory_size, self.cf_handler.scale_num * self.cf_handler.channel_size,
+             self.cf_handler.rows, self.cf_handler.cols)
+        data_shapes[prefix + ':counter'] = (1, self.memory_size)
+        data_shapes[prefix + ':visiting_timestamp'] = (1, self.memory_size)
+        for i, prop in enumerate(self.lstm_layer_props):
+            data_shapes[prefix + ':lstm%d_c' % i] = (1, prop.num_hidden)
+            data_shapes[prefix + ':lstm%d_h' % i] = (1, prop.num_hidden)
         return Memory(numerators=numerators,
                       denominators=denominators,
-                      state=self.init_memory_state,
-                      status=init_memory_status)
+                      states=init_memory_states,
+                      status=init_memory_status), data_shapes
 
     @property
     def name(self):
         return "MemoryHandler"
 
-    def write(self, memory, update_multiscale_template, tracking_state,
-              timestamp=0, deterministic=False):
+    def get_write_control_flag(self, memory, tracking_state, deterministic, timestamp=0):
         prefix = self.name + ':write'
         postfix = '_t%d' % timestamp
 
-        rl_sym_out = OrderedDict()
         # 1. Update the state of the memory
         assert len(memory.states) == len(self.lstm_layer_props)
         new_memory_states = step_stack_lstm(indata=tracking_state, prev_states=memory.states,
                                             lstm_props=self.lstm_layer_props,
                                             params=self.state_transition_params.values(),
-                                            prefix=self.name + '-state:',
+                                            prefix=self.name + ':state_transition',
                                             postfix=postfix)
-
         # 2. Choose the control flag
         fc1 = mx.symbol.FullyConnected(
             data=mx.symbol.Concat(*[state.h for state in new_memory_states],
@@ -232,13 +248,25 @@ class MemoryHandler(object):
                                        name=prefix + ':fc2' + postfix)
         control_flag_policy_op = LogSoftmaxPolicy(deterministic=deterministic)
         control_flag = control_flag_policy_op(data=fc2)
-        rl_sym_out[self.name + ':control_flag' + postfix] = control_flag
+        # TODO Enable actor-critic (Like the Async RL paper)
+        return control_flag, new_memory_states
 
-        #TODO Change the updating logic (Train the update factor using Reinforcement Unit like Beta-Policy)
-        #TODO Enable actor-critic (Like the Async RL paper)
+    def write(self, memory, update_multiscale_template, control_flag=None, tracking_state=None,
+              timestamp=0, deterministic=False):
+        prefix = self.name + ':write'
+        postfix = '_t%d' % timestamp
+        new_memory_states = memory.states
+        # 1. Choose the control flag
+        rl_sym_out = OrderedDict()
+        if control_flag is None:
+            assert tracking_state is not None, "Tracking state must be set for automatic control!"
+            control_flag, new_memory_states = \
+                self.get_write_control_flag(memory=memory, tracking_state=tracking_state,
+                                            deterministic=deterministic, timestamp=timestamp)
+            rl_sym_out[self.name + ':control_flag' + postfix] = control_flag
 
-
-        # 3. Update the memory status
+        # 2. Update the memory status
+        # TODO Change the updating logic (Train the update factor using Reinforcement Unit like Beta-Policy)
         memory_write_control_op = MemoryStatUpdateOp(mode='write')
         new_status = memory_write_control_op(counter=memory.stat.counter,
                                              visiting_timestamp=memory.stat.visiting_timestamp,
@@ -247,7 +275,7 @@ class MemoryHandler(object):
         flag = new_status[2]
         new_status = MemoryStat(new_status[0], new_status[1])
 
-        # 4. Update the multiscale templates
+        # 3. Update the multiscale templates
         update_numerator = mx.symbol.SliceChannel(update_multiscale_template.numerator,
                                                   num_outputs=self.scale_num, axis=0)
         update_numerator = mx.symbol.Concat(update_numerator, num_args=self.scale_num, dim=1)
@@ -270,48 +298,77 @@ class MemoryHandler(object):
 
         return new_memory, rl_sym_out
 
-    def read(self, memory, glimpse, timestamp=0, deterministic=False):
+    def get_read_control_flag(self, memory, glimpse, deterministic, timestamp=0):
         prefix = self.name + '-read'
-        rl_sym_out = OrderedDict()
-        # 1. Calculate the matching score of all the memory units to the new glimpse
         score_l = []
         numerators = mx.symbol.SliceChannel(memory.numerators, num_outputs=self.memory_size, axis=0)
         denominators = mx.symbol.SliceChannel(memory.denominators, num_outputs=self.memory_size, axis=0)
         memory_state_code = mx.symbol.Concat(*[state.h for state in memory.states],
                                              num_args=len(memory.states), dim=1)
+        # 1. Calculate the matching score of all the memory units to the new glimpse.
+        #    Also, get the feature maps based on the scoremaps.
+        feature_map_l = []
         for i in range(self.memory_size):
             postfix = "_m%d_t%d" % (i, timestamp)
+            #TODO Reduce the number of slicechannel and concat operators!
+            numerator = mx.symbol.SliceChannel(numerators[i], num_outputs=self.scale_num, axis=1)
+            numerator = mx.symbol.Concat(*[numerator[i] for i in range(self.scale_num)],
+                                         num_args=self.scale_num, dim=0)
+            denominator = mx.symbol.SliceChannel(denominators[i], num_outputs=self.scale_num, axis=1)
+            denominator = mx.symbol.Concat(*[denominator[i] for i in range(self.scale_num)],
+                                         num_args=self.scale_num, dim=0)
             scoremap = self.cf_handler.get_multiscale_scoremap(
-                ScaleCFTemplate(numemartor=numerators[i], denominator=denominators[i]),
+                ScaleCFTemplate(numemartor=numerator, denominator=denominator),
                 glimpse, postfix=postfix)
             feature_map = self.scoremap_processor.scoremap_processing(scoremap, postfix)
-            global_pooled_feature = mx.symbol.Pooling(data=feature_map,
-                                                      kernel=(self.scoremap_processor.dim_out[1],
-                                                              self.scoremap_processor.dim_out[2]),
-                                                      pool_type="avg",
-                                                      name=prefix + ":global-pooling" + postfix)
-            # Here we concatenate the global pooled features to the memory state
-            concat_feature = mx.symbol.Concat(global_pooled_feature, memory_state_code, dim=1)
-            fc1 = mx.symbol.FullyConnected(data=concat_feature,
-                                           num_hidden=256,
-                                           weight=self.read_params[prefix + ':fc1'].weight,
-                                           bias=self.read_params[prefix + ':fc1'].bias,
-                                           name=prefix + ':fc1' + postfix)
-            act1 = mx.symbol.Activation(data=fc1, act_type='relu', name=prefix + ':relu1' + postfix)
-            fc2 = mx.symbol.FullyConnected(data=act1,
-                                           num_hidden=1,
-                                           weight=self.read_params[prefix + ':fc2'].weight,
-                                           bias=self.read_params[prefix + ':fc2'].bias,
-                                           name=prefix + ':fc2' + postfix)
-            score_l.append(fc2)
-        postfix = "_t%d" % timestamp
-        score = mx.symbol.Concat(*score_l, dim=1, name=prefix + ':score' + postfix)
+            feature_map_l.append(feature_map)
+        feature_maps = mx.symbol.Concat(*feature_map_l, num_args=len(feature_map_l), dim=0)
 
-        # 2. Choose the memory indices based on the computed score and the memory status
+        # 2. Compute the scores: Shape --> (1, memory_size)
+        postfix = "_t%d" % timestamp
+        global_pooled_feature = mx.symbol.Pooling(data=feature_maps,
+                                                  kernel=(self.scoremap_processor.dim_out[1],
+                                                          self.scoremap_processor.dim_out[2]),
+                                                  pool_type="avg",
+                                                  name=prefix + ":global-pooling" + postfix)
+        global_pooled_feature = mx.symbol.Reshape(data=global_pooled_feature,
+                                                  target_shape=(self.memory_size, 0))
+
+        # Here we concatenate the global pooled features to the memory state
+        memory_state_code = mx.symbol.Concat(*[memory_state_code for i in range(self.memory_size)],
+                                             num_args=self.memory_size,
+                                             dim=0)
+        concat_feature = mx.symbol.Concat(global_pooled_feature, memory_state_code, dim=1)
+        fc1 = mx.symbol.FullyConnected(data=concat_feature,
+                                       num_hidden=256,
+                                       weight=self.read_params[prefix + ':fc1'].weight,
+                                       bias=self.read_params[prefix + ':fc1'].bias,
+                                       name=prefix + ':fc1' + postfix)
+        act1 = mx.symbol.Activation(data=fc1, act_type='relu', name=prefix + ':relu1' + postfix)
+        fc2 = mx.symbol.FullyConnected(data=act1,
+                                       num_hidden=1,
+                                       weight=self.read_params[prefix + ':fc2'].weight,
+                                       bias=self.read_params[prefix + ':fc2'].bias,
+                                       name=prefix + ':fc2' + postfix)
+        # We need to swapaxis here since the shape fc2 is (memory_size, 1)
+        score = mx.symbol.SwapAxis(fc2, dim1=0, dim2=1, name=prefix + ':score' + postfix)
+
+        # 3. Choose the memory indices based on the computed score and the memory status
         choice_policy_op = LogSoftmaxMaskPolicy(deterministic=deterministic)
         chosen_ind = choice_policy_op(data=score, mask=memory.stat.counter,
                                       name=prefix + ':chosen_ind' + postfix)
-        rl_sym_out[prefix + ':chosen_ind' + postfix] = chosen_ind
+        return chosen_ind
+
+    def read(self, memory, glimpse, chosen_ind=None, deterministic=False, timestamp=0):
+        prefix = self.name + '-read'
+        postfix = "_t%d" % timestamp
+        rl_sym_out = OrderedDict()
+        if chosen_ind is None:
+            chosen_ind = self.get_read_control_flag(memory=memory, glimpse=glimpse,
+                                                    timestamp=timestamp,
+                                                    deterministic=deterministic)
+            rl_sym_out[prefix + ':chosen_ind' + postfix] = chosen_ind
+
 
         # 3. Update the memory status
         memory_read_control_op = MemoryStatUpdateOp(mode='read')

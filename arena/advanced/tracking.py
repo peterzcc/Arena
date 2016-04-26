@@ -108,17 +108,17 @@ def gaussian_map_fft(attention_size, object_size, sigma_factor, rows, cols, name
 
 class CorrelationFilterHandler(object):
     def __init__(self, rows, cols, gaussian_sigma_factor, regularizer, perception_handler,
-                 batch_size=1):
+                 scale_num=3):
         super(CorrelationFilterHandler, self).__init__()
         self.rows = numpy.int32(rows)
         self.cols = numpy.int32(cols)
         self.sigma_factor = gaussian_sigma_factor
         self.regularizer = regularizer
-        self.batch_size = batch_size
+        self.scale_num = scale_num
         self.perception_handler = perception_handler
         hannmap_op = HannWindowGeneratorOp(rows=self.rows, cols=self.cols)
         self.hannmap = hannmap_op()
-        self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=0, size=self.batch_size)
+        self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=0, size=self.scale_num)
         self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=1, size=self.channel_size)
 
     @property
@@ -129,7 +129,7 @@ class CorrelationFilterHandler(object):
     def channel_size(self):
         return self.perception_handler.channel_size
 
-    def get_multiscale_template(self, glimpse, object_size, postfix=''):
+    def get_multiscale_template(self, glimpse, postfix=''):
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
@@ -228,7 +228,7 @@ class ScoreMapProcessor(object):
     def __init__(self, dim_in, num_filter=64, scale_num=1):
         super(ScoreMapProcessor, self).__init__()
         self.num_filter = num_filter
-        self.dim_in = dim_in.copy()
+        self.dim_in = dim_in
         self.scale_num = scale_num
         self.params = self._init_params()
 
@@ -251,11 +251,12 @@ class ScoreMapProcessor(object):
         return "ScoreMapProcessor"
 
     def scoremap_processing(self, multiscale_scoremap, postfix=''):
-        multiscale_scoremap_sliced = \
+        multiscale_scoremap = \
             mx.symbol.SliceChannel(multiscale_scoremap, num_outputs=self.scale_num, axis=0)
-        multiscale_scoremap_concat = \
-            mx.symbol.Concat(multiscale_scoremap_sliced, num_args=self.scale_num, dim=1)
-        conv1 = mx.symbol.Convolution(data=multiscale_scoremap_concat,
+        multiscale_scoremap = \
+            mx.symbol.Concat(*[multiscale_scoremap[i] for i in range(self.scale_num)],
+                             num_args=self.scale_num, dim=1)
+        conv1 = mx.symbol.Convolution(data=multiscale_scoremap,
                                       weight=self.params[self.name + ':conv1'].weight,
                                       bias=self.params[self.name + ':conv1'].bias,
                                       kernel=(3,3), pad=(1,1),
