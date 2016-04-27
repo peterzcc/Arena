@@ -49,6 +49,8 @@ def save_misc(dir_path="", epoch=None, name="", **argdict):
         json.dump(argdict, fp)
     return misc_saving_path
 
+def block_all(sym_list):
+    return [mx.symbol.BlockGrad(sym) for sym in sym_list]
 
 def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
