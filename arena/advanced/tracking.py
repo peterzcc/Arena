@@ -20,6 +20,7 @@ visiting_timestamp: The recorded visiting timestamp of the memory elements
 '''
 ScaleCFTemplate = namedtuple("ScaleCFTemplate", ["numerator", "denominator", "scale_num"])
 
+
 class MeshGridNpyOp(mx.operator.NumpyOp):
     def __init__(self, x_linspace, y_linspace):
         super(MeshGridNpyOp, self).__init__(need_top_grad=False)
@@ -165,7 +166,6 @@ class CorrelationFilterHandler(object):
 
     def get_multiscale_scoremap(self, multiscale_template, glimpse, postfix=''):
         assert multiscale_template.scale_num == glimpse.scale_num
-        scores = []
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
@@ -253,11 +253,8 @@ class ScoreMapProcessor(object):
         return "ScoreMapProcessor"
 
     def scoremap_processing(self, multiscale_scoremap, postfix=''):
-        multiscale_scoremap = \
-            mx.symbol.SliceChannel(multiscale_scoremap, num_outputs=self.scale_num, axis=0)
-        multiscale_scoremap = \
-            mx.symbol.Concat(*[multiscale_scoremap[i] for i in range(self.scale_num)],
-                             num_args=self.scale_num, dim=1)
+        multiscale_scoremap = mx.symbol.Reshape(multiscale_scoremap,
+                                                target_shape=(1, 0, self.dim_in[1], self.dim_in[2]))
         conv1 = mx.symbol.Convolution(data=multiscale_scoremap,
                                       weight=self.params[self.name + ':conv1'].weight,
                                       bias=self.params[self.name + ':conv1'].bias,

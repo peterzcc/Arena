@@ -284,6 +284,7 @@ class MemoryHandler(object):
         new_memory_states = memory.states
         # 1. Choose the control flag
         rl_sym_out = OrderedDict()
+
         if control_flag is None:
             assert tracking_state is not None, "Tracking state must be set for automatic control!"
             control_flag, new_memory_states = \
@@ -303,14 +304,9 @@ class MemoryHandler(object):
         new_status = MemoryStat(new_status[0], new_status[1])
 
         # 3. Update the multiscale templates
-        update_numerator = mx.symbol.SliceChannel(update_multiscale_template.numerator,
-                                                  num_outputs=self.scale_num, axis=0)
-        update_numerator = mx.symbol.Concat(*[update_numerator[i] for i in range(self.scale_num)],
-                                            num_args=self.scale_num, dim=1)
-        update_denominator = mx.symbol.SliceChannel(update_multiscale_template.denominator,
-                                                    num_outputs=self.scale_num, axis=0)
-        update_denominator = mx.symbol.Concat(*[update_denominator[i] for i in range(self.scale_num)],
-                                              num_args=self.scale_num, dim=1)
+        update_numerator = self.reshape_to_memory_ele(update_multiscale_template.numerator)
+        update_denominator = self.reshape_to_memory_ele(update_multiscale_template.denominator)
+
         new_numerators = mx.symbol.MemoryUpdate(data=memory.numerators,
                                                 update=update_numerator,
                                                 flag=flag,
@@ -330,8 +326,7 @@ class MemoryHandler(object):
         return new_memory, rl_sym_out
 
     def get_read_control_flag(self, memory, glimpse, deterministic, timestamp=0):
-        prefix = self.name + '-read'
-        score_l = []
+        prefix = self.name + ':read'
         numerators = mx.symbol.SliceChannel(memory.numerators, num_outputs=self.memory_size, axis=0)
         denominators = mx.symbol.SliceChannel(memory.denominators, num_outputs=self.memory_size, axis=0)
         memory_state_code = mx.symbol.Concat(*[state.h for state in memory.states],
@@ -339,18 +334,13 @@ class MemoryHandler(object):
         # 1. Calculate the matching score of all the memory units to the new glimpse.
         #    Also, get the feature maps based on the scoremaps.
         feature_map_l = []
-        for i in range(self.memory_size):
-            postfix = "_m%d_t%d" % (i, timestamp)
-            #TODO Reduce the number of slicechannel and concat operators!
-            numerator = mx.symbol.SliceChannel(numerators[i], num_outputs=self.scale_num, axis=1)
-            numerator = mx.symbol.Concat(*[numerator[i] for i in range(self.scale_num)],
-                                         num_args=self.scale_num, dim=0)
-            denominator = mx.symbol.SliceChannel(denominators[i], num_outputs=self.scale_num, axis=1)
-            denominator = mx.symbol.Concat(*[denominator[i] for i in range(self.scale_num)],
-                                         num_args=self.scale_num, dim=0)
+        for m in range(self.memory_size):
+            postfix = "_m%d_t%d" % (m, timestamp)
+            numerator = self.reshape_to_cf(numerators[m])
+            denominator = self.reshape_to_cf(denominators[m])
             scoremap = self.cf_handler.get_multiscale_scoremap(
-                ScaleCFTemplate(numemartor=numerator, denominator=denominator),
-                glimpse, postfix=postfix)
+                ScaleCFTemplate(numerator=numerator, denominator=denominator,
+                                scale_num=glimpse.scale_num), glimpse, postfix=postfix)
             feature_map = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             feature_map_l.append(feature_map)
         feature_maps = mx.symbol.Concat(*feature_map_l, num_args=len(feature_map_l), dim=0)
@@ -387,9 +377,30 @@ class MemoryHandler(object):
 
         # 3. Choose the memory indices based on the computed score and the memory status
         choice_policy_op = LogSoftmaxMaskPolicy(deterministic=deterministic)
-        chosen_ind = choice_policy_op(data=score, mask=memory.status.counter,
+        chosen_ind = choice_policy_op(data=score,
+                                      mask=mx.symbol.Reshape(memory.status.counter, target_shape=(1, 0)),
                                       name=prefix + ':chosen_ind' + postfix)
         return chosen_ind
+
+    def reshape_to_cf(self, memory_ele_sym, name=None):
+        if name is None:
+            return mx.symbol.Reshape(memory_ele_sym, target_shape=(self.scale_num, 0,
+                                                    self.cf_handler.out_rows,
+                                                    self.cf_handler.out_cols))
+        else:
+            return mx.symbol.Reshape(memory_ele_sym, name=name, target_shape=(self.scale_num, 0,
+                                                            self.cf_handler.out_rows,
+                                                            self.cf_handler.out_cols))
+
+    def reshape_to_memory_ele(self, cf_sym, name=None):
+        if name is None:
+            return mx.symbol.Reshape(cf_sym, target_shape=(1, 0,
+                                                    self.cf_handler.out_rows,
+                                                    self.cf_handler.out_cols))
+        else:
+            return mx.symbol.Reshape(cf_sym, name=name, target_shape=(1, 0,
+                                                    self.cf_handler.out_rows,
+                                                    self.cf_handler.out_cols))
 
     def read(self, memory, glimpse, chosen_ind=None, deterministic=False, timestamp=0):
         prefix = self.name + ':read'
@@ -418,6 +429,10 @@ class MemoryHandler(object):
         # 4. Choose the memory element
         chosen_numerator = mx.symbol.MemoryChoose(data=memory.numerators, index=chosen_ind)
         chosen_denominator = mx.symbol.MemoryChoose(data=memory.denominators, index=chosen_ind)
+        chosen_numerator = self.reshape_to_cf(chosen_numerator,
+                                              name=prefix + ":chosen_numerator" + postfix)
+        chosen_denominator = self.reshape_to_cf(chosen_denominator,
+                                                name=prefix + ":chosen_denominator" + postfix)
         chosen_multiscale_template = ScaleCFTemplate(numerator=chosen_numerator,
                                                      denominator=chosen_denominator,
                                                      scale_num=glimpse.scale_num)
