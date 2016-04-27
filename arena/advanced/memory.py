@@ -104,6 +104,7 @@ class MemoryStatUpdateOp(mx.operator.NumpyOp):
         counter_shape = in_shape[0]
         visiting_timestamp_shape = in_shape[1]
         control_flag_shape = in_shape[2]
+        print 'counter_shape', counter_shape
         assert len(in_shape[0]) == 1
         assert in_shape[0] == in_shape[1], "Memory Size of the counter and the visiting timestamp" \
                                            "must be the same."
@@ -283,15 +284,17 @@ class MemoryHandler(object):
         postfix = '_t%d' % timestamp
         new_memory_states = memory.states
         # 1. Choose the control flag
-        rl_sym_out = OrderedDict()
+        sym_out = OrderedDict()
+        init_shapes = OrderedDict()
 
         if control_flag is None:
             assert tracking_state is not None, "Tracking state must be set for automatic control!"
             control_flag, new_memory_states = \
                 self.get_write_control_flag(memory=memory, tracking_state=tracking_state,
                                             deterministic=deterministic, timestamp=timestamp)
-            rl_sym_out[self.name + ':control_flag' + postfix] = control_flag[0]
-            rl_sym_out[self.name + ':control_flag_prob' + postfix] = control_flag[1]
+            sym_out[self.name + ':control_flag' + postfix + '_action'] = control_flag[0]
+            sym_out[self.name + ':control_flag' + postfix + '_prob'] = control_flag[1]
+            init_shapes[self.name + ':control_flag' + postfix + '_score'] = (1,)
             control_flag = mx.symbol.Reshape(control_flag[0], target_shape=(0,))
         # 2. Update the memory status
         # TODO Change the updating logic (Train the update factor using Reinforcement Unit like Beta-Policy)
@@ -323,7 +326,7 @@ class MemoryHandler(object):
                             states=new_memory_states,
                             status=new_status)
 
-        return new_memory, rl_sym_out
+        return new_memory, sym_out, init_shapes
 
     def get_read_control_flag(self, memory, glimpse, deterministic, timestamp=0):
         prefix = self.name + ':read'
@@ -405,13 +408,15 @@ class MemoryHandler(object):
     def read(self, memory, glimpse, chosen_ind=None, deterministic=False, timestamp=0):
         prefix = self.name + ':read'
         postfix = "_t%d" % timestamp
-        rl_sym_out = OrderedDict()
+        sym_out = OrderedDict()
+        init_shapes = OrderedDict()
         if chosen_ind is None:
             chosen_ind = self.get_read_control_flag(memory=memory, glimpse=glimpse,
                                                     timestamp=timestamp,
                                                     deterministic=deterministic)
-            rl_sym_out[prefix + ':chosen_ind' + postfix] = chosen_ind[0]
-            rl_sym_out[prefix + ':chosen_ind_prob' + postfix] = chosen_ind[1]
+            sym_out[prefix + ':chosen_ind' + postfix + '_action'] = chosen_ind[0]
+            sym_out[prefix + ':chosen_ind' + postfix + '_prob'] = chosen_ind[1]
+            init_shapes[prefix + ':chosen_ind' + postfix + '_score'] = (1,)
             chosen_ind = chosen_ind[0]
 
         # 3. Update the memory status
@@ -436,4 +441,4 @@ class MemoryHandler(object):
         chosen_multiscale_template = ScaleCFTemplate(numerator=chosen_numerator,
                                                      denominator=chosen_denominator,
                                                      scale_num=glimpse.scale_num)
-        return new_memory, chosen_multiscale_template, rl_sym_out
+        return new_memory, chosen_multiscale_template, sym_out, init_shapes
