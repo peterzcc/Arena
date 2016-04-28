@@ -51,7 +51,7 @@ namespace mxnet {
         const std::vector<TBlob> &aux_args) {
         using namespace mshadow;
         using namespace mshadow::expr;
-        CHECK_EQ(req[complex_hadamard::kOut], kWriteTo);
+        CHECK(req[complex_hadamard::kOut] == kWriteTo || req[complex_hadamard::kOut] == kWriteInplace);
         CHECK_EQ(in_data.size(), 2);
         CHECK_EQ(out_data.size(), 1);
         Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -121,12 +121,18 @@ namespace mxnet {
         return "ComplexHadamard";
       }
 
+      std::vector<std::pair<int, void*> > ForwardInplaceOption(
+        const std::vector<int> &in_data,
+        const std::vector<void*> &out_data) const override {
+        return {{in_data[0], out_data[0]}};
+      }
+
       // decalre dependency and inplace optimization options
       std::vector<int> DeclareBackwardDependency(
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ out_grad[complex_hadamard::kOut], out_data[complex_hadamard::kOut] };
+        return{ out_data[complex_hadamard::kOut] };
       }
 
       Operator* CreateOperator(Context ctx) const override;
