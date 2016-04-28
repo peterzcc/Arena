@@ -14,7 +14,7 @@ namespace mshadow {
     /*!
     * \brief Bilinear resampling gradient expression. Take the output gradient and the ROIs as input, generate the sparse gradient w.r.t the input
     * \tparam SrcExp type of out_grad and in_data tensor expression, shape: (N_ROI, C, H_resampled, W_resampled) and (N_batch, C, H, W)
-    * \tparam ROIExp type of ROI matrix expression, shape: (N, 5) or (N, 4). If each roi has 5 elements, these elements are (batch_ind, cx, cy, sx, sy). Otherwise, the elements are (cx, cy, sx, sy).
+    * \tparam ROIExp type of ROI matrix expression, shape: (N, 5) or (N, 4). If each roi has 5 elements, these elements are (batch_ind, cx, cy, sx, sy). Otherwise, the elements are (cx, cy, sx, sy). All cx, cy, sx, sy have been normalized to be between 0.0f and 1.0f
     * \tparam DType the content data type
     */
     template<typename SrcExp, typename ROIExp, typename DType>
@@ -156,17 +156,17 @@ namespace mshadow {
           DType roi_cx, roi_cy, roi_sx, roi_sy;
           if (sroi_ == 5){
             roi_b = static_cast<index_t>(roi_.Eval(roi_ind, 0));
-            roi_cx = (roi_.Eval(b, 1) + 1.0f) / 2.0f * dst_width_f;
-            roi_cy = (roi_.Eval(b, 2) + 1.0f) / 2.0f * dst_height_f;
-            roi_sx = max((roi_.Eval(b, 3) + 1.0f) / 2.0f * dst_width_f * scale_, 1.0f);
-            roi_sy = max((roi_.Eval(b, 4) + 1.0f) / 2.0f * dst_height_f * scale_, 1.0f);
+            roi_cx = roi_.Eval(b, 1) * dst_width_f;
+            roi_cy = roi_.Eval(b, 2) * dst_height_f;
+            roi_sx = max(roi_.Eval(b, 3) * dst_width_f * scale_, 1.0f);
+            roi_sy = max(roi_.Eval(b, 4) * dst_height_f * scale_, 1.0f);
           }
           else {
             roi_b = b;
-            roi_cx = (roi_.Eval(b, 0) + 1.0f) / 2.0f * dst_width_f;
-            roi_cy = (roi_.Eval(b, 1) + 1.0f) / 2.0f * dst_height_f;
-            roi_sx = max((roi_.Eval(b, 2) + 1.0f) / 2.0f * dst_width_f * scale_, 1.0f);
-            roi_sy = max((roi_.Eval(b, 3) + 1.0f) / 2.0f * dst_height_f * scale_, 1.0f);
+            roi_cx = roi_.Eval(b, 0) * dst_width_f;
+            roi_cy = roi_.Eval(b, 1) * dst_height_f;
+            roi_sx = max(roi_.Eval(b, 2) * dst_width_f * scale_, 1.0f);
+            roi_sy = max(roi_.Eval(b, 3) * dst_height_f * scale_, 1.0f);
           }
           
           if (roi_b != b) {
