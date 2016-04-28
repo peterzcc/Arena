@@ -11,7 +11,7 @@ ImagePatch stores the basic information of the patch the basic attentional eleme
 
 ImagePatch = namedtuple("ImagePatch", ["center", "size", "data"])
 
-Glimpse = namedtuple("Glimpse", ["center", "size", "scale_num", "scale_mult", "data"])
+Glimpse = namedtuple("Glimpse", ["center", "size", "scale_num", "scale_mult", "init_scale", "data"])
 
 
 def get_multiscale_size(glimpse):
@@ -23,10 +23,11 @@ def get_multiscale_size(glimpse):
     return mx.symbol.Concat(*size_l, num_args=len(size_l), dim=0)
 
 class GlimpseHandler(object):
-    def __init__(self, scale_mult, scale_num, output_shape):
+    def __init__(self, scale_mult, scale_num, output_shape, init_scale=1.0):
         super(GlimpseHandler, self).__init__()
         self.scale_mult = scale_mult
         self.scale_num = scale_num
+        self.init_scale = init_scale
         self.output_shape = output_shape
 
     @property
@@ -39,7 +40,7 @@ class GlimpseHandler(object):
     '''
     def pyramid_glimpse(self, img, center, size, timestamp=0, attention_step=0):
         data_l = []
-        curr_scale = 1.0
+        curr_scale = self.init_scale
         roi = mx.symbol.Concat(*[center, size], num_args=2, dim=1)
         for i in range(self.scale_num):
             patch_data = mx.symbol.SpatialGlimpse(data=img, roi=roi,
@@ -50,7 +51,7 @@ class GlimpseHandler(object):
         data = mx.symbol.Concat(*data_l, num_args=len(data_l), dim=0)
         data = mx.symbol.BlockGrad(data, name=self.name + ":glimpse_t%d_step%d" % (timestamp, attention_step))
         return Glimpse(center=center, size=size, scale_num=self.scale_num, scale_mult=self.scale_mult,
-                       data=data)
+                       init_scale=self.init_scale, data=data)
 
 
 '''
@@ -76,7 +77,7 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         super(BoundingBoxRegressionOp, self).__init__(need_top_grad=False)
 
     def list_arguments(self):
-        return ['anchor', 'transformation', 'truth']
+        return ['transformation', 'anchor', 'truth']
 
     def list_outputs(self):
         return ['loss']
@@ -93,6 +94,8 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         transformation = in_data[0]
         anchor = in_data[1]
         output = out_data[0]
+        print 'transformation', transformation
+        print 'anchor', anchor
         output[:, 0] = anchor[:, 0] + transformation[:, 0] * anchor[:, 2]
         output[:, 1] = anchor[:, 1] + transformation[:, 1] * anchor[:, 3]
         output[:, 2] = numpy.exp(transformation[:, 2]) * anchor[:, 2]
@@ -127,14 +130,15 @@ def roi_transform_inv(anchor_center, anchor_size, transformed_roi):
 
 class AttentionHandler(object):
     def __init__(self, glimpse_handler=None, cf_handler=None, scoremap_processor=None,
-                 total_steps=None, lstm_layer_props=None):
+                 total_steps=None, lstm_layer_props=None, fixed_variance=True):
         super(AttentionHandler, self).__init__()
         self.glimpse_handler = glimpse_handler
         self.cf_handler = cf_handler
         self.scoremap_processor = scoremap_processor
+        self.fixed_variance = fixed_variance
         self.lstm_layer_props = lstm_layer_props
         self.roi_encoding_params = self._init_roi_encoding_params()
-        self.lstm_params, self.init_lstm_states, self.init_lstm_shapes = self._init_lstm_params()
+        self.lstm_params, self.init_lstm_states = self._init_lstm_params()
         self.roi_policy_params = self._init_roi_policy_params()
         self.total_steps = total_steps
 
@@ -147,10 +151,20 @@ class AttentionHandler(object):
                                           bias=mx.symbol.Variable(prefix + ':fc2_bias'))
         return params
 
+    def init_lstm(self, ctx=get_default_ctx()):
+        prefix = self.name
+        init_lstm_data = OrderedDict()
+        init_lstm_shapes = OrderedDict()
+        for i, lstm_layer_prop in enumerate(self.lstm_layer_props):
+            init_lstm_shapes[prefix + ':init_lstm%d_c' % i] = (1, lstm_layer_prop.num_hidden)
+            init_lstm_shapes[prefix + ':init_lstm%d_h' % i] = (1, lstm_layer_prop.num_hidden)
+            init_lstm_data[prefix + ':init_lstm%d_c' % i] = nd.zeros((1, lstm_layer_prop.num_hidden), ctx=ctx)
+            init_lstm_data[prefix + ':init_lstm%d_h' % i] = nd.zeros((1, lstm_layer_prop.num_hidden), ctx=ctx)
+        return init_lstm_data, init_lstm_shapes
+
     def _init_lstm_params(self):
         params = OrderedDict()
         init_lstm_states = []
-        init_lstm_shapes = OrderedDict()
         prefix = self.name
         for i, lstm_layer_prop in enumerate(self.lstm_layer_props):
             params[prefix + ':lstm%d' % i] = \
@@ -160,9 +174,7 @@ class AttentionHandler(object):
                         h2h_bias=mx.symbol.Variable(prefix + ':lstm%d_h2h_bias' % i))
             init_lstm_states.append(LSTMState(c=mx.symbol.Variable(prefix + ':init_lstm%d_c' % i),
                                               h=mx.symbol.Variable(prefix + ':init_lstm%d_h' % i)))
-            init_lstm_shapes[prefix + ':init_lstm%d_c' % i] = (1, lstm_layer_prop.num_hidden)
-            init_lstm_shapes[prefix + ':init_lstm%d_h' % i] = (1, lstm_layer_prop.num_hidden)
-        return params, init_lstm_states, init_lstm_shapes
+        return params, init_lstm_states
 
     def _init_roi_policy_params(self):
         params = OrderedDict()
@@ -171,46 +183,49 @@ class AttentionHandler(object):
         params[prefix + ':search_roi_mean'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':search_roi_mean_weight'),
                     bias=mx.symbol.Variable(prefix + ':search_roi_mean_bias'))
-        params[prefix + ':search_roi_var'] = \
-            FCParam(weight=mx.symbol.Variable(prefix + ':search_roi_var_weight'),
-                    bias=mx.symbol.Variable(prefix + ':search_roi_var_bias'))
+        if not self.fixed_variance:
+            params[prefix + ':search_roi_var'] = \
+                FCParam(weight=mx.symbol.Variable(prefix + ':search_roi_var_weight'),
+                        bias=mx.symbol.Variable(prefix + ':search_roi_var_bias'))
 
         #The initial search roi (transformed) of the next step
         params[prefix + ':init_roi_mean'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':init_roi_mean_weight'),
                     bias=mx.symbol.Variable(prefix + ':init_roi_mean_bias'))
-        params[prefix + ':init_roi_var'] = \
-            FCParam(weight=mx.symbol.Variable(prefix + ':init_roi_var_weight'),
-                    bias=mx.symbol.Variable(prefix + ':init_roi_var_bias'))
+        if not self.fixed_variance:
+            params[prefix + ':init_roi_var'] = \
+                FCParam(weight=mx.symbol.Variable(prefix + ':init_roi_var_weight'),
+                        bias=mx.symbol.Variable(prefix + ':init_roi_var_bias'))
 
         #The predicted roi (transformed) of the current timestamp
         params[prefix + ':pred_roi_mean'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi_mean_weight'),
                     bias=mx.symbol.Variable(prefix + ':pred_roi_mean_bias'))
-        params[prefix + ':pred_roi_var'] = \
-            FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi_var_weight'),
-                    bias=mx.symbol.Variable(prefix + ':pred_roi_var_bias'))
+        if not self.fixed_variance:
+            params[prefix + ':pred_roi_var'] = \
+                FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi_var_weight'),
+                        bias=mx.symbol.Variable(prefix + ':pred_roi_var_bias'))
         return params
 
     @property
     def name(self):
         return "AttentionHanlder"
 
-    def roi_encoding(self, glimpse):
+    def roi_encoding(self, center, size):
         prefix = self.name + ':roi_encoding'
-        roi = mx.symbol.Concat(glimpse.center, glimpse.size, num_args=2, dim=1)
-        fc1 = mx.symbol.FullyConnected(data=roi, num_hidden=128,
+        roi = mx.symbol.Concat(center, size, num_args=2, dim=1)
+        fc1 = mx.symbol.FullyConnected(data=roi, num_hidden=64,
                                        weight=self.roi_encoding_params[prefix + ':fc1'].weight,
                                        bias=self.roi_encoding_params[prefix + ':fc1'].bias,
                                        name=prefix + ':fc1')
         act1 = mx.symbol.Activation(data=fc1, act_type='relu')
-        fc2 = mx.symbol.FullyConnected(data=act1, num_hidden=128,
+        fc2 = mx.symbol.FullyConnected(data=act1, num_hidden=64,
                                        weight=self.roi_encoding_params[prefix + ':fc2'].weight,
                                        bias=self.roi_encoding_params[prefix + ':fc2'].bias,
                                        name=prefix + ':fc2')
         return fc2
 
-    def roi_policy(self, indata, deterministic=False, roi_type="init_roi", postfix=''):
+    def roi_policy(self, indata, deterministic=False, roi_var=None, roi_type="init_roi", postfix=''):
         assert roi_type == 'init_roi' or roi_type == 'search_roi' or roi_type == 'pred_roi'
         roi_mean = \
             mx.symbol.FullyConnected(data=indata, num_hidden=4,
@@ -219,21 +234,23 @@ class AttentionHandler(object):
                                          self.name + ':' + roi_type + '_mean'].weight,
                                      bias=self.roi_policy_params[
                                          self.name + ':' + roi_type + '_mean'].bias)
-        roi_var = \
-            mx.symbol.FullyConnected(data=indata, num_hidden=4,
-                                     name=self.name + ':' + roi_type + '_var' + postfix,
-                                     weight=self.roi_policy_params[
-                                         self.name + ':' + roi_type + '_var'].weight,
-                                     bias=self.roi_policy_params[
-                                         self.name + ':' + roi_type + '_var'].bias)
-        roi_var = mx.symbol.Activation(data=roi_var, act_type="softrelu")
+        if not self.fixed_variance:
+            assert roi_var is None
+            roi_var = \
+                mx.symbol.FullyConnected(data=indata, num_hidden=4,
+                                         name=self.name + ':' + roi_type + '_var' + postfix,
+                                         weight=self.roi_policy_params[
+                                             self.name + ':' + roi_type + '_var'].weight,
+                                         bias=self.roi_policy_params[
+                                             self.name + ':' + roi_type + '_var'].bias)
+            roi_var = mx.symbol.Activation(data=roi_var, act_type="softrelu")
         policy_op = LogNormalPolicy(deterministic=deterministic)
         roi = policy_op(mean=roi_mean, var=roi_var,
                         name=self.name + ':' + roi_type + postfix)
         return roi, roi_mean, roi_var
 
     def attend(self, img, init_center, init_size, multiscale_template, memory, ground_truth_roi=None,
-               deterministic=False, timestamp=0):
+               deterministic=False, timestamp=0, roi_var=None):
         memory_code = mx.symbol.Concat(*[state.h for state in memory.states],
                                        num_args=len(memory.states), dim=1)
         tracking_states = self.init_lstm_states
@@ -255,7 +272,7 @@ class AttentionHandler(object):
                                                         glimpse=glimpse, postfix=postfix)
             processed_scoremap = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             flatten_map = mx.symbol.Flatten(data=processed_scoremap)
-            roi_code = self.roi_encoding(glimpse)
+            roi_code = self.roi_encoding(glimpse.center, glimpse.size)
             aggregate_input = mx.symbol.Concat(flatten_map, roi_code, memory_code, num_args=3,
                                                dim=1)
             new_states = step_stack_lstm(indata=aggregate_input, prev_states=tracking_states,
@@ -267,7 +284,7 @@ class AttentionHandler(object):
             if i < self.total_steps - 1:
                 search_roi, search_roi_mean, search_roi_var = \
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
-                                    roi_type="search_roi", postfix=postfix)
+                                    roi_type="search_roi", roi_var=roi_var, postfix=postfix)
                 sym_out[self.name + ':search_roi' + postfix] = search_roi
                 init_shapes[self.name + ':search_roi' + postfix + '_score'] = (1,)
 
@@ -276,7 +293,7 @@ class AttentionHandler(object):
             else:
                 next_step_init_roi, next_step_init_roi_mean, next_step_init_roi_var = \
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
-                                    roi_type="init_roi", postfix=postfix)
+                                    roi_type="init_roi", roi_var=roi_var, postfix=postfix)
                 sym_out[self.name + ':init_roi' + postfix] = next_step_init_roi
                 init_shapes[self.name + ':init_roi' + postfix + '_score'] = (1,)
 
@@ -285,7 +302,7 @@ class AttentionHandler(object):
 
                 pred_roi, pred_roi_mean, pred_roi_var = \
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
-                                    roi_type="pred_roi", postfix=postfix)
+                                    roi_type="pred_roi", roi_var=roi_var, postfix=postfix)
                 pred_center, pred_size = \
                     roi_transform_inv(glimpse.center, glimpse.size, pred_roi)
                 sym_out[self.name + ':pred_roi' + postfix] = pred_roi
