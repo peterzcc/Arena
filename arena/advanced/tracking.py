@@ -18,7 +18,8 @@ MemoryStat --> The statistical variables of the memory
 counter: Counter of the memory
 visiting_timestamp: The recorded visiting timestamp of the memory elements
 '''
-ScaleCFTemplate = namedtuple("ScaleCFTemplate", ["numerator", "denominator", "scale_num"])
+
+ScaleCFTemplate = namedtuple("ScaleCFTemplate", ["numerator", "denominator"])
 
 
 class MeshGridNpyOp(mx.operator.NumpyOp):
@@ -104,8 +105,8 @@ class CorrelationFilterHandler(object):
         self.out_cols = (self.cols /2 + 1) * 2
         self.gaussian_sigma_factor = gaussian_sigma_factor
         self.regularizer = regularizer
-        self.scale_num = glimpse_handler.scale_num
         self.perception_handler = perception_handler
+        self.glimpse_handler = glimpse_handler
         hannmap_op = HannWindowGeneratorOp(rows=self.rows, cols=self.cols)
         self.hannmap = hannmap_op()
         self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=0, size=self.scale_num)
@@ -128,21 +129,21 @@ class CorrelationFilterHandler(object):
         return "CorrelationFilter"
 
     @property
+    def scale_num(self):
+        return self.glimpse_handler.scale_num
+
+    @property
     def channel_size(self):
         return self.perception_handler.channel_size
 
-    def get_multiscale_template(self, glimpse, postfix=''):
+    def get_multiscale_template(self, img, center, size, postfix=''):
+        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
+                                                       postfix=postfix)
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
         multiscale_feature_fft = mx.symbol.FFT2D(multiscale_feature)
-        #TODO We can accelerate this part by merging them into a single batch
 
-        attention_size = get_multiscale_size(glimpse)
-        object_size_l = []
-        for i in range(glimpse.scale_num):
-            object_size_l.append(glimpse.size)
-        object_size = mx.symbol.Concat(*object_size_l, num_args=len(object_size_l), dim=0)
         numerator = mx.symbol.ComplexHadamard(self.gaussian_map_fft,
                                               mx.symbol.Conjugate(multiscale_feature_fft))
         denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(multiscale_feature_fft),
@@ -152,12 +153,12 @@ class CorrelationFilterHandler(object):
         denominator = mx.symbol.SumChannel(denominator) + self.regularizer
         numerator = mx.symbol.BlockGrad(numerator, name=(self.name + ':numerator' + postfix))
         denominator = mx.symbol.BlockGrad(denominator, name=(self.name + ':denominator' + postfix))
-        multiscale_template = ScaleCFTemplate(numerator=numerator, denominator=denominator,
-                                              scale_num=glimpse.scale_num)
+        multiscale_template = ScaleCFTemplate(numerator=numerator, denominator=denominator)
         return multiscale_template
 
-    def get_multiscale_scoremap(self, multiscale_template, glimpse, postfix=''):
-        assert multiscale_template.scale_num == glimpse.scale_num
+    def get_multiscale_scoremap(self, multiscale_template, img, center, size, postfix=''):
+        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
+                                                       postfix=postfix)
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
@@ -260,4 +261,5 @@ class ScoreMapProcessor(object):
                                       num_filter=self.num_filter,
                                       name=self.name + ':conv2' + postfix)
         act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name + ':act2' + postfix)
+        act2 = mx.symbol.BlockGrad(act2)
         return act2

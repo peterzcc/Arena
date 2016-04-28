@@ -272,7 +272,7 @@ class MemoryHandler(object):
                                        bias=self.write_params[prefix + ':fc2'].bias,
                                        name=prefix + ':fc2' + postfix)
         control_flag_policy_op = LogSoftmaxPolicy(deterministic=deterministic)
-        control_flag = control_flag_policy_op(data=fc2)
+        control_flag = control_flag_policy_op(data=fc2, name=self.name + ':control_flag' + postfix)
         # TODO Enable actor-critic (Like the Async RL paper)
         return control_flag, new_memory_states
 
@@ -328,7 +328,7 @@ class MemoryHandler(object):
 
         return new_memory, sym_out, init_shapes
 
-    def get_read_control_flag(self, memory, glimpse, deterministic, timestamp=0):
+    def get_read_control_flag(self, memory, img, center, size, deterministic, timestamp=0):
         prefix = self.name + ':read'
         numerators = mx.symbol.SliceChannel(memory.numerators, num_outputs=self.memory_size, axis=0)
         denominators = mx.symbol.SliceChannel(memory.denominators, num_outputs=self.memory_size, axis=0)
@@ -342,12 +342,15 @@ class MemoryHandler(object):
             numerator = self.reshape_to_cf(numerators[m])
             denominator = self.reshape_to_cf(denominators[m])
             scoremap = self.cf_handler.get_multiscale_scoremap(
-                ScaleCFTemplate(numerator=numerator, denominator=denominator,
-                                scale_num=glimpse.scale_num), glimpse, postfix=postfix)
+                multiscale_template=ScaleCFTemplate(numerator=numerator, denominator=denominator),
+                img=img,
+                center=center,
+                size=size,
+                postfix=postfix)
             feature_map = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             feature_map_l.append(feature_map)
-        feature_maps = mx.symbol.Concat(*feature_map_l, num_args=len(feature_map_l), dim=0)
-
+        feature_maps = mx.symbol.Concat(*feature_map_l, num_args=self.memory_size, dim=0)
+        feature_maps = mx.symbol.BlockGrad(feature_maps)
         # 2. Compute the scores: Shape --> (1, memory_size)
         postfix = "_t%d" % timestamp
         global_pooled_feature = mx.symbol.Pooling(data=feature_maps,
@@ -405,13 +408,16 @@ class MemoryHandler(object):
                                                     self.cf_handler.out_rows,
                                                     self.cf_handler.out_cols))
 
-    def read(self, memory, glimpse, chosen_ind=None, deterministic=False, timestamp=0):
+    def read(self, memory, img, center, size, chosen_ind=None, deterministic=False, timestamp=0):
         prefix = self.name + ':read'
         postfix = "_t%d" % timestamp
         sym_out = OrderedDict()
         init_shapes = OrderedDict()
         if chosen_ind is None:
-            chosen_ind = self.get_read_control_flag(memory=memory, glimpse=glimpse,
+            chosen_ind = self.get_read_control_flag(memory=memory,
+                                                    img=img,
+                                                    center=center,
+                                                    size=size,
                                                     timestamp=timestamp,
                                                     deterministic=deterministic)
             sym_out[prefix + ':chosen_ind' + postfix + '_action'] = chosen_ind[0]
@@ -439,6 +445,5 @@ class MemoryHandler(object):
         chosen_denominator = self.reshape_to_cf(chosen_denominator,
                                                 name=prefix + ":chosen_denominator" + postfix)
         chosen_multiscale_template = ScaleCFTemplate(numerator=chosen_numerator,
-                                                     denominator=chosen_denominator,
-                                                     scale_num=glimpse.scale_num)
+                                                     denominator=chosen_denominator)
         return new_memory, chosen_multiscale_template, sym_out, init_shapes

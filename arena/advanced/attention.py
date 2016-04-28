@@ -11,7 +11,7 @@ ImagePatch stores the basic information of the patch the basic attentional eleme
 
 ImagePatch = namedtuple("ImagePatch", ["center", "size", "data"])
 
-Glimpse = namedtuple("Glimpse", ["center", "size", "scale_num", "scale_mult", "init_scale", "data"])
+Glimpse = namedtuple("Glimpse", ["center", "size", "data"])
 
 
 def get_multiscale_size(glimpse):
@@ -38,7 +38,7 @@ class GlimpseHandler(object):
     pyramid_glimpse: Generate a spatial pyramid of glimpse sectors, pad zero if necessary.
                      Here, center = (cx, cy) and size = (sx, sy)
     '''
-    def pyramid_glimpse(self, img, center, size, timestamp=0, attention_step=0):
+    def pyramid_glimpse(self, img, center, size, postfix=''):
         data_l = []
         curr_scale = self.init_scale
         roi = mx.symbol.Concat(*[center, size], num_args=2, dim=1)
@@ -49,9 +49,8 @@ class GlimpseHandler(object):
             data_l.append(patch_data)
             curr_scale *= self.scale_mult
         data = mx.symbol.Concat(*data_l, num_args=len(data_l), dim=0)
-        data = mx.symbol.BlockGrad(data, name=self.name + ":glimpse_t%d_step%d" % (timestamp, attention_step))
-        return Glimpse(center=center, size=size, scale_num=self.scale_num, scale_mult=self.scale_mult,
-                       init_scale=self.init_scale, data=data)
+        data = mx.symbol.BlockGrad(data, name=self.name + ":glimpse%s" % postfix)
+        return Glimpse(center=center, size=size, data=data)
 
 
 '''
@@ -249,7 +248,8 @@ class AttentionHandler(object):
                         name=self.name + ':' + roi_type + postfix)
         return roi, roi_mean, roi_var
 
-    def attend(self, img, init_center, init_size, multiscale_template, memory, ground_truth_roi=None,
+    def attend(self, img, init_center, init_size, multiscale_template,
+               memory, ground_truth_roi=None,
                deterministic=False, timestamp=0, roi_var=None):
         memory_code = mx.symbol.Concat(*[state.h for state in memory.states],
                                        num_args=len(memory.states), dim=1)
@@ -265,11 +265,13 @@ class AttentionHandler(object):
         for i in range(self.total_steps):
             postfix = '_t%d_step%d' % (timestamp, i)
             glimpse = self.glimpse_handler.pyramid_glimpse(
-                img=img, center=search_center, size=search_size,
-                timestamp=timestamp, attention_step=i)
+                img=img, center=search_center, size=search_size, postfix=postfix)
             scoremap = \
                 self.cf_handler.get_multiscale_scoremap(multiscale_template=multiscale_template,
-                                                        glimpse=glimpse, postfix=postfix)
+                                                        img=img,
+                                                        center=search_center,
+                                                        size=search_size,
+                                                        postfix=postfix)
             processed_scoremap = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             flatten_map = mx.symbol.Flatten(data=processed_scoremap)
             roi_code = self.roi_encoding(glimpse.center, glimpse.size)
@@ -297,7 +299,7 @@ class AttentionHandler(object):
                 sym_out[self.name + ':init_roi' + postfix] = next_step_init_roi
                 init_shapes[self.name + ':init_roi' + postfix + '_score'] = (1,)
 
-                nex_step_init_center, nex_step_init_size = \
+                next_step_init_center, next_step_init_size = \
                     roi_transform_inv(glimpse.center, glimpse.size, next_step_init_roi)
 
                 pred_roi, pred_roi_mean, pred_roi_var = \
