@@ -23,10 +23,10 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 ch.setFormatter(formatter)
 root.addHandler(ch)
 
-sample_length = 2
+sample_length = 3
 scale_num = 3
 memory_size = 4
-attention_steps = 1
+attention_steps = 3
 image_size = (360, 480)
 ctx = mx.gpu()
 memory_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
@@ -71,19 +71,15 @@ init_shapes = OrderedDict()
 sym_out = OrderedDict()
 
 
-
-init_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[0], center=data_centers[0],
-                                               size=data_sizes[0], timestamp=0)
-init_template = cf_handler.get_multiscale_template(glimpse=init_glimpse, postfix='_t0')
+init_template = cf_handler.get_multiscale_template(img=data_images[0], center=data_centers[0],
+                                                   size=data_sizes[0], postfix='_t0')
 init_memory, init_memory_data, init_memory_data_shapes = memory_handler.init_memory(ctx=ctx)
 init_shapes.update(init_memory_data_shapes)
 
 init_attention_lstm_data, init_attention_lstm_shape = attention_handler.init_lstm(ctx=ctx)
 init_shapes.update(init_attention_lstm_shape)
 
-# init_read_chosen_ind = mx.symbol.Variable('init_read_chosen_ind')
-
-
+# 1. Initialize the memory
 memory, write_sym_out, write_init_shapes = memory_handler.write(memory=init_memory,
                                                                 update_multiscale_template=init_template,
                                                                 control_flag=init_write_control_flag,
@@ -92,20 +88,64 @@ memory, write_sym_out, write_init_shapes = memory_handler.write(memory=init_memo
 sym_out.update(write_sym_out)
 init_shapes.update(write_init_shapes)
 
-print 'write_sym_out', write_sym_out
-print 'write_init_shapes', write_init_shapes
 
 init_center = data_centers[0]
 init_size = data_sizes[0]
-tracking_states, next_step_init_center, next_step_init_size, pred_center, pred_size, attend_sym_out, \
+
+# 2. Perform multi-Step attention
+tracking_states, init_center, init_size, pred_center, pred_size, attend_sym_out, \
 attend_init_shapes = attention_handler.attend(
     img=data_images[1], init_center=init_center, init_size=init_size,
     multiscale_template=init_template, memory=memory,
     ground_truth_roi=mx.symbol.Concat(data_centers[1], data_sizes[1], num_args=2, dim=1),
     timestamp=1, roi_var=roi_var)
-
+tracking_state = mx.symbol.Concat(*[state.h for state in tracking_states], num_args=len(tracking_states), dim=1)
 sym_out.update(attend_sym_out)
 init_shapes.update(attend_init_shapes)
+
+# 3. Write new template into the memory
+template = cf_handler.get_multiscale_template(img=data_images[1], center=pred_center,
+                                                     size=pred_size, postfix='_t1_memorize')
+memory, write_sym_out, write_init_shapes = memory_handler.write(memory=memory,
+                                                                tracking_state=tracking_state,
+                                                                update_multiscale_template=template,
+                                                                update_factor=update_factor,
+                                                                timestamp=1)
+sym_out.update(write_sym_out)
+init_shapes.update(write_init_shapes)
+
+# 4. Given a new image, read the template first
+memory, template, read_sym_out, read_init_shapes = memory_handler.read(memory=memory,
+                                                                       img=data_images[2],
+                                                                       center=init_center,
+                                                                       size=init_size, timestamp=2)
+
+sym_out.update(read_sym_out)
+init_shapes.update(read_init_shapes)
+
+# 5. Attend
+tracking_states, init_center, init_size, pred_center, pred_size, attend_sym_out, \
+attend_init_shapes = attention_handler.attend(
+    img=data_images[2], init_center=init_center, init_size=init_size,
+    multiscale_template=template, memory=memory,
+    ground_truth_roi=mx.symbol.Concat(data_centers[2], data_sizes[2], num_args=2, dim=1),
+    timestamp=2, roi_var=roi_var)
+tracking_state = mx.symbol.Concat(*[state.h for state in tracking_states], num_args=len(tracking_states), dim=1)
+sym_out.update(attend_sym_out)
+init_shapes.update(attend_init_shapes)
+
+# 6. Write new template into the memory
+template = cf_handler.get_multiscale_template(img=data_images[2], center=pred_center,
+                                                     size=pred_size, postfix='_t2_memorize')
+memory, write_sym_out, write_init_shapes = memory_handler.write(memory=memory,
+                                                                tracking_state=tracking_state,
+                                                                update_multiscale_template=template,
+                                                                update_factor=update_factor,
+                                                                timestamp=2)
+sym_out.update(write_sym_out)
+init_shapes.update(write_init_shapes)
+
+
 
 data_shapes = OrderedDict([
     ('data_images', (1, sample_length, 3) + image_size),
@@ -116,37 +156,40 @@ data_shapes = OrderedDict([
 data_shapes.update(init_shapes)
 
 
-data_shapes.pop("init_write_control_flag", None)
-data_shapes.pop("update_factor", None)
-data_shapes.pop("MemoryHandler:memory_init:numerators", None)
-data_shapes.pop("MemoryHandler:memory_init:denominators", None)
-data_shapes.pop("MemoryHandler:memory_init:visiting_timestamp", None)
-data_shapes.pop("MemoryHandler:memory_init:counter", None)
-data_shapes.pop('MemoryHandler:memory_init:lstm0_c', None)
+#data_shapes.pop("init_write_control_flag", None)
+#data_shapes.pop("update_factor", None)
+#data_shapes.pop("MemoryHandler:memory_init:numerators", None)
+#data_shapes.pop("MemoryHandler:memory_init:denominators", None)
+#data_shapes.pop("MemoryHandler:memory_init:visiting_timestamp", None)
+#data_shapes.pop("MemoryHandler:memory_init:counter", None)
+#data_shapes.pop('MemoryHandler:memory_init:lstm0_c', None)
 #init_memory_data.pop('MemoryHandler:memory_init:lstm0_c', None)
 #data_shapes.pop('MemoryHandler:memory_init:lstm0_h', None)
-data_shapes.pop('MemoryHandler:memory_init:lstm1_c', None)
+#data_shapes.pop('MemoryHandler:memory_init:lstm1_c', None)
 #init_memory_data.pop('MemoryHandler:memory_init:lstm1_c', None)
 #data_shapes.pop('MemoryHandler:memory_init:lstm1_h', None)
 
 
 print 'data_shapes:', data_shapes
 print memory_to_sym_dict(memory)
-print sym_out
 
 # net = Base(sym=mx.symbol.Group(symbols=block_all(memory_to_sym_dict(memory).values())),
 #            data_shapes=data_shapes)
-net = Base(sym=mx.symbol.Group(sym_out.values() + [pred_center, pred_size]),
+print sym_out.keys()
+net = Base(sym=mx.symbol.Group(sym_out.values() + [pred_center, pred_size,
+                                                   memory.numerators,
+                                                   memory.denominators,
+                                                   memory.status.counter,
+                                                   memory.status.visiting_timestamp]),
            data_shapes=data_shapes)
 
 net.print_stat()
 perception_handler.set_params(net.params)
 
 constant_inputs = OrderedDict()
-#constant_inputs['init_write_control_flag'] = 2
-# constant_inputs['init_read_chosen_ind'] = 2
-#constant_inputs['update_factor'] = 0.2
-#constant_inputs.update(init_memory_data)
+constant_inputs['init_write_control_flag'] = 2
+constant_inputs['update_factor'] = 0.2
+constant_inputs.update(init_memory_data)
 constant_inputs.update(init_attention_lstm_data)
 
 seq_images, seq_rois = tracking_iterator.sample(length=sample_length)
@@ -158,54 +201,20 @@ print 'Run'
 outputs = net.forward(**(OrderedDict(additional_inputs.items() + constant_inputs.items())))
 print outputs
 # outputs = net.forward(**additional_inputs)
-for key, output in zip(sym_out.keys() + ['pred_center', 'pred_size'], outputs):
-    print key, output.shape, output.asnumpy()
-    if 'counter' in key or 'visiting_timestamp' in key or 'chosen_ind' in key:
-        print output.asnumpy()
+for key, output in zip(sym_out.keys() + ['pred_center', 'pred_size', 'memory_numerators',
+                                         'memory_denominators','memory_counter',
+                                         'memory_visiting_timestamp'], outputs):
+    print key, output.shape
     if 'numerators' in key or 'denominators' in key:
         print numpy.abs(output.asnumpy())[0].sum()
         print numpy.abs(output.asnumpy())[1].sum()
         print numpy.abs(output.asnumpy())[2].sum()
         print numpy.abs(output.asnumpy())[3].sum()
+    else:
+        print output.asnumpy()
 
-'''
-net.print_stat()
+print outputs[-4].shape, outputs[-3].shape
 
-output = net.forward(**(OrderedDict(additional_inputs.items())))[0]
-for i in range(output.asnumpy().shape[1]):
-    cv2.imshow("image", output.asnumpy()[2, i] / output.asnumpy()[2, i].max())
-    cv2.waitKey()
-'''
-
-'''
-for i in range(sample_length):
-    glimpse = glimpse_handler.pyramid_glimpse(img=data_images[i], center=data_centers[i],
-                                              size=data_sizes[i], timestamp=i)
-    multiscale_template = cf_handler.get_multiscale_template(glimpse=glimpse, postfix='_t%d' %i)
-    scoremap = cf_handler.get_multiscale_scoremap(multiscale_template=multiscale_template,
-                                                  glimpse=glimpse, postfix="_t%d" %i)
-    multiscale_template_l.append(multiscale_template)
-    scoremap_l.append(scoremap)
-
-net_sym = mx.symbol.Group(symbols=scoremap_l)
-
-data_shapes = {'data_images':(1, sample_length, 3) + image_size,
-               'data_rois': (1, sample_length, 4)}
-
-net = Base(sym=net_sym, data_shapes=data_shapes)
-perception_handler.set_params(net.params)
-
-start = time.time()
-for i in range(100):
-    seq_images, seq_rois = tracking_iterator.sample(length=sample_length)
-    outputs = net.forward(data_shapes={'data_images': seq_images.shape, 'data_rois': seq_rois.shape},
-            data_images=seq_images, data_rois=seq_rois)
-    for output in outputs:
-        print output.asnumpy().shape
-        #visualize_weights(output.asnumpy()[0])
-        # for i in range(output.asnumpy().shape[1]):
-        #     cv2.imshow("image", output.asnumpy()[2, i]/output.asnumpy()[2,i].max())
-        #     cv2.waitKey()
-end = time.time()
-print end-start
-'''
+template = numpy.fft.irfft2(outputs[-4].asnumpy()[1, 96:(96+96), :, :] / outputs[-3].asnumpy()[1, 1:2, :, :],
+                            (64, 64))
+visualize_weights(template)
