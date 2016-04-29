@@ -11,8 +11,8 @@ roi, gt, shape (batch_size, 4), normalized version in [-1,1]
 def calc_CPE(im, roi, gt):
     width = im.shape[2]
     height = im.shape[1]
-    roi = (roi + 1) / 2 * [width, height, width, height]
-    gt = (gt + 1) / 2 * [width, height, width, height]
+    roi = roi * [width, height, width, height]
+    gt = gt * [width, height, width, height]
     center_roi = roi[:, 0:2]
     center_gt = gt[:, 0:2]
     cpe = numpy.sqrt(numpy.sum((center_gt-center_roi) ** 2, axis=1))
