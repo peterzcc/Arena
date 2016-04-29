@@ -77,6 +77,7 @@ namespace mxnet {
         const std::vector<OpReqType> &req,
         const std::vector<TBlob> &in_grad,
         const std::vector<TBlob> &aux_args) {
+        /*
         using namespace mshadow;
         using namespace mshadow::expr;
         CHECK_EQ(out_grad.size(), 1);
@@ -93,6 +94,7 @@ namespace mxnet {
 
         Assign(input_grad, req[spatial_glimpse_enum::kData],
           bilinear_resample_grad(grad, data, roi, param_.scale));
+        */
       }
 
     private:
@@ -151,7 +153,8 @@ namespace mxnet {
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ out_grad[spatial_glimpse_enum::kOut], in_data[spatial_glimpse_enum::kData], in_data[spatial_glimpse_enum::kROI] };
+        //return{ out_grad[spatial_glimpse_enum::kOut], in_data[spatial_glimpse_enum::kData], in_data[spatial_glimpse_enum::kROI] };
+        return{ };
       }
 
       Operator* CreateOperator(Context ctx) const override;
