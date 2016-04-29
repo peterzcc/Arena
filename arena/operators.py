@@ -177,7 +177,6 @@ class LogSoftmaxPolicy(mx.operator.NumpyOp):
         else:
             for ind in range(y_action.shape[0]):
                 y_action[ind] = numpy.searchsorted(numpy.cumsum(y_prob[ind]), self.rng.rand())
-        in_data[2][:] = y_action
 
     def backward(self, out_grad, in_data, out_data, in_grad):
         score = in_data[1]
