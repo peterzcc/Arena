@@ -49,6 +49,8 @@ def save_misc(dir_path="", epoch=None, name="", **argdict):
         json.dump(argdict, fp)
     return misc_saving_path
 
+def block_all(sym_list):
+    return [mx.symbol.BlockGrad(sym) for sym in sym_list]
 
 def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
@@ -103,10 +105,13 @@ class ExecutorDataShapePool(object):
         self.inputs_grad_dict = {}
         self.basic_data_shapes = data_shapes.copy()
         self.exe_pool = {}
+        self.base_exe = None
         self.base_exe = self.get()
 
     def get(self, batch_size=None, data_shapes=None, internal_sym_name=None):
         if batch_size is None and data_shapes is None:
+            if self.base_exe is not None:
+                return self.base_exe
             data_shapes_items = tuple(self.basic_data_shapes.items())
         elif data_shapes is not None:
             # The `data_shapes` field will not be used if `batch_size` is specified.

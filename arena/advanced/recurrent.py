@@ -32,3 +32,16 @@ def step_lstm(num_hidden, indata, prev_state, param, dropout=0., layeridx=0, pre
     next_c = (forget_gate * prev_state.c) + (in_gate * in_transform)
     next_h = out_gate * mx.sym.Activation(next_c, act_type="tanh")
     return LSTMState(c=next_c, h=next_h)
+
+
+#TODO Revise the naming strategy
+def step_stack_lstm(indata, prev_states, lstm_props, params, prefix='', postfix=''):
+    assert (len(lstm_props) == len(params)) and (len(prev_states) == len(lstm_props))
+    new_states = []
+    lstm_input = indata
+    for i, lstm_prop in enumerate(lstm_props):
+        new_states.append(step_lstm(num_hidden=lstm_prop.num_hidden, indata=lstm_input,
+                                    param=params[i], prev_state=prev_states[i], layeridx=i,
+                                    prefix=prefix, postfix=postfix))
+        lstm_input = new_states[-1].h
+    return new_states

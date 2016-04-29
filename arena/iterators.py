@@ -82,9 +82,11 @@ class TrackingIterator(object):
             seq_roi_batch[counter] = numpy.asarray(
                 self.roi_lists[video_index][start_index:start_index+length], dtype=numpy.float32)
             counter += 1
-        seq_roi_batch[:, :, 0:2] += seq_roi_batch[:, :, 2:4]/2 - 1
-        seq_roi_batch[:, :, ::2] = 2 * (seq_roi_batch[:, :, ::2]/im_shape[1]) - 1
-        seq_roi_batch[:, :, 1::2] = 2 * (seq_roi_batch[:, :, 1::2]/im_shape[0]) - 1
+
+        seq_roi_batch[:, :, 0:2] += seq_roi_batch[:, :, 2:4] / 2 - 1
+        seq_roi_batch[:, :, ::2] = seq_roi_batch[:, :, ::2] / im_shape[1]
+        seq_roi_batch[:, :, 1::2] = seq_roi_batch[:, :, 1::2] / im_shape[0]
+
         seq_data_batch = nd.array(seq_data_batch, ctx=self.ctx)
         seq_data_batch -= self.img_mean(seq_data_batch.shape)
         seq_roi_batch = nd.array(seq_roi_batch, ctx=self.ctx)

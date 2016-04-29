@@ -1,9 +1,25 @@
 import numpy
 import mxnet as mx
 from arena.helpers.pretrained import vgg_m
+from .common import *
 from collections import namedtuple
+from .attention import get_multiscale_size
 
-CFTemplate = namedtuple("CFTemplate", ["numerator", "denominator"])
+
+'''
+
+ScaleCFTemplate --> The basic memory structure
+numerators: (num_memory, scale_num * channel of single template, row, col)
+denominators: (num_memory, scale_num * channel of single template, row, col)
+state: list of LSTMState (Multiple layers)
+status: Status like reading times and visiting timestamp of each memory cell
+
+MemoryStat --> The statistical variables of the memory
+counter: Counter of the memory
+visiting_timestamp: The recorded visiting timestamp of the memory elements
+'''
+
+ScaleCFTemplate = namedtuple("ScaleCFTemplate", ["numerator", "denominator"])
 
 
 class MeshGridNpyOp(mx.operator.NumpyOp):
@@ -30,9 +46,9 @@ class MeshGridNpyOp(mx.operator.NumpyOp):
 
 
 class GaussianMapGeneratorOp(mx.operator.NumpyOp):
-    def __init__(self, sigma_factor, rows, cols):
+    def __init__(self, sigma_factors, rows, cols):
         super(GaussianMapGeneratorOp, self).__init__(need_top_grad=False)
-        self.sigma_factor = sigma_factor
+        self.sigma_factors = sigma_factors
         self.rows = rows
         self.cols = cols
         x_ind_mat, y_ind_mat = numpy.meshgrid(
@@ -43,26 +59,20 @@ class GaussianMapGeneratorOp(mx.operator.NumpyOp):
                         numpy.square(y_ind_mat).astype(numpy.float32)
 
     def list_arguments(self):
-        return ['attention_size', 'object_size']
+        return []
 
     def list_outputs(self):
         return ['gaussian_map']
 
     def infer_shape(self, in_shape):
-        attention_size_shape = in_shape[0]
-        object_size_shape = in_shape[1]
-        assert object_size_shape == attention_size_shape
-        gaussian_map_shape = (in_shape[0][0], 1, self.rows, self.cols)
-        return [attention_size_shape, object_size_shape], [gaussian_map_shape]
+        gaussian_map_shape = (len(self.sigma_factors), 1, self.rows, self.cols)
+        return [], [gaussian_map_shape]
 
     def forward(self, in_data, out_data):
-        attention_size = in_data[0]
-        object_size = in_data[1]
         gaussian_map = out_data[0]
-        for i in range(attention_size.shape[0]):
-            ratio = numpy.sqrt(numpy.prod(object_size[i] / attention_size[i]).astype(numpy.float32))
-            gaussian_map[i, 0, :, :] = numpy.exp(-self.distance / 2 /
-                                                 numpy.square(ratio * self.sigma_factor))
+        for i, sigma_factor in enumerate(self.sigma_factors):
+            gaussian_map[i, 0, :, :] = numpy.exp(-self.distance / (2 * numpy.square(sigma_factor)))
+
 
 class HannWindowGeneratorOp(mx.operator.NumpyOp):
     def __init__(self, rows, cols):
@@ -85,94 +95,87 @@ class HannWindowGeneratorOp(mx.operator.NumpyOp):
         hanning_map[:] = self.hann_window
 
 
-def gaussian_map_fft(attention_size, object_size, sigma_factor, rows, cols, prefix="", postfix=""):
-    gaussian_map_op = GaussianMapGeneratorOp(sigma_factor=sigma_factor, rows=rows, cols=cols)
-    ret = gaussian_map_op(attention_size=attention_size, object_size=object_size)
-    ret = mx.symbol.FFT2D(data=ret)
-    ret = mx.symbol.BlockGrad(data=ret, name="%sGaussianMapFFT%s" % (prefix, postfix))
-    return ret
-
-
 class CorrelationFilterHandler(object):
     def __init__(self, rows, cols, gaussian_sigma_factor, regularizer, perception_handler,
-                 batch_size=1):
+                 glimpse_handler):
         super(CorrelationFilterHandler, self).__init__()
         self.rows = numpy.int32(rows)
         self.cols = numpy.int32(cols)
-        self.sigma_factor = gaussian_sigma_factor
+        self.out_rows = self.rows
+        self.out_cols = (self.cols /2 + 1) * 2
+        self.gaussian_sigma_factor = gaussian_sigma_factor
         self.regularizer = regularizer
-        self.batch_size = batch_size
         self.perception_handler = perception_handler
+        self.glimpse_handler = glimpse_handler
         hannmap_op = HannWindowGeneratorOp(rows=self.rows, cols=self.cols)
         self.hannmap = hannmap_op()
-        self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=0, size=self.batch_size)
+        self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=0, size=self.scale_num)
         self.hannmap = mx.symbol.BroadcastChannel(self.hannmap, dim=1, size=self.channel_size)
+
+        # Build the sigma_factor list
+        self.sigma_factors = []
+        sigma_factor = self.gaussian_sigma_factor / glimpse_handler.init_scale
+        for i in range(self.scale_num):
+            self.sigma_factors.append(sigma_factor)
+            sigma_factor /= glimpse_handler.scale_mult
+        gaussian_map_op = GaussianMapGeneratorOp(sigma_factors=self.sigma_factors,
+                                                 rows=rows, cols=cols)
+        self.gaussian_map_fft = mx.symbol.FFT2D(data=gaussian_map_op())
+        self.gaussian_map_fft = mx.symbol.BroadcastChannel(self.gaussian_map_fft,
+                                                           dim=1, size=self.channel_size)
 
     @property
     def name(self):
         return "CorrelationFilter"
 
     @property
+    def scale_num(self):
+        return self.glimpse_handler.scale_num
+
+    @property
     def channel_size(self):
         return self.perception_handler.channel_size
 
-    def get_multiscale_template(self, glimpse, object_size, timestamp=0, attention_step=0):
-        multiscale_template = []
-        features = []
-        for i, image_patch in enumerate(glimpse):
-            postfix = "scale%d_t%d_step%d" % (i, timestamp, attention_step)
-            features.append(self.perception_handler.perceive(image_patch.data, postfix) *
-                            self.hannmap)
-        feature_ffts = mx.symbol.FFT2D(mx.symbol.Concat(*features, dim=0))
-        feature_ffts = mx.symbol.SliceChannel(feature_ffts, num_outputs=len(glimpse), axis=0)
+    def get_multiscale_template(self, img, center, size, postfix=''):
+        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
+                                                       postfix=postfix)
+        multiscale_feature = self.perception_handler.perceive(
+            data_sym=glimpse.data,
+            name=self.name + ":multiscale_feature" + postfix) * self.hannmap
+        multiscale_feature_fft = mx.symbol.FFT2D(multiscale_feature)
 
-        #TODO We can accelerate this part by merging them into a single batch
-        for i, image_patch in enumerate(glimpse):
-            gaussian_map = gaussian_map_fft(attention_size=image_patch.size,
-                                            object_size=object_size,
-                                            sigma_factor=self.sigma_factor,
-                                            rows=self.rows, cols=self.cols,
-                                            postfix=postfix)
-            gaussian_map = mx.symbol.BroadcastChannel(gaussian_map, dim=1, size=self.channel_size)
-            numerator = mx.symbol.ComplexHadamard(gaussian_map,
-                                                  mx.symbol.Conjugate(feature_ffts[i]))
-            denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(feature_ffts[i]),
-                                                    feature_ffts[i]) + \
-                          mx.symbol.ComplexHadamard(feature_ffts[i],
-                                                    mx.symbol.ComplexExchange(feature_ffts[i]))
-            denominator = mx.symbol.SumChannel(denominator) + self.regularizer
-            numerator = mx.symbol.BlockGrad(numerator, name='numerator' + postfix)
-            denominator = mx.symbol.BlockGrad(denominator, name='denominator' + postfix)
-            multiscale_template.append(CFTemplate(numerator, denominator))
+        numerator = mx.symbol.ComplexHadamard(self.gaussian_map_fft,
+                                              mx.symbol.Conjugate(multiscale_feature_fft))
+        denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(multiscale_feature_fft),
+                                                multiscale_feature_fft) + \
+                      mx.symbol.ComplexHadamard(multiscale_feature_fft,
+                                                mx.symbol.ComplexExchange(multiscale_feature_fft))
+        denominator = mx.symbol.SumChannel(denominator) + self.regularizer
+        numerator = mx.symbol.BlockGrad(numerator, name=(self.name + ':numerator' + postfix))
+        denominator = mx.symbol.BlockGrad(denominator, name=(self.name + ':denominator' + postfix))
+        multiscale_template = ScaleCFTemplate(numerator=numerator, denominator=denominator)
         return multiscale_template
 
-    def get_score_maps(self, multiscale_template, glimpse, timestamp=0, attention_step=0):
-        assert len(multiscale_template) == len(glimpse)
-        scores = []
-        features = []
-        for i, image_patch in enumerate(glimpse):
-            postfix = "scale%d_t%d_step%d" % (i, timestamp, attention_step)
-            features.append(self.perception_handler.perceive(image_patch.data, postfix) *
-                            self.hannmap)
-        feature_ffts = mx.symbol.FFT2D(mx.symbol.Concat(*features, dim=0))
+    def get_multiscale_scoremap(self, multiscale_template, img, center, size, postfix=''):
+        center = mx.symbol.BlockGrad(center)
+        size = mx.symbol.BlockGrad(size)
+        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
+                                                       postfix=postfix)
+        multiscale_feature = self.perception_handler.perceive(
+            data_sym=glimpse.data,
+            name=self.name + ":multiscale_feature" + postfix) * self.hannmap
 
-        numerators = []
-        denominators = []
-        for i, template in enumerate(multiscale_template):
-            numerators.append(template.numerator)
-            denominators.append(mx.symbol.BroadcastChannel(data=template.denominator, dim=1,
-                                                           size=self.channel_size))
-        processed_template = mx.symbol.Concat(*numerators, dim=0)/\
-                             mx.symbol.Concat(*denominators, dim=0)
-        scores = mx.symbol.IFFT2D(data=mx.symbol.ComplexHadamard(processed_template, feature_ffts),
-                                  output_shape=(self.rows, self.cols))
-        scores = mx.symbol.SliceChannel(scores, num_outputs=len(glimpse), axis=0)
-        score_maps = []
-        for i in range(len(glimpse)):
-            postfix = "scale%d_t%d_step%d" % (i, timestamp, attention_step)
-            score_map = mx.symbol.BlockGrad(scores[i], name='scoremap' + postfix)
-            score_maps.append(scores[i])
-        return score_maps
+        multiscale_feature_fft = mx.symbol.FFT2D(multiscale_feature)
+        numerator = multiscale_template.numerator
+        denominator = mx.symbol.BroadcastChannel(data=multiscale_template.denominator, dim=1,
+                                                 size=self.channel_size)
+        processed_template = numerator / denominator
+        multiscale_scoremap = mx.symbol.IFFT2D(data=mx.symbol.ComplexHadamard(processed_template,
+                                                                              multiscale_feature_fft),
+                                               output_shape=(self.rows, self.cols))
+        multiscale_scoremap = mx.symbol.BlockGrad(multiscale_scoremap,
+                                                  name=self.name + ':multiscale_scoremap' + postfix)
+        return multiscale_scoremap
 
 class PerceptionHandler(object):
     def __init__(self, net_type='VGG-M', blocked=True):
@@ -200,37 +203,40 @@ class PerceptionHandler(object):
         if 'VGG-M' == self.net_type:
             return 96
 
-    def perceive(self, data_sym, postfix=''):
+    def perceive(self, data_sym, name=''):
         if 'VGG-M' == self.net_type:
             if not self.blocked:
                 conv1 = mx.symbol.Convolution(data=data_sym,
                                               weight=self.params_sym['arg:conv1_weight'],
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
-                                              stride=(2, 2), num_filter=96,
-                                              name="%s-Perceive%s" %(self.net_type, postfix))
+                                              stride=(2, 2), num_filter=96)
             else:
+                data_sym = mx.symbol.BlockGrad(data_sym)
                 conv1 = mx.symbol.Convolution(data=data_sym, weight=self.params_sym['arg:conv1_weight'],
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
-                                              stride=(2, 2), num_filter=96,
-                                              name="%s-Perceive%s" % (self.net_type, postfix))
-                conv1 = mx.symbol.BlockGrad(data=conv1, name="perception%s")
+                                              stride=(2, 2), num_filter=96)
+                conv1 = mx.symbol.BlockGrad(data=conv1, name=name)
             return conv1
         else:
             raise NotImplementedError
 
+
 class ScoreMapProcessor(object):
-    def __init__(self, dim_in, num_filter=64):
+    def __init__(self, dim_in, num_filter=4, scale_num=1):
         super(ScoreMapProcessor, self).__init__()
         self.num_filter = num_filter
-        self.dim_in = dim_in.copy()
+        self.dim_in = dim_in
+        self.scale_num = scale_num
         self.params = self._init_params()
 
     def _init_params(self):
         params = {}
-        params[self.name + ':conv1_weight'] = mx.symbol.Variable(self.name + ':conv1_weight')
-        params[self.name + ':conv1_bias'] = mx.symbol.Variable(self.name + ':conv1_bias')
-        params[self.name + ':conv2_weight'] = mx.symbol.Variable(self.name + ':conv2_weight')
-        params[self.name + ':conv2_bias'] = mx.symbol.Variable(self.name + ':conv2_bias')
+        params[self.name + ':conv1'] = ConvParam(
+            weight=mx.symbol.Variable(self.name + ':conv1_weight'),
+            bias=mx.symbol.Variable(self.name + ':conv1_bias'))
+        params[self.name + ':conv2'] = ConvParam(
+            weight=mx.symbol.Variable(self.name + ':conv2_weight'),
+            bias=mx.symbol.Variable(self.name + ':conv2_bias'))
         return params
 
     @property
@@ -241,18 +247,22 @@ class ScoreMapProcessor(object):
     def name(self):
         return "ScoreMapProcessor"
 
-    def score_map_processing(self, score_maps, postfix=''):
-        score_maps = mx.symbol.Concat(*score_maps, dim=1)
-        conv1 = mx.symbol.Convolution(data=score_maps,
-                                      weight=self.params[self.name + ':conv1_weight'],
-                                      bias=self.params[self.name + ':conv1_bias'],
+    def scoremap_processing(self, multiscale_scoremap, postfix=''):
+        multiscale_scoremap = mx.symbol.Reshape(multiscale_scoremap,
+                                                target_shape=(1, 0, self.dim_in[1], self.dim_in[2]))
+        conv1 = mx.symbol.Convolution(data=multiscale_scoremap,
+                                      weight=self.params[self.name + ':conv1'].weight,
+                                      bias=self.params[self.name + ':conv1'].bias,
                                       kernel=(3,3), pad=(1,1),
-                                      num_filter=self.num_filter, name=self.name + ':conv1' + postfix)
+                                      num_filter=self.num_filter,
+                                      name=self.name + ':conv1' + postfix)
         act1 = mx.symbol.Activation(data=conv1, act_type='relu', name=self.name + ':act1' + postfix)
         conv2 = mx.symbol.Convolution(data=act1,
-                                      weight=self.params[self.name + ':conv2_weight'],
-                                      bias=self.params[self.name + ':conv2_bias'],
+                                      weight=self.params[self.name + ':conv2'].weight,
+                                      bias=self.params[self.name + ':conv2'].bias,
                                       kernel=(3, 3), pad=(1, 1),
-                                      num_filter=self.num_filter, name=self.name + ':conv2' + postfix)
+                                      num_filter=self.num_filter,
+                                      name=self.name + ':conv2' + postfix)
         act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name + ':act2' + postfix)
+        act2 = mx.symbol.BlockGrad(act2)
         return act2

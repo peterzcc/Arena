@@ -179,7 +179,6 @@ class LogSoftmaxPolicy(mx.operator.NumpyOp):
         else:
             for ind in range(y_action.shape[0]):
                 y_action[ind] = numpy.searchsorted(numpy.cumsum(y_prob[ind]), self.rng.rand())
-        in_data[2][:] = y_action
 
     def backward(self, out_grad, in_data, out_data, in_grad):
         score = in_data[1]
@@ -218,6 +217,9 @@ class LogSoftmaxMaskPolicy(mx.operator.NumpyOp):
     def infer_shape(self, in_shape):
         data_shape = in_shape[0]
         mask_shape = in_shape[1]
+        assert mask_shape == data_shape, 'Mask Shape and Data Shape must be equal! ' \
+                                         'Currently, Mask Shape = %s, Data Shape = %s' \
+                                         %(str(mask_shape), str(data_shape))
         score_shape = (in_shape[0][0],)
         action_shape = (in_shape[0][0],)
         prob_shape = in_shape[0]
@@ -227,10 +229,10 @@ class LogSoftmaxMaskPolicy(mx.operator.NumpyOp):
     def forward(self, in_data, out_data):
         x = in_data[0]
         mask = in_data[1]
-        x = x * mask
+        mask = (mask > 0).astype(numpy.float32)
         y_action = out_data[0]
         y_prob = out_data[1]
-        y_prob[:] = mask * numpy.exp(x - x.max(axis=1).reshape((x.shape[0], 1)))
+        y_prob[:] = mask * numpy.exp(x - numpy.ma.array(x, mask=1 - mask).max(axis=1).data.reshape((x.shape[0], 1)))
         y_prob /= y_prob.sum(axis=1).reshape((x.shape[0], 1))
         if self.deterministic:
             y_action[:] = numpy.argmax(y_prob, axis=1)

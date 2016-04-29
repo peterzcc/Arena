@@ -41,7 +41,7 @@ def draw_track_res(im, roi, delay=0):
     im = im.transpose(1, 2, 0)
     width = im.shape[1]
     height = im.shape[0]
-    roi = (roi + 1) / 2 * [width, height, width, height]
+    roi = roi * [width, height, width, height]
     roi = numpy.uint8(roi)
     pt1 = (roi[0]-roi[2]/2, roi[1]-roi[3]/2)
     pt2 = (roi[0]+roi[2]/2, roi[1]+roi[3]/2)
@@ -68,5 +68,5 @@ if __name__ == '__main__':
 
     for i in xrange(data_batch.shape[0]):
         for j in xrange(data_batch.shape[1]):
-            draw_track_res(data_batch[i, j], roi_batch[i, j], delay=50)
+            draw_track_res(data_batch.asnumpy()[i, j], roi_batch.asnumpy()[i, j], delay=50)
 

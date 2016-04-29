@@ -150,7 +150,7 @@ namespace mxnet {
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ out_grad[fft2d::kOut], out_data[fft2d::kOut] };
+        return{ out_data[fft2d::kOut] };
       }
 
       Operator* CreateOperator(Context ctx) const override;
