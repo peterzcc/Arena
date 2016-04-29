@@ -157,6 +157,8 @@ class CorrelationFilterHandler(object):
         return multiscale_template
 
     def get_multiscale_scoremap(self, multiscale_template, img, center, size, postfix=''):
+        center = mx.symbol.BlockGrad(center)
+        size = mx.symbol.BlockGrad(size)
         glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
                                                        postfix=postfix)
         multiscale_feature = self.perception_handler.perceive(
@@ -209,6 +211,7 @@ class PerceptionHandler(object):
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
                                               stride=(2, 2), num_filter=96)
             else:
+                data_sym = mx.symbol.BlockGrad(data_sym)
                 conv1 = mx.symbol.Convolution(data=data_sym, weight=self.params_sym['arg:conv1_weight'],
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
                                               stride=(2, 2), num_filter=96)

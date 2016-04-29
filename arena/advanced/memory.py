@@ -104,7 +104,6 @@ class MemoryStatUpdateOp(mx.operator.NumpyOp):
         counter_shape = in_shape[0]
         visiting_timestamp_shape = in_shape[1]
         control_flag_shape = in_shape[2]
-        print 'counter_shape', counter_shape
         assert len(in_shape[0]) == 1
         assert in_shape[0] == in_shape[1], "Memory Size of the counter and the visiting timestamp" \
                                            "must be the same."
@@ -132,8 +131,6 @@ class MemoryStatUpdateOp(mx.operator.NumpyOp):
         new_counter[:] = counter
         new_visiting_timestamp[:] = visiting_timestamp
         if 'read' == self.mode:
-            print new_counter
-            print new_visiting_timestamp
             new_counter[control_flag] += 1
             new_visiting_timestamp[control_flag] = numpy.max(visiting_timestamp) + 1
         elif 'write' == self.mode:
@@ -272,7 +269,7 @@ class MemoryHandler(object):
                                        bias=self.write_params[prefix + ':fc2'].bias,
                                        name=prefix + ':fc2' + postfix)
         control_flag_policy_op = LogSoftmaxPolicy(deterministic=deterministic)
-        control_flag = control_flag_policy_op(data=fc2, name=self.name + ':control_flag' + postfix)
+        control_flag = control_flag_policy_op(data=fc2, name=prefix + ':control_flag' + postfix)
         # TODO Enable actor-critic (Like the Async RL paper)
         return control_flag, new_memory_states
 
@@ -292,10 +289,11 @@ class MemoryHandler(object):
             control_flag, new_memory_states = \
                 self.get_write_control_flag(memory=memory, tracking_state=tracking_state,
                                             deterministic=deterministic, timestamp=timestamp)
-            sym_out[self.name + ':control_flag' + postfix + '_action'] = control_flag[0]
-            sym_out[self.name + ':control_flag' + postfix + '_prob'] = control_flag[1]
-            init_shapes[self.name + ':control_flag' + postfix + '_score'] = (1,)
+            sym_out[prefix + ':control_flag' + postfix + '_action'] = control_flag[0]
+            sym_out[prefix + ':control_flag' + postfix + '_prob'] = control_flag[1]
+            init_shapes[prefix + ':control_flag' + postfix + '_score'] = (1,)
             control_flag = mx.symbol.Reshape(control_flag[0], target_shape=(0,))
+            control_flag = mx.symbol.BlockGrad(control_flag)
         # 2. Update the memory status
         # TODO Change the updating logic (Train the update factor using Reinforcement Unit like Beta-Policy)
         memory_write_control_op = MemoryStatUpdateOp(mode='write')

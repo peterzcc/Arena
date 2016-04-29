@@ -79,11 +79,11 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         return ['transformation', 'anchor', 'truth']
 
     def list_outputs(self):
-        return ['loss']
+        return ['output']
 
     def infer_shape(self, in_shape):
         transformation_shape = in_shape[0]
-        anchor_shape = in_shape[0]
+        anchor_shape = in_shape[1]
         truth_shape = in_shape[0]
         output_shape = in_shape[0]
         return [transformation_shape, anchor_shape, truth_shape], \
@@ -93,8 +93,6 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         transformation = in_data[0]
         anchor = in_data[1]
         output = out_data[0]
-        print 'transformation', transformation
-        print 'anchor', anchor
         output[:, 0] = anchor[:, 0] + transformation[:, 0] * anchor[:, 2]
         output[:, 1] = anchor[:, 1] + transformation[:, 1] * anchor[:, 3]
         output[:, 2] = numpy.exp(transformation[:, 2]) * anchor[:, 2]
@@ -124,6 +122,8 @@ def roi_transform_inv(anchor_center, anchor_size, transformed_roi):
     roi_sliced = mx.symbol.SliceChannel(transformed_roi, num_outputs=2, axis=1)
     center = anchor_center + roi_sliced[0] * anchor_size
     size = mx.symbol.exp(roi_sliced[1]) * anchor_size
+    center = mx.symbol.BlockGrad(center)
+    size = mx.symbol.BlockGrad(size)
     return center, size
 
 
@@ -210,18 +210,18 @@ class AttentionHandler(object):
     def name(self):
         return "AttentionHanlder"
 
-    def roi_encoding(self, center, size):
+    def roi_encoding(self, center, size, postfix):
         prefix = self.name + ':roi_encoding'
         roi = mx.symbol.Concat(center, size, num_args=2, dim=1)
         fc1 = mx.symbol.FullyConnected(data=roi, num_hidden=64,
                                        weight=self.roi_encoding_params[prefix + ':fc1'].weight,
                                        bias=self.roi_encoding_params[prefix + ':fc1'].bias,
-                                       name=prefix + ':fc1')
+                                       name=prefix + ':fc1' + postfix)
         act1 = mx.symbol.Activation(data=fc1, act_type='relu')
         fc2 = mx.symbol.FullyConnected(data=act1, num_hidden=64,
                                        weight=self.roi_encoding_params[prefix + ':fc2'].weight,
                                        bias=self.roi_encoding_params[prefix + ':fc2'].bias,
-                                       name=prefix + ':fc2')
+                                       name=prefix + ':fc2' + postfix)
         return fc2
 
     def roi_policy(self, indata, deterministic=False, roi_var=None, roi_type="init_roi", postfix=''):
@@ -264,8 +264,6 @@ class AttentionHandler(object):
         search_size = init_size
         for i in range(self.total_steps):
             postfix = '_t%d_step%d' % (timestamp, i)
-            glimpse = self.glimpse_handler.pyramid_glimpse(
-                img=img, center=search_center, size=search_size, postfix=postfix)
             scoremap = \
                 self.cf_handler.get_multiscale_scoremap(multiscale_template=multiscale_template,
                                                         img=img,
@@ -274,7 +272,7 @@ class AttentionHandler(object):
                                                         postfix=postfix)
             processed_scoremap = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             flatten_map = mx.symbol.Flatten(data=processed_scoremap)
-            roi_code = self.roi_encoding(glimpse.center, glimpse.size)
+            roi_code = self.roi_encoding(search_center, search_size, postfix=postfix)
             aggregate_input = mx.symbol.Concat(flatten_map, roi_code, memory_code, num_args=3,
                                                dim=1)
             new_states = step_stack_lstm(indata=aggregate_input, prev_states=tracking_states,
@@ -291,7 +289,8 @@ class AttentionHandler(object):
                 init_shapes[self.name + ':search_roi' + postfix + '_score'] = (1,)
 
                 search_center, search_size = \
-                    roi_transform_inv(glimpse.center, glimpse.size, search_roi)
+                    roi_transform_inv(search_center, search_size, search_roi)
+
             else:
                 next_step_init_roi, next_step_init_roi_mean, next_step_init_roi_var = \
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
@@ -300,13 +299,13 @@ class AttentionHandler(object):
                 init_shapes[self.name + ':init_roi' + postfix + '_score'] = (1,)
 
                 next_step_init_center, next_step_init_size = \
-                    roi_transform_inv(glimpse.center, glimpse.size, next_step_init_roi)
+                    roi_transform_inv(search_center, search_size, next_step_init_roi)
 
                 pred_roi, pred_roi_mean, pred_roi_var = \
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
                                     roi_type="pred_roi", roi_var=roi_var, postfix=postfix)
                 pred_center, pred_size = \
-                    roi_transform_inv(glimpse.center, glimpse.size, pred_roi)
+                    roi_transform_inv(search_center, search_size, pred_roi)
                 sym_out[self.name + ':pred_roi' + postfix] = pred_roi
                 init_shapes[self.name + ':pred_roi' + postfix + '_score'] = (1,)
 
@@ -314,14 +313,14 @@ class AttentionHandler(object):
                 if ground_truth_roi is not None:
                     bb_regress_roi = \
                         bb_regress_op(
-                            anchor=mx.symbol.Concat(glimpse.center, glimpse.size, num_args=2, dim=1),
+                            anchor=mx.symbol.Concat(search_center, search_size, num_args=2, dim=1),
                             transformation=pred_roi_mean,
                             truth=ground_truth_roi,
                             name=self.name + ':bb_regress_t%d' % timestamp)
                     sym_out[self.name + ':bb_regress_t%d' % timestamp] = bb_regress_roi
                 else:
                     bb_regress_roi = \
-                        bb_regress_op(anchor=mx.symbol.Concat(glimpse.center, glimpse.size, num_args=2, dim=1),
+                        bb_regress_op(anchor=mx.symbol.Concat(search_center, search_size, num_args=2, dim=1),
                                       transformation=pred_roi_mean,
                                       name=self.name + ':bb_regress_t%d' %timestamp)
                     sym_out[self.name + ':bb_regress_t%d' % timestamp] = bb_regress_roi
