@@ -204,7 +204,7 @@ class MemoryHandler(object):
         return params
 
     def init_memory(self, ctx=get_default_ctx()):
-        prefix = self.name + ':memory_init'
+        prefix = 'init_memory'
         numerators=mx.symbol.Variable(prefix + ':numerators')
         denominators=mx.symbol.Variable(prefix + ':denominators')
         init_memory_status = \

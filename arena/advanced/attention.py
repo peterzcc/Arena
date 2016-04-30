@@ -253,7 +253,7 @@ class AttentionHandler(object):
                                          self.name + ':' + roi_type + ':mean'].weight,
                                      bias=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':mean'].bias)
-        roi_mean = 4 * mx.symbol.Activation(data=roi_mean, act_type='tanh')
+        #roi_mean = 4 * mx.symbol.Activation(data=roi_mean, act_type='tanh')
         if not self.fixed_variance:
             assert roi_var is None
             roi_var = \
