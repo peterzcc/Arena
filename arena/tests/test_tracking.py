@@ -164,68 +164,68 @@ glimpse_history = OrderedDict()
 read_template_history = OrderedDict()
 last_step_memory = OrderedDict()
 
-for i in range(BPTT_length):
-    init_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[i],
+for timestamp in range(BPTT_length):
+    init_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[timestamp],
                                                    center=init_search_center,
                                                    size=init_search_size,
-                                                   postfix='_init_t%d' %i)
-    glimpse_history['glimpse_init_t%d:center'%i] = init_glimpse.center
-    glimpse_history['glimpse_init_t%d:size' % i] = init_glimpse.size
-    glimpse_history['glimpse_init_t%d:data' % i] = init_glimpse.data
+                                                   postfix='_init_t%d' %timestamp)
+    glimpse_history['glimpse_init_t%d:center'%timestamp] = init_glimpse.center
+    glimpse_history['glimpse_init_t%d:size' %timestamp] = init_glimpse.size
+    glimpse_history['glimpse_init_t%d:data' %timestamp] = init_glimpse.data
 
     # 2.1 Read template from the memory
     memory, template, read_sym_out, read_init_shapes = \
-        memory_handler.read(memory=memory, glimpse=init_glimpse, timestamp=i)
+        memory_handler.read(memory=memory, glimpse=init_glimpse, timestamp=timestamp)
     sym_out.update(read_sym_out)
     init_shapes.update(read_init_shapes)
-    memory_status_history['counter_after_read_t%i' %i] = memory.status.counter
-    memory_status_history['visiting_timestamp_after_read_t%i' %i] = memory.status.visiting_timestamp
-    read_template_history['numerators_after_read_t%i' %i] = template.numerator
-    read_template_history['denominators_after_read_t%i' % i] = template.denominator
+    memory_status_history['counter_after_read_t%d' %timestamp] = memory.status.counter
+    memory_status_history['visiting_timestamp_after_read_t%d' %timestamp] = memory.status.visiting_timestamp
+    read_template_history['numerators_after_read_t%d' %timestamp] = template.numerator
+    read_template_history['denominators_after_read_t%d' % timestamp] = template.denominator
 
     # 2.2 Attend
     tracking_states, init_search_center, init_search_size, pred_center, pred_size, attend_sym_out, \
     attend_init_shapes = attention_handler.attend(
-        img=data_images[i], init_glimpse=init_glimpse,
+        img=data_images[timestamp], init_glimpse=init_glimpse,
         multiscale_template=template, memory=memory,
-        ground_truth_roi=mx.symbol.Concat(data_centers[i], data_sizes[i], num_args=2, dim=1),
-        timestamp=i, roi_var=roi_var)
+        ground_truth_roi=mx.symbol.Concat(data_centers[timestamp], data_sizes[timestamp], num_args=2, dim=1),
+        timestamp=timestamp, roi_var=roi_var)
     tracking_state = mx.symbol.Concat(*[state.h for state in tracking_states],
                                       num_args=len(tracking_states), dim=1)
     sym_out.update(attend_sym_out)
     init_shapes.update(attend_init_shapes)
-    pred_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[i],
+    pred_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[timestamp],
                                                    center=pred_center,
                                                    size=pred_size,
-                                                   postfix='_pred_t%d' % i)
-    glimpse_history['glimpse_next_step_search_t%d:center'%i] = init_search_center
-    glimpse_history['glimpse_next_step_search_t%d:size' % i] = init_search_size
-    glimpse_history['glimpse_pred_t%d_center'%i] = pred_glimpse.center
-    glimpse_history['glimpse_pred_t%d_size' % i] = pred_glimpse.size
-    glimpse_history['glimpse_pred_t%d_data' % i] = pred_glimpse.data
+                                                   postfix='_pred_t%d' % timestamp)
+    glimpse_history['glimpse_next_step_search_t%d:center'%timestamp] = init_search_center
+    glimpse_history['glimpse_next_step_search_t%d:size' % timestamp] = init_search_size
+    glimpse_history['glimpse_pred_t%d_center'%timestamp] = pred_glimpse.center
+    glimpse_history['glimpse_pred_t%d_size' % timestamp] = pred_glimpse.size
+    glimpse_history['glimpse_pred_t%d_data' % timestamp] = pred_glimpse.data
 
     # 2.3 Memorize
     template = cf_handler.get_multiscale_template(glimpse=pred_glimpse,
-                                                  postfix='_t%d_memorize' %i)
+                                                  postfix='_t%d_memorize' %timestamp)
     memory, write_sym_out, write_init_shapes = memory_handler.write(memory=memory,
                                                                     tracking_state=tracking_state,
                                                                     update_multiscale_template=template,
                                                                     update_factor=update_factor,
-                                                                    timestamp=i)
+                                                                    timestamp=timestamp)
     sym_out.update(write_sym_out)
     init_shapes.update(write_init_shapes)
-    if i < BPTT_length - 1:
-        memory_status_history['counter_after_write_t%i' % i] = memory.status.counter
-        memory_status_history['visiting_timestamp_after_write_t%i' % i] = memory.status.visiting_timestamp
+    if timestamp < BPTT_length - 1:
+        memory_status_history['counter_after_write_t%d' % timestamp] = memory.status.counter
+        memory_status_history['visiting_timestamp_after_write_t%d' % timestamp] = memory.status.visiting_timestamp
     else:
         sym_out.update(write_sym_out)
         last_step_memory['last_step_memory:numerators'] = mx.symbol.BlockGrad(memory.numerators)
         last_step_memory['last_step_memory:denominators'] = mx.symbol.BlockGrad(memory.denominators)
         for i, state in enumerate(memory.states):
-            last_step_memory['last_step_memory:states%d_c' % i] = mx.symbol.BlockGrad(state.c)
-            last_step_memory['last_step_memory:states%d_h' % i] = mx.symbol.BlockGrad(state.h)
-        last_step_memory['last_step_memory:status:counter'] = mx.symbol.BlockGrad(memory.status.counter)
-        last_step_memory['last_step_memory:status:visiting_timestamp'] = mx.symbol.BlockGrad(memory.status.visiting_timestamp)
+            last_step_memory['last_step_memory:lstm%d_c' % i] = mx.symbol.BlockGrad(state.c)
+            last_step_memory['last_step_memory:lstm%d_h' % i] = mx.symbol.BlockGrad(state.h)
+        last_step_memory['last_step_memory:counter'] = mx.symbol.BlockGrad(memory.status.counter)
+        last_step_memory['last_step_memory:visiting_timestamp'] = mx.symbol.BlockGrad(memory.status.visiting_timestamp)
 
 sym_out.update(memory_status_history)
 sym_out.update(glimpse_history)
@@ -280,6 +280,7 @@ for iter in range(200):
                                                               mem_constant_inputs.items())))
     else:
         mem_outputs = memory_generator.forward(is_train=False, **additional_inputs)
+
     data_images_ndarray = seq_images[1:(BPTT_length+1)].reshape((1, BPTT_length,) + seq_images.shape[1:])
     data_rois_ndarray = seq_rois[1:(BPTT_length+1)].reshape((1, BPTT_length, 4))
     additional_inputs = OrderedDict()
@@ -295,12 +296,13 @@ for iter in range(200):
     else:
         outputs = net.forward(is_train=True, **additional_inputs)
     net.backward()
+    for k, v in net.params_grad.items():
+        print k, v.asnumpy().sum()
+    ch = raw_input()
     net.update(updater=updater)
     for i, (key, output) in enumerate(zip(sym_out.keys(), outputs)):
         if 'bb_regress' in key:
             print key, output.asnumpy()
             print seq_rois.asnumpy()[get_timestamp(key)]
-        if 'glimpse_init' in key and 'center' in key:
-            print key, output.asnumpy()
 end = time.time()
 print sample_length / (end - start)
