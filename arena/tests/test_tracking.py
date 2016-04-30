@@ -44,7 +44,7 @@ perception_handler = PerceptionHandler(net_type='VGG-M')
 cf_handler = CorrelationFilterHandler(rows=64, cols=64, gaussian_sigma_factor=10, regularizer=0.01,
                                       perception_handler=perception_handler,
                                       glimpse_handler=glimpse_handler)
-scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=4, scale_num=scale_num)
+scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=2, scale_num=scale_num)
 memory_handler = MemoryHandler(cf_handler=cf_handler, scoremap_processor=scoremap_processor,
                                memory_size=memory_size,
                                lstm_layer_props=memory_lstm_props)
@@ -72,8 +72,6 @@ data_sizes = mx.symbol.SliceChannel(data_rois[1], num_outputs=sample_length, axi
 
 init_shapes = OrderedDict()
 sym_out = OrderedDict()
-counter_history = OrderedDict()
-visiting_timestamp_history = OrderedDict()
 
 
 # 0. Initialize the parameters in the handler
@@ -100,6 +98,9 @@ init_shapes.update(write_init_shapes)
 init_center = data_centers[0]
 init_size = data_sizes[0]
 tracking_state = None
+counter_history = OrderedDict()
+visiting_timestamp_history = OrderedDict()
+read_template = OrderedDict()
 
 for i in range(1, sample_length):
     if i > 1:
@@ -111,6 +112,8 @@ for i in range(1, sample_length):
         init_shapes.update(read_init_shapes)
         counter_history['counter:read_t%i' %i] = memory.status.counter
         visiting_timestamp_history['visiting_timestamp:read_t%i' %i] = memory.status.visiting_timestamp
+        read_template['numerators:read_t%i' %i] = template.numerator
+        read_template['denominators:read_t%i' % i] = template.denominator
     # 2.2 Attend
     tracking_states, init_center, init_size, pred_center, pred_size, attend_sym_out, \
     attend_init_shapes = attention_handler.attend(
@@ -149,7 +152,8 @@ data_shapes.update(init_shapes)
 
 net = Base(sym=mx.symbol.Group(sym_out.values() +
                                counter_history.values() +
-                               visiting_timestamp_history.values()),
+                               visiting_timestamp_history.values() +
+                               read_template.values()),
            data_shapes=data_shapes)
 net.print_stat()
 
@@ -164,6 +168,11 @@ constant_inputs.update(init_attention_lstm_data)
 
 
 additional_inputs = OrderedDict()
+
+optimizer = mx.optimizer.create(name='adam', learning_rate=0.001,
+                                clip_gradient=None,
+                                rescale_grad=1.0, wd=0.)
+updater = mx.optimizer.get_updater(optimizer)
 start = time.time()
 
 for i in range(100):
@@ -175,7 +184,11 @@ for i in range(100):
     else:
         outputs = net.forward(**additional_inputs)
     net.backward()
-    for key, output in zip(sym_out.keys() + counter_history.keys() + visiting_timestamp_history.keys(),
+    for key, grad in net.params_grad.items():
+        print key, (grad.asnumpy().sum()), grad.shape
+    ch = raw_input()
+    net.update(updater=updater)
+    for key, output in zip(sym_out.keys() + counter_history.keys() + visiting_timestamp_history.keys() + read_template.keys(),
                            outputs):
         '''
         print key, output.shape
@@ -186,6 +199,6 @@ for i in range(100):
             print numpy.abs(output.asnumpy())[3].sum()
         else:
         '''
-        output.asnumpy()
+        print key, output.asnumpy().sum()
 end = time.time()
 print sample_length / (end - start)
