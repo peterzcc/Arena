@@ -11,8 +11,8 @@ roi, gt, shape (batch_size, 4), normalized version in [-1,1]
 def calc_CPE(im, roi, gt):
     width = im.shape[2]
     height = im.shape[1]
-    roi = (roi + 1) / 2 * [width, height, width, height]
-    gt = (gt + 1) / 2 * [width, height, width, height]
+    roi = roi * [width, height, width, height]
+    gt = gt * [width, height, width, height]
     center_roi = roi[:, 0:2]
     center_gt = gt[:, 0:2]
     cpe = numpy.sqrt(numpy.sum((center_gt-center_roi) ** 2, axis=1))
@@ -26,6 +26,7 @@ roi, gt, shape (batch_size, 4), normalized version in [-1,1]
 def cal_rect_int(im, roi, gt):
     width = im.shape[2]
     height = im.shape[1]
+
     roi = roi * [width, height, width, height]
     gt = gt * [width, height, width, height]
     left_roi = roi[:, 0] - roi[:, 2]/2
@@ -49,6 +50,7 @@ if __name__ == '__main__':
     rect = numpy.loadtxt(os.path.join('/home/sliay/Documents/OTB100/Basketball', 'groundtruth_rect.txt'), delimiter=',')
     im = cv2.imread('/home/sliay/Documents/OTB100/Basketball/img/0001.jpg')
     rect[:, 0:2] += rect[:, 2:4]/2 - 1
+
     rect[:, ::2] = rect[:, ::2] / im.shape[1]
     rect[:, 1::2] = rect[:, 1::2] / im.shape[0]
     A = rect[0:10, :]
