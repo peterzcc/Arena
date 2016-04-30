@@ -2,7 +2,7 @@ import numpy
 import mxnet as mx
 from arena.helpers.pretrained import vgg_m
 from .common import *
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from .attention import get_multiscale_size
 
 
@@ -157,8 +157,6 @@ class CorrelationFilterHandler(object):
         return multiscale_template
 
     def get_multiscale_scoremap(self, multiscale_template, img, center, size, postfix=''):
-        center = mx.symbol.BlockGrad(center)
-        size = mx.symbol.BlockGrad(size)
         glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
                                                        postfix=postfix)
         multiscale_feature = self.perception_handler.perceive(
@@ -169,7 +167,7 @@ class CorrelationFilterHandler(object):
         numerator = multiscale_template.numerator
         denominator = mx.symbol.BroadcastChannel(data=multiscale_template.denominator, dim=1,
                                                  size=self.channel_size)
-        processed_template = numerator / denominator
+        processed_template = numerator / (denominator + 1E-6)
         multiscale_scoremap = mx.symbol.IFFT2D(data=mx.symbol.ComplexHadamard(processed_template,
                                                                               multiscale_feature_fft),
                                                output_shape=(self.rows, self.cols))
@@ -211,7 +209,6 @@ class PerceptionHandler(object):
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
                                               stride=(2, 2), num_filter=96)
             else:
-                data_sym = mx.symbol.BlockGrad(data_sym)
                 conv1 = mx.symbol.Convolution(data=data_sym, weight=self.params_sym['arg:conv1_weight'],
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
                                               stride=(2, 2), num_filter=96)
@@ -230,7 +227,7 @@ class ScoreMapProcessor(object):
         self.params = self._init_params()
 
     def _init_params(self):
-        params = {}
+        params = OrderedDict()
         params[self.name + ':conv1'] = ConvParam(
             weight=mx.symbol.Variable(self.name + ':conv1_weight'),
             bias=mx.symbol.Variable(self.name + ':conv1_bias'))
@@ -264,5 +261,4 @@ class ScoreMapProcessor(object):
                                       num_filter=self.num_filter,
                                       name=self.name + ':conv2' + postfix)
         act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name + ':act2' + postfix)
-        act2 = mx.symbol.BlockGrad(act2)
         return act2

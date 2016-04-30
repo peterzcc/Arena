@@ -348,7 +348,6 @@ class MemoryHandler(object):
             feature_map = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             feature_map_l.append(feature_map)
         feature_maps = mx.symbol.Concat(*feature_map_l, num_args=self.memory_size, dim=0)
-        feature_maps = mx.symbol.BlockGrad(feature_maps)
         # 2. Compute the scores: Shape --> (1, memory_size)
         postfix = "_t%d" % timestamp
         global_pooled_feature = mx.symbol.Pooling(data=feature_maps,
