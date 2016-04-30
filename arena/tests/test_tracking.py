@@ -13,6 +13,7 @@ from arena.advanced.recurrent import *
 from arena.advanced.common import *
 from arena.iterators import TrackingIterator
 from arena.helpers.visualization import *
+from arena.helpers.tracking import *
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -24,7 +25,7 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 
 
-sample_length = 11
+sample_length = 16
 scale_num = 3
 memory_size = 4
 attention_steps = 3
@@ -44,7 +45,7 @@ perception_handler = PerceptionHandler(net_type='VGG-M')
 cf_handler = CorrelationFilterHandler(rows=64, cols=64, gaussian_sigma_factor=10, regularizer=0.01,
                                       perception_handler=perception_handler,
                                       glimpse_handler=glimpse_handler)
-scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=2, scale_num=scale_num)
+scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=16, scale_num=scale_num)
 memory_handler = MemoryHandler(cf_handler=cf_handler, scoremap_processor=scoremap_processor,
                                memory_size=memory_size,
                                lstm_layer_props=memory_lstm_props)
@@ -82,8 +83,11 @@ init_attention_lstm_data, init_attention_lstm_shape = attention_handler.init_lst
 init_shapes.update(init_attention_lstm_shape)
 
 # 1. Get template from the first frame and insert it into the memory
-template = cf_handler.get_multiscale_template(img=data_images[0], center=data_centers[0],
-                                              size=data_sizes[0], postfix='_t0')
+glimpse = glimpse_handler.pyramid_glimpse(img=data_images[0],
+                                          center=data_centers[0],
+                                          size=data_sizes[0],
+                                          postfix='_t0')
+template = cf_handler.get_multiscale_template(glimpse=glimpse, postfix='_init_t0')
 memory, write_sym_out, write_init_shapes = memory_handler.write(memory=init_memory,
                                                                 update_multiscale_template=template,
                                                                 control_flag=init_write_control_flag,
@@ -98,26 +102,33 @@ init_shapes.update(write_init_shapes)
 init_center = data_centers[0]
 init_size = data_sizes[0]
 tracking_state = None
-counter_history = OrderedDict()
-visiting_timestamp_history = OrderedDict()
-read_template = OrderedDict()
+memory_status_history = OrderedDict()
+glimpse_history = OrderedDict()
+read_template_history = OrderedDict()
 
 for i in range(1, sample_length):
+    init_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[i],
+                                                   center=init_center,
+                                                   size=init_size,
+                                                   postfix='_init_t%d' %i)
+    glimpse_history['glimpse_init_t%d_center'%i] = init_glimpse.center
+    glimpse_history['glimpse_init_t%d_size' % i] = init_glimpse.size
+    glimpse_history['glimpse_init_t%d_data' % i] = init_glimpse.data
+
     if i > 1:
         # 2.1 Read template from the memory
         memory, template, read_sym_out, read_init_shapes = \
-            memory_handler.read(memory=memory, img=data_images[i], center=init_center,
-                                size=init_size, timestamp=i)
+            memory_handler.read(memory=memory, glimpse=init_glimpse, timestamp=i)
         sym_out.update(read_sym_out)
         init_shapes.update(read_init_shapes)
-        counter_history['counter:read_t%i' %i] = memory.status.counter
-        visiting_timestamp_history['visiting_timestamp:read_t%i' %i] = memory.status.visiting_timestamp
-        read_template['numerators:read_t%i' %i] = template.numerator
-        read_template['denominators:read_t%i' % i] = template.denominator
+        memory_status_history['counter_after_read_t%i' %i] = memory.status.counter
+        memory_status_history['visiting_timestamp_after_read_t%i' %i] = memory.status.visiting_timestamp
+        read_template_history['numerators_after_read_t%i' %i] = template.numerator
+        read_template_history['denominators_after_read_t%i' % i] = template.denominator
     # 2.2 Attend
     tracking_states, init_center, init_size, pred_center, pred_size, attend_sym_out, \
     attend_init_shapes = attention_handler.attend(
-        img=data_images[i], init_center=init_center, init_size=init_size,
+        img=data_images[i], init_glimpse=init_glimpse,
         multiscale_template=template, memory=memory,
         ground_truth_roi=mx.symbol.Concat(data_centers[i], data_sizes[i], num_args=2, dim=1),
         timestamp=i, roi_var=roi_var)
@@ -125,11 +136,18 @@ for i in range(1, sample_length):
                                       num_args=len(tracking_states), dim=1)
     sym_out.update(attend_sym_out)
     init_shapes.update(attend_init_shapes)
+    pred_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[i],
+                                                   center=pred_center,
+                                                   size=pred_size,
+                                                   postfix='_pred_t%d' % i)
+    glimpse_history['glimpse_pred_t%d_center'%i] = pred_glimpse.center
+    glimpse_history['glimpse_pred_t%d_size' % i] = pred_glimpse.size
+    glimpse_history['glimpse_pred_t%d_data' % i] = pred_glimpse.data
 
     # 2.3 Memorize
     if i < sample_length - 1:
-        template = cf_handler.get_multiscale_template(img=data_images[i], center=pred_center,
-                                                      size=pred_size, postfix='_t%d_memorize' %i)
+        template = cf_handler.get_multiscale_template(glimpse=pred_glimpse,
+                                                      postfix='_t%d_memorize' %i)
         memory, write_sym_out, write_init_shapes = memory_handler.write(memory=memory,
                                                                         tracking_state=tracking_state,
                                                                         update_multiscale_template=template,
@@ -137,8 +155,8 @@ for i in range(1, sample_length):
                                                                         timestamp=i)
         sym_out.update(write_sym_out)
         init_shapes.update(write_init_shapes)
-        counter_history['counter:write_t%i' % i] = memory.status.counter
-        visiting_timestamp_history['visiting_timestamp:write_t%i' % i] = memory.status.visiting_timestamp
+        memory_status_history['counter_after_write_t%i' % i] = memory.status.counter
+        memory_status_history['visiting_timestamp_after_write_t%i' % i] = memory.status.visiting_timestamp
 
 ############################# 2nd: Build the network ###############################################
 
@@ -151,9 +169,8 @@ data_shapes = OrderedDict([
 data_shapes.update(init_shapes)
 
 net = Base(sym=mx.symbol.Group(sym_out.values() +
-                               counter_history.values() +
-                               visiting_timestamp_history.values() +
-                               read_template.values()),
+                               memory_status_history.values() +
+                               glimpse_history.values()),
            data_shapes=data_shapes)
 net.print_stat()
 
@@ -162,12 +179,14 @@ perception_handler.set_params(net.params)
 constant_inputs = OrderedDict()
 constant_inputs['init_write_control_flag'] = 2
 constant_inputs['update_factor'] = 0.2
-constant_inputs["roi_var"] = nd.array(numpy.array([[1E-3, 1E-3, 2E-4, 2E-4]]), ctx=ctx)
+constant_inputs["roi_var"] = nd.array(numpy.array([[1E-4, 1E-4, 2E-5, 2E-5]]), ctx=ctx)
 constant_inputs.update(init_memory_data)
 constant_inputs.update(init_attention_lstm_data)
 
 
 additional_inputs = OrderedDict()
+score_inputs = OrderedDict()
+baselines = OrderedDict()
 
 optimizer = mx.optimizer.create(name='adam', learning_rate=0.001,
                                 clip_gradient=None,
@@ -175,8 +194,8 @@ optimizer = mx.optimizer.create(name='adam', learning_rate=0.001,
 updater = mx.optimizer.get_updater(optimizer)
 start = time.time()
 
-for i in range(100):
-    seq_images, seq_rois = tracking_iterator.sample(length=sample_length)
+for i in range(200):
+    seq_images, seq_rois = tracking_iterator.sample(length=sample_length, interval_step=1)
     additional_inputs["data_images"] = seq_images
     additional_inputs["data_rois"] = seq_rois
     if i == 0:
@@ -184,21 +203,13 @@ for i in range(100):
     else:
         outputs = net.forward(**additional_inputs)
     net.backward()
-    for key, grad in net.params_grad.items():
-        print key, (grad.asnumpy().sum()), grad.shape
-    ch = raw_input()
     net.update(updater=updater)
-    for key, output in zip(sym_out.keys() + counter_history.keys() + visiting_timestamp_history.keys() + read_template.keys(),
-                           outputs):
-        '''
-        print key, output.shape
-        if 'numerators' in key or 'denominators' in key:
-            print numpy.abs(output.asnumpy())[0].sum()
-            print numpy.abs(output.asnumpy())[1].sum()
-            print numpy.abs(output.asnumpy())[2].sum()
-            print numpy.abs(output.asnumpy())[3].sum()
-        else:
-        '''
-        print key, output.asnumpy().sum()
+    for i, (key, output) in enumerate(zip(sym_out.keys() + memory_status_history.keys() + glimpse_history.keys(),
+                           outputs)):
+        if 'bb_regress' in key:
+            print key, output.asnumpy()
+            print seq_rois.asnumpy()[0, get_timestamp(key)]
+        if 'glimpse_init' in key and 'center' in key:
+            print key, output.asnumpy()
 end = time.time()
 print sample_length / (end - start)

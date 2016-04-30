@@ -136,9 +136,7 @@ class CorrelationFilterHandler(object):
     def channel_size(self):
         return self.perception_handler.channel_size
 
-    def get_multiscale_template(self, img, center, size, postfix=''):
-        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
-                                                       postfix=postfix)
+    def get_multiscale_template(self, glimpse, postfix=''):
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
@@ -150,15 +148,13 @@ class CorrelationFilterHandler(object):
                                                 multiscale_feature_fft) + \
                       mx.symbol.ComplexHadamard(multiscale_feature_fft,
                                                 mx.symbol.ComplexExchange(multiscale_feature_fft))
-        denominator = mx.symbol.SumChannel(denominator) + self.regularizer
+        denominator = mx.symbol.SumChannel(denominator)
         numerator = mx.symbol.BlockGrad(numerator, name=(self.name + ':numerator' + postfix))
         denominator = mx.symbol.BlockGrad(denominator, name=(self.name + ':denominator' + postfix))
         multiscale_template = ScaleCFTemplate(numerator=numerator, denominator=denominator)
         return multiscale_template
 
-    def get_multiscale_scoremap(self, multiscale_template, img, center, size, postfix=''):
-        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
-                                                       postfix=postfix)
+    def get_multiscale_scoremap(self, multiscale_template, glimpse, postfix=''):
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
@@ -167,7 +163,7 @@ class CorrelationFilterHandler(object):
         numerator = multiscale_template.numerator
         denominator = mx.symbol.BroadcastChannel(data=multiscale_template.denominator, dim=1,
                                                  size=self.channel_size)
-        processed_template = numerator / (denominator + 1E-6)
+        processed_template = numerator / (denominator + self.regularizer)
         multiscale_scoremap = mx.symbol.IFFT2D(data=mx.symbol.ComplexHadamard(processed_template,
                                                                               multiscale_feature_fft),
                                                output_shape=(self.rows, self.cols))
@@ -238,7 +234,7 @@ class ScoreMapProcessor(object):
 
     @property
     def dim_out(self):
-        return (self.num_filter, self.dim_in[1], self.dim_in[2])
+        return (self.num_filter/4 + self.num_filter, self.dim_in[1]/2, self.dim_in[2]/2)
 
     @property
     def name(self):
@@ -254,11 +250,12 @@ class ScoreMapProcessor(object):
                                       num_filter=self.num_filter,
                                       name=self.name + ':conv1' + postfix)
         act1 = mx.symbol.Activation(data=conv1, act_type='relu', name=self.name + ':act1' + postfix)
-        conv2 = mx.symbol.Convolution(data=act1,
+        pool1 = mx.symbol.Pooling(data=act1, kernel=(2, 2), pool_type='avg', stride=(2, 2))
+        conv2 = mx.symbol.Convolution(data=pool1,
                                       weight=self.params[self.name + ':conv2'].weight,
                                       bias=self.params[self.name + ':conv2'].bias,
                                       kernel=(3, 3), pad=(1, 1),
-                                      num_filter=self.num_filter,
+                                      num_filter=self.num_filter/4,
                                       name=self.name + ':conv2' + postfix)
         act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name + ':act2' + postfix)
         return act2

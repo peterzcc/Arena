@@ -326,7 +326,7 @@ class MemoryHandler(object):
 
         return new_memory, sym_out, init_shapes
 
-    def get_read_control_flag(self, memory, img, center, size, deterministic, timestamp=0):
+    def get_read_control_flag(self, memory, glimpse, deterministic, timestamp=0):
         prefix = self.name + ':read'
         numerators = mx.symbol.SliceChannel(memory.numerators, num_outputs=self.memory_size, axis=0)
         denominators = mx.symbol.SliceChannel(memory.denominators, num_outputs=self.memory_size, axis=0)
@@ -341,9 +341,7 @@ class MemoryHandler(object):
             denominator = self.reshape_to_cf(denominators[m])
             scoremap = self.cf_handler.get_multiscale_scoremap(
                 multiscale_template=ScaleCFTemplate(numerator=numerator, denominator=denominator),
-                img=img,
-                center=center,
-                size=size,
+                glimpse=glimpse,
                 postfix=postfix)
             feature_map = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             feature_map_l.append(feature_map)
@@ -405,16 +403,14 @@ class MemoryHandler(object):
                                                     self.cf_handler.out_rows,
                                                     self.cf_handler.out_cols))
 
-    def read(self, memory, img, center, size, chosen_ind=None, deterministic=False, timestamp=0):
+    def read(self, memory, glimpse, chosen_ind=None, deterministic=False, timestamp=0):
         prefix = self.name + ':read'
         postfix = "_t%d" % timestamp
         sym_out = OrderedDict()
         init_shapes = OrderedDict()
         if chosen_ind is None:
             chosen_ind = self.get_read_control_flag(memory=memory,
-                                                    img=img,
-                                                    center=center,
-                                                    size=size,
+                                                    glimpse=glimpse,
                                                     timestamp=timestamp,
                                                     deterministic=deterministic)
             sym_out[prefix + ':chosen_ind' + postfix + '_action'] = chosen_ind[0]
