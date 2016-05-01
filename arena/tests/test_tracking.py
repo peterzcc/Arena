@@ -99,6 +99,8 @@ class TrackerInitializer(mx.initializer.Normal):
         if 'ScoreMapProcessor' in name:
             print name
             mx.random.normal(0.1, self.sigma, out=arr)
+        elif 'roi' in name and 'AttentionHanlder' in name:
+            mx.random.normal(0, self.sigma/5, out=arr)
 
     def _init_bias(self, name, arr):
         super(TrackerInitializer, self)._init_bias(name, arr)
@@ -234,8 +236,8 @@ def build_tracker(tracking_length,
     perception_handler.set_params(tracker.params)
 
     constant_inputs = OrderedDict()
-    constant_inputs['update_factor'] = 0.02
-    constant_inputs["roi_var"] = nd.array(numpy.array([[1E-3, 1E-3, 1E-3, 1E-3]]), ctx=ctx)
+    constant_inputs['update_factor'] = 0.1
+    constant_inputs["roi_var"] = nd.array(numpy.array([[1E-4, 1E-4, 1E-6, 1E-6]]), ctx=ctx)
     constant_inputs.update(init_attention_lstm_data)
     return tracker, sym_out, init_shapes, constant_inputs
 
@@ -268,13 +270,27 @@ def compute_tracking_score(pred_rois, truth_rois, thresholds=(0.5, 0.7, 0.8, 0.9
     return scores
 
 
+def get_memory_controls(outputs, sym_out, total_timesteps):
+    read_controls = numpy.empty((total_timesteps, ), dtype=numpy.float32)
+    write_controls = numpy.empty((total_timesteps, ), dtype=numpy.float32)
+
+    for i, (key, output) in enumerate(zip(sym_out.keys(), outputs)):
+        if 'read:chosen_ind' in key and 'action' in key:
+            timestamp = get_timestamp(key)
+            read_controls[timestamp] = output.asnumpy()
+        elif 'write:control_flag' in key and 'action' in key:
+            timestamp = get_timestamp(key)
+            write_controls[timestamp] = output.asnumpy()
+    return read_controls, write_controls
+
+
 def get_backward_input(init_shapes, scores, baselines, total_timesteps, attention_steps):
     assert scores.shape == baselines.shape
     assert 1 == len(scores.shape)
     assert scores.shape[0] == total_timesteps
     backward_inputs = OrderedDict()
     scores = numpy.cumsum(scores[::-1], axis=0)[::-1]
-    advantages = (scores - baselines)/20000
+    advantages = (scores - baselines)/20000.0
     counter_checking = {'search_roi':0,
                         'pred_roi':0,
                         'init_roi':0,
@@ -301,11 +317,11 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
                     backward_inputs[key] = 0
                 counter_checking['init_roi'] += 1
             elif 'read:chosen_ind' in key:
-                backward_inputs[key] = advantages[timestamp]
+                backward_inputs[key] = advantages[timestamp] * 100
                 counter_checking['read:chosen_ind'] += 1
             elif 'write:control_flag' in key:
                 if timestamp < total_timesteps - 1:
-                    backward_inputs[key] = advantages[timestamp + 1]
+                    backward_inputs[key] = advantages[timestamp + 1] * 100
                 else:
                     backward_inputs[key] = 0
                 counter_checking['write:control_flag'] += 1
@@ -324,7 +340,7 @@ failure_penalty = -10
 level_reward = 1
 
 scale_num = 3
-memory_size = 4
+memory_size = 3
 attention_steps = 3
 image_size = (360, 480)
 ctx = mx.gpu()
@@ -418,14 +434,19 @@ for iter in range(100000):
                                                 tracker_constant_inputs.items())))
     else:
         tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
-
+    read_controls, write_controls = get_memory_controls(tracker_outputs, tracker_sym_out, BPTT_length)
     pred_rois = get_tracker_pred_rois(tracker_outputs, tracker_sym_out, BPTT_length)
+    print pred_rois
+    print data_rois_ndarray.asnumpy()[0]
     scores = compute_tracking_score(pred_rois=pred_rois,
                                     truth_rois=data_rois_ndarray.asnumpy()[0],
                                     thresholds=thresholds,
                                     failure_penalty=failure_penalty,
                                     level_reward=level_reward)
-    print scores
+    print 'Scores:', scores
+    print 'Baseline:', baselines
+    print 'Read Controls:', read_controls
+    print 'Write Controls:', write_controls
     backward_inputs = get_backward_input(init_shapes=tracker_init_shapes,
                                          scores=scores,
                                          baselines=baselines,
@@ -433,9 +454,9 @@ for iter in range(100000):
                                          attention_steps=attention_handler.total_steps)
     tracker.backward(**backward_inputs)
     q_estimation = numpy.cumsum(scores[::-1], axis=0)[::-1]
-    baselines[:] -= 0.001 * (baselines - q_estimation)
-    #for k, v in tracker.params_grad.items():
-    #    print k, numpy.abs(v.asnumpy()).sum()
+    baselines[:] -= 0.0001 * (baselines - q_estimation)
+    for k, v in tracker.params_grad.items():
+        print k, numpy.abs(v.asnumpy()).sum()
     #ch = raw_input()
     tracker.update(updater=updater)
 end = time.time()
