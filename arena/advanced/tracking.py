@@ -247,6 +247,7 @@ class ScoreMapProcessor(object):
                                                      axis=0)
         parsed_scoremaps = []
         for i in range(self.scale_num):
+            #TODO Testing for whether padding should be used
             conv1 = mx.symbol.Convolution(data=multiscale_scoremap[i],
                                           weight=self.params[self.name + ':scale%d:conv1' %i].weight,
                                           bias=self.params[self.name + ':scale%d:conv1' %i].bias,
