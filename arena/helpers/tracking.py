@@ -45,11 +45,9 @@ calculate the central pixel error between two rois
 im, shape (3, height, width)
 roi, gt, shape (batch_size, 4), normalized version in [0, 1]
 '''
-def calc_CPE(im, roi, gt):
-    width = im.shape[2]
-    height = im.shape[1]
-    roi = roi * [width, height, width, height]
-    gt = gt * [width, height, width, height]
+def calc_CPE(im_height, im_width, roi, gt):
+    roi = roi * [im_width, im_height, im_width, im_height]
+    gt = gt * [im_width, im_height, im_width, im_height]
     center_roi = roi[:, 0:2]
     center_gt = gt[:, 0:2]
     cpe = numpy.sqrt(numpy.sum((center_gt - center_roi) ** 2, axis=1))
@@ -60,12 +58,10 @@ calculate the overlap ratio between two rois
 im, shape (3, height, width)
 roi, gt, shape (batch_size, 4), normalized version in [0, 1]
 '''
-def cal_rect_int(im, roi, gt):
-    width = im.shape[2]
-    height = im.shape[1]
+def cal_rect_int(roi, gt):
 
-    roi = roi * [width, height, width, height]
-    gt = gt * [width, height, width, height]
+    #roi = roi * [im_width, im_height, im_width, im_height]
+    #gt = gt * [im_width, im_height, im_width, im_height]
     left_roi = roi[:, 0] - roi[:, 2]/2
     bottom_roi = roi[:, 1] - roi[:, 3]/2
     right_roi = left_roi + roi[:, 2] - 1
@@ -84,16 +80,22 @@ def cal_rect_int(im, roi, gt):
 
 
 if __name__ == '__main__':
-    rect = numpy.loadtxt(os.path.join('/home/sliay/Documents/OTB100/Basketball', 'groundtruth_rect.txt'), delimiter=',')
-    im = cv2.imread('/home/sliay/Documents/OTB100/Basketball/img/0001.jpg')
+    rect = numpy.loadtxt(os.path.join('D:/HKUST/2-2/learning-to-track/datasets/OTB100/Basketball', 'groundtruth_rect.txt'), delimiter=',')
+    im = cv2.imread('D:/HKUST/2-2/learning-to-track/datasets/OTB100/Basketball/img/0001.jpg')
+    im_height = im.shape[0]
+    im_width = im.shape[1]
     rect[:, 0:2] += rect[:, 2:4]/2 - 1
 
     rect[:, ::2] = rect[:, ::2] / im.shape[1]
     rect[:, 1::2] = rect[:, 1::2] / im.shape[0]
     A = rect[0:10, :]
     B = rect[10:20, :]
-    overlap = cal_rect_int(im.transpose(2, 0, 1), A, B)
+    overlap = cal_rect_int(A, B)
     print overlap
-    cpe = calc_CPE(im.transpose(2, 0 ,1), A, B)
+    cpe = calc_CPE(im_height, im_width, A, B)
+    print cpe
+    overlap = cal_rect_int(A, A)
+    print overlap
+    cpe = calc_CPE(im_height, im_width, A, A)
     print cpe
 
