@@ -113,22 +113,34 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         grad_transformation[:] = numpy.clip(transformation - transformed_truth, -1, 1)
 
 
-def roi_transform(anchor_center, anchor_size, roi):
-    roi_sliced = mx.symbol.SliceChannel(roi, num_outputs=2, axis=1)
-    transformed_center = (roi_sliced[0] - anchor_center) / anchor_size
-    transformed_size = mx.symbol.log(roi_sliced[1] / anchor_size)
+def get_roi_center_size(roi):
+    if type(roi) is not list:
+        roi = mx.symbol.SliceChannel(roi, num_outputs=2, axis=1)
+    roi_center = roi[0]
+    roi_size = roi[1]
+    return roi_center, roi_size
+
+
+def roi_transform(anchor_roi, roi):
+    anchor_center, anchor_size = get_roi_center_size(anchor_roi)
+    roi_center, roi_size = get_roi_center_size(roi)
+    transformed_center = (roi_center - anchor_center) / anchor_size
+    transformed_size = mx.symbol.log(roi_size / anchor_size)
+    transformed_center = mx.symbol.BlockGrad(transformed_center)
+    transformed_size = mx.symbol.BlockGrad(transformed_size)
     return transformed_center, transformed_size
 
 
-def roi_transform_inv(anchor_center, anchor_size, transformed_roi):
-    roi_sliced = mx.symbol.SliceChannel(transformed_roi, num_outputs=2, axis=1)
-    center = anchor_center + roi_sliced[0] * anchor_size
-    size = mx.symbol.exp(roi_sliced[1]) * anchor_size
-    center = mx.symbol.clip_zero_one(center)
-    size = mx.symbol.clip_zero_one(size)
-    center = mx.symbol.BlockGrad(center)
-    size = mx.symbol.BlockGrad(size)
-    return center, size
+def roi_transform_inv(anchor_roi, transformed_roi):
+    anchor_center, anchor_size = get_roi_center_size(anchor_roi)
+    transformed_roi_center, transformed_roi_size = get_roi_center_size(transformed_roi)
+    roi_center = anchor_center + transformed_roi_center * anchor_size
+    roi_size = mx.symbol.exp(transformed_roi_size) * anchor_size
+    roi_center = mx.symbol.clip_zero_one(roi_center)
+    roi_size = mx.symbol.clip_zero_one(roi_size)
+    roi_center = mx.symbol.BlockGrad(roi_center)
+    roi_size = mx.symbol.BlockGrad(roi_size)
+    return roi_center, roi_size
 
 
 class AttentionHandler(object):
@@ -300,7 +312,12 @@ class AttentionHandler(object):
             flatten_map = mx.symbol.Flatten(data=processed_scoremap)
 
             #TODO Use transformed search_center
-            roi_code = self.roi_encoding(search_center, search_size, postfix=postfix)
+            transformed_search_center, transformed_search_size = \
+                roi_transform(anchor_roi=[init_glimpse.center, init_glimpse.size],
+                              roi=[search_center, search_size])
+            roi_code = self.roi_encoding(center=transformed_search_center,
+                                         size=transformed_search_size,
+                                         postfix=postfix)
             aggregate_input = mx.symbol.Concat(flatten_map, roi_code, memory_code, num_args=3,
                                                dim=1)
             new_states = step_stack_lstm(indata=aggregate_input, prev_states=tracking_states,
@@ -317,7 +334,7 @@ class AttentionHandler(object):
                 init_shapes[self.name + ':search_roi' + postfix + '_score'] = (1,)
 
                 search_center, search_size = \
-                    roi_transform_inv(init_glimpse.center, init_glimpse.size, search_roi)
+                    roi_transform_inv([init_glimpse.center, init_glimpse.size], search_roi)
 
             else:
                 next_step_init_roi, next_step_init_roi_mean, next_step_init_roi_var = \
@@ -330,12 +347,12 @@ class AttentionHandler(object):
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
                                     roi_type="pred_roi", roi_var=roi_var, postfix=postfix)
                 pred_center, pred_size = \
-                    roi_transform_inv(init_glimpse.center, init_glimpse.size, pred_roi)
+                    roi_transform_inv([init_glimpse.center, init_glimpse.size], pred_roi)
                 sym_out[self.name + ':pred_roi' + postfix] = pred_roi
                 init_shapes[self.name + ':pred_roi' + postfix + '_score'] = (1,)
 
                 next_step_init_center, next_step_init_size = \
-                    roi_transform_inv(init_glimpse.center, init_glimpse.size,
+                    roi_transform_inv([init_glimpse.center, init_glimpse.size],
                                       next_step_init_roi + pred_roi)
 
                 bb_regress_op = BoundingBoxRegressionOp()
