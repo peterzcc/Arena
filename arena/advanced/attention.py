@@ -2,6 +2,7 @@ import mxnet as mx
 import numpy
 from collections import namedtuple, OrderedDict
 from arena.operators import *
+from arena.helpers.tracking import *
 from .common import *
 from .recurrent import LSTMState, LSTMParam, LSTMLayerProp, step_stack_lstm
 
@@ -112,35 +113,6 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         transformed_truth[:, 3] = numpy.log(truth[:, 3] / anchor[:, 3])
         grad_transformation[:] = numpy.clip(transformation - transformed_truth, -1, 1)
 
-
-def get_roi_center_size(roi):
-    if type(roi) is not list:
-        roi = mx.symbol.SliceChannel(roi, num_outputs=2, axis=1)
-    roi_center = roi[0]
-    roi_size = roi[1]
-    return roi_center, roi_size
-
-
-def roi_transform(anchor_roi, roi):
-    anchor_center, anchor_size = get_roi_center_size(anchor_roi)
-    roi_center, roi_size = get_roi_center_size(roi)
-    transformed_center = (roi_center - anchor_center) / anchor_size
-    transformed_size = mx.symbol.log(roi_size / anchor_size)
-    transformed_center = mx.symbol.BlockGrad(transformed_center)
-    transformed_size = mx.symbol.BlockGrad(transformed_size)
-    return transformed_center, transformed_size
-
-
-def roi_transform_inv(anchor_roi, transformed_roi):
-    anchor_center, anchor_size = get_roi_center_size(anchor_roi)
-    transformed_roi_center, transformed_roi_size = get_roi_center_size(transformed_roi)
-    roi_center = anchor_center + transformed_roi_center * anchor_size
-    roi_size = mx.symbol.exp(transformed_roi_size) * anchor_size
-    roi_center = mx.symbol.clip_zero_one(roi_center)
-    roi_size = mx.symbol.clip_zero_one(roi_size)
-    roi_center = mx.symbol.BlockGrad(roi_center)
-    roi_size = mx.symbol.BlockGrad(roi_size)
-    return roi_center, roi_size
 
 
 class AttentionHandler(object):
