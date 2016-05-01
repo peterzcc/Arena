@@ -239,8 +239,8 @@ def build_tracker(tracking_length,
     constant_inputs.update(init_attention_lstm_data)
     return tracker, sym_out, init_shapes, constant_inputs
 
-sample_length = 11
-BPTT_length = 10
+sample_length = 16
+BPTT_length = 15
 
 scale_num = 3
 memory_size = 4
@@ -249,8 +249,8 @@ image_size = (360, 480)
 ctx = mx.gpu()
 memory_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
                      LSTMLayerProp(num_hidden=128, dropout=0.)]
-attention_lstm_props = [LSTMLayerProp(num_hidden=256, dropout=0.),
-                        LSTMLayerProp(num_hidden=256, dropout=0.)]
+attention_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
+                        LSTMLayerProp(num_hidden=128, dropout=0.)]
 
 tracking_iterator = TrackingIterator(
     'D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
