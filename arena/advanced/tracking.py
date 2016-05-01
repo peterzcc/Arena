@@ -253,7 +253,7 @@ class ScoreMapProcessor(object):
                                           kernel=(3,3), pad=(1,1),
                                           num_filter=self.num_filter,
                                           name=self.name + (':scale%d:conv1' %i) + postfix)
-            act1 = mx.symbol.Activation(data=conv1, act_type='relu', name=self.name + (':scale%d:act1' %i) + postfix) + conv1
+            act1 = mx.symbol.Activation(data=conv1, act_type='tanh', name=self.name + (':scale%d:act1' %i) + postfix)
             pool1 = mx.symbol.Pooling(data=act1, kernel=(2, 2), pool_type='avg', stride=(2, 2))
             conv2 = mx.symbol.Convolution(data=pool1,
                                           weight=self.params[self.name + ':scale%d:conv2' %i].weight,
@@ -261,8 +261,8 @@ class ScoreMapProcessor(object):
                                           kernel=(3, 3), pad=(1, 1),
                                           num_filter=self.num_filter,
                                           name=self.name + (':scale%d:conv2' %i) + postfix)
-            act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name +
+            act2 = mx.symbol.Activation(data=conv2, act_type='tanh', name=self.name +
                                                                           (':scale%d:act2' %i) +
-                                                                          postfix) + conv2
+                                                                          postfix)
             parsed_scoremaps.append(act2)
         return mx.symbol.Concat(*parsed_scoremaps, num_args=self.scale_num, dim=1)
