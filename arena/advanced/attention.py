@@ -298,6 +298,8 @@ class AttentionHandler(object):
                                                         postfix=postfix)
             processed_scoremap = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             flatten_map = mx.symbol.Flatten(data=processed_scoremap)
+
+            #TODO Use transformed search_center
             roi_code = self.roi_encoding(search_center, search_size, postfix=postfix)
             aggregate_input = mx.symbol.Concat(flatten_map, roi_code, memory_code, num_args=3,
                                                dim=1)
