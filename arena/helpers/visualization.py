@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import cv2
 import logging
 
+
 '''
 Function: visualize_weights
 Description:

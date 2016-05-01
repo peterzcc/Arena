@@ -134,8 +134,8 @@ class AttentionHandler(object):
         prefix = self.name + ':roi_encoding'
         params[prefix + ':fc1'] = FCParam(weight=mx.symbol.Variable(prefix + ':fc1_weight'),
                                           bias=mx.symbol.Variable(prefix + ':fc1_bias'))
-        params[prefix + ':fc2'] = FCParam(weight=mx.symbol.Variable(prefix + ':fc2_weight'),
-                                          bias=mx.symbol.Variable(prefix + ':fc2_bias'))
+        #params[prefix + ':fc2'] = FCParam(weight=mx.symbol.Variable(prefix + ':fc2_weight'),
+        #                                  bias=mx.symbol.Variable(prefix + ':fc2_bias'))
         return params
 
     def init_lstm(self, ctx=get_default_ctx()):
@@ -210,16 +210,16 @@ class AttentionHandler(object):
     def roi_encoding(self, center, size, postfix):
         prefix = self.name + ':roi_encoding'
         roi = mx.symbol.Concat(center, size, num_args=2, dim=1)
-        fc1 = mx.symbol.FullyConnected(data=roi, num_hidden=128,
+        fc1 = mx.symbol.FullyConnected(data=roi, num_hidden=16,
                                        weight=self.roi_encoding_params[prefix + ':fc1'].weight,
                                        bias=self.roi_encoding_params[prefix + ':fc1'].bias,
                                        name=prefix + ':fc1' + postfix)
-        act1 = mx.symbol.Activation(data=fc1, act_type='relu')
-        fc2 = mx.symbol.FullyConnected(data=act1, num_hidden=128,
-                                       weight=self.roi_encoding_params[prefix + ':fc2'].weight,
-                                       bias=self.roi_encoding_params[prefix + ':fc2'].bias,
-                                       name=prefix + ':fc2' + postfix)
-        return fc2
+        act1 = mx.symbol.Activation(data=fc1, act_type='tanh')
+        #fc2 = mx.symbol.FullyConnected(data=act1, num_hidden=128,
+        #                               weight=self.roi_encoding_params[prefix + ':fc2'].weight,
+        #                               bias=self.roi_encoding_params[prefix + ':fc2'].bias,
+        #                               name=prefix + ':fc2' + postfix)
+        return act1
 
     def roi_policy(self, indata, deterministic=False, roi_var=None, roi_type="init_roi", postfix=''):
         assert roi_type == 'init_roi' or roi_type == 'search_roi' or roi_type == 'pred_roi'
@@ -280,8 +280,9 @@ class AttentionHandler(object):
                 self.cf_handler.get_multiscale_scoremap(multiscale_template=multiscale_template,
                                                         glimpse=glimpse,
                                                         postfix=postfix)
+            sym_out[self.name + ':attention_scoremap' + postfix] = scoremap
             processed_scoremap = self.scoremap_processor.scoremap_processing(scoremap, postfix)
-            flatten_map = mx.symbol.Flatten(data=processed_scoremap)
+            flatten_map = mx.symbol.Reshape(processed_scoremap, target_shape=(1, 0))
 
             #TODO Use transformed search_center
             transformed_search_center, transformed_search_size = \

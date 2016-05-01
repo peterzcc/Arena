@@ -224,38 +224,45 @@ class ScoreMapProcessor(object):
 
     def _init_params(self):
         params = OrderedDict()
-        params[self.name + ':conv1'] = ConvParam(
-            weight=mx.symbol.Variable(self.name + ':conv1_weight'),
-            bias=mx.symbol.Variable(self.name + ':conv1_bias'))
-        params[self.name + ':conv2'] = ConvParam(
-            weight=mx.symbol.Variable(self.name + ':conv2_weight'),
-            bias=mx.symbol.Variable(self.name + ':conv2_bias'))
+        for i in range(self.scale_num):
+            params[self.name + ':scale%d:conv1' %i] = ConvParam(
+                weight=mx.symbol.Variable(self.name + ':scale%d:conv1_weight' %i),
+                bias=mx.symbol.Variable(self.name + ':scale%d:conv1_bias' %i))
+            params[self.name + ':scale%d:conv2' %i] = ConvParam(
+                weight=mx.symbol.Variable(self.name + ':scale%d:conv2_weight' %i),
+                bias=mx.symbol.Variable(self.name + ':scale%d:conv2_bias' %i))
         return params
 
     @property
     def dim_out(self):
-        return (self.num_filter/4 + self.num_filter, self.dim_in[1]/2, self.dim_in[2]/2)
+        return (self.num_filter, self.dim_in[1]/2, self.dim_in[2]/2)
 
     @property
     def name(self):
         return "ScoreMapProcessor"
 
     def scoremap_processing(self, multiscale_scoremap, postfix=''):
-        multiscale_scoremap = mx.symbol.Reshape(multiscale_scoremap,
-                                                target_shape=(1, 0, self.dim_in[1], self.dim_in[2]))
-        conv1 = mx.symbol.Convolution(data=multiscale_scoremap,
-                                      weight=self.params[self.name + ':conv1'].weight,
-                                      bias=self.params[self.name + ':conv1'].bias,
-                                      kernel=(3,3), pad=(1,1),
-                                      num_filter=self.num_filter,
-                                      name=self.name + ':conv1' + postfix)
-        act1 = mx.symbol.Activation(data=conv1, act_type='relu', name=self.name + ':act1' + postfix)
-        pool1 = mx.symbol.Pooling(data=act1, kernel=(2, 2), pool_type='avg', stride=(2, 2))
-        conv2 = mx.symbol.Convolution(data=pool1,
-                                      weight=self.params[self.name + ':conv2'].weight,
-                                      bias=self.params[self.name + ':conv2'].bias,
-                                      kernel=(3, 3), pad=(1, 1),
-                                      num_filter=self.num_filter/4,
-                                      name=self.name + ':conv2' + postfix)
-        act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name + ':act2' + postfix)
-        return act2
+        multiscale_scoremap = mx.symbol.SliceChannel(multiscale_scoremap,
+                                                     num_outputs=self.scale_num,
+                                                     axis=0)
+        parsed_scoremaps = []
+        for i in range(self.scale_num):
+            conv1 = mx.symbol.Convolution(data=multiscale_scoremap[i],
+                                          weight=self.params[self.name + ':scale%d:conv1' %i].weight,
+                                          bias=self.params[self.name + ':scale%d:conv1' %i].bias,
+                                          kernel=(3,3), pad=(1,1),
+                                          num_filter=self.num_filter,
+                                          name=self.name + (':scale%d:conv1' %i) + postfix)
+            act1 = mx.symbol.Activation(data=conv1, act_type='relu', name=self.name + (':scale%d:act1' %i) + postfix) + conv1
+            pool1 = mx.symbol.Pooling(data=act1, kernel=(2, 2), pool_type='avg', stride=(2, 2))
+            conv2 = mx.symbol.Convolution(data=pool1,
+                                          weight=self.params[self.name + ':scale%d:conv2' %i].weight,
+                                          bias=self.params[self.name + ':scale%d:conv2' %i].bias,
+                                          kernel=(3, 3), pad=(1, 1),
+                                          num_filter=self.num_filter,
+                                          name=self.name + (':scale%d:conv2' %i) + postfix)
+            act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name +
+                                                                          (':scale%d:act2' %i) +
+                                                                          postfix) + conv2
+            parsed_scoremaps.append(act2)
+        return mx.symbol.Concat(*parsed_scoremaps, num_args=self.scale_num, dim=1)

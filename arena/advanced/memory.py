@@ -367,7 +367,7 @@ class MemoryHandler(object):
                                        weight=self.read_params[prefix + ':fc1'].weight,
                                        bias=self.read_params[prefix + ':fc1'].bias,
                                        name=prefix + ':fc1' + postfix)
-        act1 = mx.symbol.Activation(data=fc1, act_type='relu', name=prefix + ':relu1' + postfix)
+        act1 = mx.symbol.Activation(data=fc1, act_type='tanh', name=prefix + ':relu1' + postfix)
         fc2 = mx.symbol.FullyConnected(data=act1,
                                        num_hidden=1,
                                        weight=self.read_params[prefix + ':fc2'].weight,

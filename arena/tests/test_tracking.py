@@ -98,7 +98,7 @@ class TrackerInitializer(mx.initializer.Normal):
         super(TrackerInitializer, self)._init_weight(name, arr)
         if 'ScoreMapProcessor' in name:
             print name
-            mx.random.normal(0.0005, self.sigma, out=arr)
+            mx.random.normal(0.1, self.sigma, out=arr)
 
     def _init_bias(self, name, arr):
         super(TrackerInitializer, self)._init_bias(name, arr)
@@ -106,6 +106,7 @@ class TrackerInitializer(mx.initializer.Normal):
 
 def build_tracker(tracking_length,
                   image_size,
+                  deterministic,
                   attention_handler,
                   memory_handler,
                   glimpse_handler,
@@ -173,7 +174,8 @@ def build_tracker(tracking_length,
             multiscale_template=template, memory=memory,
             ground_truth_roi=mx.symbol.Concat(data_centers[timestamp], data_sizes[timestamp],
                                               num_args=2, dim=1),
-            timestamp=timestamp, roi_var=roi_var)
+            timestamp=timestamp, roi_var=roi_var,
+            deterministic=deterministic)
         tracking_state = mx.symbol.Concat(*[state.h for state in tracking_states],
                                           num_args=len(tracking_states), dim=1)
         sym_out.update(attend_sym_out)
@@ -237,12 +239,12 @@ def build_tracker(tracking_length,
     constant_inputs.update(init_attention_lstm_data)
     return tracker, sym_out, init_shapes, constant_inputs
 
-sample_length = 16
-BPTT_length = 15
+sample_length = 11
+BPTT_length = 10
 
 scale_num = 3
 memory_size = 4
-attention_steps = 1
+attention_steps = 3
 image_size = (360, 480)
 ctx = mx.gpu()
 memory_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
@@ -259,7 +261,7 @@ perception_handler = PerceptionHandler(net_type='VGG-M')
 cf_handler = CorrelationFilterHandler(rows=64, cols=64, gaussian_sigma_factor=10, regularizer=0.01,
                                       perception_handler=perception_handler,
                                       glimpse_handler=glimpse_handler)
-scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=16, scale_num=scale_num)
+scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=4, scale_num=scale_num)
 memory_handler = MemoryHandler(cf_handler=cf_handler, scoremap_processor=scoremap_processor,
                                memory_size=memory_size,
                                lstm_layer_props=memory_lstm_props)
@@ -285,6 +287,7 @@ memory_generator.print_stat()
 tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs= \
     build_tracker(image_size=image_size,
                   tracking_length=BPTT_length,
+                  deterministic=False,
                   memory_handler=memory_handler,
                   glimpse_handler=glimpse_handler,
                   cf_handler=cf_handler,
@@ -296,14 +299,14 @@ tracker.print_stat()
 score_inputs = OrderedDict()
 baselines = OrderedDict()
 
-optimizer = mx.optimizer.create(name='adam', learning_rate=0.0001,
+optimizer = mx.optimizer.create(name='adam', learning_rate=0.001,
                                 clip_gradient=None,
                                 rescale_grad=1.0, wd=0.00001)
 updater = mx.optimizer.get_updater(optimizer)
 start = time.time()
-seq_images, seq_rois = tracking_iterator.sample(length=sample_length, interval_step=1)
 
 for iter in range(2000):
+    seq_images, seq_rois = tracking_iterator.sample(length=sample_length, interval_step=1)
     print seq_images.shape
     print seq_rois.shape
     init_image_ndarray = seq_images[:1].reshape((1,) + seq_images.shape[1:])
@@ -337,8 +340,8 @@ for iter in range(2000):
     else:
         tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
     tracker.backward()
-    #for k, v in tracker.params_grad.items():
-    #    print k, v.asnumpy().sum()
+    for k, v in tracker.params_grad.items():
+        print k, numpy.abs(v.asnumpy()).sum()
     #ch = raw_input()
     tracker.update(updater=updater)
     for i, (key, output) in enumerate(zip(tracker_sym_out.keys(), tracker_outputs)):
@@ -346,5 +349,12 @@ for iter in range(2000):
         if 'bb_regress' in key:
             print key, output.asnumpy()
             print data_rois_ndarray.asnumpy()[0, get_timestamp(key), :]
+        #if 'scoremap' in key:
+        #    print key
+            #scoremap = output.asnumpy()
+            #for scale in range(scoremap.shape[0]):
+            #    visualize_weights(scoremap[scale])
+        #if 'glimpse_pred' in key and 'data' in key:
+            # visualize_weights(output.asnumpy())
 end = time.time()
 print sample_length / (end - start)
