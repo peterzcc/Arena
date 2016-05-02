@@ -76,6 +76,20 @@ for year in year_list:
 video_path = os.path.join(alov_path, 'imagedata++')
 roi_path = os.path.join(alov_path, 'alov300++_rectangleAnnotation_full')
 categories = sorted(os.listdir(video_path))
+alov_omit_list = [
+    '01-Light_video00007',
+    '01-Light_video00015',
+    '01-Light_video00016',
+    '01-Light_video00021',
+    '02-SurfaceCover_video00012',
+    '06-MotionSmoothness_video00016',
+    '06-MotionSmoothness_video00019',
+    '08-Clutter_video00011',
+    '09-Confusion_video00001',
+    '11-Occlusion_video00010',
+    '11-Occlusion_video00024',
+    '11-Occlusion_video00025',
+]
 
 for cat in categories:
     video_per_category = sorted(os.listdir(os.path.join(video_path, cat)))
@@ -83,6 +97,8 @@ for cat in categories:
     counter = -1
     for gt in gt_per_category:
         counter += 1
+        if any(video_per_category[counter] == s for s in alov_omit_list):
+            continue
         roi = numpy.loadtxt(os.path.join(roi_path, cat, gt))
         index = numpy.int64(roi[:, 0])
         roi = roi[:, [3, 2, 1, 6]]
