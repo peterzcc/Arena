@@ -109,6 +109,7 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         transformed_truth = numpy.zeros(truth.shape, dtype=numpy.float32)
         transformed_truth[:, 0] = (truth[:, 0] - anchor[:, 0]) / anchor[:, 2]
         transformed_truth[:, 1] = (truth[:, 1] - anchor[:, 1]) / anchor[:, 3]
+        #TODO Possible Devision by Zero!
         transformed_truth[:, 2] = numpy.log(truth[:, 2] / anchor[:, 2])
         transformed_truth[:, 3] = numpy.log(truth[:, 3] / anchor[:, 3])
         grad_transformation[:] = numpy.clip(transformation - transformed_truth, -1, 1)
@@ -224,7 +225,7 @@ class AttentionHandler(object):
     def roi_policy(self, indata, deterministic=False, roi_var=None, roi_type="init_roi", postfix=''):
         assert roi_type == 'init_roi' or roi_type == 'search_roi' or roi_type == 'pred_roi'
         roi_fc1 = \
-            mx.symbol.FullyConnected(data=indata, num_hidden=256,
+            mx.symbol.FullyConnected(data=indata, num_hidden=512,
                                      name=self.name + ':' + roi_type + ':fc1' + postfix,
                                      weight=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':fc1'].weight,
@@ -237,7 +238,7 @@ class AttentionHandler(object):
                                          self.name + ':' + roi_type + ':mean'].weight,
                                      bias=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':mean'].bias)
-        #roi_mean = 4 * mx.symbol.Activation(data=roi_mean, act_type='tanh')
+        #roi_mean = 2 * mx.symbol.Activation(data=roi_mean, act_type='tanh')
         if not self.fixed_variance:
             assert roi_var is None
             roi_var = \
@@ -248,8 +249,11 @@ class AttentionHandler(object):
                                          bias=self.roi_policy_params[
                                              self.name + ':' + roi_type + ':var'].bias)
             roi_var = mx.symbol.Activation(data=roi_var, act_type="softrelu")
-        policy_op = LogNormalPolicy(deterministic=deterministic)
-        roi = policy_op(mean=roi_mean, var=roi_var,
+        #policy_op = LogNormalPolicy(deterministic=deterministic)
+        #roi = policy_op(mean=roi_mean, var=roi_var,
+        #                name=self.name + ':' + roi_type + postfix)
+        policy_op = LogLaplacePolicy(deterministic=deterministic)
+        roi = policy_op(mean=roi_mean, scale=roi_var,
                         name=self.name + ':' + roi_type + postfix)
         return roi, roi_mean, roi_var
 
@@ -307,7 +311,8 @@ class AttentionHandler(object):
                 init_shapes[self.name + ':search_roi' + postfix + '_score'] = (1,)
 
                 search_center, search_size = \
-                    roi_transform_inv([init_glimpse.center, init_glimpse.size], search_roi)
+                    roi_transform_inv(anchor_roi=[init_glimpse.center, init_glimpse.size],
+                                      transformed_roi=search_roi)
 
             else:
                 next_step_init_roi, next_step_init_roi_mean, next_step_init_roi_var = \
@@ -320,13 +325,14 @@ class AttentionHandler(object):
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
                                     roi_type="pred_roi", roi_var=roi_var, postfix=postfix)
                 pred_center, pred_size = \
-                    roi_transform_inv([init_glimpse.center, init_glimpse.size], pred_roi)
+                    roi_transform_inv(anchor_roi=[init_glimpse.center, init_glimpse.size],
+                                      transformed_roi=pred_roi)
                 sym_out[self.name + ':pred_roi' + postfix] = pred_roi
                 init_shapes[self.name + ':pred_roi' + postfix + '_score'] = (1,)
 
                 next_step_init_center, next_step_init_size = \
-                    roi_transform_inv([init_glimpse.center, init_glimpse.size],
-                                      next_step_init_roi + pred_roi)
+                    roi_transform_inv(anchor_roi=[init_glimpse.center, init_glimpse.size],
+                                      transformed_roi=next_step_init_roi + pred_roi_mean)
 
                 bb_regress_op = BoundingBoxRegressionOp()
                 if ground_truth_roi is not None:
