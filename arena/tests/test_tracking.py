@@ -29,13 +29,14 @@ Function: build_memory_generator
 Description: Get the initial template and memory by analyzing the first frame
 
 '''
+
+
 def build_memory_generator(image_size, glimpse_handler,
                            cf_handler,
                            perception_handler,
                            memory_handler, ctx):
     sym_out = OrderedDict()
     init_shapes = OrderedDict()
-
 
     ############################ 0. Define the input symbols #######################################
     # Variable Inputs: init_image, init_roi
@@ -69,8 +70,8 @@ def build_memory_generator(image_size, glimpse_handler,
     sym_out['init_memory:numerators'] = memory.numerators
     sym_out['init_memory:denominators'] = memory.denominators
     for i, state in enumerate(memory.states):
-       sym_out['init_memory:lstm%d_c' %i] = mx.symbol.BlockGrad(state.c)
-       sym_out['init_memory:lstm%d_h' % i] = mx.symbol.BlockGrad(state.h)
+        sym_out['init_memory:lstm%d_c' % i] = mx.symbol.BlockGrad(state.c)
+        sym_out['init_memory:lstm%d_h' % i] = mx.symbol.BlockGrad(state.h)
     sym_out['init_memory:counter'] = memory.status.counter
     sym_out['init_memory:visiting_timestamp'] = memory.status.visiting_timestamp
 
@@ -89,9 +90,10 @@ def build_memory_generator(image_size, glimpse_handler,
     perception_handler.set_params(memory_generator.params)
     constant_inputs = OrderedDict()
     constant_inputs['init_write_control_flag'] = numpy.array(2)
-    constant_inputs['update_factor'] = numpy.array(0.2)
+    constant_inputs['update_factor'] = numpy.array(0.1)
     constant_inputs.update(init_memory_data)
     return memory_generator, sym_out, init_shapes, constant_inputs
+
 
 class TrackerInitializer(mx.initializer.Normal):
     def _init_weight(self, name, arr):
@@ -100,7 +102,7 @@ class TrackerInitializer(mx.initializer.Normal):
             print name
             mx.random.normal(0.1, self.sigma, out=arr)
         elif 'roi' in name and 'AttentionHanlder' in name:
-            mx.random.normal(0, self.sigma/5, out=arr)
+            mx.random.normal(0, self.sigma, out=arr)
 
     def _init_bias(self, name, arr):
         super(TrackerInitializer, self)._init_bias(name, arr)
@@ -236,10 +238,11 @@ def build_tracker(tracking_length,
     perception_handler.set_params(tracker.params)
 
     constant_inputs = OrderedDict()
-    constant_inputs['update_factor'] = 0.1
-    constant_inputs["roi_var"] = nd.array(numpy.array([[1E-4, 1E-4, 1E-6, 1E-6]]), ctx=ctx)
+    constant_inputs['update_factor'] = 0.05
+    constant_inputs["roi_var"] = nd.array(numpy.array([[0.001, 0.001, 0.001, 0.001]]), ctx=ctx)
     constant_inputs.update(init_attention_lstm_data)
     return tracker, sym_out, init_shapes, constant_inputs
+
 
 def get_tracker_pred_rois(outputs, sym_out, total_timesteps):
     pred_rois = numpy.zeros((total_timesteps, 4), dtype=numpy.float32)
@@ -257,9 +260,12 @@ def get_tracker_pred_rois(outputs, sym_out, total_timesteps):
     assert (center_counter == total_timesteps) and (size_counter == total_timesteps)
     return pred_rois
 
+#def get_bb_regress_roi(outputs, sym_out, total_timesteps):
+
+
 
 def compute_tracking_score(pred_rois, truth_rois, thresholds=(0.5, 0.7, 0.8, 0.9),
-                           failure_penalty=-10, level_reward=1):
+                           failure_penalty=-3, level_reward=1):
     assert pred_rois.shape == truth_rois.shape
     assert len(thresholds) > 1
     overlapping_ratios = cal_rect_int(pred_rois, truth_rois)
@@ -267,13 +273,14 @@ def compute_tracking_score(pred_rois, truth_rois, thresholds=(0.5, 0.7, 0.8, 0.9
     scores = (failure_penalty * (overlapping_ratios < thresholds[0])).astype(numpy.float32)
     for i, threshold in enumerate(thresholds):
         scores += (level_reward * (overlapping_ratios >= threshold)).astype(numpy.float32)
-    return scores
+    return scores + overlapping_ratios
 
 
-def get_memory_controls(outputs, sym_out, total_timesteps):
-    read_controls = numpy.empty((total_timesteps, ), dtype=numpy.float32)
-    write_controls = numpy.empty((total_timesteps, ), dtype=numpy.float32)
-
+def get_memory_controls(outputs, sym_out, total_timesteps, memory_size):
+    read_controls = numpy.empty((total_timesteps,), dtype=numpy.float32)
+    write_controls = numpy.empty((total_timesteps,), dtype=numpy.float32)
+    read_controls_prob = numpy.empty((total_timesteps, memory_size), dtype=numpy.float32)
+    write_controls_prob = numpy.empty((total_timesteps, 3), dtype=numpy.float32)
     for i, (key, output) in enumerate(zip(sym_out.keys(), outputs)):
         if 'read:chosen_ind' in key and 'action' in key:
             timestamp = get_timestamp(key)
@@ -281,7 +288,13 @@ def get_memory_controls(outputs, sym_out, total_timesteps):
         elif 'write:control_flag' in key and 'action' in key:
             timestamp = get_timestamp(key)
             write_controls[timestamp] = output.asnumpy()
-    return read_controls, write_controls
+        elif 'read:chosen_ind' in key and 'prob' in key:
+            timestamp = get_timestamp(key)
+            read_controls_prob[timestamp] = output.asnumpy()
+        elif 'write:control_flag' in key and 'prob' in key:
+            timestamp = get_timestamp(key)
+            write_controls_prob[timestamp] = output.asnumpy()
+    return read_controls, write_controls, read_controls_prob, write_controls_prob
 
 
 def get_backward_input(init_shapes, scores, baselines, total_timesteps, attention_steps):
@@ -290,44 +303,44 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
     assert scores.shape[0] == total_timesteps
     backward_inputs = OrderedDict()
     scores = numpy.cumsum(scores[::-1], axis=0)[::-1]
-    advantages = (scores - baselines)/20000.0
-    counter_checking = {'search_roi':0,
-                        'pred_roi':0,
-                        'init_roi':0,
-                        'read:chosen_ind':0,
-                        'write:control_flag':0}
-    counter_ground_truth = {'search_roi':total_timesteps * (attention_steps - 1),
-                            'pred_roi':total_timesteps,
-                            'init_roi':total_timesteps,
-                            'read:chosen_ind':total_timesteps,
-                            'write:control_flag':total_timesteps}
+    advantages = (scores - baselines)
+    counter_checking = {'search_roi': 0,
+                        'pred_roi': 0,
+                        'init_roi': 0,
+                        'read:chosen_ind': 0,
+                        'write:control_flag': 0}
+    counter_ground_truth = {'search_roi': total_timesteps * (attention_steps - 1),
+                            'pred_roi': total_timesteps,
+                            'init_roi': total_timesteps,
+                            'read:chosen_ind': total_timesteps,
+                            'write:control_flag': total_timesteps}
     for key in init_shapes.keys():
         if 'score' in key:
             timestamp = get_timestamp(key)
             if 'search_roi' in key:
-                backward_inputs[key] = advantages[timestamp]
+                backward_inputs[key] = advantages[timestamp] / 10000000 * 0
                 counter_checking['search_roi'] += 1
             elif 'pred_roi' in key:
-                backward_inputs[key] = advantages[timestamp]
+                backward_inputs[key] = advantages[timestamp] / 10000000 * 0
                 counter_checking['pred_roi'] += 1
             elif 'init_roi' in key:
                 if timestamp < total_timesteps - 1:
-                    backward_inputs[key] = advantages[timestamp + 1]
+                    backward_inputs[key] = advantages[timestamp + 1] / 10000000 * 0
                 else:
                     backward_inputs[key] = 0
                 counter_checking['init_roi'] += 1
             elif 'read:chosen_ind' in key:
-                backward_inputs[key] = advantages[timestamp] * 100
+                backward_inputs[key] = advantages[timestamp]
                 counter_checking['read:chosen_ind'] += 1
             elif 'write:control_flag' in key:
                 if timestamp < total_timesteps - 1:
-                    backward_inputs[key] = advantages[timestamp + 1] * 100
+                    backward_inputs[key] = advantages[timestamp + 1]
                 else:
                     backward_inputs[key] = 0
                 counter_checking['write:control_flag'] += 1
             else:
                 raise NotImplementedError, 'Only support %s, find key="%s"' \
-                                           %(str(counter_checking.keys()), key)
+                                           % (str(counter_checking.keys()), key)
     assert counter_checking == counter_ground_truth, counter_checking
     return backward_inputs
 
@@ -335,14 +348,15 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
 sample_length = 16
 BPTT_length = 15
 
-thresholds=(0.5, 0.7, 0.8, 0.9)
-failure_penalty = -10
+#thresholds = (0.5, 0.7, 0.8, 0.9)
+thresholds = (0.5, 0.8)
+failure_penalty = 0
 level_reward = 1
 
 scale_num = 3
 memory_size = 3
-attention_steps = 3
-image_size = (360, 480)
+attention_steps = 1
+image_size = (480, 540)
 ctx = mx.gpu()
 memory_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
                      LSTMLayerProp(num_hidden=128, dropout=0.)]
@@ -353,9 +367,9 @@ tracking_iterator = TrackingIterator(
     'D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
     output_size=image_size,
     resize=True)
-glimpse_handler = GlimpseHandler(scale_mult=1.8, scale_num=scale_num, output_shape=(133, 133))
+glimpse_handler = GlimpseHandler(scale_mult=1.8, scale_num=scale_num, output_shape=(133, 133), init_scale=1.0)
 perception_handler = PerceptionHandler(net_type='VGG-M')
-cf_handler = CorrelationFilterHandler(rows=64, cols=64, gaussian_sigma_factor=10, regularizer=0.01,
+cf_handler = CorrelationFilterHandler(rows=64, cols=64, gaussian_sigma_factor=20, regularizer=0.01,
                                       perception_handler=perception_handler,
                                       glimpse_handler=glimpse_handler)
 scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=4, scale_num=scale_num)
@@ -371,7 +385,7 @@ attention_handler = AttentionHandler(glimpse_handler=glimpse_handler, cf_handler
 # 1. Build the memory generator that initialze the memory by analyzing the first frame
 
 
-memory_generator, mem_sym_out, mem_init_shapes, mem_constant_inputs= \
+memory_generator, mem_sym_out, mem_init_shapes, mem_constant_inputs = \
     build_memory_generator(image_size=image_size,
                            memory_handler=memory_handler,
                            glimpse_handler=glimpse_handler,
@@ -381,7 +395,7 @@ memory_generator, mem_sym_out, mem_init_shapes, mem_constant_inputs= \
 memory_generator.print_stat()
 
 # 2. Build the tracker following the Perceive, Attend and Memorize procedure
-tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs= \
+tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs = \
     build_tracker(image_size=image_size,
                   tracking_length=BPTT_length,
                   deterministic=False,
@@ -393,25 +407,26 @@ tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs= \
                   ctx=ctx)
 tracker.print_stat()
 
-
 baselines = numpy.zeros((BPTT_length,), dtype=numpy.float32)
-optimizer = mx.optimizer.create(name='adam', learning_rate=0.001,
+optimizer = mx.optimizer.create(name='RMSPropNoncentered', learning_rate=0.002, gamma1=0.95,
+                                eps=1E-3,
                                 clip_gradient=None,
                                 rescale_grad=1.0, wd=0.00001)
 updater = mx.optimizer.get_updater(optimizer)
 start = time.time()
+
 for iter in range(100000):
     seq_images, seq_rois = tracking_iterator.sample(length=sample_length, interval_step=1)
-    #print seq_images.shape
-    #print seq_rois.shape
+    # print seq_images.shape
+    # print seq_rois.shape
     init_image_ndarray = seq_images[:1].reshape((1,) + seq_images.shape[1:])
     init_roi_ndarray = seq_rois[:1]
-    #print init_roi_ndarray.shape
-    #print init_image_ndarray.shape
+    # print init_roi_ndarray.shape
+    # print init_image_ndarray.shape
     additional_inputs = OrderedDict()
     additional_inputs['init_image'] = init_image_ndarray
     additional_inputs['init_roi'] = init_roi_ndarray
-    #for k, v in mem_constant_inputs.items():
+    # for k, v in mem_constant_inputs.items():
     #    print k, v.shape
     if 0 == iter:
         mem_outputs = memory_generator.forward(is_train=False,
@@ -420,8 +435,9 @@ for iter in range(100000):
     else:
         mem_outputs = memory_generator.forward(is_train=False, **additional_inputs)
 
-    data_images_ndarray = seq_images[1:(BPTT_length+1)].reshape((1, BPTT_length,) + seq_images.shape[1:])
-    data_rois_ndarray = seq_rois[1:(BPTT_length+1)].reshape((1, BPTT_length, 4))
+    data_images_ndarray = seq_images[1:(BPTT_length + 1)].reshape(
+        (1, BPTT_length,) + seq_images.shape[1:])
+    data_rois_ndarray = seq_rois[1:(BPTT_length + 1)].reshape((1, BPTT_length, 4))
     additional_inputs = OrderedDict()
     additional_inputs['data_images'] = data_images_ndarray
     additional_inputs['data_rois'] = data_rois_ndarray
@@ -429,35 +445,49 @@ for iter in range(100000):
     for i, k in enumerate(mem_sym_out.keys()):
         if 'init_memory' in k:
             additional_inputs[k] = mem_outputs[i]
-    if iter == 0:
-        tracker_outputs = tracker.forward(is_train=True, **(OrderedDict(additional_inputs.items() +
-                                                tracker_constant_inputs.items())))
-    else:
-        tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
-    read_controls, write_controls = get_memory_controls(tracker_outputs, tracker_sym_out, BPTT_length)
-    pred_rois = get_tracker_pred_rois(tracker_outputs, tracker_sym_out, BPTT_length)
-    print pred_rois
-    print data_rois_ndarray.asnumpy()[0]
-    scores = compute_tracking_score(pred_rois=pred_rois,
-                                    truth_rois=data_rois_ndarray.asnumpy()[0],
-                                    thresholds=thresholds,
-                                    failure_penalty=failure_penalty,
-                                    level_reward=level_reward)
-    print 'Scores:', scores
-    print 'Baseline:', baselines
-    print 'Read Controls:', read_controls
-    print 'Write Controls:', write_controls
-    backward_inputs = get_backward_input(init_shapes=tracker_init_shapes,
-                                         scores=scores,
-                                         baselines=baselines,
-                                         total_timesteps=BPTT_length,
-                                         attention_steps=attention_handler.total_steps)
-    tracker.backward(**backward_inputs)
-    q_estimation = numpy.cumsum(scores[::-1], axis=0)[::-1]
-    baselines[:] -= 0.0001 * (baselines - q_estimation)
-    for k, v in tracker.params_grad.items():
-        print k, numpy.abs(v.asnumpy()).sum()
-    #ch = raw_input()
-    tracker.update(updater=updater)
+    avg_scores = numpy.zeros((BPTT_length,), dtype=numpy.float32)
+    for inner_iter in range(1):
+        if iter == 0:
+            tracker_outputs = tracker.forward(is_train=True, **(OrderedDict(additional_inputs.items() +
+                                                                            tracker_constant_inputs.items())))
+        else:
+            tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
+        read_controls, write_controls, read_controls_prob, write_controls_prob = \
+            get_memory_controls(outputs=tracker_outputs,
+                                sym_out=tracker_sym_out,
+                                total_timesteps=BPTT_length,
+                                memory_size=memory_size)
+        pred_rois = get_tracker_pred_rois(tracker_outputs, tracker_sym_out, BPTT_length)
+#        print pred_rois
+#        print data_rois_ndarray.asnumpy()[0]
+        scores = compute_tracking_score(pred_rois=pred_rois,
+                                        truth_rois=data_rois_ndarray.asnumpy()[0],
+                                        thresholds=thresholds,
+                                        failure_penalty=failure_penalty,
+                                        level_reward=level_reward)
+        avg_scores += scores
+#        print 'Scores:', scores
+#        print 'Baseline:', baselines
+#        print 'Read Controls:', read_controls
+#        print 'Write Controls:', write_controls
+#        print 'Read Control Probs:', read_controls_prob
+#        print 'Write Control Probs:', write_controls_prob
+        backward_inputs = get_backward_input(init_shapes=tracker_init_shapes,
+                                             scores=scores,
+                                             baselines=baselines,
+                                             total_timesteps=BPTT_length,
+                                             attention_steps=attention_handler.total_steps)
+        tracker.backward(**backward_inputs)
+        q_estimation = numpy.cumsum(scores[::-1], axis=0)[::-1]
+        baselines[:] -= 0.001 * (baselines - q_estimation)
+#        for k, v in tracker.params_grad.items():
+#            print k, numpy.abs(v.asnumpy()).sum()
+        tracker.update(updater=updater)
+    print 'Avg Scores:', avg_scores/1
+    print 'Read Control Probs:', read_controls_prob
+    print 'Write Control Probs:', write_controls_prob
+    print 'Predicted ROIS:', pred_rois
+    print 'Ground Truth ROIS:', data_rois_ndarray.asnumpy()[0]
+
 end = time.time()
 print sample_length / (end - start)
