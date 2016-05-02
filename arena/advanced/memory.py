@@ -135,6 +135,8 @@ class MemoryStatUpdateOp(mx.operator.NumpyOp):
             new_visiting_timestamp[control_flag] = numpy.max(visiting_timestamp) + 1
         elif 'write' == self.mode:
             flags = out_data[2]
+            if numpy.any(counter == 0):
+                control_flag = 2
             if 0 == control_flag:
                 flags[:] = 0
             elif 1 == control_flag:
@@ -363,7 +365,7 @@ class MemoryHandler(object):
         concat_feature = mx.symbol.Concat(global_pooled_feature, memory_state_code,
                                           num_args=2, dim=1)
         fc1 = mx.symbol.FullyConnected(data=concat_feature,
-                                       num_hidden=256,
+                                       num_hidden=128,
                                        weight=self.read_params[prefix + ':fc1'].weight,
                                        bias=self.read_params[prefix + ':fc1'].bias,
                                        name=prefix + ':fc1' + postfix)
