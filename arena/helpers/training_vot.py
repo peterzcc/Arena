@@ -13,8 +13,8 @@ alov_path = 'D://HKUST//2-2//learning-to-track//datasets//alov300/'
 
 folder_path = os.path.dirname(os.path.abspath(__file__))
 
-list_file_14 = open(os.path.join(output_path, 'training_otb14.lst'), 'w')
-list_file_15 = open(os.path.join(output_path, 'training_otb15.lst'), 'w')
+list_file_14 = open(os.path.join(output_path, 'training_vot14.lst'), 'w')
+list_file_15 = open(os.path.join(output_path, 'training_vot15.lst'), 'w')
 training_list = []
 
 
