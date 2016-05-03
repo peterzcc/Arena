@@ -176,8 +176,7 @@ class LogLaplacePolicy(mx.operator.NumpyOp):
         grad_mu = in_grad[0]
         grad_scale = in_grad[1]
         grad_mu[:] = numpy.sign(mean - action) / scale * score.reshape((score.shape[0], 1))
-        grad_scale[:] = - numpy.sign(mean - action) / (scale * scale) * score.reshape((score.shape[0], 1))
-
+        grad_scale[:] = - numpy.abs(mean - action) / (scale * scale) * score.reshape((score.shape[0], 1))
 
 
 '''
