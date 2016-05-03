@@ -23,6 +23,7 @@ ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 root.addHandler(ch)
+mx.random.seed(100)
 
 '''
 Function: build_memory_generator
@@ -101,8 +102,10 @@ class TrackerInitializer(mx.initializer.Normal):
         if 'ScoreMapProcessor' in name:
             print name
             mx.random.normal(0.1, self.sigma, out=arr)
-        elif 'roi' in name and 'AttentionHanlder' in name:
-            mx.random.normal(0, self.sigma, out=arr)
+        elif 'init_roi' in name and 'AttentionHanlder' in name:
+            mx.random.normal(0, self.sigma / 1000, out=arr)
+        elif 'search_roi' in name and 'AttentionHanlder' in name:
+            mx.random.normal(0, self.sigma / 1000, out=arr)
 
     def _init_bias(self, name, arr):
         super(TrackerInitializer, self)._init_bias(name, arr)
@@ -238,16 +241,19 @@ def build_tracker(tracking_length,
     perception_handler.set_params(tracker.params)
 
     constant_inputs = OrderedDict()
-    constant_inputs['update_factor'] = 0.05
-    constant_inputs["roi_var"] = nd.array(numpy.array([[0.001, 0.001, 0.001, 0.001]]), ctx=ctx)
+    constant_inputs['update_factor'] = 0.1
+    constant_inputs["roi_var"] = nd.array(numpy.array([[0.01, 0.01, 0.001, 0.001]]), ctx=ctx)
     constant_inputs.update(init_attention_lstm_data)
     return tracker, sym_out, init_shapes, constant_inputs
 
 
-def get_tracker_pred_rois(outputs, sym_out, total_timesteps):
+def get_tracker_pred_glimpse(outputs, sym_out, total_timesteps, glimpse_data_shape=None):
     pred_rois = numpy.zeros((total_timesteps, 4), dtype=numpy.float32)
+    if glimpse_data_shape is not None:
+        pred_glimpse_data = numpy.zeros((total_timesteps, ) + glimpse_data_shape, dtype=numpy.float32)
     center_counter = 0
     size_counter = 0
+    data_counter = 0
     for i, (key, output) in enumerate(zip(sym_out.keys(), outputs)):
         if 'glimpse_pred' in key:
             timestamp = get_timestamp(key)
@@ -257,8 +263,16 @@ def get_tracker_pred_rois(outputs, sym_out, total_timesteps):
             elif 'size' in key:
                 pred_rois[timestamp, 2:4] = output.asnumpy()[:]
                 size_counter += 1
-    assert (center_counter == total_timesteps) and (size_counter == total_timesteps)
-    return pred_rois
+            elif 'data' in key:
+                if glimpse_data_shape is not None:
+                    pred_glimpse_data[timestamp, :, :, :, :] = output.asnumpy()
+                data_counter += 1
+    assert (center_counter == total_timesteps) and (size_counter == total_timesteps) and \
+           (data_counter == total_timesteps)
+    if glimpse_data_shape is not None:
+        return pred_rois, pred_glimpse_data
+    else:
+        return pred_rois
 
 #def get_bb_regress_roi(outputs, sym_out, total_timesteps):
 
@@ -305,12 +319,10 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
     scores = numpy.cumsum(scores[::-1], axis=0)[::-1]
     advantages = (scores - baselines)
     counter_checking = {'search_roi': 0,
-                        'pred_roi': 0,
                         'init_roi': 0,
                         'read:chosen_ind': 0,
                         'write:control_flag': 0}
     counter_ground_truth = {'search_roi': total_timesteps * (attention_steps - 1),
-                            'pred_roi': total_timesteps,
                             'init_roi': total_timesteps,
                             'read:chosen_ind': total_timesteps,
                             'write:control_flag': total_timesteps}
@@ -318,19 +330,18 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
         if 'score' in key:
             timestamp = get_timestamp(key)
             if 'search_roi' in key:
-                backward_inputs[key] = advantages[timestamp] / 10000000 * 0
+                backward_inputs[key] = advantages[timestamp] / 1000
                 counter_checking['search_roi'] += 1
             elif 'pred_roi' in key:
-                backward_inputs[key] = advantages[timestamp] / 10000000 * 0
-                counter_checking['pred_roi'] += 1
+                assert False
             elif 'init_roi' in key:
                 if timestamp < total_timesteps - 1:
-                    backward_inputs[key] = advantages[timestamp + 1] / 10000000 * 0
+                    backward_inputs[key] = advantages[timestamp + 1] / 1000
                 else:
                     backward_inputs[key] = 0
                 counter_checking['init_roi'] += 1
             elif 'read:chosen_ind' in key:
-                backward_inputs[key] = advantages[timestamp]
+                backward_inputs[key] = advantages[timestamp] / 100
                 counter_checking['read:chosen_ind'] += 1
             elif 'write:control_flag' in key:
                 if timestamp < total_timesteps - 1:
@@ -347,33 +358,59 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
 
 sample_length = 16
 BPTT_length = 15
+roll_out_num = 3
+total_epoch_num = 200
+epoch_iter_num = 30000
 
-#thresholds = (0.5, 0.7, 0.8, 0.9)
+# Score Related Parameters
+
 thresholds = (0.5, 0.8)
-failure_penalty = 0
+failure_penalty = -2
 level_reward = 1
 
+# Glimpse Hanlder Parameters
 scale_num = 3
+scale_mult = 1.6
+init_scale = 1.0
+
+# Correlation Filter Handler Parameters
+cf_gaussian_sigma_factor = 20
+cf_regularizer = 0.01
+
+
+scoremap_num_filter = 4
+
 memory_size = 3
-attention_steps = 1
+attention_steps = 3
 image_size = (480, 540)
 ctx = mx.gpu()
-memory_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
-                     LSTMLayerProp(num_hidden=128, dropout=0.)]
+memory_lstm_props = [LSTMLayerProp(num_hidden=256, dropout=0.),
+                     LSTMLayerProp(num_hidden=256, dropout=0.)]
 attention_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
                         LSTMLayerProp(num_hidden=128, dropout=0.)]
 
+sequence_list_path = 'D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst'
+
+
 tracking_iterator = TrackingIterator(
-    'D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
+    sequence_list_path,
     output_size=image_size,
     resize=True)
-glimpse_handler = GlimpseHandler(scale_mult=1.8, scale_num=scale_num, output_shape=(133, 133), init_scale=1.0)
+glimpse_handler = GlimpseHandler(scale_mult=scale_mult,
+                                 scale_num=scale_num,
+                                 output_shape=(133, 133),
+                                 init_scale=init_scale)
 perception_handler = PerceptionHandler(net_type='VGG-M')
-cf_handler = CorrelationFilterHandler(rows=64, cols=64, gaussian_sigma_factor=20, regularizer=0.01,
+cf_handler = CorrelationFilterHandler(rows=64, cols=64,
+                                      gaussian_sigma_factor=cf_gaussian_sigma_factor,
+                                      regularizer=cf_regularizer,
                                       perception_handler=perception_handler,
                                       glimpse_handler=glimpse_handler)
-scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64), num_filter=4, scale_num=scale_num)
-memory_handler = MemoryHandler(cf_handler=cf_handler, scoremap_processor=scoremap_processor,
+scoremap_processor = ScoreMapProcessor(dim_in=(96, 64, 64),
+                                       num_filter=scoremap_num_filter,
+                                       scale_num=scale_num)
+memory_handler = MemoryHandler(cf_handler=cf_handler,
+                               scoremap_processor=scoremap_processor,
                                memory_size=memory_size,
                                lstm_layer_props=memory_lstm_props)
 attention_handler = AttentionHandler(glimpse_handler=glimpse_handler, cf_handler=cf_handler,
@@ -408,86 +445,101 @@ tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs = \
 tracker.print_stat()
 
 baselines = numpy.zeros((BPTT_length,), dtype=numpy.float32)
-optimizer = mx.optimizer.create(name='RMSPropNoncentered', learning_rate=0.002, gamma1=0.95,
-                                eps=1E-3,
+optimizer = mx.optimizer.create(name='RMSPropNoncentered',
+                                learning_rate=0.0001,
+                                gamma1=0.95,
+                                eps=1E-6,
                                 clip_gradient=None,
-                                rescale_grad=1.0, wd=0.00001)
+                                rescale_grad=1.0, wd=0.0)
 updater = mx.optimizer.get_updater(optimizer)
-start = time.time()
 
-for iter in range(100000):
-    seq_images, seq_rois = tracking_iterator.sample(length=sample_length, interval_step=1)
-    # print seq_images.shape
-    # print seq_rois.shape
-    init_image_ndarray = seq_images[:1].reshape((1,) + seq_images.shape[1:])
-    init_roi_ndarray = seq_rois[:1]
-    # print init_roi_ndarray.shape
-    # print init_image_ndarray.shape
-    additional_inputs = OrderedDict()
-    additional_inputs['init_image'] = init_image_ndarray
-    additional_inputs['init_roi'] = init_roi_ndarray
-    # for k, v in mem_constant_inputs.items():
-    #    print k, v.shape
-    if 0 == iter:
-        mem_outputs = memory_generator.forward(is_train=False,
-                                               **(OrderedDict(additional_inputs.items() +
-                                                              mem_constant_inputs.items())))
-    else:
-        mem_outputs = memory_generator.forward(is_train=False, **additional_inputs)
+accumulative_grad = OrderedDict()
+for k, v in tracker.params_grad.items():
+    accumulative_grad[k] = nd.empty(shape=v.shape, ctx=v.context)
 
-    data_images_ndarray = seq_images[1:(BPTT_length + 1)].reshape(
-        (1, BPTT_length,) + seq_images.shape[1:])
-    data_rois_ndarray = seq_rois[1:(BPTT_length + 1)].reshape((1, BPTT_length, 4))
-    additional_inputs = OrderedDict()
-    additional_inputs['data_images'] = data_images_ndarray
-    additional_inputs['data_rois'] = data_rois_ndarray
-    additional_inputs['init_search_roi'] = init_roi_ndarray
-    for i, k in enumerate(mem_sym_out.keys()):
-        if 'init_memory' in k:
-            additional_inputs[k] = mem_outputs[i]
-    avg_scores = numpy.zeros((BPTT_length,), dtype=numpy.float32)
-    for inner_iter in range(1):
-        if iter == 0:
-            tracker_outputs = tracker.forward(is_train=True, **(OrderedDict(additional_inputs.items() +
-                                                                            tracker_constant_inputs.items())))
+for epoch in range(total_epoch_num):
+    for iter in range(epoch_iter_num):
+        seq_images, seq_rois = tracking_iterator.sample(length=sample_length,
+                                                        interval_step=1,
+                                                        verbose=False)
+        # print seq_images.shape
+        # print seq_rois.shape
+        init_image_ndarray = seq_images[:1].reshape((1,) + seq_images.shape[1:])
+        init_roi_ndarray = seq_rois[:1]
+        # print init_roi_ndarray.shape
+        # print init_image_ndarray.shape
+        additional_inputs = OrderedDict()
+        additional_inputs['init_image'] = init_image_ndarray
+        additional_inputs['init_roi'] = init_roi_ndarray
+        # for k, v in mem_constant_inputs.items():
+        #    print k, v.shape
+        if 0 == iter:
+            mem_outputs = memory_generator.forward(is_train=False,
+                                                   **(OrderedDict(additional_inputs.items() +
+                                                                  mem_constant_inputs.items())))
         else:
-            tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
-        read_controls, write_controls, read_controls_prob, write_controls_prob = \
-            get_memory_controls(outputs=tracker_outputs,
-                                sym_out=tracker_sym_out,
-                                total_timesteps=BPTT_length,
-                                memory_size=memory_size)
-        pred_rois = get_tracker_pred_rois(tracker_outputs, tracker_sym_out, BPTT_length)
-#        print pred_rois
-#        print data_rois_ndarray.asnumpy()[0]
-        scores = compute_tracking_score(pred_rois=pred_rois,
-                                        truth_rois=data_rois_ndarray.asnumpy()[0],
-                                        thresholds=thresholds,
-                                        failure_penalty=failure_penalty,
-                                        level_reward=level_reward)
-        avg_scores += scores
-#        print 'Scores:', scores
-#        print 'Baseline:', baselines
-#        print 'Read Controls:', read_controls
-#        print 'Write Controls:', write_controls
-#        print 'Read Control Probs:', read_controls_prob
-#        print 'Write Control Probs:', write_controls_prob
-        backward_inputs = get_backward_input(init_shapes=tracker_init_shapes,
-                                             scores=scores,
-                                             baselines=baselines,
-                                             total_timesteps=BPTT_length,
-                                             attention_steps=attention_handler.total_steps)
-        tracker.backward(**backward_inputs)
-        q_estimation = numpy.cumsum(scores[::-1], axis=0)[::-1]
-        baselines[:] -= 0.001 * (baselines - q_estimation)
-#        for k, v in tracker.params_grad.items():
-#            print k, numpy.abs(v.asnumpy()).sum()
-        tracker.update(updater=updater)
-    print 'Avg Scores:', avg_scores/1
-    print 'Read Control Probs:', read_controls_prob
-    print 'Write Control Probs:', write_controls_prob
-    print 'Predicted ROIS:', pred_rois
-    print 'Ground Truth ROIS:', data_rois_ndarray.asnumpy()[0]
+            mem_outputs = memory_generator.forward(is_train=False, **additional_inputs)
 
-end = time.time()
-print sample_length / (end - start)
+        data_images_ndarray = seq_images[1:(BPTT_length + 1)].reshape(
+            (1, BPTT_length,) + seq_images.shape[1:])
+        data_rois_ndarray = seq_rois[1:(BPTT_length + 1)].reshape((1, BPTT_length, 4))
+        additional_inputs = OrderedDict()
+        additional_inputs['data_images'] = data_images_ndarray
+        additional_inputs['data_rois'] = data_rois_ndarray
+        additional_inputs['init_search_roi'] = init_roi_ndarray
+        for i, k in enumerate(mem_sym_out.keys()):
+            if 'init_memory' in k:
+                additional_inputs[k] = mem_outputs[i]
+        avg_scores = numpy.zeros((BPTT_length,), dtype=numpy.float32)
+        for episode in range(roll_out_num):
+            if 0 == episode:
+                if iter == 0:
+                    tracker_outputs = tracker.forward(is_train=True, **(OrderedDict(additional_inputs.items() +
+                                                                                    tracker_constant_inputs.items())))
+                else:
+                    tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
+            else:
+                tracker_outputs = tracker.forward(is_train=True)
+            read_controls, write_controls, read_controls_prob, write_controls_prob = \
+                get_memory_controls(outputs=tracker_outputs,
+                                    sym_out=tracker_sym_out,
+                                    total_timesteps=BPTT_length,
+                                    memory_size=memory_size)
+            pred_rois = get_tracker_pred_glimpse(outputs=tracker_outputs,
+                                                 sym_out=tracker_sym_out,
+                                                 total_timesteps=BPTT_length,
+                                                 glimpse_data_shape=None)#(scale_num, 3) + glimpse_handler.output_shape)
+
+            # for i in range(BPTT_length):
+            #      draw_track_res(data_images_ndarray.asnumpy()[0, i, :, :, :], pred_rois[i], delay=3)
+            # print pred_rois
+            # print data_rois_ndarray.asnumpy()[0]
+            scores = compute_tracking_score(pred_rois=pred_rois,
+                                            truth_rois=data_rois_ndarray.asnumpy()[0],
+                                            thresholds=thresholds,
+                                            failure_penalty=failure_penalty,
+                                            level_reward=level_reward)
+            avg_scores += scores
+            backward_inputs = get_backward_input(init_shapes=tracker_init_shapes,
+                                                 scores=scores,
+                                                 baselines=baselines,
+                                                 total_timesteps=BPTT_length,
+                                                 attention_steps=attention_handler.total_steps)
+            tracker.backward(**backward_inputs)
+            for k, v in tracker.params_grad.items():
+                if 0 == episode:
+                    accumulative_grad[k][:] = v / float(roll_out_num)
+                else:
+                    accumulative_grad[k][:] += v / float(roll_out_num)
+        #for k, v in accumulative_grad.items():
+        #    print k, numpy.abs(v.asnumpy()).sum()
+        tracker.update(updater=updater, params_grad=accumulative_grad)
+        avg_scores /= roll_out_num
+        q_estimation = numpy.cumsum(avg_scores[::-1], axis=0)[::-1]
+        baselines[:] -= 0.001 * (baselines - q_estimation)
+        #print 'Avg Scores:', avg_scores
+        logging.info('Epoch:%d, Iter:%d, Baselines:%s' % (epoch, iter, str(baselines)))
+        #print 'Read Control Probs:', read_controls_prob
+        #print 'Write Control Probs:', write_controls_prob
+        #print 'Predicted ROIS:', pred_rois
+        #print 'Ground Truth ROIS:', data_rois_ndarray.asnumpy()[0]
