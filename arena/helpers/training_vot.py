@@ -111,7 +111,13 @@ for cat in categories:
         roi = numpy.loadtxt(os.path.join(roi_path, cat, gt))
         index = numpy.int64(roi[:, 0])
         roi = roi[:, [3, 2, 1, 6]]
-        roi[:, 2:4] = roi[:, 2:4] - roi[:, 0:2] + 1
+        cx = (roi[:, 0] + roi[:, 2]) / 2
+        cy = (roi[:, 1] + roi[:, 3]) / 2
+        wh = abs(roi[:, 2:4] - roi[:, 0:2]) + 1
+        roi[:, 0] = cx - wh[:, 0]/2
+        roi[:, 1] = cy - wh[:, 1]/2
+        roi[:, 2] = wh[:, 0]
+        roi[:, 3] = wh[:, 1]
         interp_roi = numpy.zeros((index[-1] - index[0] + 1, 4))
         # do linear interpolation
         for i in xrange(4):
