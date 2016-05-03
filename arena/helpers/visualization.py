@@ -1,7 +1,6 @@
 import numpy
 from arena.utils import *
 import mxnet.ndarray as nd
-import matplotlib.pyplot as plt
 import cv2
 import logging
 
