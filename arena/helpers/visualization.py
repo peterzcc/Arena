@@ -39,7 +39,7 @@ def visualize_weights(data, delay=0):
 '''
 plot the roi bounding box on the image
 im, shape (3, height, width)
-roi, normalized version from [-1,1]
+roi, normalized version from [0, 1]
 '''
 
 
@@ -48,14 +48,14 @@ def draw_track_res(im, roi, delay=0):
     width = im.shape[1]
     height = im.shape[0]
     roi = roi * [width, height, width, height]
-    roi = numpy.uint8(roi)
+    roi = numpy.uint32(roi)
     pt1 = (roi[0] - roi[2] / 2, roi[1] - roi[3] / 2)
     pt2 = (roi[0] + roi[2] / 2, roi[1] + roi[3] / 2)
     im2 = numpy.zeros(im.shape)
     im2[:] = im
     cv2.rectangle(im2, pt1, pt2, (0, 0, 255), 1)
     win = cv2.namedWindow("Tracking", cv2.WINDOW_NORMAL)
-    cv2.imshow('Tracking', im2[:, :, ::-1] / 255.0)
+    cv2.imshow("Tracking", im2[:, :, ::-1] / 255.0)
     cv2.waitKey(delay)
 
 
