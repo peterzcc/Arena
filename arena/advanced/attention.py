@@ -107,11 +107,11 @@ class BoundingBoxRegressionOp(mx.operator.NumpyOp):
         truth = in_data[2]
         grad_transformation = in_grad[0]
         transformed_truth = numpy.zeros(truth.shape, dtype=numpy.float32)
-        transformed_truth[:, 0] = (truth[:, 0] - anchor[:, 0]) / anchor[:, 2]
-        transformed_truth[:, 1] = (truth[:, 1] - anchor[:, 1]) / anchor[:, 3]
+        transformed_truth[:, 0] = numpy.nan_to_num((truth[:, 0] - anchor[:, 0]) / anchor[:, 2])
+        transformed_truth[:, 1] = numpy.nan_to_num((truth[:, 1] - anchor[:, 1]) / anchor[:, 3])
         #TODO Possible Devision by Zero!
-        transformed_truth[:, 2] = numpy.log(truth[:, 2] / anchor[:, 2])
-        transformed_truth[:, 3] = numpy.log(truth[:, 3] / anchor[:, 3])
+        transformed_truth[:, 2] = numpy.nan_to_num(numpy.log(truth[:, 2] / anchor[:, 2]))
+        transformed_truth[:, 3] = numpy.nan_to_num(numpy.log(truth[:, 3] / anchor[:, 3]))
         grad_transformation[:] = numpy.clip(transformation - transformed_truth, -1, 1)
 
 
@@ -171,6 +171,9 @@ class AttentionHandler(object):
         params[prefix + ':search_roi:fc1'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':search_roi:fc1_weight'),
                     bias=mx.symbol.Variable(prefix + ':search_roi:fc1_bias'))
+        params[prefix + ':search_roi:fc2'] = \
+            FCParam(weight=mx.symbol.Variable(prefix + ':search_roi:fc2_weight'),
+                    bias=mx.symbol.Variable(prefix + ':search_roi:fc2_bias'))
         params[prefix + ':search_roi:mean'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':search_roi:mean_weight'),
                     bias=mx.symbol.Variable(prefix + ':search_roi:mean_bias'))
@@ -183,6 +186,9 @@ class AttentionHandler(object):
         params[prefix + ':init_roi:fc1'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':init_roi:fc1_weight'),
                     bias=mx.symbol.Variable(prefix + ':init_roi:fc1_bias'))
+        params[prefix + ':init_roi:fc2'] = \
+            FCParam(weight=mx.symbol.Variable(prefix + ':init_roi:fc2_weight'),
+                    bias=mx.symbol.Variable(prefix + ':init_roi:fc2_bias'))
         params[prefix + ':init_roi:mean'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':init_roi:mean_weight'),
                     bias=mx.symbol.Variable(prefix + ':init_roi:mean_bias'))
@@ -195,6 +201,9 @@ class AttentionHandler(object):
         params[prefix + ':pred_roi:fc1'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi:fc1_weight'),
                     bias=mx.symbol.Variable(prefix + ':pred_roi:fc1_bias'))
+        params[prefix + ':pred_roi:fc2'] = \
+            FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi:fc2_weight'),
+                    bias=mx.symbol.Variable(prefix + ':pred_roi:fc2_bias'))
         params[prefix + ':pred_roi:mean'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi:mean_weight'),
                     bias=mx.symbol.Variable(prefix + ':pred_roi:mean_bias'))
@@ -225,14 +234,25 @@ class AttentionHandler(object):
     def roi_policy(self, indata, deterministic=False, roi_var=None, roi_type="init_roi", postfix=''):
         assert roi_type == 'init_roi' or roi_type == 'search_roi' or roi_type == 'pred_roi'
         roi_fc1 = \
-            mx.symbol.FullyConnected(data=indata, num_hidden=512,
+            mx.symbol.FullyConnected(data=indata, num_hidden=1024,
                                      name=self.name + ':' + roi_type + ':fc1' + postfix,
                                      weight=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':fc1'].weight,
                                      bias=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':fc1'].bias)
+        roi_act1 = mx.symbol.Activation(data=roi_fc1, act_type='tanh')
+        roi_act1 = mx.sym.Dropout(data=roi_act1, p=0.3)
+        roi_fc2 = \
+            mx.symbol.FullyConnected(data=roi_act1, num_hidden=512,
+                                     name=self.name + ':' + roi_type + ':fc2' + postfix,
+                                     weight=self.roi_policy_params[
+                                         self.name + ':' + roi_type + ':fc2'].weight,
+                                     bias=self.roi_policy_params[
+                                         self.name + ':' + roi_type + ':fc2'].bias)
+        roi_act2 = mx.symbol.Activation(data=roi_fc2, act_type='tanh')
+        roi_act2 = mx.sym.Dropout(data=roi_act2, p=0.3)
         roi_mean = \
-            mx.symbol.FullyConnected(data=roi_fc1, num_hidden=4,
+            mx.symbol.FullyConnected(data=roi_act2, num_hidden=4,
                                      name=self.name + ':' + roi_type + ':mean' + postfix,
                                      weight=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':mean'].weight,
