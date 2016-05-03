@@ -390,7 +390,7 @@ attention_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
                         LSTMLayerProp(num_hidden=128, dropout=0.)]
 
 sequence_list_path = 'D:\\HKUST\\2-2\\learning-to-track\\datasets\\training_for_otb100\\training_otb.lst'
-
+save_dir = "tracking-model"
 
 tracking_iterator = TrackingIterator(
     sequence_list_path,
@@ -446,7 +446,7 @@ tracker.print_stat()
 
 baselines = numpy.zeros((BPTT_length,), dtype=numpy.float32)
 optimizer = mx.optimizer.create(name='RMSPropNoncentered',
-                                learning_rate=0.0001,
+                                learning_rate=0.0002,
                                 gamma1=0.95,
                                 eps=1E-6,
                                 clip_gradient=None,
@@ -510,8 +510,8 @@ for epoch in range(total_epoch_num):
                                                  total_timesteps=BPTT_length,
                                                  glimpse_data_shape=None)#(scale_num, 3) + glimpse_handler.output_shape)
 
-            for i in range(BPTT_length):
-                 draw_track_res(data_images_ndarray.asnumpy()[0, i, :, :, :], pred_rois[i], delay=3)
+            # for i in range(BPTT_length):
+            #      draw_track_res((data_images_ndarray + tracking_iterator.img_mean(data_images_ndarray.shape)).asnumpy()[0, i, :, :, :], pred_rois[i], delay=3)
             # print pred_rois
             # print data_rois_ndarray.asnumpy()[0]
             scores = compute_tracking_score(pred_rois=pred_rois,
@@ -538,8 +538,10 @@ for epoch in range(total_epoch_num):
         q_estimation = numpy.cumsum(avg_scores[::-1], axis=0)[::-1]
         baselines[:] -= 0.001 * (baselines - q_estimation)
         #print 'Avg Scores:', avg_scores
-        logging.info('Epoch:%d, Iter:%d, Baselines:%s' % (epoch, iter, str(baselines)))
+        logging.info('Epoch:%d, Iter:%d, Baselines:%s, Read Controls:%s, Write Controls %s' %
+                     (epoch, iter, str(baselines), str(read_controls), str(write_controls)))
         #print 'Read Control Probs:', read_controls_prob
         #print 'Write Control Probs:', write_controls_prob
         #print 'Predicted ROIS:', pred_rois
         #print 'Ground Truth ROIS:', data_rois_ndarray.asnumpy()[0]
+    tracker.save_params(dir_path=save_dir, epoch=epoch)
