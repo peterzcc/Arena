@@ -135,6 +135,8 @@ class MemoryStatUpdateOp(mx.operator.NumpyOp):
             new_visiting_timestamp[control_flag] = numpy.max(visiting_timestamp) + 1
         elif 'write' == self.mode:
             flags = out_data[2]
+            if numpy.any(counter == 0):
+                control_flag = 2
             if 0 == control_flag:
                 flags[:] = 0
             elif 1 == control_flag:
@@ -204,7 +206,7 @@ class MemoryHandler(object):
         return params
 
     def init_memory(self, ctx=get_default_ctx()):
-        prefix = self.name + ':memory_init'
+        prefix = 'init_memory'
         numerators=mx.symbol.Variable(prefix + ':numerators')
         denominators=mx.symbol.Variable(prefix + ':denominators')
         init_memory_status = \
@@ -262,7 +264,7 @@ class MemoryHandler(object):
             weight=self.write_params[prefix + ':fc1'].weight,
             bias=self.write_params[prefix + ':fc1'].bias,
             name=prefix + ':fc1' + postfix)
-        act1 = mx.symbol.Activation(data=fc1, act_type='relu', name=prefix + ':relu1' + postfix)
+        act1 = mx.symbol.Activation(data=fc1, act_type='tanh', name=prefix + ':tanh1' + postfix)
         fc2 = mx.symbol.FullyConnected(data=act1,
                                        num_hidden=3,
                                        weight=self.write_params[prefix + ':fc2'].weight,
@@ -326,7 +328,7 @@ class MemoryHandler(object):
 
         return new_memory, sym_out, init_shapes
 
-    def get_read_control_flag(self, memory, img, center, size, deterministic, timestamp=0):
+    def get_read_control_flag(self, memory, glimpse, deterministic, timestamp=0):
         prefix = self.name + ':read'
         numerators = mx.symbol.SliceChannel(memory.numerators, num_outputs=self.memory_size, axis=0)
         denominators = mx.symbol.SliceChannel(memory.denominators, num_outputs=self.memory_size, axis=0)
@@ -341,14 +343,11 @@ class MemoryHandler(object):
             denominator = self.reshape_to_cf(denominators[m])
             scoremap = self.cf_handler.get_multiscale_scoremap(
                 multiscale_template=ScaleCFTemplate(numerator=numerator, denominator=denominator),
-                img=img,
-                center=center,
-                size=size,
+                glimpse=glimpse,
                 postfix=postfix)
             feature_map = self.scoremap_processor.scoremap_processing(scoremap, postfix)
             feature_map_l.append(feature_map)
         feature_maps = mx.symbol.Concat(*feature_map_l, num_args=self.memory_size, dim=0)
-        feature_maps = mx.symbol.BlockGrad(feature_maps)
         # 2. Compute the scores: Shape --> (1, memory_size)
         postfix = "_t%d" % timestamp
         global_pooled_feature = mx.symbol.Pooling(data=feature_maps,
@@ -366,11 +365,11 @@ class MemoryHandler(object):
         concat_feature = mx.symbol.Concat(global_pooled_feature, memory_state_code,
                                           num_args=2, dim=1)
         fc1 = mx.symbol.FullyConnected(data=concat_feature,
-                                       num_hidden=256,
+                                       num_hidden=128,
                                        weight=self.read_params[prefix + ':fc1'].weight,
                                        bias=self.read_params[prefix + ':fc1'].bias,
                                        name=prefix + ':fc1' + postfix)
-        act1 = mx.symbol.Activation(data=fc1, act_type='relu', name=prefix + ':relu1' + postfix)
+        act1 = mx.symbol.Activation(data=fc1, act_type='tanh', name=prefix + ':tanh1' + postfix)
         fc2 = mx.symbol.FullyConnected(data=act1,
                                        num_hidden=1,
                                        weight=self.read_params[prefix + ':fc2'].weight,
@@ -406,16 +405,14 @@ class MemoryHandler(object):
                                                     self.cf_handler.out_rows,
                                                     self.cf_handler.out_cols))
 
-    def read(self, memory, img, center, size, chosen_ind=None, deterministic=False, timestamp=0):
+    def read(self, memory, glimpse, chosen_ind=None, deterministic=False, timestamp=0):
         prefix = self.name + ':read'
         postfix = "_t%d" % timestamp
         sym_out = OrderedDict()
         init_shapes = OrderedDict()
         if chosen_ind is None:
             chosen_ind = self.get_read_control_flag(memory=memory,
-                                                    img=img,
-                                                    center=center,
-                                                    size=size,
+                                                    glimpse=glimpse,
                                                     timestamp=timestamp,
                                                     deterministic=deterministic)
             sym_out[prefix + ':chosen_ind' + postfix + '_action'] = chosen_ind[0]

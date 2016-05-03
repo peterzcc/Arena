@@ -2,7 +2,7 @@ import numpy
 import mxnet as mx
 from arena.helpers.pretrained import vgg_m
 from .common import *
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from .attention import get_multiscale_size
 
 
@@ -136,9 +136,7 @@ class CorrelationFilterHandler(object):
     def channel_size(self):
         return self.perception_handler.channel_size
 
-    def get_multiscale_template(self, img, center, size, postfix=''):
-        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
-                                                       postfix=postfix)
+    def get_multiscale_template(self, glimpse, postfix=''):
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
@@ -150,17 +148,13 @@ class CorrelationFilterHandler(object):
                                                 multiscale_feature_fft) + \
                       mx.symbol.ComplexHadamard(multiscale_feature_fft,
                                                 mx.symbol.ComplexExchange(multiscale_feature_fft))
-        denominator = mx.symbol.SumChannel(denominator) + self.regularizer
+        denominator = mx.symbol.SumChannel(denominator)
         numerator = mx.symbol.BlockGrad(numerator, name=(self.name + ':numerator' + postfix))
         denominator = mx.symbol.BlockGrad(denominator, name=(self.name + ':denominator' + postfix))
         multiscale_template = ScaleCFTemplate(numerator=numerator, denominator=denominator)
         return multiscale_template
 
-    def get_multiscale_scoremap(self, multiscale_template, img, center, size, postfix=''):
-        center = mx.symbol.BlockGrad(center)
-        size = mx.symbol.BlockGrad(size)
-        glimpse = self.glimpse_handler.pyramid_glimpse(img=img, center=center, size=size,
-                                                       postfix=postfix)
+    def get_multiscale_scoremap(self, multiscale_template, glimpse, postfix=''):
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,
             name=self.name + ":multiscale_feature" + postfix) * self.hannmap
@@ -169,7 +163,7 @@ class CorrelationFilterHandler(object):
         numerator = multiscale_template.numerator
         denominator = mx.symbol.BroadcastChannel(data=multiscale_template.denominator, dim=1,
                                                  size=self.channel_size)
-        processed_template = numerator / denominator
+        processed_template = numerator / (denominator + self.regularizer)
         multiscale_scoremap = mx.symbol.IFFT2D(data=mx.symbol.ComplexHadamard(processed_template,
                                                                               multiscale_feature_fft),
                                                output_shape=(self.rows, self.cols))
@@ -211,7 +205,6 @@ class PerceptionHandler(object):
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
                                               stride=(2, 2), num_filter=96)
             else:
-                data_sym = mx.symbol.BlockGrad(data_sym)
                 conv1 = mx.symbol.Convolution(data=data_sym, weight=self.params_sym['arg:conv1_weight'],
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
                                               stride=(2, 2), num_filter=96)
@@ -230,39 +223,47 @@ class ScoreMapProcessor(object):
         self.params = self._init_params()
 
     def _init_params(self):
-        params = {}
-        params[self.name + ':conv1'] = ConvParam(
-            weight=mx.symbol.Variable(self.name + ':conv1_weight'),
-            bias=mx.symbol.Variable(self.name + ':conv1_bias'))
-        params[self.name + ':conv2'] = ConvParam(
-            weight=mx.symbol.Variable(self.name + ':conv2_weight'),
-            bias=mx.symbol.Variable(self.name + ':conv2_bias'))
+        params = OrderedDict()
+        for i in range(self.scale_num):
+            params[self.name + ':scale%d:conv1' %i] = ConvParam(
+                weight=mx.symbol.Variable(self.name + ':scale%d:conv1_weight' %i),
+                bias=mx.symbol.Variable(self.name + ':scale%d:conv1_bias' %i))
+            params[self.name + ':scale%d:conv2' %i] = ConvParam(
+                weight=mx.symbol.Variable(self.name + ':scale%d:conv2_weight' %i),
+                bias=mx.symbol.Variable(self.name + ':scale%d:conv2_bias' %i))
         return params
 
     @property
     def dim_out(self):
-        return (self.num_filter, self.dim_in[1], self.dim_in[2])
+        return (self.num_filter, self.dim_in[1]/2, self.dim_in[2]/2)
 
     @property
     def name(self):
         return "ScoreMapProcessor"
 
     def scoremap_processing(self, multiscale_scoremap, postfix=''):
-        multiscale_scoremap = mx.symbol.Reshape(multiscale_scoremap,
-                                                target_shape=(1, 0, self.dim_in[1], self.dim_in[2]))
-        conv1 = mx.symbol.Convolution(data=multiscale_scoremap,
-                                      weight=self.params[self.name + ':conv1'].weight,
-                                      bias=self.params[self.name + ':conv1'].bias,
-                                      kernel=(3,3), pad=(1,1),
-                                      num_filter=self.num_filter,
-                                      name=self.name + ':conv1' + postfix)
-        act1 = mx.symbol.Activation(data=conv1, act_type='relu', name=self.name + ':act1' + postfix)
-        conv2 = mx.symbol.Convolution(data=act1,
-                                      weight=self.params[self.name + ':conv2'].weight,
-                                      bias=self.params[self.name + ':conv2'].bias,
-                                      kernel=(3, 3), pad=(1, 1),
-                                      num_filter=self.num_filter,
-                                      name=self.name + ':conv2' + postfix)
-        act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name + ':act2' + postfix)
-        act2 = mx.symbol.BlockGrad(act2)
-        return act2
+        multiscale_scoremap = mx.symbol.SliceChannel(multiscale_scoremap,
+                                                     num_outputs=self.scale_num,
+                                                     axis=0)
+        parsed_scoremaps = []
+        for i in range(self.scale_num):
+            #TODO Testing for whether padding should be used
+            conv1 = mx.symbol.Convolution(data=multiscale_scoremap[i],
+                                          weight=self.params[self.name + ':scale%d:conv1' %i].weight,
+                                          bias=self.params[self.name + ':scale%d:conv1' %i].bias,
+                                          kernel=(3,3), pad=(1,1),
+                                          num_filter=self.num_filter,
+                                          name=self.name + (':scale%d:conv1' %i) + postfix)
+            act1 = mx.symbol.Activation(data=conv1, act_type='tanh', name=self.name + (':scale%d:act1' %i) + postfix)
+            pool1 = mx.symbol.Pooling(data=act1, kernel=(2, 2), pool_type='avg', stride=(2, 2))
+            conv2 = mx.symbol.Convolution(data=pool1,
+                                          weight=self.params[self.name + ':scale%d:conv2' %i].weight,
+                                          bias=self.params[self.name + ':scale%d:conv2' %i].bias,
+                                          kernel=(3, 3), pad=(1, 1),
+                                          num_filter=self.num_filter,
+                                          name=self.name + (':scale%d:conv2' %i) + postfix)
+            act2 = mx.symbol.Activation(data=conv2, act_type='tanh', name=self.name +
+                                                                          (':scale%d:act2' %i) +
+                                                                          postfix)
+            parsed_scoremaps.append(act2)
+        return mx.symbol.Concat(*parsed_scoremaps, num_args=self.scale_num, dim=1)

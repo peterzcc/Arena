@@ -45,7 +45,7 @@ class TrackingIterator(object):
     '''
     def img_mean(self, shape):
         nd_mean = nd.array([123.68, 116.779, 103.939], ctx=self.ctx)
-        nd_mean = nd_mean.reshape((1, 1, 3, 1, 1))
+        nd_mean = nd_mean.reshape((1, 3, 1, 1))
         nd_mean = nd_mean.broadcast_to(shape)
         return nd_mean
 
@@ -54,6 +54,7 @@ class TrackingIterator(object):
 
     '''
     def sample(self, length=20, batch_size=1, interval_step=1):
+        assert 1 == batch_size
         video_index = self.rng.randint(0, self.video_num)
         # make sure choose video have enough frames
         while len(self.img_lists[video_index]) < length * interval_step:
@@ -61,11 +62,11 @@ class TrackingIterator(object):
         print 'sampled image from video %s\n' % self.img_lists[video_index][0]
         im_shape = cv2.imread(self.img_lists[video_index][0]).shape
         if self.resize:
-            seq_data_batch = numpy.zeros((batch_size, length, 3) + self.output_size, dtype=numpy.uint8)
+            seq_data_batch = numpy.zeros((length, 3) + self.output_size, dtype=numpy.uint8)
         else:
-            seq_data_batch = numpy.zeros((batch_size, length, 3) + (im_shape[0], im_shape[1]),
+            seq_data_batch = numpy.zeros((length, 3) + (im_shape[0], im_shape[1]),
                                          dtype=numpy.uint8)
-        seq_roi_batch = numpy.zeros((batch_size, length, 4), dtype=numpy.float32)
+        seq_roi_batch = numpy.zeros((length, 4), dtype=numpy.float32)
         counter = 0
         while counter < batch_size:
             start_index = self.rng.randint(0, len(self.img_lists[video_index]) - (length - 1)*interval_step)
@@ -78,14 +79,14 @@ class TrackingIterator(object):
                     im = numpy.tile(im.reshape((1, 3, 3)), (3, 1, 1))
                 else:
                     im = numpy.rollaxis(im, 2)
-                seq_data_batch[counter, i, :, :, :] = im[::-1, :, :]
-            seq_roi_batch[counter] = numpy.asarray(
+                seq_data_batch[i, :, :, :] = im[::-1, :, :]
+            seq_roi_batch[:] = numpy.asarray(
                 self.roi_lists[video_index][start_index:start_index+length], dtype=numpy.float32)
             counter += 1
-
-        seq_roi_batch[:, :, 0:2] += seq_roi_batch[:, :, 2:4] / 2 - 1
-        seq_roi_batch[:, :, ::2] = seq_roi_batch[:, :, ::2] / im_shape[1]
-        seq_roi_batch[:, :, 1::2] = seq_roi_batch[:, :, 1::2] / im_shape[0]
+            
+        seq_roi_batch[:, 0:2] += seq_roi_batch[:, 2:4] / 2 - 1
+        seq_roi_batch[:, ::2] = seq_roi_batch[:, ::2] / im_shape[1]
+        seq_roi_batch[:, 1::2] = seq_roi_batch[:, 1::2] / im_shape[0]
 
         seq_data_batch = nd.array(seq_data_batch, ctx=self.ctx)
         seq_data_batch -= self.img_mean(seq_data_batch.shape)
