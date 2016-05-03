@@ -53,13 +53,12 @@ class TrackingIterator(object):
     Choose a video and draw minibatch samples from this video.
 
     '''
-    def sample(self, length=20, batch_size=1, interval_step=1):
+    def sample(self, length=20, batch_size=1, interval_step=1, verbose=False):
         assert 1 == batch_size
         video_index = self.rng.randint(0, self.video_num)
         # make sure choose video have enough frames
         while len(self.img_lists[video_index]) < length * interval_step:
             video_index = self.rng.randint(0, self.video_num)
-        print 'sampled image from video %s\n' % self.img_lists[video_index][0]
         im_shape = cv2.imread(self.img_lists[video_index][0]).shape
         if self.resize:
             seq_data_batch = numpy.zeros((length, 3) + self.output_size, dtype=numpy.uint8)
@@ -70,6 +69,8 @@ class TrackingIterator(object):
         counter = 0
         while counter < batch_size:
             start_index = self.rng.randint(0, len(self.img_lists[video_index]) - (length - 1)*interval_step)
+            if verbose:
+                print 'Sampled image from video %s, Start Index = %d\n' % (self.img_lists[video_index][0], start_index)
             for i in xrange(length):
                 im = cv2.imread(self.img_lists[video_index][start_index+i])
                 if self.resize:
