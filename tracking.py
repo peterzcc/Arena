@@ -365,12 +365,12 @@ epoch_iter_num = 30000
 # Score Related Parameters
 
 thresholds = (0.5, 0.8)
-failure_penalty = -2
+failure_penalty = -1
 level_reward = 1
 
 # Glimpse Hanlder Parameters
 scale_num = 3
-scale_mult = 1.6
+scale_mult = 1.8
 init_scale = 1.0
 
 # Correlation Filter Handler Parameters
@@ -446,7 +446,7 @@ tracker.print_stat()
 
 baselines = numpy.zeros((BPTT_length,), dtype=numpy.float32)
 optimizer = mx.optimizer.create(name='RMSPropNoncentered',
-                                learning_rate=0.0002,
+                                learning_rate=0.0001,
                                 gamma1=0.95,
                                 eps=1E-6,
                                 clip_gradient=None,
@@ -509,9 +509,6 @@ for epoch in range(total_epoch_num):
                                                  sym_out=tracker_sym_out,
                                                  total_timesteps=BPTT_length,
                                                  glimpse_data_shape=None)#(scale_num, 3) + glimpse_handler.output_shape)
-
-            # for i in range(BPTT_length):
-            #      draw_track_res((data_images_ndarray + tracking_iterator.img_mean(data_images_ndarray.shape)).asnumpy()[0, i, :, :, :], pred_rois[i], delay=3)
             # print pred_rois
             # print data_rois_ndarray.asnumpy()[0]
             scores = compute_tracking_score(pred_rois=pred_rois,
@@ -531,6 +528,10 @@ for epoch in range(total_epoch_num):
                     accumulative_grad[k][:] = v / float(roll_out_num)
                 else:
                     accumulative_grad[k][:] += v / float(roll_out_num)
+        data_img_npy = (data_images_ndarray + tracking_iterator.img_mean(data_images_ndarray.shape)).asnumpy()
+        for i in range(BPTT_length):
+            draw_track_res(data_img_npy[0, i, :, :, :], pred_rois[i], delay=1)
+
         #for k, v in accumulative_grad.items():
         #    print k, numpy.abs(v.asnumpy()).sum()
         tracker.update(updater=updater, params_grad=accumulative_grad)
