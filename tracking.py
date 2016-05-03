@@ -4,6 +4,7 @@ import numpy
 import cv2
 from arena import Base
 import time
+import argparse
 import pyfftw
 import sys
 from arena.advanced.attention import *
@@ -14,6 +15,8 @@ from arena.advanced.common import *
 from arena.iterators import TrackingIterator
 from arena.helpers.visualization import *
 from arena.helpers.tracking import *
+from scipy.stats import entropy
+
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -119,6 +122,7 @@ def build_tracker(tracking_length,
                   glimpse_handler,
                   cf_handler,
                   perception_handler,
+                  default_update_factor,
                   ctx):
     sym_out = OrderedDict()
     init_shapes = OrderedDict()
@@ -241,7 +245,7 @@ def build_tracker(tracking_length,
     perception_handler.set_params(tracker.params)
 
     constant_inputs = OrderedDict()
-    constant_inputs['update_factor'] = 0.1
+    constant_inputs['update_factor'] = default_update_factor
     constant_inputs["roi_var"] = nd.array(numpy.array([[0.01, 0.01, 0.001, 0.001]]), ctx=ctx)
     constant_inputs.update(init_attention_lstm_data)
     return tracker, sym_out, init_shapes, constant_inputs
@@ -356,12 +360,69 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
     return backward_inputs
 
 
-sample_length = 16
-BPTT_length = 15
-roll_out_num = 3
+parser = argparse.ArgumentParser(description='Script to train the tracking agent.')
+parser.add_argument('-d', '--dir-path', required=False, type=str, default='tracking-model',
+                    help='Saving directory of model files.')
+parser.add_argument('-s', '--sequence-path', required=False, type=str,
+                    default='D:\\HKUST\\2-2\\learning-to-track\\datasets\\training_for_otb100\\training_otb.lst',
+                    help='Saving directory of model files.')
+parser.add_argument('-v', '--visualization', required=False, type=int, default=0,
+                    help='Visualize the runs.')
+parser.add_argument('--lr', required=False, type=float, default=1E-4,
+                    help='Learning rate of the RMSPropNoncentered optimizer')
+parser.add_argument('--eps', required=False, type=float, default=1E-6,
+                    help='Eps of the RMSPropNoncentered optimizer')
+parser.add_argument('--clip-gradient', required=False, type=float, default=None,
+                    help='Clip threshold of the RMSPropNoncentered optimizer')
+parser.add_argument('--gamma1', required=False, type=float, default=False,
+                    help='Use Double DQN')
+parser.add_argument('--wd', required=False, type=float, default=0.0,
+                    help='Weight of the L2 Regularizer')
+parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
+                    help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
+parser.add_argument('--roll-out', required=False, type=float, default=3,
+                    help='Eps of the epsilon-greedy policy at the beginning')
+parser.add_argument('--scale-num', required=False, type=int, default=3,
+                    help='Scale number of the glimpse sector')
+parser.add_argument('--scale-mult', required=False, type=float, default=1.8,
+                    help='Scale multiple of the glimpse sector')
+parser.add_argument('--init-scale', required=False, type=float, default=1.0,
+                    help='Initial scale of the glimpse sector')
+parser.add_argument('--cf-sigma-factor', required=False, type=float, default=20,
+                    help='Gaussian sigma factor of the correlation filter')
+parser.add_argument('--cf-regularizer', required=False, type=float, default=0.01,
+                    help='Regularizer of the correlation filter')
+parser.add_argument('--default-update-factor', required=False, type=float, default=0.1,
+                    help='Default update factor of the correlation filter')
+parser.add_argument('--scoremap-num', required=False, type=int, default=4,
+                    help='Number of filters for scoremap')
+parser.add_argument('--memory-size', required=False, type=int, default=3,
+                    help='Size of the memory unit')
+parser.add_argument('--attention-steps', required=False, type=int, default=3,
+                    help='Steps of recurrent attention')
+parser.add_argument('--sample-length', required=False, type=int, default=16,
+                    help='Length of the sampling sequence')
+parser.add_argument('--BPTT-length', required=False, type=int, default=15,
+                    help='Length of each BPTT step')
+parser.add_argument('--interval-step', required=False, type=int, default=1,
+                    help='Interval of the sampling sequence')
+parser.add_argument('--baseline-lr', required=False, type=float, default=0.001,
+                    help='Steps of recurrent attention')
+parser.add_argument('--optimizer', required=False, type=str, default="RMSPropNoncentered",
+                    help='type of optimizer')
+args, unknown = parser.parse_known_args()
+ctx = parse_ctx(args.ctx)
+ctx = mx.Context(*ctx[0])
+logging.info("Arguments:")
+for k, v in vars(args).items():
+    logging.info("   %s = %s" %(k, v))
+
+sample_length = args.sample_length
+BPTT_length = args.BPTT_length
+roll_out_num = args.roll_out
 total_epoch_num = 200
 epoch_iter_num = 30000
-
+baseline_lr = args.baseline_lr
 # Score Related Parameters
 
 thresholds = (0.5, 0.8)
@@ -369,28 +430,26 @@ failure_penalty = -1
 level_reward = 1
 
 # Glimpse Hanlder Parameters
-scale_num = 3
-scale_mult = 1.8
-init_scale = 1.0
+scale_num = args.scale_num
+scale_mult = args.scale_mult
+init_scale = args.init_scale
 
 # Correlation Filter Handler Parameters
-cf_gaussian_sigma_factor = 20
-cf_regularizer = 0.01
+cf_gaussian_sigma_factor = args.cf_sigma_factor
+cf_regularizer = args.cf_regularizer
 
+scoremap_num_filter = args.scoremap_num
 
-scoremap_num_filter = 4
-
-memory_size = 3
-attention_steps = 3
+memory_size = args.memory_size
+attention_steps = args.attention_steps
 image_size = (480, 540)
-ctx = mx.gpu()
 memory_lstm_props = [LSTMLayerProp(num_hidden=256, dropout=0.),
                      LSTMLayerProp(num_hidden=256, dropout=0.)]
 attention_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
                         LSTMLayerProp(num_hidden=128, dropout=0.)]
 
-sequence_list_path = 'D:\\HKUST\\2-2\\learning-to-track\\datasets\\training_for_otb100\\training_otb.lst'
-save_dir = "tracking-model"
+sequence_list_path = args.sequence_path
+save_dir = args.dir_path
 
 tracking_iterator = TrackingIterator(
     sequence_list_path,
@@ -441,16 +500,17 @@ tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs = \
                   cf_handler=cf_handler,
                   attention_handler=attention_handler,
                   perception_handler=perception_handler,
+                  default_update_factor=args.default_update_factor,
                   ctx=ctx)
 tracker.print_stat()
 
 baselines = numpy.zeros((BPTT_length,), dtype=numpy.float32)
-optimizer = mx.optimizer.create(name='RMSPropNoncentered',
-                                learning_rate=0.0001,
-                                gamma1=0.95,
-                                eps=1E-6,
+optimizer = mx.optimizer.create(name=args.optimizer,
+                                learning_rate=args.lr,
+                                gamma1=args.gamma1,
+                                eps=args.eps,
                                 clip_gradient=None,
-                                rescale_grad=1.0, wd=0.0)
+                                rescale_grad=1.0, wd=args.wd)
 updater = mx.optimizer.get_updater(optimizer)
 
 accumulative_grad = OrderedDict()
@@ -460,7 +520,7 @@ for k, v in tracker.params_grad.items():
 for epoch in range(total_epoch_num):
     for iter in range(epoch_iter_num):
         seq_images, seq_rois = tracking_iterator.sample(length=sample_length,
-                                                        interval_step=1,
+                                                        interval_step=args.interval_step,
                                                         verbose=False)
         # print seq_images.shape
         # print seq_rois.shape
@@ -529,18 +589,23 @@ for epoch in range(total_epoch_num):
                 else:
                     accumulative_grad[k][:] += v / float(roll_out_num)
         data_img_npy = (data_images_ndarray + tracking_iterator.img_mean(data_images_ndarray.shape)).asnumpy()
-        for i in range(BPTT_length):
-            draw_track_res(data_img_npy[0, i, :, :, :], pred_rois[i], delay=1)
+        if args.visualization:
+            for i in range(BPTT_length):
+                draw_track_res(data_img_npy[0, i, :, :, :], pred_rois[i], delay=3)
 
         #for k, v in accumulative_grad.items():
         #    print k, numpy.abs(v.asnumpy()).sum()
         tracker.update(updater=updater, params_grad=accumulative_grad)
         avg_scores /= roll_out_num
         q_estimation = numpy.cumsum(avg_scores[::-1], axis=0)[::-1]
-        baselines[:] -= 0.001 * (baselines - q_estimation)
+        baselines[:] -= args.baseline_lr * (baselines - q_estimation)
         #print 'Avg Scores:', avg_scores
-        logging.info('Epoch:%d, Iter:%d, Baselines:%s, Read Controls:%s, Write Controls %s' %
-                     (epoch, iter, str(baselines), str(read_controls), str(write_controls)))
+        logging.info('Epoch:%d, Iter:%d, Baselines:%s, Read:%g/%s, Write:%g/%s' %
+                     (epoch, iter, str(baselines),
+                      entropy(read_controls_prob.T).mean(),
+                      str(read_controls_prob.argmax(axis=1)),
+                      entropy(read_controls_prob.T).mean(),
+                      str(write_controls_prob.argmax(axis=1))))
         #print 'Read Control Probs:', read_controls_prob
         #print 'Write Control Probs:', write_controls_prob
         #print 'Predicted ROIS:', pred_rois
