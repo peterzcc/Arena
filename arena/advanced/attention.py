@@ -179,7 +179,7 @@ class AttentionHandler(object):
                 FCParam(weight=mx.symbol.Variable(prefix + ':search_roi:var_weight'),
                         bias=mx.symbol.Variable(prefix + ':search_roi:var_bias'))
 
-        #The initial search roi (transformed) of the next step
+        # The initial search roi (transformed) of the next step
         params[prefix + ':init_roi:fc1'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':init_roi:fc1_weight'),
                     bias=mx.symbol.Variable(prefix + ':init_roi:fc1_bias'))
@@ -191,17 +191,17 @@ class AttentionHandler(object):
                 FCParam(weight=mx.symbol.Variable(prefix + ':init_roi:var_weight'),
                         bias=mx.symbol.Variable(prefix + ':init_roi:var_bias'))
 
-        #The predicted roi (transformed) of the current timestamp
+        # The predicted roi (transformed) of the current timestamp
         params[prefix + ':pred_roi:fc1'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi:fc1_weight'),
                     bias=mx.symbol.Variable(prefix + ':pred_roi:fc1_bias'))
         params[prefix + ':pred_roi:mean'] = \
             FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi:mean_weight'),
                     bias=mx.symbol.Variable(prefix + ':pred_roi:mean_bias'))
-        if not self.fixed_variance:
-            params[prefix + ':pred_roi:var'] = \
-                FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi:var_weight'),
-                        bias=mx.symbol.Variable(prefix + ':pred_roi:var_bias'))
+        # if not self.fixed_variance:
+        #     params[prefix + ':pred_roi:var'] = \
+        #         FCParam(weight=mx.symbol.Variable(prefix + ':pred_roi:var_weight'),
+        #                 bias=mx.symbol.Variable(prefix + ':pred_roi:var_bias'))
         return params
 
     @property
@@ -239,23 +239,27 @@ class AttentionHandler(object):
                                      bias=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':mean'].bias)
         #roi_mean = 2 * mx.symbol.Activation(data=roi_mean, act_type='tanh')
-        if not self.fixed_variance:
-            assert roi_var is None
-            roi_var = \
-                mx.symbol.FullyConnected(data=roi_fc1, num_hidden=4,
-                                         name=self.name + ':' + roi_type + ':var' + postfix,
-                                         weight=self.roi_policy_params[
-                                             self.name + ':' + roi_type + ':var'].weight,
-                                         bias=self.roi_policy_params[
-                                             self.name + ':' + roi_type + ':var'].bias)
-            roi_var = mx.symbol.Activation(data=roi_var, act_type="softrelu")
-        #policy_op = LogNormalPolicy(deterministic=deterministic)
-        #roi = policy_op(mean=roi_mean, var=roi_var,
-        #                name=self.name + ':' + roi_type + postfix)
-        policy_op = LogLaplacePolicy(deterministic=deterministic)
-        roi = policy_op(mean=roi_mean, scale=roi_var,
-                        name=self.name + ':' + roi_type + postfix)
-        return roi, roi_mean, roi_var
+        if roi_type is not 'pred_roi':
+            if not self.fixed_variance:
+                assert roi_var is None
+                roi_var = \
+                    mx.symbol.FullyConnected(data=roi_fc1, num_hidden=4,
+                                             name=self.name + ':' + roi_type + ':var' + postfix,
+                                             weight=self.roi_policy_params[
+                                                 self.name + ':' + roi_type + ':var'].weight,
+                                             bias=self.roi_policy_params[
+                                                 self.name + ':' + roi_type + ':var'].bias)
+                roi_var = mx.symbol.Activation(data=roi_var, act_type="softrelu")
+            #policy_op = LogNormalPolicy(deterministic=deterministic)
+            #roi = policy_op(mean=roi_mean, var=roi_var,
+            #                name=self.name + ':' + roi_type + postfix)
+            policy_op = LogLaplacePolicy(deterministic=deterministic)
+            roi = policy_op(mean=roi_mean, scale=roi_var,
+                            name=self.name + ':' + roi_type + postfix)
+            return roi, roi_mean, roi_var
+        else:
+            return roi_mean
+
 
     def attend(self, img, init_glimpse, multiscale_template,
                memory, ground_truth_roi=None,
@@ -321,14 +325,9 @@ class AttentionHandler(object):
                 sym_out[self.name + ':init_roi' + postfix] = next_step_init_roi
                 init_shapes[self.name + ':init_roi' + postfix + '_score'] = (1,)
 
-                pred_roi, pred_roi_mean, pred_roi_var = \
+                pred_roi_mean = \
                     self.roi_policy(indata=concat_state, deterministic=deterministic,
                                     roi_type="pred_roi", roi_var=roi_var, postfix=postfix)
-                pred_center, pred_size = \
-                    roi_transform_inv(anchor_roi=[init_glimpse.center, init_glimpse.size],
-                                      transformed_roi=pred_roi)
-                sym_out[self.name + ':pred_roi' + postfix] = pred_roi
-                init_shapes[self.name + ':pred_roi' + postfix + '_score'] = (1,)
 
                 next_step_init_center, next_step_init_size = \
                     roi_transform_inv(anchor_roi=[init_glimpse.center, init_glimpse.size],
@@ -341,16 +340,16 @@ class AttentionHandler(object):
                             anchor=mx.symbol.Concat(init_glimpse.center, init_glimpse.size, num_args=2, dim=1),
                             transformation=pred_roi_mean,
                             truth=ground_truth_roi,
-                            name=self.name + ':bb_regress_t%d' % timestamp)
-                    sym_out[self.name + ':bb_regress_t%d' % timestamp] = bb_regress_roi
+                            name=self.name + ':bb_regress_roi_t%d' % timestamp)
+                    sym_out[self.name + ':bb_regress_roi_t%d' % timestamp] = bb_regress_roi
                 else:
                     bb_regress_roi = \
                         bb_regress_op(anchor=mx.symbol.Concat(init_glimpse.center, init_glimpse.size, num_args=2, dim=1),
                                       transformation=pred_roi_mean,
                                       name=self.name + ':bb_regress_t%d' %timestamp)
-                    sym_out[self.name + ':bb_regress_t%d' % timestamp] = bb_regress_roi
-                    init_shapes[self.name + ':bb_regress_t%d' % timestamp + '_truth'] = (1,)
-
+                    sym_out[self.name + ':bb_regress_roi_t%d' % timestamp] = bb_regress_roi
+                    init_shapes[self.name + ':bb_regress_roi_t%d' % timestamp + '_truth'] = (1,)
+                pred_center, pred_size = get_roi_center_size(mx.symbol.clip_zero_one(bb_regress_roi))
             tracking_states = new_states
 
         return tracking_states, next_step_init_center, next_step_init_size, pred_center, pred_size, \
