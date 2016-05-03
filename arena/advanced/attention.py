@@ -234,7 +234,7 @@ class AttentionHandler(object):
     def roi_policy(self, indata, deterministic=False, roi_var=None, roi_type="init_roi", postfix=''):
         assert roi_type == 'init_roi' or roi_type == 'search_roi' or roi_type == 'pred_roi'
         roi_fc1 = \
-            mx.symbol.FullyConnected(data=indata, num_hidden=1024,
+            mx.symbol.FullyConnected(data=indata, num_hidden=512,
                                      name=self.name + ':' + roi_type + ':fc1' + postfix,
                                      weight=self.roi_policy_params[
                                          self.name + ':' + roi_type + ':fc1'].weight,
