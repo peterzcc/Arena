@@ -389,7 +389,7 @@ memory_lstm_props = [LSTMLayerProp(num_hidden=256, dropout=0.),
 attention_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
                         LSTMLayerProp(num_hidden=128, dropout=0.)]
 
-sequence_list_path = 'D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst'
+sequence_list_path = 'D:\\HKUST\\2-2\\learning-to-track\\datasets\\training_for_otb100\\training_otb.lst'
 
 
 tracking_iterator = TrackingIterator(
@@ -510,8 +510,8 @@ for epoch in range(total_epoch_num):
                                                  total_timesteps=BPTT_length,
                                                  glimpse_data_shape=None)#(scale_num, 3) + glimpse_handler.output_shape)
 
-            # for i in range(BPTT_length):
-            #      draw_track_res(data_images_ndarray.asnumpy()[0, i, :, :, :], pred_rois[i], delay=3)
+            for i in range(BPTT_length):
+                 draw_track_res(data_images_ndarray.asnumpy()[0, i, :, :, :], pred_rois[i], delay=3)
             # print pred_rois
             # print data_rois_ndarray.asnumpy()[0]
             scores = compute_tracking_score(pred_rois=pred_rois,
