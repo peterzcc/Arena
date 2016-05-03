@@ -350,19 +350,25 @@ class MemoryHandler(object):
         feature_maps = mx.symbol.Concat(*feature_map_l, num_args=self.memory_size, dim=0)
         # 2. Compute the scores: Shape --> (1, memory_size)
         postfix = "_t%d" % timestamp
-        global_pooled_feature = mx.symbol.Pooling(data=feature_maps,
-                                                  kernel=(self.scoremap_processor.dim_out[1],
-                                                          self.scoremap_processor.dim_out[2]),
-                                                  pool_type="avg",
-                                                  name=prefix + ":global-pooling" + postfix)
-        global_pooled_feature = mx.symbol.Reshape(data=global_pooled_feature,
-                                                  target_shape=(self.memory_size, 0))
 
+        # # Depreciated! Formally I try to use global pooling!
+        # global_pooled_feature = mx.symbol.Pooling(data=feature_maps,
+        #                                           kernel=(self.scoremap_processor.dim_out[1],
+        #                                                   self.scoremap_processor.dim_out[2]),
+        #                                           pool_type="avg",
+        #                                           name=prefix + ":global-pooling" + postfix)
+        # global_pooled_feature = mx.symbol.Reshape(data=global_pooled_feature,
+        #                                           target_shape=(self.memory_size, 0))
+        # # # #
+
+        flatten_feature = mx.symbol.Flatten(data=feature_maps, name=prefix + ":flatten-feature" +
+                                                                    postfix)
         # Here we concatenate the global pooled features to the memory state
+
         memory_state_code = mx.symbol.Concat(*[memory_state_code for i in range(self.memory_size)],
                                              num_args=self.memory_size,
                                              dim=0)
-        concat_feature = mx.symbol.Concat(global_pooled_feature, memory_state_code,
+        concat_feature = mx.symbol.Concat(flatten_feature, memory_state_code,
                                           num_args=2, dim=1)
         fc1 = mx.symbol.FullyConnected(data=concat_feature,
                                        num_hidden=128,
