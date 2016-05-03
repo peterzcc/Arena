@@ -604,7 +604,7 @@ for epoch in range(total_epoch_num):
                      (epoch, iter, str(baselines),
                       entropy(read_controls_prob.T).mean(),
                       str(read_controls_prob.argmax(axis=1)),
-                      entropy(read_controls_prob.T).mean(),
+                      entropy(write_controls_prob.T).mean(),
                       str(write_controls_prob.argmax(axis=1))))
         #print 'Read Control Probs:', read_controls_prob
         #print 'Write Control Probs:', write_controls_prob
