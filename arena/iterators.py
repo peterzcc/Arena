@@ -3,7 +3,6 @@ import cv2
 import re
 import time
 from utils import *
-import matplotlib.pyplot as plt
 import mxnet.ndarray as nd
 
 '''
