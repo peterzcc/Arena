@@ -80,7 +80,7 @@ def main():
                         help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
     parser.add_argument('-d', '--dir-path', required=False, type=str, default='',
                         help='Saving directory of model files.')
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
         args.dir_path = 'dqn-%s' % rom_name

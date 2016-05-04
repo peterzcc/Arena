@@ -92,7 +92,7 @@ def main():
                         help='type of kvstore, default will not use kvstore, could also be dist_async')
     parser.add_argument('--optimizer', required=False, type=str, default="adagrad",
                         help='type of optimizer')
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
 
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]

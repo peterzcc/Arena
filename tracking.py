@@ -5,7 +5,6 @@ import cv2
 from arena import Base
 import time
 import argparse
-import pyfftw
 import sys
 from arena.advanced.attention import *
 from arena.advanced.tracking import *
@@ -26,6 +25,7 @@ ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 root.addHandler(ch)
+root.setLevel(logging.DEBUG)
 mx.random.seed(100)
 
 '''
@@ -380,7 +380,7 @@ parser.add_argument('--wd', required=False, type=float, default=0.0,
                     help='Weight of the L2 Regularizer')
 parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
                     help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
-parser.add_argument('--roll-out', required=False, type=float, default=3,
+parser.add_argument('--roll-out', required=False, type=int, default=3,
                     help='Eps of the epsilon-greedy policy at the beginning')
 parser.add_argument('--scale-num', required=False, type=int, default=3,
                     help='Scale number of the glimpse sector')
@@ -410,7 +410,7 @@ parser.add_argument('--baseline-lr', required=False, type=float, default=0.001,
                     help='Steps of recurrent attention')
 parser.add_argument('--optimizer', required=False, type=str, default="RMSPropNoncentered",
                     help='type of optimizer')
-args, unknown = parser.parse_known_args()
+args = parser.parse_args()
 ctx = parse_ctx(args.ctx)
 ctx = mx.Context(*ctx[0])
 logging.info("Arguments:")
