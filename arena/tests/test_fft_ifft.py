@@ -5,7 +5,6 @@ import pyfftw
 import time
 import mxnet.ndarray as nd
 import cv2
-from arena.advanced.tracking import gaussian_map_fft
 
 
 a = mx.symbol.Variable('a')
