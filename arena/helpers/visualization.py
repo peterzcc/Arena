@@ -42,7 +42,7 @@ roi, normalized version from [0, 1]
 '''
 
 
-def draw_track_res(im, roi, delay=0):
+def draw_track_res(im, roi, delay=0, color=(0, 0, 255)):
     im = im.transpose(1, 2, 0)
     width = im.shape[1]
     height = im.shape[0]
@@ -52,7 +52,7 @@ def draw_track_res(im, roi, delay=0):
     pt2 = (roi[0] + roi[2] / 2, roi[1] + roi[3] / 2)
     im2 = numpy.zeros(im.shape)
     im2[:] = im
-    cv2.rectangle(im2, pt1, pt2, (0, 0, 255), 1)
+    cv2.rectangle(im2, pt1, pt2, color, 1)
     win = cv2.namedWindow("Tracking", cv2.WINDOW_NORMAL)
     cv2.imshow("Tracking", im2[:, :, ::-1] / 255.0)
     cv2.waitKey(delay)
