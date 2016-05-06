@@ -97,7 +97,7 @@ class HannWindowGeneratorOp(mx.operator.NumpyOp):
 
 class CorrelationFilterHandler(object):
     def __init__(self, rows, cols, gaussian_sigma_factor, regularizer, perception_handler,
-                 glimpse_handler, fft_batchsize=16):
+                 glimpse_handler, fft_batchsize=8):
         super(CorrelationFilterHandler, self).__init__()
         self.rows = numpy.int32(rows)
         self.cols = numpy.int32(cols)
