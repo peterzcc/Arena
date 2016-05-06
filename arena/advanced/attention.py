@@ -5,7 +5,7 @@ from arena.operators import *
 from arena.helpers.tracking import *
 from .common import *
 from .recurrent import LSTMState, LSTMParam, LSTMLayerProp, step_stack_lstm
-
+from .memory import Memory
 '''
 ImagePatch stores the basic information of the patch the basic attentional element of the tracker
 '''
@@ -135,7 +135,8 @@ class AttentionHandler(object):
                  memory_handler=None,
                  total_steps=None, lstm_layer_props=None,
                  fixed_center_variance=True,
-                 fixed_size_variance=True):
+                 fixed_size_variance=True,
+                 verbose_sym_out=False):
         super(AttentionHandler, self).__init__()
         self.glimpse_handler = glimpse_handler
         self.cf_handler = cf_handler
@@ -148,6 +149,7 @@ class AttentionHandler(object):
         self.lstm_params = self._init_lstm_params()
         self.roi_policy_params = self._init_roi_policy_params()
         self.total_steps = total_steps
+        self.verbose_sym_out = verbose_sym_out
 
     def _init_roi_encoding_params(self):
         params = OrderedDict()
@@ -241,7 +243,6 @@ class AttentionHandler(object):
                                          self.name + ':' + typ + '_center:mean'].weight,
                                      bias=self.roi_policy_params[
                                          self.name + ':' + typ + '_center:mean'].bias)
-        center_mean = center_mean / 10
         size_mean = \
             mx.symbol.FullyConnected(data=roi_act2, num_hidden=2,
                                      name=self.name + ':' + typ + '_size:mean' + postfix,
@@ -249,7 +250,6 @@ class AttentionHandler(object):
                                          self.name + ':' + typ + '_size:mean'].weight,
                                      bias=self.roi_policy_params[
                                          self.name + ':' + typ + '_size:mean'].bias)
-        size_mean = size_mean
         if typ is not 'trans_pred':
             if center_var is None:
                 center_var = \
@@ -278,12 +278,12 @@ class AttentionHandler(object):
                                       name=self.name + ':' + typ +'_center' + postfix)
             size = size_policy_op(mean=size_mean, var=size_var,
                                   name=self.name + ':' + typ + '_size' + postfix)
-            return center/5, size * numpy.log(1.02), center_mean/10, size_mean * numpy.log(1.02), \
+            return center/5, size * numpy.log(1.02), center_mean/5, size_mean * numpy.log(1.02), \
                    center_var, size_var
         else:
             center = center_mean
             size = size_mean
-            return center/5, size * numpy.log(1.02)
+            return center, size
 
 
     def attend(self, img, init_search_center, init_search_size,
@@ -318,13 +318,18 @@ class AttentionHandler(object):
                 self.cf_handler.get_multiscale_scoremap(multiscale_template=template,
                                                         glimpse=glimpse,
                                                         postfix=postfix)
-            sym_out[self.name + ':attention_scoremap' + postfix] = scoremap
+
             processed_scoremap = self.scoremap_processor.scoremap_processing(scoremap, postfix)
+            if self.verbose_sym_out:
+                sym_out[self.name + ':attention_scoremap' + postfix] = scoremap
+                sym_out[self.name + ':processed_scoremap' + postfix] = mx.symbol.BlockGrad(processed_scoremap)
             flatten_map = mx.symbol.Reshape(processed_scoremap, target_shape=(1, 0))
             tracking_states = step_stack_lstm(indata=flatten_map, prev_states=tracking_states,
                                          lstm_props=self.lstm_layer_props,
                                          params=self.lstm_params.values(),
                                          prefix=self.name + ':', postfix=postfix)
+            memory = Memory(numerators=memory.numerators, denominators=memory.denominators, states=tracking_states,
+                            status=memory.status)
             concat_state = mx.symbol.Concat(*([state.h for state in tracking_states] + [flatten_map]),
                                             num_args=len(tracking_states) + 1, dim=1)
             if i < self.total_steps - 1:

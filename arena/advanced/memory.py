@@ -2,7 +2,6 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 from collections import namedtuple, OrderedDict
-from tracking import ScaleCFTemplate
 from arena.operators import *
 from .recurrent import LSTMState, LSTMParam, LSTMLayerProp, step_stack_lstm
 from .common import *
@@ -25,6 +24,7 @@ visiting_timestamp: The recorded visiting timestamp of the memory elements, (1, 
 '''
 
 MemoryStat = namedtuple("MemoryStat", ["counter", "visiting_timestamp"])
+from tracking import ScaleCFTemplate
 
 
 def memory_to_sym_dict(memory):

@@ -3,6 +3,7 @@ import mxnet as mx
 from arena.helpers.pretrained import vgg_m
 from .common import *
 from collections import namedtuple, OrderedDict
+from arena.operators import spatial_softmax
 from .attention import get_multiscale_size
 
 
@@ -240,10 +241,10 @@ class ScoreMapProcessor(object):
 
     @property
     def dim_out(self):
-        return (self.num_filter, (self.dim_in[1] - 5 + 1) / 2 - 5 + 1,
-                (self.dim_in[2] - 5 + 1) / 2 - 5 + 1)
+        # return (self.num_filter, (self.dim_in[1] - 5 + 1) / 2 - 5 + 1,
+        #         (self.dim_in[2] - 5 + 1) / 2 - 5 + 1)
 
-        # return (self.num_filter, self.dim_in[1] / 2, self.dim_in[2] / 2)
+        return (self.num_filter, self.dim_in[1] / 2, self.dim_in[2] / 2)
 
     @property
     def name(self):
@@ -259,7 +260,7 @@ class ScoreMapProcessor(object):
             conv1 = mx.symbol.Convolution(data=multiscale_scoremap[i],
                                           weight=self.params[self.name + ':scale%d:conv1' %i].weight,
                                           bias=self.params[self.name + ':scale%d:conv1' %i].bias,
-                                          kernel=(5, 5), pad=(0, 0),
+                                          kernel=(5, 5), pad=(2, 2),
                                           num_filter=self.num_filter,
                                           name=self.name + (':scale%d:conv1' %i) + postfix,
                                           workspace=50)
@@ -270,12 +271,14 @@ class ScoreMapProcessor(object):
             conv2 = mx.symbol.Convolution(data=pool1,
                                           weight=self.params[self.name + ':scale%d:conv2' %i].weight,
                                           bias=self.params[self.name + ':scale%d:conv2' %i].bias,
-                                          kernel=(5, 5), pad=(0, 0),
+                                          kernel=(5, 5), pad=(2, 2),
                                           num_filter=self.num_filter,
                                           name=self.name + (':scale%d:conv2' %i) + postfix,
                                           workspace=50)
-            act2 = mx.symbol.Activation(data=conv2, act_type='relu', name=self.name +
-                                                                          (':scale%d:act2' %i) +
-                                                                          postfix)
-            parsed_scoremaps.append(act2)
-        return mx.symbol.Concat(*parsed_scoremaps, num_args=self.scale_num, dim=1)
+
+            parsed_scoremaps.append(conv2)
+        parsed_scoremap = mx.symbol.Concat(*parsed_scoremaps, num_args=self.scale_num, dim=1)
+        parsed_scoremap = spatial_softmax(data=parsed_scoremap, channel_num=self.scale_num * self.dim_out[0],
+                                          rows=self.dim_out[1], cols=self.dim_out[2],
+                                          name=self.name + ':parsed_scoremap' + postfix)
+        return parsed_scoremap
