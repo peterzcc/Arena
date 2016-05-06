@@ -481,7 +481,7 @@ baseline_lr = args.baseline_lr
 
 # Score Related Parameters
 thresholds = (0.5, 0.8)
-failure_penalty = -1
+failure_penalty = -0.1
 level_reward = 1
 
 # Glimpse Hanlder Parameters
