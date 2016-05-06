@@ -52,7 +52,7 @@ class TrackingIterator(object):
     Choose a video and draw minibatch samples from this video.
 
     '''
-    def sample(self, length=20, batch_size=1, interval_step=1, verbose=False):
+    def sample(self, length=20, batch_size=1, interval_step=1, verbose=False, random_perturbation=False):
         assert 1 == batch_size
         video_index = self.rng.randint(0, self.video_num)
         # make sure choose video have enough frames
@@ -86,6 +86,10 @@ class TrackingIterator(object):
         seq_roi_batch[:, 0:2] += seq_roi_batch[:, 2:4] / 2 - 1
         seq_roi_batch[:, ::2] = seq_roi_batch[:, ::2] / im_shape[1]
         seq_roi_batch[:, 1::2] = seq_roi_batch[:, 1::2] / im_shape[0]
+        if random_perturbation:
+            seq_roi_batch[0, 0:2] = numpy.clip(seq_roi_batch[0, 0:2] + 0.1 * self.rng.rand(2) * seq_roi_batch[0, 2:4],
+                                               0, 1)
+            seq_roi_batch[0, 2:4] = numpy.clip(seq_roi_batch[0, 2:4] * (1 + 0.2 * self.rng.rand(2)), 0, 1)
         seq_data_batch = nd.array(seq_data_batch, ctx=self.ctx)
         seq_data_batch -= self.img_mean(seq_data_batch.shape)
         seq_roi_batch = nd.array(seq_roi_batch, ctx=self.ctx)
