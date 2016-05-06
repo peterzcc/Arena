@@ -219,7 +219,7 @@ class AttentionHandler(object):
                    typ="trans_search", postfix=''):
         assert typ == 'trans_search' or typ == 'trans_pred', "The given typ=%s" %typ
         roi_fc1 = \
-            mx.symbol.FullyConnected(data=indata, num_hidden=512,
+            mx.symbol.FullyConnected(data=indata, num_hidden=256,
                                      name=self.name + ':' + typ + '_roi:fc1' + postfix,
                                      weight=self.roi_policy_params[
                                          self.name + ':' + typ + '_roi:fc1'].weight,
@@ -228,7 +228,7 @@ class AttentionHandler(object):
         roi_act1 = mx.symbol.Activation(data=roi_fc1, act_type='tanh')
         roi_act1 = mx.sym.Dropout(data=roi_act1, p=0.3)
         roi_fc2 = \
-            mx.symbol.FullyConnected(data=roi_act1, num_hidden=512,
+            mx.symbol.FullyConnected(data=roi_act1, num_hidden=256,
                                      name=self.name + ':' + typ + '_roi:fc2' + postfix,
                                      weight=self.roi_policy_params[
                                          self.name + ':' + typ + '_roi:fc2'].weight,
