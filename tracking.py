@@ -581,7 +581,8 @@ for epoch in range(total_epoch_num):
     for iter in range(epoch_iter_num):
         seq_images, seq_rois = tracking_iterator.sample(length=sample_length,
                                                         interval_step=args.interval_step,
-                                                        verbose=False)
+                                                        verbose=False,
+                                                        random_perturbation=True)
         # print seq_images.shape
         # print seq_rois.shape
         init_image_ndarray = seq_images[:1].reshape((1,) + seq_images.shape[1:])
@@ -632,8 +633,8 @@ for epoch in range(total_epoch_num):
                                                    scoremap_processor=scoremap_processor,
                                                    parse_all=verbose_sym_out)
             parsed_outputs_list.append(parsed_outputs)
-            print parsed_outputs['pred_rois']
-            print data_rois_ndarray.asnumpy()[0]
+            #print parsed_outputs['pred_rois']
+            #print data_rois_ndarray.asnumpy()[0]
             scores = compute_tracking_score(pred_rois=parsed_outputs['pred_rois'],
                                             truth_rois=data_rois_ndarray.asnumpy()[0],
                                             thresholds=thresholds,
@@ -682,8 +683,8 @@ for epoch in range(total_epoch_num):
                 #         visualize_weights(v[i])
                 # print 'v:', v
                 # ch = raw_input()
-        for k, v in accumulative_grad.items():
-           print k, numpy.abs(v.asnumpy()).sum()
+        #for k, v in accumulative_grad.items():
+        #   print k, numpy.abs(v.asnumpy()).sum()
         tracker.update(updater=updater, params_grad=accumulative_grad)
         avg_scores /= roll_out_num
         q_estimation = numpy.cumsum(avg_scores[::-1], axis=0)[::-1]
