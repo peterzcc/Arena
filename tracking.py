@@ -103,15 +103,16 @@ class TrackerInitializer(mx.initializer.Normal):
     def _init_weight(self, name, arr):
         super(TrackerInitializer, self)._init_weight(name, arr)
         if 'ScoreMapProcessor' in name:
-            print name
             mx.random.normal(0.1, self.sigma, out=arr)
         elif 'init_roi' in name and 'AttentionHanlder' in name:
-            mx.random.normal(0, self.sigma / 1000, out=arr)
+            mx.random.normal(0, self.sigma, out=arr)
         elif 'search_roi' in name and 'AttentionHanlder' in name:
-            mx.random.normal(0, self.sigma / 1000, out=arr)
+            mx.random.normal(0, self.sigma, out=arr)
 
     def _init_bias(self, name, arr):
         super(TrackerInitializer, self)._init_bias(name, arr)
+        if 'conv' in name:
+            arr[:] = 0.1
 
 
 def build_tracker(tracking_length,
@@ -137,7 +138,8 @@ def build_tracker(tracking_length,
 
     # Constant Inputs: update_factor, roi_var
     update_factor = mx.symbol.Variable('update_factor')
-    roi_var = mx.symbol.Variable('roi_var')
+    center_var = mx.symbol.Variable('center_var')
+    size_var = mx.symbol.Variable('size_var')
 
     init_search_center, init_search_size = get_roi_center_size(init_search_roi)
     data_rois = mx.symbol.SliceChannel(data_rois, num_outputs=2, axis=2)
@@ -148,55 +150,38 @@ def build_tracker(tracking_length,
     data_sizes = mx.symbol.SliceChannel(data_rois[1], num_outputs=tracking_length, axis=1,
                                         squeeze_axis=True)
 
-    init_attention_lstm_data, init_attention_lstm_shape = attention_handler.init_lstm(ctx=ctx)
-    init_shapes.update(init_attention_lstm_shape)
-
     ############################ 1. Get the computation logic ######################################
     memory = init_memory
     memory_status_history = OrderedDict()
     glimpse_history = OrderedDict()
-    read_template_history = OrderedDict()
     last_step_memory = OrderedDict()
 
     for timestamp in range(tracking_length):
-        init_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[timestamp],
-                                                       center=init_search_center,
-                                                       size=init_search_size,
-                                                       postfix='_init_t%d' % timestamp)
-        glimpse_history['glimpse_init_t%d:center' % timestamp] = init_glimpse.center
-        glimpse_history['glimpse_init_t%d:size' % timestamp] = init_glimpse.size
-        glimpse_history['glimpse_init_t%d:data' % timestamp] = init_glimpse.data
+        # 2.1 Get the initial glimpse
+        glimpse_history['glimpse_init_t%d:center' % timestamp] = mx.symbol.BlockGrad(init_search_center)
+        glimpse_history['glimpse_init_t%d:size' % timestamp] = mx.symbol.BlockGrad(init_search_size)
 
-        # 2.1 Read template from the memory
-        memory, template, read_sym_out, read_init_shapes = \
-            memory_handler.read(memory=memory, glimpse=init_glimpse, timestamp=timestamp)
-        sym_out.update(read_sym_out)
-        init_shapes.update(read_init_shapes)
-        memory_status_history['counter_after_read_t%d' % timestamp] = memory.status.counter
-        memory_status_history[
-            'visiting_timestamp_after_read_t%d' % timestamp] = memory.status.visiting_timestamp
-        read_template_history['numerators_after_read_t%d' % timestamp] = template.numerator
-        read_template_history['denominators_after_read_t%d' % timestamp] = template.denominator
-
-        # 2.2 Attend
-        tracking_states, init_search_center, init_search_size, pred_center, pred_size, attend_sym_out, \
+        # 2.2 Attend with the help of memory
+        memory, init_search_center, init_search_size, pred_center, pred_size, attend_sym_out, \
         attend_init_shapes = attention_handler.attend(
-            img=data_images[timestamp], init_glimpse=init_glimpse,
-            multiscale_template=template, memory=memory,
+            img=data_images[timestamp],
+            init_search_center=init_search_center,
+            init_search_size=init_search_size,
+            memory=memory,
             ground_truth_roi=mx.symbol.Concat(data_centers[timestamp], data_sizes[timestamp],
                                               num_args=2, dim=1),
-            timestamp=timestamp, roi_var=roi_var,
+            timestamp=timestamp,
+            center_var=center_var,
+            size_var=size_var,
             deterministic=deterministic)
-        tracking_state = mx.symbol.Concat(*[state.h for state in tracking_states],
-                                          num_args=len(tracking_states), dim=1)
         sym_out.update(attend_sym_out)
         init_shapes.update(attend_init_shapes)
         pred_glimpse = glimpse_handler.pyramid_glimpse(img=data_images[timestamp],
                                                        center=pred_center,
                                                        size=pred_size,
                                                        postfix='_pred_t%d' % timestamp)
-        glimpse_history['glimpse_next_step_search_t%d:center' % timestamp] = init_search_center
-        glimpse_history['glimpse_next_step_search_t%d:size' % timestamp] = init_search_size
+        glimpse_history['glimpse_next_step_search_t%d:center' % timestamp] = mx.symbol.BlockGrad(init_search_center)
+        glimpse_history['glimpse_next_step_search_t%d:size' % timestamp] = mx.symbol.BlockGrad(init_search_size)
         glimpse_history['glimpse_pred_t%d_center' % timestamp] = pred_glimpse.center
         glimpse_history['glimpse_pred_t%d_size' % timestamp] = pred_glimpse.size
         glimpse_history['glimpse_pred_t%d_data' % timestamp] = pred_glimpse.data
@@ -205,7 +190,6 @@ def build_tracker(tracking_length,
         template = cf_handler.get_multiscale_template(glimpse=pred_glimpse,
                                                       postfix='_t%d_memorize' % timestamp)
         memory, write_sym_out, write_init_shapes = memory_handler.write(memory=memory,
-                                                                        tracking_state=tracking_state,
                                                                         update_multiscale_template=template,
                                                                         update_factor=update_factor,
                                                                         timestamp=timestamp)
@@ -216,7 +200,6 @@ def build_tracker(tracking_length,
             memory_status_history[
                 'visiting_timestamp_after_write_t%d' % timestamp] = memory.status.visiting_timestamp
         else:
-            sym_out.update(write_sym_out)
             last_step_memory['last_step_memory:numerators'] = mx.symbol.BlockGrad(memory.numerators)
             last_step_memory['last_step_memory:denominators'] = mx.symbol.BlockGrad(
                 memory.denominators)
@@ -235,8 +218,10 @@ def build_tracker(tracking_length,
         ('data_images', (1, tracking_length, 3) + image_size),
         ('data_rois', (1, tracking_length, 4)),
         ('update_factor', (1,)),
-        ('init_search_roi', (1, 4)),
-        ('roi_var', (1, 4))])
+        ('init_search_roi', (1, 4))])
+    if attention_handler.total_steps > 1:
+        data_shapes['center_var'] = (1, 2)
+        data_shapes['size_var'] = (1, 2)
     data_shapes.update(init_shapes)
     tracker = Base(sym=mx.symbol.Group(sym_out.values()),
                    data_shapes=data_shapes,
@@ -246,40 +231,138 @@ def build_tracker(tracking_length,
 
     constant_inputs = OrderedDict()
     constant_inputs['update_factor'] = default_update_factor
-    constant_inputs["roi_var"] = nd.array(numpy.array([[0.01, 0.01, 0.001, 0.001]]), ctx=ctx)
-    constant_inputs.update(init_attention_lstm_data)
+    if attention_handler.total_steps > 1:
+        constant_inputs["center_var"] = nd.array(numpy.array([[0.1, 0.1]]), ctx=ctx)
+        constant_inputs["size_var"] = nd.array(numpy.array([[0.1, 0.1]]), ctx=ctx)
     return tracker, sym_out, init_shapes, constant_inputs
 
 
-def get_tracker_pred_glimpse(outputs, sym_out, total_timesteps, glimpse_data_shape=None):
-    pred_rois = numpy.zeros((total_timesteps, 4), dtype=numpy.float32)
+def parse_tracker_outputs(outputs, sym_out, total_timesteps, attention_steps, memory_size,
+                          cf_handler, scoremap_processor,
+                          glimpse_data_shape=None, parse_all=False):
+    ret = OrderedDict()
+    ret['pred_rois'] = numpy.zeros((total_timesteps, 4), dtype=numpy.float32)
+    ret['search_rois'] = numpy.zeros((total_timesteps, attention_steps, 4), dtype=numpy.float32)
+    ret['trans_search_rois'] = numpy.zeros((total_timesteps, attention_steps - 1, 4),
+                                           dtype=numpy.float32)
+    ret['trans_pred_rois'] = numpy.zeros((total_timesteps, 4),
+                                           dtype=numpy.float32)
+    ret['bb_regress_loss'] = numpy.zeros((total_timesteps, 4), dtype=numpy.float32)
+
+    ret['read_controls'] = numpy.empty((total_timesteps, attention_steps), dtype=numpy.float32)
+    ret['write_controls'] = numpy.empty((total_timesteps,), dtype=numpy.float32)
+    ret['read_controls_prob'] = numpy.empty((total_timesteps, attention_steps, memory_size),
+                                              dtype=numpy.float32)
+    ret['write_controls_prob'] = numpy.empty((total_timesteps, 3), dtype=numpy.float32)
+
     if glimpse_data_shape is not None:
-        pred_glimpse_data = numpy.zeros((total_timesteps, ) + glimpse_data_shape, dtype=numpy.float32)
-    center_counter = 0
-    size_counter = 0
-    data_counter = 0
+        ret['pred_glimpse_data'] = numpy.zeros((total_timesteps, ) + glimpse_data_shape,
+                                        dtype=numpy.float32)
+    counter_checking = {'pred_rois': 0,
+                        'trans_search_rois': 0,
+                        'search_rois': 0,
+                        'trans_pred_rois': 0,
+                        'bb_regress_loss': 0,
+                        'read_controls': 0,
+                        'write_controls': 0,
+                        'read_controls_prob': 0,
+                        'write_controls_prob': 0}
+
+    counter_ground_truth = {'pred_rois': total_timesteps * 2,
+                            'trans_search_rois': total_timesteps * (attention_steps - 1) * 2,
+                            'search_rois': total_timesteps * attention_steps * 2,
+                            'trans_pred_rois': total_timesteps * 2,
+                            'bb_regress_loss': total_timesteps,
+                            'read_controls': total_timesteps * attention_steps,
+                            'write_controls': total_timesteps,
+                            'read_controls_prob': total_timesteps * attention_steps,
+                            'write_controls_prob': total_timesteps}
+
+    if parse_all:
+        ret['attention_scoremap'] = numpy.empty((total_timesteps, attention_steps) +
+                                                cf_handler.scoremap_shape, dtype=numpy.float32)
+        ret['processed_scoremap'] = numpy.empty((total_timesteps, attention_steps) +
+                                                (scoremap_processor.dim_out[0] * scoremap_processor.scale_num,
+                                                 scoremap_processor.dim_out[1],
+                                                 scoremap_processor.dim_out[2]), dtype=numpy.float32)
+        counter_checking['attention_scoremap'] = 0
+        counter_checking['processed_scoremap'] = 0
+        counter_ground_truth['attention_scoremap'] = total_timesteps * attention_steps
+        counter_ground_truth['processed_scoremap'] = total_timesteps * attention_steps
+
     for i, (key, output) in enumerate(zip(sym_out.keys(), outputs)):
-        if 'glimpse_pred' in key:
+        if 'glimpse_pred_t' in key:
             timestamp = get_timestamp(key)
             if 'center' in key:
-                pred_rois[timestamp, 0:2] = output.asnumpy()[:]
-                center_counter += 1
+                ret['pred_rois'][timestamp, 0:2] = output.asnumpy()
+                counter_checking['pred_rois'] += 1
             elif 'size' in key:
-                pred_rois[timestamp, 2:4] = output.asnumpy()[:]
-                size_counter += 1
+                ret['pred_rois'][timestamp, 2:4] = output.asnumpy()
+                counter_checking['pred_rois'] += 1
             elif 'data' in key:
                 if glimpse_data_shape is not None:
-                    pred_glimpse_data[timestamp, :, :, :, :] = output.asnumpy()
-                data_counter += 1
-    assert (center_counter == total_timesteps) and (size_counter == total_timesteps) and \
-           (data_counter == total_timesteps)
-    if glimpse_data_shape is not None:
-        return pred_rois, pred_glimpse_data
-    else:
-        return pred_rois
+                    ret['pred_glimpse_data'][timestamp, :, :, :, :] = output.asnumpy()
+        elif 'real_search' in key:
+            timestamp = get_timestamp(key)
+            attention_step = get_attention_step(key)
+            if 'center' in key:
+                ret['search_rois'][timestamp, attention_step, 0:2] = output.asnumpy()
+                counter_checking['search_rois'] += 1
+            elif 'size' in key:
+                ret['search_rois'][timestamp, attention_step, 2:4] = output.asnumpy()
+                counter_checking['search_rois'] += 1
+        elif 'read:chosen_ind' in key:
+            timestamp = get_timestamp(key)
+            attention_step = get_attention_step(key)
+            if 'action' in key:
+                ret['read_controls'][timestamp, attention_step] = output.asnumpy()
+                counter_checking['read_controls'] += 1
+            elif 'prob' in key:
+                ret['read_controls_prob'][timestamp, attention_step] = output.asnumpy()
+                counter_checking['read_controls_prob'] += 1
+        elif 'write:control_flag' in key:
+            timestamp = get_timestamp(key)
+            if 'action' in key:
+                ret['write_controls'][timestamp] = output.asnumpy()
+                counter_checking['write_controls'] += 1
+            elif 'prob' in key:
+                ret['write_controls_prob'][timestamp] = output.asnumpy()
+                counter_checking['write_controls_prob'] += 1
+        elif 'bb_regress_loss' in key:
+            timestamp = get_timestamp(key)
+            ret['bb_regress_loss'][timestamp, :] = output.asnumpy()
+            counter_checking['bb_regress_loss'] += 1
+        elif 'trans_search' in key:
+            timestamp = get_timestamp(key)
+            attention_step = get_attention_step(key)
+            if 'center' in key:
+                ret['trans_search_rois'][timestamp, attention_step, 0:2] = output.asnumpy()
+                counter_checking['trans_search_rois'] += 1
+            elif 'size' in key:
+                ret['trans_search_rois'][timestamp, attention_step, 2:4] = output.asnumpy()
+                counter_checking['trans_search_rois'] += 1
+        elif 'trans_pred' in key:
+            if 'center' in key:
+                ret['trans_pred_rois'][timestamp, 0:2] = output.asnumpy()[:]
+                counter_checking['trans_pred_rois'] += 1
+            elif 'size' in key:
+                ret['trans_pred_rois'][timestamp, 2:4] = output.asnumpy()[:]
+                counter_checking['trans_pred_rois'] += 1
+        if parse_all:
+            if 'attention_scoremap' in key:
+                timestamp = get_timestamp(key)
+                attention_step = get_attention_step(key)
+                ret['attention_scoremap'][timestamp, attention_step, :, :, :, :] = output.asnumpy()
+                counter_checking['attention_scoremap'] += 1
+            elif 'processed_scoremap' in key:
+                timestamp = get_timestamp(key)
+                attention_step = get_attention_step(key)
+                ret['processed_scoremap'][timestamp, attention_step, :, :, :] = output.asnumpy()[0]
+                counter_checking['processed_scoremap'] += 1
 
-#def get_bb_regress_roi(outputs, sym_out, total_timesteps):
-
+    assert counter_checking == counter_ground_truth, "Find %s but expected %s" \
+                                                     % (counter_checking, counter_ground_truth)
+    return ret
 
 
 def compute_tracking_score(pred_rois, truth_rois, thresholds=(0.5, 0.7, 0.8, 0.9),
@@ -294,27 +377,6 @@ def compute_tracking_score(pred_rois, truth_rois, thresholds=(0.5, 0.7, 0.8, 0.9
     return scores + overlapping_ratios
 
 
-def get_memory_controls(outputs, sym_out, total_timesteps, memory_size):
-    read_controls = numpy.empty((total_timesteps,), dtype=numpy.float32)
-    write_controls = numpy.empty((total_timesteps,), dtype=numpy.float32)
-    read_controls_prob = numpy.empty((total_timesteps, memory_size), dtype=numpy.float32)
-    write_controls_prob = numpy.empty((total_timesteps, 3), dtype=numpy.float32)
-    for i, (key, output) in enumerate(zip(sym_out.keys(), outputs)):
-        if 'read:chosen_ind' in key and 'action' in key:
-            timestamp = get_timestamp(key)
-            read_controls[timestamp] = output.asnumpy()
-        elif 'write:control_flag' in key and 'action' in key:
-            timestamp = get_timestamp(key)
-            write_controls[timestamp] = output.asnumpy()
-        elif 'read:chosen_ind' in key and 'prob' in key:
-            timestamp = get_timestamp(key)
-            read_controls_prob[timestamp] = output.asnumpy()
-        elif 'write:control_flag' in key and 'prob' in key:
-            timestamp = get_timestamp(key)
-            write_controls_prob[timestamp] = output.asnumpy()
-    return read_controls, write_controls, read_controls_prob, write_controls_prob
-
-
 def get_backward_input(init_shapes, scores, baselines, total_timesteps, attention_steps):
     assert scores.shape == baselines.shape
     assert 1 == len(scores.shape)
@@ -322,30 +384,22 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
     backward_inputs = OrderedDict()
     scores = numpy.cumsum(scores[::-1], axis=0)[::-1]
     advantages = (scores - baselines)
-    counter_checking = {'search_roi': 0,
-                        'init_roi': 0,
+    counter_checking = {'trans_search': 0,
                         'read:chosen_ind': 0,
                         'write:control_flag': 0}
-    counter_ground_truth = {'search_roi': total_timesteps * (attention_steps - 1),
-                            'init_roi': total_timesteps,
-                            'read:chosen_ind': total_timesteps,
+    counter_ground_truth = {'trans_search': total_timesteps * (attention_steps - 1) * 2,
+                            'read:chosen_ind': total_timesteps * attention_steps,
                             'write:control_flag': total_timesteps}
     for key in init_shapes.keys():
         if 'score' in key:
             timestamp = get_timestamp(key)
-            if 'search_roi' in key:
-                backward_inputs[key] = advantages[timestamp] / 1000
-                counter_checking['search_roi'] += 1
-            elif 'pred_roi' in key:
+            if 'trans_search' in key:
+                backward_inputs[key] = advantages[timestamp]/1000
+                counter_checking['trans_search'] += 1
+            elif 'trans_pred' in key:
                 assert False
-            elif 'init_roi' in key:
-                if timestamp < total_timesteps - 1:
-                    backward_inputs[key] = advantages[timestamp + 1] / 1000
-                else:
-                    backward_inputs[key] = 0
-                counter_checking['init_roi'] += 1
             elif 'read:chosen_ind' in key:
-                backward_inputs[key] = advantages[timestamp] / 100
+                backward_inputs[key] = advantages[timestamp]/100
                 counter_checking['read:chosen_ind'] += 1
             elif 'write:control_flag' in key:
                 if timestamp < total_timesteps - 1:
@@ -356,7 +410,8 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
             else:
                 raise NotImplementedError, 'Only support %s, find key="%s"' \
                                            % (str(counter_checking.keys()), key)
-    assert counter_checking == counter_ground_truth, counter_checking
+    assert counter_checking == counter_ground_truth, "Find %s but expected %s" \
+                                                     %(counter_checking, counter_ground_truth)
     return backward_inputs
 
 
@@ -382,11 +437,11 @@ parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
                     help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
 parser.add_argument('--roll-out', required=False, type=int, default=3,
                     help='Eps of the epsilon-greedy policy at the beginning')
-parser.add_argument('--scale-num', required=False, type=int, default=3,
+parser.add_argument('--scale-num', required=False, type=int, default=1,
                     help='Scale number of the glimpse sector')
 parser.add_argument('--scale-mult', required=False, type=float, default=1.8,
                     help='Scale multiple of the glimpse sector')
-parser.add_argument('--init-scale', required=False, type=float, default=1.0,
+parser.add_argument('--init-scale', required=False, type=float, default=1.8,
                     help='Initial scale of the glimpse sector')
 parser.add_argument('--cf-sigma-factor', required=False, type=float, default=20,
                     help='Gaussian sigma factor of the correlation filter')
@@ -423,8 +478,8 @@ roll_out_num = args.roll_out
 total_epoch_num = 200
 epoch_iter_num = 30000
 baseline_lr = args.baseline_lr
-# Score Related Parameters
 
+# Score Related Parameters
 thresholds = (0.5, 0.8)
 failure_penalty = -1
 level_reward = 1
@@ -438,13 +493,16 @@ init_scale = args.init_scale
 cf_gaussian_sigma_factor = args.cf_sigma_factor
 cf_regularizer = args.cf_regularizer
 
+verbose_sym_out = False# Whether to parse all the outputs
+
+
 scoremap_num_filter = args.scoremap_num
 
 memory_size = args.memory_size
 attention_steps = args.attention_steps
 image_size = (480, 540)
-memory_lstm_props = [LSTMLayerProp(num_hidden=256, dropout=0.),
-                     LSTMLayerProp(num_hidden=256, dropout=0.)]
+memory_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
+                     LSTMLayerProp(num_hidden=128, dropout=0.)]
 attention_lstm_props = [LSTMLayerProp(num_hidden=128, dropout=0.),
                         LSTMLayerProp(num_hidden=128, dropout=0.)]
 
@@ -473,13 +531,15 @@ memory_handler = MemoryHandler(cf_handler=cf_handler,
                                memory_size=memory_size,
                                lstm_layer_props=memory_lstm_props)
 attention_handler = AttentionHandler(glimpse_handler=glimpse_handler, cf_handler=cf_handler,
+                                     memory_handler=memory_handler,
                                      scoremap_processor=scoremap_processor,
                                      total_steps=attention_steps,
                                      lstm_layer_props=attention_lstm_props,
-                                     fixed_variance=True)
+                                     fixed_center_variance=True,
+                                     fixed_size_variance=True,
+                                     verbose_sym_out=verbose_sym_out)
 
 # 1. Build the memory generator that initialze the memory by analyzing the first frame
-
 
 memory_generator, mem_sym_out, mem_init_shapes, mem_constant_inputs = \
     build_memory_generator(image_size=image_size,
@@ -550,7 +610,9 @@ for epoch in range(total_epoch_num):
         for i, k in enumerate(mem_sym_out.keys()):
             if 'init_memory' in k:
                 additional_inputs[k] = mem_outputs[i]
+
         avg_scores = numpy.zeros((BPTT_length,), dtype=numpy.float32)
+        parsed_outputs_list = []
         for episode in range(roll_out_num):
             if 0 == episode:
                 if iter == 0:
@@ -560,18 +622,19 @@ for epoch in range(total_epoch_num):
                     tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
             else:
                 tracker_outputs = tracker.forward(is_train=True)
-            read_controls, write_controls, read_controls_prob, write_controls_prob = \
-                get_memory_controls(outputs=tracker_outputs,
-                                    sym_out=tracker_sym_out,
-                                    total_timesteps=BPTT_length,
-                                    memory_size=memory_size)
-            pred_rois = get_tracker_pred_glimpse(outputs=tracker_outputs,
-                                                 sym_out=tracker_sym_out,
-                                                 total_timesteps=BPTT_length,
-                                                 glimpse_data_shape=None)#(scale_num, 3) + glimpse_handler.output_shape)
-            # print pred_rois
-            # print data_rois_ndarray.asnumpy()[0]
-            scores = compute_tracking_score(pred_rois=pred_rois,
+            parsed_outputs = parse_tracker_outputs(outputs=tracker_outputs,
+                                                   sym_out=tracker_sym_out,
+                                                   total_timesteps=BPTT_length,
+                                                   attention_steps=attention_steps,
+                                                   memory_size=memory_size,
+                                                   glimpse_data_shape=(scale_num, 3) + glimpse_handler.output_shape,
+                                                   cf_handler=cf_handler,
+                                                   scoremap_processor=scoremap_processor,
+                                                   parse_all=verbose_sym_out)
+            parsed_outputs_list.append(parsed_outputs)
+            print parsed_outputs['pred_rois']
+            print data_rois_ndarray.asnumpy()[0]
+            scores = compute_tracking_score(pred_rois=parsed_outputs['pred_rois'],
                                             truth_rois=data_rois_ndarray.asnumpy()[0],
                                             thresholds=thresholds,
                                             failure_penalty=failure_penalty,
@@ -591,10 +654,36 @@ for epoch in range(total_epoch_num):
         data_img_npy = (data_images_ndarray + tracking_iterator.img_mean(data_images_ndarray.shape)).asnumpy()
         if args.visualization:
             for i in range(BPTT_length):
-                draw_track_res(data_img_npy[0, i, :, :, :], pred_rois[i], delay=3)
+                for j in range(attention_steps):
+                   draw_track_res(data_img_npy[0, i, :, :, :], parsed_outputs_list[0]['search_rois'][i, j],
+                              delay=5, color=(0, 0, 255))
+                draw_track_res(data_img_npy[0, i, :, :, :], parsed_outputs_list[0]['pred_rois'][i],
+                               delay=5, color=(255, 0, 0))
 
-        #for k, v in accumulative_grad.items():
-        #    print k, numpy.abs(v.asnumpy()).sum()
+        if verbose_sym_out:
+            for parsed_outputs in parsed_outputs_list:
+                for k, v in parsed_outputs.items():
+                    if 'attention_scoremap' == k:
+                        for i in range(BPTT_length):
+                            for j in range(attention_steps):
+                                for s in range(scale_num):
+                                    print i, j, s
+                                    visualize_weights(v[i, j, s])
+                    if 'processed_scoremap' == k:
+                        for i in range(BPTT_length):
+                            for j in range(attention_steps):
+                                print i, j
+                                visualize_weights(v[i, j])
+                # print 'k:', k
+                # ch = raw_input()
+                # print v.shape
+                # if 'pred_glimpse_data' == k:
+                #     for i in range(BPTT_length):
+                #         visualize_weights(v[i])
+                # print 'v:', v
+                # ch = raw_input()
+        for k, v in accumulative_grad.items():
+           print k, numpy.abs(v.asnumpy()).sum()
         tracker.update(updater=updater, params_grad=accumulative_grad)
         avg_scores /= roll_out_num
         q_estimation = numpy.cumsum(avg_scores[::-1], axis=0)[::-1]
@@ -602,10 +691,10 @@ for epoch in range(total_epoch_num):
         #print 'Avg Scores:', avg_scores
         logging.info('Epoch:%d, Iter:%d, Baselines:%s, Read:%g/%s, Write:%g/%s' %
                      (epoch, iter, str(baselines),
-                      entropy(read_controls_prob.T).mean(),
-                      str(read_controls_prob.argmax(axis=1)),
-                      entropy(write_controls_prob.T).mean(),
-                      str(write_controls_prob.argmax(axis=1))))
+                      entropy(parsed_outputs_list[0]['read_controls_prob'].T).mean(),
+                      str(parsed_outputs_list[0]['read_controls_prob'].argmax(axis=2)),
+                      entropy(parsed_outputs_list[0]['write_controls_prob'].T).mean(),
+                      str(parsed_outputs_list[0]['write_controls_prob'].argmax(axis=1))))
         #print 'Read Control Probs:', read_controls_prob
         #print 'Write Control Probs:', write_controls_prob
         #print 'Predicted ROIS:', pred_rois
