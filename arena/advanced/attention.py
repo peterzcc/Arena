@@ -282,7 +282,7 @@ class AttentionHandler(object):
                    center_var, size_var
         else:
             center = center_mean
-            size = size_mean
+            size = size_mean * numpy.log(1.02)
             return center, size
 
 
