@@ -429,7 +429,7 @@ parser.add_argument('--eps', required=False, type=float, default=1E-6,
                     help='Eps of the RMSPropNoncentered optimizer')
 parser.add_argument('--clip-gradient', required=False, type=float, default=None,
                     help='Clip threshold of the RMSPropNoncentered optimizer')
-parser.add_argument('--gamma1', required=False, type=float, default=False,
+parser.add_argument('--gamma1', required=False, type=float, default=0.95,
                     help='Use Double DQN')
 parser.add_argument('--wd', required=False, type=float, default=0.0,
                     help='Weight of the L2 Regularizer')
