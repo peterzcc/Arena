@@ -476,7 +476,7 @@ sample_length = args.sample_length
 BPTT_length = args.BPTT_length
 roll_out_num = args.roll_out
 total_epoch_num = 200
-epoch_iter_num = 30000
+epoch_iter_num = 10000
 baseline_lr = args.baseline_lr
 
 # Score Related Parameters
