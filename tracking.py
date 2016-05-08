@@ -2,6 +2,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import cv2
+import json
 from arena import Base
 import time
 import argparse
@@ -237,6 +238,8 @@ def build_tracker(tracking_length,
     return tracker, sym_out, init_shapes, constant_inputs
 
 
+#TODO sym_out can be replaced by mx.symbol.list_outputs() in the future
+
 def parse_tracker_outputs(outputs, sym_out, total_timesteps, attention_steps, memory_size,
                           cf_handler, scoremap_processor,
                           glimpse_data_shape=None, parse_all=False):
@@ -366,7 +369,7 @@ def parse_tracker_outputs(outputs, sym_out, total_timesteps, attention_steps, me
 
 
 def compute_tracking_score(pred_rois, truth_rois, thresholds=(0.5, 0.7, 0.8, 0.9),
-                           failure_penalty=-3, level_reward=1):
+                           failure_penalty=-3.0, level_reward=1.0):
     assert pred_rois.shape == truth_rois.shape
     assert len(thresholds) > 1
     overlapping_ratios = cal_rect_int(pred_rois, truth_rois)
@@ -416,13 +419,17 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
 
 
 parser = argparse.ArgumentParser(description='Script to train the tracking agent.')
-parser.add_argument('-d', '--dir-path', required=False, type=str, default='tracking-model',
+parser.add_argument('-d', '--dir-path', required=False, type=str, default='tracking-model-new',
                     help='Saving directory of model files.')
 parser.add_argument('-s', '--sequence-path', required=False, type=str,
                     default='D:\\HKUST\\2-2\\learning-to-track\\datasets\\training_for_otb100\\training_otb.lst',
                     help='Saving directory of model files.')
 parser.add_argument('-v', '--visualization', required=False, type=int, default=0,
                     help='Visualize the runs.')
+parser.add_argument('--train-epoch-num', required=False, type=int, default=200,
+                    help='Total training epochs')
+parser.add_argument('--train-iter-num', required=False, type=int, default=5000,
+                    help='Total iterations for each epoch')
 parser.add_argument('--lr', required=False, type=float, default=1E-4,
                     help='Learning rate of the RMSPropNoncentered optimizer')
 parser.add_argument('--eps', required=False, type=float, default=1E-6,
@@ -437,11 +444,11 @@ parser.add_argument('-c', '--ctx', required=False, type=str, default='gpu',
                     help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
 parser.add_argument('--roll-out', required=False, type=int, default=3,
                     help='Eps of the epsilon-greedy policy at the beginning')
-parser.add_argument('--scale-num', required=False, type=int, default=1,
+parser.add_argument('--scale-num', required=False, type=int, default=2,
                     help='Scale number of the glimpse sector')
-parser.add_argument('--scale-mult', required=False, type=float, default=1.8,
+parser.add_argument('--scale-mult', required=False, type=float, default=1.5,
                     help='Scale multiple of the glimpse sector')
-parser.add_argument('--init-scale', required=False, type=float, default=1.8,
+parser.add_argument('--init-scale', required=False, type=float, default=1.7,
                     help='Initial scale of the glimpse sector')
 parser.add_argument('--cf-sigma-factor', required=False, type=float, default=20,
                     help='Gaussian sigma factor of the correlation filter')
@@ -465,23 +472,31 @@ parser.add_argument('--baseline-lr', required=False, type=float, default=0.001,
                     help='Steps of recurrent attention')
 parser.add_argument('--optimizer', required=False, type=str, default="RMSPropNoncentered",
                     help='type of optimizer')
+parser.add_argument('--mode', required=False, type=str, choices=['train', 'test'], default='train')
 args = parser.parse_args()
+
 ctx = parse_ctx(args.ctx)
 ctx = mx.Context(*ctx[0])
 logging.info("Arguments:")
 for k, v in vars(args).items():
     logging.info("   %s = %s" %(k, v))
+quick_save_json(args.dir_path, "args.json", content=vars(args))
 
 sample_length = args.sample_length
 BPTT_length = args.BPTT_length
+
+assert (sample_length - 1) % BPTT_length == 0, 'Currently BPTT_length must divide sample_length-1. ' \
+                                               'The received sample_length=%d, BPTT_length=%d' %(sample_length,
+                                                                                                 BPTT_length)
+
 roll_out_num = args.roll_out
-total_epoch_num = 200
-epoch_iter_num = 5000
+total_epoch_num = args.train_epoch_num
+epoch_iter_num = args.train_iter_num
 baseline_lr = args.baseline_lr
 
 # Score Related Parameters
 thresholds = (0.5, 0.8)
-failure_penalty = -0.1
+failure_penalty = -0.2
 level_reward = 1
 
 # Glimpse Hanlder Parameters
@@ -493,8 +508,17 @@ init_scale = args.init_scale
 cf_gaussian_sigma_factor = args.cf_sigma_factor
 cf_regularizer = args.cf_regularizer
 
-verbose_sym_out = False# Whether to parse all the outputs
+if args.visualization:
+    verbose_sym_out = True# Whether to parse all the outputs
+else:
+    verbose_sym_out = False
 
+if 'test' == args.mode:
+    deterministic = True
+    random_perturbation = False
+else:
+    deterministic = False
+    random_perturbation = True
 
 scoremap_num_filter = args.scoremap_num
 
@@ -554,7 +578,7 @@ memory_generator.print_stat()
 tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs = \
     build_tracker(image_size=image_size,
                   tracking_length=BPTT_length,
-                  deterministic=False,
+                  deterministic=deterministic,
                   memory_handler=memory_handler,
                   glimpse_handler=glimpse_handler,
                   cf_handler=cf_handler,
@@ -564,6 +588,9 @@ tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs = \
                   ctx=ctx)
 tracker.print_stat()
 
+#tracker.load_params(tracker.name, dir_path="../learning-to-track/training-otb-lr0.0001-gamma0.9-mult1.5-init1.7-up-mem4-attend1-score4-len51-blen50", epoch=0)
+#tracker.load_params(tracker.name, dir_path="./tracking-model", epoch=0)
+
 baselines = numpy.zeros((BPTT_length,), dtype=numpy.float32)
 optimizer = mx.optimizer.create(name=args.optimizer,
                                 learning_rate=args.lr,
@@ -572,17 +599,17 @@ optimizer = mx.optimizer.create(name=args.optimizer,
                                 clip_gradient=None,
                                 rescale_grad=1.0, wd=args.wd)
 updater = mx.optimizer.get_updater(optimizer)
-
-accumulative_grad = OrderedDict()
-for k, v in tracker.params_grad.items():
-    accumulative_grad[k] = nd.empty(shape=v.shape, ctx=v.context)
+#
+# accumulative_grad = OrderedDict()
+# for k, v in tracker.params_grad.items():
+#     accumulative_grad[k] = nd.empty(shape=v.shape, ctx=v.context)
 
 for epoch in range(total_epoch_num):
     for iter in range(epoch_iter_num):
         seq_images, seq_rois = tracking_iterator.sample(length=sample_length,
                                                         interval_step=args.interval_step,
                                                         verbose=False,
-                                                        random_perturbation=True)
+                                                        random_perturbation=random_perturbation)
         # print seq_images.shape
         # print seq_rois.shape
         init_image_ndarray = seq_images[:1].reshape((1,) + seq_images.shape[1:])
@@ -600,29 +627,40 @@ for epoch in range(total_epoch_num):
                                                                   mem_constant_inputs.items())))
         else:
             mem_outputs = memory_generator.forward(is_train=False, **additional_inputs)
+        init_memory_keys = mem_sym_out.keys()
+        init_memory_outputs = mem_outputs
+        for bptt_step in range((sample_length-1)/BPTT_length):
+            start_indx = BPTT_length*bptt_step + 1
+            end_indx = BPTT_length*(bptt_step + 1)
+            data_images_ndarray = seq_images[start_indx:(end_indx - 1)].reshape(
+                (1, BPTT_length,) + seq_images.shape[1:])
+            data_rois_ndarray = seq_rois[start_indx:(end_indx - 1)].reshape((1, BPTT_length, 4))
 
-        data_images_ndarray = seq_images[1:(BPTT_length + 1)].reshape(
-            (1, BPTT_length,) + seq_images.shape[1:])
-        data_rois_ndarray = seq_rois[1:(BPTT_length + 1)].reshape((1, BPTT_length, 4))
-        additional_inputs = OrderedDict()
-        additional_inputs['data_images'] = data_images_ndarray
-        additional_inputs['data_rois'] = data_rois_ndarray
-        additional_inputs['init_search_roi'] = init_roi_ndarray
-        for i, k in enumerate(mem_sym_out.keys()):
-            if 'init_memory' in k:
-                additional_inputs[k] = mem_outputs[i]
+            additional_inputs = OrderedDict()
+            additional_inputs['data_images'] = data_images_ndarray
+            additional_inputs['data_rois'] = data_rois_ndarray
+            additional_inputs['init_search_roi'] = init_roi_ndarray
+            for i, k in enumerate(init_memory_keys):
+                if 'init_memory' in k:
+                    additional_inputs[k] = init_memory_outputs[i]
 
-        avg_scores = numpy.zeros((BPTT_length,), dtype=numpy.float32)
-        parsed_outputs_list = []
-        for episode in range(roll_out_num):
-            if 0 == episode:
-                if iter == 0:
-                    tracker_outputs = tracker.forward(is_train=True, **(OrderedDict(additional_inputs.items() +
-                                                                                    tracker_constant_inputs.items())))
-                else:
-                    tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
+            # avg_scores = numpy.zeros((BPTT_length,), dtype=numpy.float32)
+            parsed_outputs_list = []
+        #for episode in range(roll_out_num):
+            if iter == 0:
+                tracker_outputs = tracker.forward(is_train=True, **(OrderedDict(additional_inputs.items() +
+                                                                                tracker_constant_inputs.items())))
             else:
-                tracker_outputs = tracker.forward(is_train=True)
+                tracker_outputs = tracker.forward(is_train=True, **additional_inputs)
+        # else:
+        #     tracker_outputs = tracker.forward(is_train=True)
+            init_memory_outputs = []
+            init_memory_keys = []
+            for (k, v) in zip(tracker_sym_out.keys(), tracker_outputs):
+                if 'last_step_memory' in k:
+                    init_memory_outputs.append(v)
+                    init_memory_keys.append(k.replace("last_step_memory", "init_memory"))
+
             parsed_outputs = parse_tracker_outputs(outputs=tracker_outputs,
                                                    sym_out=tracker_sym_out,
                                                    total_timesteps=BPTT_length,
@@ -640,64 +678,70 @@ for epoch in range(total_epoch_num):
                                             thresholds=thresholds,
                                             failure_penalty=failure_penalty,
                                             level_reward=level_reward)
-            avg_scores += scores
+            # avg_scores += scores
             backward_inputs = get_backward_input(init_shapes=tracker_init_shapes,
                                                  scores=scores,
                                                  baselines=baselines,
                                                  total_timesteps=BPTT_length,
                                                  attention_steps=attention_handler.total_steps)
-            tracker.backward(**backward_inputs)
-            for k, v in tracker.params_grad.items():
-                if 0 == episode:
-                    accumulative_grad[k][:] = v / float(roll_out_num)
-                else:
-                    accumulative_grad[k][:] += v / float(roll_out_num)
-        data_img_npy = (data_images_ndarray + tracking_iterator.img_mean(data_images_ndarray.shape)).asnumpy()
-        if args.visualization:
-            for i in range(BPTT_length):
-                for j in range(attention_steps):
-                   draw_track_res(data_img_npy[0, i, :, :, :], parsed_outputs_list[0]['search_rois'][i, j],
-                              delay=5, color=(0, 0, 255))
-                draw_track_res(data_img_npy[0, i, :, :, :], parsed_outputs_list[0]['pred_rois'][i],
-                               delay=5, color=(255, 0, 0))
-
-        if verbose_sym_out:
-            for parsed_outputs in parsed_outputs_list:
-                for k, v in parsed_outputs.items():
-                    if 'attention_scoremap' == k:
-                        for i in range(BPTT_length):
-                            for j in range(attention_steps):
-                                for s in range(scale_num):
-                                    print i, j, s
-                                    visualize_weights(v[i, j, s])
-                    if 'processed_scoremap' == k:
-                        for i in range(BPTT_length):
-                            for j in range(attention_steps):
-                                print i, j
-                                visualize_weights(v[i, j])
-                # print 'k:', k
-                # ch = raw_input()
-                # print v.shape
-                # if 'pred_glimpse_data' == k:
-                #     for i in range(BPTT_length):
-                #         visualize_weights(v[i])
-                # print 'v:', v
-                # ch = raw_input()
-        #for k, v in accumulative_grad.items():
-        #   print k, numpy.abs(v.asnumpy()).sum()
-        tracker.update(updater=updater, params_grad=accumulative_grad)
-        avg_scores /= roll_out_num
-        q_estimation = numpy.cumsum(avg_scores[::-1], axis=0)[::-1]
-        baselines[:] -= args.baseline_lr * (baselines - q_estimation)
-        #print 'Avg Scores:', avg_scores
-        logging.info('Epoch:%d, Iter:%d, Baselines:%s, Read:%g/%s, Write:%g/%s' %
-                     (epoch, iter, str(baselines),
-                      entropy(parsed_outputs_list[0]['read_controls_prob'].T).mean(),
-                      str(parsed_outputs_list[0]['read_controls_prob'].argmax(axis=2)),
-                      entropy(parsed_outputs_list[0]['write_controls_prob'].T).mean(),
-                      str(parsed_outputs_list[0]['write_controls_prob'].argmax(axis=1))))
-        #print 'Read Control Probs:', read_controls_prob
-        #print 'Write Control Probs:', write_controls_prob
-        #print 'Predicted ROIS:', pred_rois
-        #print 'Ground Truth ROIS:', data_rois_ndarray.asnumpy()[0]
+            if 'train' == args.mode:
+                tracker.backward(**backward_inputs)
+                tracker.update(updater=updater)
+            # for k, v in tracker.params_grad.items():
+            #     if 0 == episode:
+            #         accumulative_grad[k][:] = v / float(roll_out_num)
+            #     else:
+            #         accumulative_grad[k][:] += v / float(roll_out_num)
+            if args.visualization:
+                data_img_npy = (data_images_ndarray + tracking_iterator.img_mean(data_images_ndarray.shape)).asnumpy()
+                p = tracker.params['ScoreMapProcessor:scale0:conv1_weight'].asnumpy()
+                visualize_weights(p[0,:,:,:],
+                                  win_name="scale0:conv1_weight")
+                p = tracker.params['ScoreMapProcessor:scale1:conv1_weight'].asnumpy()
+                visualize_weights(p[0,:,:,:],
+                                  win_name="scale1:conv1_weight")
+                p = tracker.params['ScoreMapProcessor:scale0:conv2_weight'].asnumpy()
+                visualize_weights(p[0,:,:,:],
+                                  win_name="scale0:conv2_weight")
+                p = tracker.params['ScoreMapProcessor:scale1:conv2_weight'].asnumpy()
+                visualize_weights(p[0,:,:,:],
+                                  win_name="scale1:conv2_weight")
+                for i in range(BPTT_length):
+                    # for j in range(attention_steps):
+                    #    draw_track_res(data_img_npy[0, i, :, :, :], parsed_outputs_list[0]['search_rois'][i, j],
+                    #               delay=10, color=(0, 0, 255))
+                    draw_track_res(data_img_npy[0, i, :, :, :], parsed_outputs_list[0]['pred_rois'][i],
+                                   color=(255, 0, 0))
+                    if verbose_sym_out:
+                        for j in range(attention_steps):
+                            for s in range(scale_num):
+                                visualize_weights(parsed_outputs['attention_scoremap'][i, j, s],
+                                                  win_name="Attention Scoremap")
+                                visualize_weights(parsed_outputs['processed_scoremap'][i, j],
+                                                  win_name="Processed Scoremap")
+                                visualize_weights(parsed_outputs['pred_glimpse_data'][i],
+                                                  win_name="Prediction Glimpse")
+                                cv2.waitKey(1)
+                    else:
+                        cv2.waitKey(1)
+                    # print 'k:', k
+                    # ch = raw_input()
+                    # print v.shape
+                    # if 'pred_glimpse_data' == k:
+                    #     for i in range(BPTT_length):
+                    #         visualize_weights(v[i])
+                    # print 'v:', v
+                    # ch = raw_input()
+            #for k, v in accumulative_grad.items():
+            #   print k, numpy.abs(v.asnumpy()).sum()
+            # avg_scores /= roll_out_num
+            q_estimation = numpy.cumsum(scores[::-1], axis=0)[::-1]
+            baselines[:] -= args.baseline_lr * (baselines - q_estimation)
+            #print 'Avg Scores:', avg_scores
+            logging.info('Epoch:%d, Iter:%d, Step:%d, Baselines:%s, Read:%g/%s, Write:%g/%s' %
+                         (epoch, iter, bptt_step, str(baselines),
+                          entropy(parsed_outputs_list[0]['read_controls_prob'].T).mean(),
+                          str(parsed_outputs_list[0]['read_controls_prob'].argmax(axis=2)),
+                          entropy(parsed_outputs_list[0]['write_controls_prob'].T).mean(),
+                          str(parsed_outputs_list[0]['write_controls_prob'].argmax(axis=1))))
     tracker.save_params(dir_path=save_dir, epoch=epoch)
