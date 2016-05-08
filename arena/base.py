@@ -80,7 +80,10 @@ class Base(object):
         params, aux_states, param_loading_path = load_params(dir_path=dir_path, epoch=epoch, name=name)
         logging.info('Loading params from \"%s\" to %s' %(param_loading_path, self.name))
         for k, v in params.items():
-            self.params[k][:] = v
+            if k in self.params:
+                self.params[k][:] = v
+            else:
+                logging.warn("Found unused param in the saved model file: %s" %k)
         for k, v in aux_states.items():
             self.aux_states[k][:] = v
 
