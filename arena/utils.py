@@ -4,6 +4,7 @@ import os
 import numpy
 import json
 import re
+import logging
 from collections import namedtuple, OrderedDict
 
 ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['data_shapes_items', 'sym_name'])
@@ -31,9 +32,10 @@ def get_saving_path(prefix="", epoch=None,):
     return sym_saving_path, param_saving_path, misc_saving_path
 
 
-def save_params(dir_path="", epoch=None, name="", params=None, aux_states=None, ctx=mx.cpu()):
+def save_params(dir_path=os.curdir, epoch=None, name="", params=None, aux_states=None, ctx=mx.cpu()):
     prefix = os.path.join(dir_path, name)
     _, param_saving_path, _ = get_saving_path(prefix, epoch)
+    #TODO Remove the (dir_path == "") condition in the future
     if not os.path.isdir(dir_path) and not (dir_path == ""):
         os.makedirs(dir_path)
     save_dict = {('arg:%s' % k): v.copyto(ctx) for k, v in params.items()}
@@ -42,12 +44,22 @@ def save_params(dir_path="", epoch=None, name="", params=None, aux_states=None, 
     return param_saving_path
 
 
-def save_misc(dir_path="", epoch=None, name="", **argdict):
+def save_misc(dir_path=os.curdir, epoch=None, name="", content=None):
     prefix = os.path.join(dir_path, name)
     _, _, misc_saving_path = get_saving_path(prefix, epoch)
     with open(misc_saving_path, 'w') as fp:
-        json.dump(argdict, fp)
+        json.dump(content, fp)
     return misc_saving_path
+
+
+def quick_save_json(dir_path=os.curdir, file_name="", content=None):
+    file_path = os.path.join(dir_path, file_name)
+    if not os.path.isdir(dir_path):
+        os.makedirs(dir_path)
+    with open(file_path, 'w') as fp:
+        json.dump(content, fp)
+    logging.info('Save json into %s' % file_path)
+
 
 def block_all(sym_list):
     return [mx.symbol.BlockGrad(sym) for sym in sym_list]

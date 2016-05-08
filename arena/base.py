@@ -52,7 +52,7 @@ class Base(object):
                 initializer(k, v)
         else:
             assert set(self.arg_name_shape.items()) == set(data_shapes.items() + [(k, v.shape)
-                                                                     for k, v in params.items()])
+                                                                                  for k, v in params.items()])
             self.params = OrderedDict([(k, v.copyto(ctx)) for k, v in params.items()])
             self.params_grad = OrderedDict([(n, nd.empty(v.shape, ctx=ctx))
                                             for n, v in self.params.items()])
@@ -69,21 +69,21 @@ class Base(object):
 
     def save_params(self, dir_path="", epoch=None):
         param_saving_path = save_params(dir_path=dir_path, name=self.name, epoch=epoch,
-                                            params=self.params,
-                                            aux_states=self.aux_states)
+                                        params=self.params,
+                                        aux_states=self.aux_states)
         misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
-                                     data_shapes=self.data_shapes)
+                                     content={'data_shapes': self.data_shapes})
         logging.info('Saving %s, params: \"%s\", misc: \"%s\"',
                      self.name, param_saving_path, misc_saving_path)
 
     def load_params(self, name="", dir_path="", epoch=None):
         params, aux_states, param_loading_path = load_params(dir_path=dir_path, epoch=epoch, name=name)
-        logging.info('Loading params from \"%s\" to %s' %(param_loading_path, self.name))
+        logging.info('Loading params from \"%s\" to %s' % (param_loading_path, self.name))
         for k, v in params.items():
             if k in self.params:
                 self.params[k][:] = v
             else:
-                logging.warn("Found unused param in the saved model file: %s" %k)
+                logging.warn("Found unused param in the saved model file: %s" % k)
         for k, v in aux_states.items():
             self.aux_states[k][:] = v
 
@@ -101,7 +101,7 @@ class Base(object):
         if sym_name is not None:
             assert is_train is False, "We can only view the internal symbols using the " \
                                       "forward function!"
-        #TODO `wait_to_read()` here seems unnecessary, remove it in the future!
+        # TODO `wait_to_read()` here seems unnecessary, remove it in the future!
         for v in self.params.values():
             v.wait_to_read()
         for k, v in input_dict.items():
@@ -139,7 +139,8 @@ class Base(object):
     """
     Can be used to calculate the gradient of Q(s,a) over a
     """
-    #TODO Test this part!
+
+    # TODO Test this part!
     def get_grads(self, keys, ctx=None, batch_size=None, data_shapes=None, **input_dict):
         if len(input_dict) != 0:
             exe = self.executor_pool.get(batch_size, data_shapes)
@@ -162,13 +163,13 @@ class Base(object):
         if name is None:
             name = self.name + '-copy-' + str(ctx)
         return Base(data_shapes=self.data_shapes, sym=self.sym,
-                      params=self.params,
-                      aux_states=self.aux_states, ctx=ctx, name=name)
+                    params=self.params,
+                    aux_states=self.aux_states, ctx=ctx, name=name)
 
     def copy_params_to(self, dst):
         for k, v in self.params.items():
             dst.params[k][:] = v
-            #TODO `wait_to_read()` here seems unnecessary, remove it in the future!
+            # TODO `wait_to_read()` here seems unnecessary, remove it in the future!
             dst.params[k].wait_to_read()
 
     @property
