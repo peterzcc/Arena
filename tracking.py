@@ -632,9 +632,9 @@ for epoch in range(total_epoch_num):
         for bptt_step in range((sample_length-1)/BPTT_length):
             start_indx = BPTT_length*bptt_step + 1
             end_indx = BPTT_length*(bptt_step + 1)
-            data_images_ndarray = seq_images[start_indx:(end_indx - 1)].reshape(
+            data_images_ndarray = seq_images[start_indx:(end_indx + 1)].reshape(
                 (1, BPTT_length,) + seq_images.shape[1:])
-            data_rois_ndarray = seq_rois[start_indx:(end_indx - 1)].reshape((1, BPTT_length, 4))
+            data_rois_ndarray = seq_rois[start_indx:(end_indx  + 1)].reshape((1, BPTT_length, 4))
 
             additional_inputs = OrderedDict()
             additional_inputs['data_images'] = data_images_ndarray
@@ -686,6 +686,8 @@ for epoch in range(total_epoch_num):
                                                  attention_steps=attention_handler.total_steps)
             if 'train' == args.mode:
                 tracker.backward(**backward_inputs)
+                #for k, v in tracker.params_grad.items():
+                #    print k, numpy.abs(v.asnumpy()).sum()
                 tracker.update(updater=updater)
             # for k, v in tracker.params_grad.items():
             #     if 0 == episode:
@@ -732,8 +734,6 @@ for epoch in range(total_epoch_num):
                     #         visualize_weights(v[i])
                     # print 'v:', v
                     # ch = raw_input()
-            #for k, v in accumulative_grad.items():
-            #   print k, numpy.abs(v.asnumpy()).sum()
             # avg_scores /= roll_out_num
             q_estimation = numpy.cumsum(scores[::-1], axis=0)[::-1]
             baselines[:] -= args.baseline_lr * (baselines - q_estimation)
