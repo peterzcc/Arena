@@ -32,7 +32,6 @@ class ReplayMemory(object):
         self.top = 0
         self.size = 0
 
-
     def latest_slice(self):
         if self.size >= self.history_length:
             return self.states.take(numpy.arange(self.top - self.history_length, self.top), axis=0, mode="wrap")
@@ -45,11 +44,23 @@ class ReplayMemory(object):
     def sample_enabled(self):
         return self.size > self.replay_start_size
 
+    '''
+    Function: clear
+    Description: Clear all contents in the relay memory
+    '''
     def clear(self):
         self.states[:] = 0
         self.actions[:] = 0
         self.rewards[:] = 0
         self.terminate_flags[:] = 0
+        self.top = 0
+        self.size = 0
+
+    '''
+    Function: reset
+    Description: Reset all the flags stored in the replay memory. It's a light/quick version of clear()
+    '''
+    def reset(self):
         self.top = 0
         self.size = 0
 
@@ -99,8 +110,8 @@ class ReplayMemory(object):
             index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length + 1)
             transition_indices = numpy.arange(index, index + self.history_length)
             initial_indices = transition_indices - 1
-            end_index = index + self.history_length - 1
-            if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
+            end_index = index + self.history_length - 2
+            if numpy.any(self.terminate_flags.take(initial_indices[:self.history_length], mode='wrap')):
                 # Check if terminates in the middle of the sample!
                 continue
             states[counter] = self.states.take(initial_indices, axis=0, mode='wrap')

@@ -141,6 +141,7 @@ class AtariGame(Game):
                                            "We need to call either game.begin_episode(max_episode_step) to continue a new episode" \
                                            "or game.start() to force restart."
         self.episode_step += 1
+        ob = self.get_observation()
         reward = 0.0
         action = self.action_set[a]
         for i in xrange(self.frame_skip):
@@ -148,7 +149,6 @@ class AtariGame(Game):
             self.ale.getScreenGrayscale(self.screen_buffer[i % self.screen_buffer_length, :, :])
         self.total_reward += reward
         self.episode_reward += reward
-        ob = self.get_observation()
         terminate_flag = self.episode_terminate
         self.replay_memory.append(ob, a, numpy.clip(reward, -1, 1), terminate_flag)
         return reward, terminate_flag
