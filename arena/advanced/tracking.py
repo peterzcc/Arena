@@ -244,7 +244,7 @@ class ScoreMapProcessor(object):
         # return (self.num_filter, (self.dim_in[1] - 5 + 1) / 2 - 5 + 1,
         #         (self.dim_in[2] - 5 + 1) / 2 - 5 + 1)
 
-        return (self.num_filter, self.dim_in[1] / 2, self.dim_in[2] / 2)
+        return (1, self.dim_in[1]/2, self.dim_in[2]/2)
 
     @property
     def name(self):
@@ -267,12 +267,12 @@ class ScoreMapProcessor(object):
             #TODO Use Softmax for Activation to reduce scale variation
             act1 = mx.symbol.Activation(data=conv1, act_type='relu',
                                         name=self.name + (':scale%d:act1' %i) + postfix)
-            pool1 = mx.symbol.Pooling(data=act1, kernel=(2, 2), pool_type='avg', stride=(2, 2))
-            conv2 = mx.symbol.Convolution(data=pool1,
+            #pool1 = mx.symbol.Pooling(data=act1, kernel=(2, 2), pool_type='avg', stride=(2, 2))
+            conv2 = mx.symbol.Convolution(data=act1,
                                           weight=self.params[self.name + ':scale%d:conv2' %i].weight,
                                           bias=self.params[self.name + ':scale%d:conv2' %i].bias,
-                                          kernel=(5, 5), pad=(2, 2),
-                                          num_filter=self.num_filter,
+                                          kernel=(5, 5), pad=(2, 2), stride=(2, 2),
+                                          num_filter=1,
                                           name=self.name + (':scale%d:conv2' %i) + postfix,
                                           workspace=50)
 
