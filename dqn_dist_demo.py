@@ -26,7 +26,7 @@ mx.random.seed(100)
 npy_rng = get_numpy_rng()
 
 
-def dqn_sym_nips(action_num, output_op):
+def dqn_sym_nips(action_num):
     net = mx.symbol.Variable('data')
     net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=16)
     net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
@@ -36,11 +36,11 @@ def dqn_sym_nips(action_num, output_op):
     net = mx.symbol.FullyConnected(data=net, name='fc3', num_hidden=256)
     net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
     net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=action_num)
-    net = output_op(data=net, name='dqn')
+    net = mx.symbol.Custom(data=net, name='dqn', op_type='DQNOutput')
     return net
 
 
-def dqn_sym_nature(action_num, output_op):
+def dqn_sym_nature(action_num):
     net = mx.symbol.Variable('data')
     net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=32)
     net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
@@ -52,7 +52,7 @@ def dqn_sym_nature(action_num, output_op):
     net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=512)
     net = mx.symbol.Activation(data=net, name='relu4', act_type="relu")
     net = mx.symbol.FullyConnected(data=net, name='fc5', num_hidden=action_num)
-    net = output_op(data=net, name='dqn')
+    net = mx.symbol.Custom(data=net, name='dqn', op_type='DQNOutput')
     return net
 
 
@@ -129,9 +129,7 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-
-    dqn_output_op = DQNOutputNpyOp()
-    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    dqn_sym = dqn_sym_nature(action_num)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
