@@ -6,7 +6,7 @@ from scipy.stats import entropy
 from utils import *
 
 
-# TODO Test the DQNOutput Operator
+# TODO Test the DQNOutput Operator. NDArrayOP will cause some troubles see `https://github.com/dmlc/mxnet/issues/1720'
 class DQNOutput(mx.operator.CustomOp):
     def __init__(self):
         super(DQNOutput, self).__init__()
@@ -15,14 +15,14 @@ class DQNOutput(mx.operator.CustomOp):
         self.assign(out_data[0], req[0], in_data[0])
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        x = out_data[0]
-        action = in_data[1]
-        reward = in_data[2]
+        x = out_data[0].asnumpy()
+        action = in_data[1].asnumpy().astype(numpy.int)
+        reward = in_data[2].asnumpy()
         dx = in_grad[0]
-        self.assign(in_grad[0], req[0], nd.fill_element_0index(nd.zeros(dx.shape, ctx=dx.context),
-                                                               nd.clip(nd.choose_element_0index(x, action) - reward,
-                                                                       -1, 1),
-                                                               action))
+        ret = numpy.zeros(shape=dx.shape, dtype=numpy.float32)
+        ret[numpy.arange(action.shape[0]), action] \
+            = numpy.clip(x[numpy.arange(action.shape[0]), action] - reward, -1, 1)
+        self.assign(dx, req[0], ret)
 
 
 @mx.operator.register("DQNOutput")
