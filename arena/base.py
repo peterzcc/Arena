@@ -81,6 +81,7 @@ class Base(object):
         logging.info('Loading params from \"%s\" to %s' % (param_loading_path, self.name))
         for k, v in params.items():
             if k in self.params:
+                logging.debug('   Loading %s %s' %(k, str(v.shape)))
                 self.params[k][:] = v
             else:
                 logging.warn("Found unused param in the saved model file: %s" % k)
