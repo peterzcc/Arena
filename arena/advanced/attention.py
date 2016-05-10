@@ -7,21 +7,11 @@ from .common import *
 from .recurrent import LSTMState, LSTMParam, LSTMLayerProp, step_stack_lstm
 from .memory import Memory
 '''
-ImagePatch stores the basic information of the patch the basic attentional element of the tracker
+Glimpse stores the multi-scale image patch the tracker sees. It's the basic attentional element of the tracker
 '''
-
-ImagePatch = namedtuple("ImagePatch", ["center", "size", "data"])
 
 Glimpse = namedtuple("Glimpse", ["center", "size", "data"])
 
-
-def get_multiscale_size(glimpse):
-    size_l = []
-    curr_scale = 1.0
-    for i in range(glimpse.scale_num):
-        size_l.append(glimpse.size * curr_scale)
-        curr_scale *= glimpse.scale_mult
-    return mx.symbol.Concat(*size_l, num_args=len(size_l), dim=0)
 
 class GlimpseHandler(object):
     def __init__(self, scale_mult, scale_num, output_shape, init_scale=1.0):
@@ -54,65 +44,6 @@ class GlimpseHandler(object):
         data = mx.symbol.Concat(*data_l, num_args=len(data_l), dim=0)
         data = mx.symbol.BlockGrad(data, name=self.name + ":glimpse%s" % postfix)
         return Glimpse(center=center, size=size, data=data)
-
-
-'''
-Output the predicted ROI given the anchor ROI and the transformed ROI. The transformaion rule is:
-
-pred_cx = anchor_cx + transformation_cx * anchor_sx
-pred_cy = anchor_cy + transformation_cy * anchor_sy
-pred_sx = exp(transformation_sx) * anchor_sx
-pred_sy = exp(transformation_sy) * anchor_sy
-
-anchor, transformation and truth store the ROIs: (cx, cy, sx, sy)
-
-The gradient is computed with-respect-to the Huber loss:
-f(x, x_truth) =
-if ||x||_2 < 1:
-    0.5 * ||x - x_truth||_2^2
-else:
-    |x - x_truth| - 0.5
-'''
-
-class BoundingBoxRegressionOp(mx.operator.NumpyOp):
-    def __init__(self):
-        super(BoundingBoxRegressionOp, self).__init__(need_top_grad=False)
-
-    def list_arguments(self):
-        return ['transformation', 'anchor', 'truth']
-
-    def list_outputs(self):
-        return ['output']
-
-    def infer_shape(self, in_shape):
-        transformation_shape = in_shape[0]
-        anchor_shape = in_shape[1]
-        truth_shape = in_shape[0]
-        output_shape = in_shape[0]
-        return [transformation_shape, anchor_shape, truth_shape], \
-               [output_shape]
-
-    def forward(self, in_data, out_data):
-        transformation = in_data[0]
-        anchor = in_data[1]
-        output = out_data[0]
-        output[:, 0] = anchor[:, 0] + transformation[:, 0] * anchor[:, 2]
-        output[:, 1] = anchor[:, 1] + transformation[:, 1] * anchor[:, 3]
-        output[:, 2] = numpy.exp(transformation[:, 2]) * anchor[:, 2]
-        output[:, 3] = numpy.exp(transformation[:, 3]) * anchor[:, 3]
-
-    def backward(self, out_grad, in_data, out_data, in_grad):
-        transformation = in_data[0]
-        anchor = in_data[1]
-        truth = in_data[2]
-        grad_transformation = in_grad[0]
-        transformed_truth = numpy.zeros(truth.shape, dtype=numpy.float32)
-        transformed_truth[:, 0] = numpy.nan_to_num((truth[:, 0] - anchor[:, 0]) / anchor[:, 2])
-        transformed_truth[:, 1] = numpy.nan_to_num((truth[:, 1] - anchor[:, 1]) / anchor[:, 3])
-        #TODO Possible Devision by Zero!
-        transformed_truth[:, 2] = numpy.nan_to_num(numpy.log(truth[:, 2] / anchor[:, 2]))
-        transformed_truth[:, 3] = numpy.nan_to_num(numpy.log(truth[:, 3] / anchor[:, 3]))
-        grad_transformation[:] = numpy.clip(transformation - transformed_truth, -1, 1)
 
 
 def roi_transform_glimpse(roi, glimpse, glimpse_handler):
@@ -270,14 +201,12 @@ class AttentionHandler(object):
                                                  self.name + ':' + typ + '_size:var'].bias)
                 size_var = mx.symbol.Activation(data=size_var, act_type="softrelu")
             #policy_op = LogNormalPolicy(deterministic=deterministic)
-            #roi = policy_op(mean=roi_mean, var=roi_var,
-            #                name=self.name + ':' + roi_type + postfix)
-            center_policy_op = LogNormalPolicy(deterministic=deterministic)
-            size_policy_op = LogNormalPolicy(deterministic=deterministic)
-            center = center_policy_op(mean=center_mean, var=center_var,
-                                      name=self.name + ':' + typ +'_center' + postfix)
-            size = size_policy_op(mean=size_mean, var=size_var,
-                                  name=self.name + ':' + typ + '_size' + postfix)
+            #roi = mx.symbol.Custom(mean=roi_mean, var=roi_var, deterministic=deterministic
+            #                name=self.name + ':' + roi_type + postfix, op_type='LogNormalPolicy')
+            center = mx.symbol.Custom(mean=center_mean, var=center_var, deterministic=deterministic,
+                                      name=self.name + ':' + typ +'_center' + postfix, op_type='LogNormalPolicy')
+            size = mx.symbol.Custom(mean=size_mean, var=size_var, deterministic=deterministic,
+                                    name=self.name + ':' + typ + '_size' + postfix, op_type='LogNormalPolicy')
             return center/5, size * numpy.log(1.02), center_mean/5, size_mean * numpy.log(1.02), \
                    center_var, size_var
         else:
