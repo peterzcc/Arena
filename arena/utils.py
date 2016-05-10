@@ -5,6 +5,7 @@ import numpy
 import json
 import re
 import logging
+import ast
 from collections import namedtuple, OrderedDict
 
 ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['data_shapes_items', 'sym_name'])
@@ -59,6 +60,13 @@ def quick_save_json(dir_path=os.curdir, file_name="", content=None):
     with open(file_path, 'w') as fp:
         json.dump(content, fp)
     logging.info('Save json into %s' % file_path)
+
+
+def safe_eval(expr):
+    if type(expr) is str:
+        return ast.literal_eval(expr)
+    else:
+        return expr
 
 
 def block_all(sym_list):

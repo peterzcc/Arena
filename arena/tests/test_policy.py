@@ -99,13 +99,12 @@ def test_lognormal():
         update_line(lines, fig, ax, i, score.mean())#numpy.square(means - data*data).mean())
 
 def test_logsoftmax():
-    output_op = LogSoftmaxPolicy()
     var = mx.symbol.Variable('var')
     data = mx.symbol.Variable('data')
     net = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=10)
     net = mx.symbol.Activation(data=net, name='relu1', act_type='relu')
     net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=4)
-    net = output_op(data=net, name='policy')
+    net = mx.symbol.Custom(data=net, name='policy', op_type='LogSoftmaxPolicy')
     ctx = mx.gpu()
     minibatch_size = 100
     data_shapes = {'data': (minibatch_size, 4),

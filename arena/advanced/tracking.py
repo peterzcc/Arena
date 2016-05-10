@@ -4,7 +4,6 @@ from arena.helpers.pretrained import vgg_m
 from .common import *
 from collections import namedtuple, OrderedDict
 from arena.operators import spatial_softmax
-from .attention import get_multiscale_size
 
 
 '''

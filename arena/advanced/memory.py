@@ -264,8 +264,11 @@ class MemoryHandler(object):
                                        weight=self.write_params[prefix + ':fc2'].weight,
                                        bias=self.write_params[prefix + ':fc2'].bias,
                                        name=prefix + ':fc2' + postfix)
-        control_flag_policy_op = LogSoftmaxPolicy(deterministic=deterministic)
-        control_flag = control_flag_policy_op(data=fc2, name=prefix + ':control_flag' + postfix)
+        control_flag = mx.symbol.Custom(data=fc2,
+                                        name=prefix + ':control_flag' + postfix,
+                                        deterministic=deterministic,
+                                        use_mask=0,
+                                        op_type="LogSoftmaxPolicy")
         # TODO Enable actor-critic (Like the Async RL paper)
         return control_flag
 
@@ -368,10 +371,12 @@ class MemoryHandler(object):
         score = mx.symbol.SwapAxis(fc2, dim1=0, dim2=1, name=prefix + ':score' + postfix)
 
         # 3. Choose the memory indices based on the computed score and the memory status
-        choice_policy_op = LogSoftmaxMaskPolicy(deterministic=deterministic)
-        chosen_ind = choice_policy_op(data=score,
+        chosen_ind = mx.symbol.Custom(data=score,
                                       mask=mx.symbol.Reshape(memory.status.counter, target_shape=(1, 0)),
-                                      name=prefix + ':chosen_ind' + postfix)
+                                      name=prefix + ':chosen_ind' + postfix,
+                                      deterministic=deterministic,
+                                      use_mask=1,
+                                      op_type="LogSoftmaxPolicy")
         return chosen_ind
 
     def reshape_to_cf(self, memory_ele_sym, name=None):
