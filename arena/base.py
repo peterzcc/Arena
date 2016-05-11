@@ -102,9 +102,6 @@ class Base(object):
         if sym_name is not None:
             assert is_train is False, "We can only view the internal symbols using the " \
                                       "forward function!"
-        # TODO `wait_to_read()` here seems unnecessary, remove it in the future!
-        for v in self.params.values():
-            v.wait_to_read()
         for k, v in input_dict.items():
             exe.arg_dict[k][:] = v
         exe.forward(is_train=is_train)

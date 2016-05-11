@@ -10,7 +10,7 @@ import sys
 from arena import Critic
 from arena.games import AtariGame
 from arena.utils import *
-
+from arena.operators import *
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -23,53 +23,6 @@ root.addHandler(ch)
 npy_rng = get_numpy_rng()
 
 
-class DQNOutputOp(mx.operator.NDArrayOp):
-    def __init__(self):
-        super(DQNOutputOp, self).__init__(need_top_grad=False)
-
-    def list_arguments(self):
-        return ['data', 'action', 'reward']
-
-    def list_outputs(self):
-        return ['output']
-
-    def infer_shape(self, in_shape):
-        data_shape = in_shape[0]
-        action_shape = (in_shape[0][0],)
-        reward_shape = (in_shape[0][0],)
-        output_shape = in_shape[0]
-        return [data_shape, action_shape, reward_shape], [output_shape]
-
-    def forward(self, in_data, out_data):
-        x = in_data[0]
-        y = out_data[0]
-        y[:] = x
-
-    def backward(self, out_grad, in_data, out_data, in_grad):
-        x = out_data[0]
-        action = in_data[1]
-        reward = in_data[2]
-        dx = in_grad[0]
-        dx[:] = 0
-        dx[:] = nd.fill_element_0index(dx,
-                                       nd.clip(nd.choose_element_0index(x, action) - reward, -1, 1),
-                                       action)
-
-
-def dqn_sym_nature(action_num, output_op):
-    net = mx.symbol.Variable('data')
-    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=32)
-    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
-    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=64)
-    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
-    net = mx.symbol.Convolution(data=net, name='conv3', kernel=(3, 3), stride=(1, 1), num_filter=64)
-    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
-    net = mx.symbol.Flatten(data=net)
-    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=512)
-    net = mx.symbol.Activation(data=net, name='relu4', act_type="relu")
-    net = mx.symbol.FullyConnected(data=net, name='fc5', num_hidden=action_num)
-    net = output_op(data=net, name='dqn')
-    return net
 
 
 def collect_holdout_samples(game, num_steps=3200, sample_num=3200):
@@ -154,6 +107,8 @@ def main():
                         help='Epochs to run testing. E.g `-e 0,80`, `-e 0,80,2`')
     parser.add_argument('-v', '--visualization', required=False, type=int, default=0,
                         help='Visualize the runs.')
+    parser.add_argument('--symbol', required=False, type=str, default="nature",
+                        help='type of network, nature or nips')
     args, unknown = parser.parse_known_args()
     max_start_nullops = 30
     holdout_size = 3200
@@ -181,8 +136,11 @@ def main():
     action_num = len(game.action_set)
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-    dqn_output_op = DQNOutputOp()
-    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    dqn_output_op = DQNOutputNpyOp()
+    if args.symbol == "nature":
+        dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    elif args.symbol == "nips":
+        dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
     qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, name=args.model_prefix, ctx=q_ctx)
 
     for epoch in epochs:

@@ -7,6 +7,7 @@ import re
 import logging
 import ast
 from collections import namedtuple, OrderedDict
+import time
 
 ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['data_shapes_items', 'sym_name'])
 ExecutorPoolKey.__new__.__defaults__ = (None, None)
@@ -75,6 +76,8 @@ def block_all(sym_list):
 def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
     _, param_loading_path, _ = get_saving_path(prefix, epoch)
+    while not os.path.isfile(param_loading_path):
+        time.sleep(60)
     save_dict = nd.load(param_loading_path)
     arg_params = {}
     aux_params = {}
@@ -95,6 +98,7 @@ def load_misc(dir_path="", epoch=None, name=""):
     return misc
 
 
+<<<<<<< HEAD
 def update_on_kvstore(kv, params, params_grad):
     for ind, k in enumerate(params.keys()):
         kv.push(ind, params_grad[k], priority=-ind)
@@ -115,7 +119,7 @@ def get_npy_list(ndarray_list):
     return [v.asnumpy() for v in ndarray_list]
 
 class ExecutorDataShapePool(object):
-    def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states):
+    def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states, share_execs=True):
         self.ctx = ctx
         self.sym = sym
         self.internal_syms = self.sym.get_internals()
@@ -125,6 +129,7 @@ class ExecutorDataShapePool(object):
         self.inputs_grad_dict = {}
         self.basic_data_shapes = data_shapes.copy()
         self.exe_pool = {}
+        self.share_execs = share_execs
         self.base_exe = None
         self.base_exe = self.get()
 
@@ -170,8 +175,13 @@ class ExecutorDataShapePool(object):
                                     args_grad=dict(self.params_grad.items() + inputs_grad.items()),
                                     aux_states=self.aux_states)
                 else:
-                    exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
-                                    args_grad=dict(self.params_grad.items() + inputs_grad.items()),
-                                    aux_states=self.aux_states, shared_exec=self.base_exe)
+                    if self.share_execs == True:
+                        exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+                                            args_grad=dict(self.params_grad.items() + inputs_grad.items()),
+                                            aux_states=self.aux_states, shared_exec=self.base_exe)
+                    else:
+                        exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
+                                            args_grad=dict(self.params_grad.items() + inputs_grad.items()),
+                                            aux_states=self.aux_states)
                 self.exe_pool[exe_key] = exe
             return exe

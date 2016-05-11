@@ -89,7 +89,90 @@ class ReplayMemory(object):
         self.top = (self.top + 1) % self.memory_size
         if self.size < self.memory_size:
             self.size += 1
-
+    def sample_last(self, batch_size,states,offset):
+        assert self.size >= batch_size and self.replay_start_size >= self.history_length
+        assert(0 <= self.size <= self.memory_size)
+        assert(0 <= self.top <= self.memory_size)
+        if self.size <= self.replay_start_size:
+            raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
+                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
+        actions = numpy.empty((batch_size,) + self.action_dim, dtype=self.actions.dtype)
+        rewards = numpy.empty(batch_size, dtype='float32')
+        terminate_flags = numpy.empty(batch_size, dtype='bool')
+        counter = 0
+        first_index = self.top - self.history_length - 1
+        while counter < batch_size:
+            full_indices = numpy.arange(first_index, first_index + self.history_length+1)
+            end_index = first_index + self.history_length
+            if numpy.any(self.terminate_flags.take(full_indices[0:self.history_length], mode='wrap')):
+                # Check if terminates in the middle of the sample!
+                first_index -= 1
+                continue
+            states[counter+offset] = self.states.take(full_indices, axis=0, mode='wrap')
+            actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
+            rewards[counter] = self.rewards.take(end_index, mode='wrap')
+            terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
+            counter += 1
+            first_index -= 1
+        return actions, rewards, terminate_flags
+    def sample_mix(self, batch_size,states,offset,current_index):
+        assert self.size >= batch_size and self.replay_start_size >= self.history_length
+        assert(0 <= self.size <= self.memory_size)
+        assert(0 <= self.top <= self.memory_size)
+        if self.size <= self.replay_start_size:
+            raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
+                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
+        actions = numpy.empty((batch_size,) + self.action_dim, dtype=self.actions.dtype)
+        rewards = numpy.empty(batch_size, dtype='float32')
+        terminate_flags = numpy.empty(batch_size, dtype='bool')
+        counter = 0
+        first_index = self.top - self.history_length + current_index
+        thisid = first_index
+        while counter < batch_size:
+            full_indices = numpy.arange(thisid, thisid + self.history_length+1)
+            end_index = thisid + self.history_length
+            if numpy.any(self.terminate_flags.take(full_indices[0:self.history_length], mode='wrap')):
+                # Check if terminates in the middle of the sample!
+                thisid -= 1
+                continue
+            states[counter+offset] = self.states.take(full_indices, axis=0, mode='wrap')
+            actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
+            rewards[counter] = self.rewards.take(end_index, mode='wrap')
+            terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
+            counter += 1
+            thisid = self.rng.randint(low=self.top - self.size, high=self.top - self.history_length-1)
+        return actions, rewards, terminate_flags
+    def sample_inplace(self, batch_size,states,offset):
+        assert self.size >= batch_size and self.replay_start_size >= self.history_length
+        assert(0 <= self.size <= self.memory_size)
+        assert(0 <= self.top <= self.memory_size)
+        if self.size <= self.replay_start_size:
+            raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
+                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
+        #TODO Possibly states + inds for less memory access
+        # states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
+        #                      dtype=self.states.dtype)
+        actions = numpy.zeros((batch_size,) + self.action_dim, dtype=self.actions.dtype)
+        rewards = numpy.zeros(batch_size, dtype='float32')
+        terminate_flags = numpy.zeros(batch_size, dtype='bool')
+        # next_states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
+        #                           dtype=self.states.dtype)
+        counter = 0
+        while counter < batch_size:
+            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length )
+            transition_indices = numpy.arange(index, index + self.history_length+1)
+            initial_indices = transition_indices - 1
+            end_index = index + self.history_length - 1
+            if numpy.any(self.terminate_flags.take(initial_indices[0:self.history_length], mode='wrap')):
+                # Check if terminates in the middle of the sample!
+                continue
+            states[counter+offset] = self.states.take(initial_indices, axis=0, mode='wrap')
+            actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
+            rewards[counter] = self.rewards.take(end_index, mode='wrap')
+            terminate_flags[counter] = self.terminate_flags.take(end_index, mode='wrap')
+            # next_states[counter] = self.states.take(transition_indices, axis=0, mode='wrap')
+            counter += 1
+        return actions, rewards, terminate_flags
     def sample(self, batch_size):
         assert self.size >= batch_size and self.replay_start_size >= self.history_length
         assert(0 <= self.size <= self.memory_size)
@@ -107,13 +190,16 @@ class ReplayMemory(object):
                                   dtype=self.states.dtype)
         counter = 0
         while counter < batch_size:
-            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length + 1)
+            index = self.rng.randint(low=self.top - self.size + 1, high=self.top - self.history_length)
             transition_indices = numpy.arange(index, index + self.history_length)
             initial_indices = transition_indices - 1
             end_index = index + self.history_length - 1
-            if numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
+            while numpy.any(self.terminate_flags.take(initial_indices, mode='wrap')):
                 # Check if terminates in the middle of the sample!
-                continue
+                index -= 1
+                transition_indices = numpy.arange(index, index + self.history_length)
+                initial_indices = transition_indices - 1
+                end_index = index + self.history_length - 1
             states[counter] = self.states.take(initial_indices, axis=0, mode='wrap')
             actions[counter] = self.actions.take(end_index, axis=0, mode='wrap')
             rewards[counter] = self.rewards.take(end_index, mode='wrap')

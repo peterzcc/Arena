@@ -137,7 +137,7 @@ def main():
 
     use_easgd = False
     if args.optimizer != "easgd":
-        optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
+        optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
     else:
@@ -301,7 +301,11 @@ def main():
         end = time.time()
         fps = steps_per_epoch / (end - start)
         qnet.save_params(dir_path=args.dir_path, epoch=epoch)
-        logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d"
+        if args.kv_type != None:
+            logging.info("Node[%d]: Epoch:%d, FPS:%f, Avg Reward: %f/%d"
+                     % (kv.rank, epoch, fps, epoch_reward / float(episode), episode))
+        else:
+            logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d"
                      % (epoch, fps, epoch_reward / float(episode), episode))
 
 if __name__ == '__main__':
