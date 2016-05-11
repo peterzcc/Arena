@@ -15,18 +15,18 @@ feature = mx.symbol.Variable("feature")
 second_feature = mx.symbol.Variable("second_feature")
 gaussian_map = mx.symbol.Variable("gaussian_map")
 
-feature_ffts = mx.symbol.FFT2D(feature)
+feature_ffts = mx.symbol.FFT2D(feature, batchsize=64)
 
-gaussian_map = mx.symbol.FFT2D(gaussian_map)
-gaussian_map = mx.symbol.BroadcastChannel(gaussian_map, dim=1, size=channel_size)
+gaussian_map_fft = mx.symbol.FFT2D(gaussian_map, batchsize=64)
+gaussian_map_fft = mx.symbol.BroadcastChannel(gaussian_map_fft, dim=1, size=channel_size)
 
-numerator = mx.symbol.ComplexHadamard(gaussian_map, mx.symbol.Conjugate(feature_ffts))
+numerator = mx.symbol.ComplexHadamard(gaussian_map_fft, mx.symbol.Conjugate(feature_ffts))
 denominator = mx.symbol.ComplexHadamard(mx.symbol.Conjugate(feature_ffts), feature_ffts) + \
               mx.symbol.ComplexHadamard(feature_ffts, mx.symbol.ComplexExchange(feature_ffts))
 denominator = mx.symbol.SumChannel(denominator)
 denominator = mx.symbol.BroadcastChannel(data=denominator + regularizer, dim=1, size=channel_size)
-scores = mx.symbol.ComplexHadamard(numerator / denominator, mx.symbol.FFT2D(second_feature))
-scores = mx.symbol.IFFT2D(data=scores, output_shape=(numpy.int32(rows), numpy.int32(cols)))
+scores = mx.symbol.ComplexHadamard(numerator / denominator, mx.symbol.FFT2D(second_feature, batchsize=64))
+scores = mx.symbol.IFFT2D(data=scores, output_shape=(numpy.int32(rows), numpy.int32(cols)), batchsize=64)
 
 
 
