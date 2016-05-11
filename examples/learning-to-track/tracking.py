@@ -206,7 +206,7 @@ def get_backward_input(init_shapes, scores, baselines, total_timesteps, attentio
 
 
 parser = argparse.ArgumentParser(description='Script to train the tracking agent.')
-parser.add_argument('-d', '--dir-path', required=False, type=str, default='tracking-model-new',
+parser.add_argument('-d', '--dir-path', required=False, type=str, default='tracking-model-new2',
                     help='Saving directory of model files.')
 parser.add_argument('-s', '--sequence-path', required=False, type=str,
                     default='D:\\HKUST\\2-2\\learning-to-track\\datasets\\training_for_otb100\\training_otb.lst',
@@ -375,8 +375,10 @@ tracker, tracker_sym_out, tracker_init_shapes, tracker_constant_inputs = \
                   ctx=ctx)
 tracker.print_stat()
 
-tracker.load_params(tracker.name, dir_path="../../../learning-to-track/training-otb-lr0.0001-gamma0.9-mult1.5-init1.7-up-mem4-attend1-score4-len51-blen50", epoch=0)
+#tracker.load_params(tracker.name, dir_path="../../../learning-to-track/training-otb-lr0.0001-gamma0.9-mult1.5-init1.7-up-mem4-attend1-score4-len51-blen50", epoch=0)
 #tracker.load_params(tracker.name, dir_path="../../tracking-model", epoch=0)
+#tracker.load_params(tracker.name, dir_path="tracking-model-new", epoch=3)
+tracker.load_params(tracker.name, dir_path="../../../learning-to-track/write2-training-otb-lr0.0001-gamma0.9-snum4-mult1.3-init1.3-up-mem1-attend1-score4-len51-blen50", epoch=2)
 
 baselines = numpy.zeros((BPTT_length,), dtype=numpy.float32)
 optimizer = mx.optimizer.create(name=args.optimizer,
@@ -457,6 +459,7 @@ for epoch in range(total_epoch_num):
                                                    cf_handler=cf_handler,
                                                    scoremap_processor=scoremap_processor,
                                                    parse_all=verbose_sym_out)
+            init_roi_ndarray = nd.array(parsed_outputs['pred_rois'][-1:])
             parsed_outputs_list.append(parsed_outputs)
             #print parsed_outputs['pred_rois']
             #print data_rois_ndarray.asnumpy()[0]
