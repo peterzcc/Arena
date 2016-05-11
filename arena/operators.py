@@ -6,7 +6,7 @@ from scipy.stats import entropy
 from utils import *
 
 
-# TODO Test the DQNOutput Operator. NDArrayOP will cause some troubles see `https://github.com/dmlc/mxnet/issues/1720'
+# TODO Backward using NDArray will cause some troubles see `https://github.com/dmlc/mxnet/issues/1720'
 class DQNOutput(mx.operator.CustomOp):
     def __init__(self):
         super(DQNOutput, self).__init__()
@@ -77,6 +77,58 @@ class DQNOutputNpyOp(mx.operator.NumpyOp):
         dx[:] = 0
         dx[numpy.arange(action.shape[0]), action] \
             = numpy.clip(x[numpy.arange(action.shape[0]), action] - reward, -1, 1)
+
+
+'''
+Name: dqn_sym_nips
+Usage: Structure of the Deep Q Network in the NIPS 2013 workshop paper:
+      "Playing Atari with Deep Reinforcement Learning" (https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
+'''
+
+
+def dqn_sym_nips(action_num, data=None, name='dqn'):
+    if data is None:
+        net = mx.symbol.Variable('data')
+    else:
+        net = data
+    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=16)
+    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=32)
+    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
+    net = mx.symbol.Flatten(data=net)
+    net = mx.symbol.FullyConnected(data=net, name='fc3', num_hidden=256)
+    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
+    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=action_num)
+    net = mx.symbol.Custom(data=net, name=name, op_type='DQNOutput')
+    return net
+
+
+'''
+Name: dqn_sym_nature
+Usage: Structure of the Deep Q Network in the Nature 2015 paper:
+Human-level control through deep reinforcement learning
+(http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html)
+'''
+
+
+def dqn_sym_nature(action_num, data=None, name='dqn'):
+    if data is None:
+        net = mx.symbol.Variable('data')
+    else:
+        net = data
+    net = mx.symbol.Variable('data')
+    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=32)
+    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=64)
+    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
+    net = mx.symbol.Convolution(data=net, name='conv3', kernel=(3, 3), stride=(1, 1), num_filter=64)
+    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
+    net = mx.symbol.Flatten(data=net)
+    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=512)
+    net = mx.symbol.Activation(data=net, name='relu4', act_type="relu")
+    net = mx.symbol.FullyConnected(data=net, name='fc5', num_hidden=action_num)
+    net = mx.symbol.Custom(data=net, name=name, op_type='DQNOutput')
+    return net
 
 
 '''

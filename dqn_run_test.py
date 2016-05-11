@@ -23,8 +23,6 @@ root.addHandler(ch)
 npy_rng = get_numpy_rng()
 
 
-
-
 def collect_holdout_samples(game, num_steps=3200, sample_num=3200):
     print "Begin Collecting Holdout Samples...",
     game.force_restart()
@@ -136,11 +134,12 @@ def main():
     action_num = len(game.action_set)
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-    dqn_output_op = DQNOutputNpyOp()
     if args.symbol == "nature":
-        dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+        dqn_sym = dqn_sym_nature(action_num)
     elif args.symbol == "nips":
-        dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
+        dqn_sym = dqn_sym_nips(action_num)
+    else:
+        raise NotImplementedError
     qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, name=args.model_prefix, ctx=q_ctx)
 
     for epoch in epochs:

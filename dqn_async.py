@@ -25,6 +25,8 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
 npy_rng = get_numpy_rng()
+
+
 def play_game(args):
     game,action = args
     game.play(action)
@@ -36,6 +38,12 @@ class EpisodeStat(object):
         self.episode_q_value = 0.0
         self.episode_update_step = 0
         self.episode_action_step = 0
+
+
+class DQNInitializer(mx.initializer.Xavier):
+    def _init_bias(self, _, arr):
+        arr[:] = .1
+
 
 def main():
     parser = argparse.ArgumentParser(description='Script to test the trained network on a game.')
@@ -151,11 +159,12 @@ def main():
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 
-    dqn_output_op = DQNOutputNpyOp()
     if args.symbol == "nature":
-        dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+        dqn_sym = dqn_sym_nature(action_num)
     elif args.symbol == "nips":
-        dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
+        dqn_sym = dqn_sym_nips(action_num)
+    else:
+        raise NotImplementedError
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
@@ -354,10 +363,10 @@ def main():
                                           dqn_reward=target_rewards)
                 qnet.backward(batch_size=minibatch_size)
 
-                if args.kv_type == None or use_easgd:
+                if args.kv_type is None or use_easgd:
                     qnet.update(updater=updater)
                 else:
-                    update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                    update_on_kvstore(kv, qnet.params, qnet.params_grad)
 
                 # 3.3 Calculate Loss
                 diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)

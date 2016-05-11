@@ -98,7 +98,6 @@ def load_misc(dir_path="", epoch=None, name=""):
     return misc
 
 
-<<<<<<< HEAD
 def update_on_kvstore(kv, params, params_grad):
     for ind, k in enumerate(params.keys()):
         kv.push(ind, params_grad[k], priority=-ind)
@@ -117,6 +116,7 @@ Description:
 '''
 def get_npy_list(ndarray_list):
     return [v.asnumpy() for v in ndarray_list]
+
 
 class ExecutorDataShapePool(object):
     def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states, share_execs=True):

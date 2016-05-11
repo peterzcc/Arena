@@ -25,6 +25,13 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 mx.random.seed(100)
 npy_rng = get_numpy_rng()
+
+
+class DQNInitializer(mx.initializer.Xavier):
+    def _init_bias(self, _, arr):
+        arr[:] = .1
+
+
 def play_game(args):
     game,action = args
     game.play(action)
@@ -156,11 +163,13 @@ def main():
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
 
-    dqn_output_op = DQNOutputNpyOp()
     if args.symbol == "nature":
-        dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+        dqn_sym = dqn_sym_nature(action_num)
     elif args.symbol == "nips":
-        dqn_sym = dqn_sym_nips(action_num, dqn_output_op)
+        dqn_sym = dqn_sym_nips(action_num)
+    else:
+        raise NotImplementedError
+
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
@@ -370,7 +379,7 @@ def main():
                     if args.kv_type != None:
                         if total_steps % kvstore_update_period == 0:
                             if use_easgd == False:
-                                update_to_kvstore(kv,qnet.params,qnet.params_grad)
+                                update_on_kvstore(kv, qnet.params, qnet.params_grad)
                             else:
                                 for paramIndex in range(len(qnet.params)):
                                     k=qnet.params.keys()[paramIndex]
@@ -391,9 +400,9 @@ def main():
                     quadratic_part = nd.clip(diff, -1, 1)
                     loss = (0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)).asscalar()
                     if ave_loss == 0:
-                        ave_loss =  loss
+                        ave_loss = loss
                     else:
-                        ave_loss =  0.95*ave_loss + 0.05*loss
+                        ave_loss = 0.95*ave_loss + 0.05*loss
 
                     # 3.3 Update the target network every freeze_interval
                     # (We can do annealing instead of hard copy)
