@@ -1,5 +1,5 @@
 <%
-    from rllab.misc.mako_utils import compute_rect_vertices
+    from arena.games.box2d.mako_utils import compute_rect_vertices
     cart_width = 4.0 / (12 ** 0.5)
     cart_height = 3.0 / (12 ** 0.5)
 
