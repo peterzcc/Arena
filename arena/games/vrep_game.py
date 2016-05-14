@@ -26,21 +26,27 @@ reward: calculated based on the quadcopter orientation and target location in th
 
 
 class VREPGame(Game):
-    def __init__(self, frame_skip=1, history_length=3,
+    def __init__(self, remote_port=19997, frame_skip=1, history_length=1,
                  replay_memory_size=1000000,
                  replay_start_size=100):
         super(VREPGame, self).__init__()
         self.rng = get_numpy_rng()
         self.frame_skip = frame_skip
         self.history_length = history_length
+        self.remote_port = remote_port
 
         # members about the vrep environment
         self.client_id = -1
         self.quadcopter_handle = None
         self.target_handle = None
         self.camera_handle = None
+        self.target_neck = None
+        self.target_leftshoulder = None
+        self.target_rightshoulder = None
+        self.target_leftfoot = None
+        self.target_rightfoot = None
         # width by height ie column by row
-        self.resolution = None
+        self.resolution = [128, 128]
         # image observation
         # self.image = None
         # linear and angular velocity of quadcopter in the absolute frame
@@ -59,6 +65,18 @@ class VREPGame(Game):
         self.target_pos = None
         # target coordinates position from the view of quadcopter camera
         self.target_coordinates = None
+        # auxiliary variables used to compute self.target_coordinates
+        self.target_neck_pos = None
+        self.target_leftshoulder_pos = None
+        self.target_rightshoulder_pos = None
+        self.target_leftfoot_pos = None
+        self.target_rightfoot_pos = None
+        # self.action_bounds = [4.8, 6.0]
+        self.action_bounds = [4.583759, 6.501942]
+        # bounding box coordinates and scale are normalized to range [0,1]
+        # desired [cx, cy, height]
+        self.desire_goal = numpy.array([0.5, 0.5, 0.4])
+        self.desire_velocity = numpy.array([2, 2, 0])
 
         self.start()
 
@@ -90,7 +108,7 @@ class VREPGame(Game):
 
 
     def _read_vrep_data(self):
-        # self._read_camera_image()
+        self._read_camera_image()
         _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
             self.client_id, self.quadcopter_handle, vrep.simx_opmode_buffer)
         _, self.quadcopter_pos = vrep.simxGetObjectPosition(
@@ -111,6 +129,18 @@ class VREPGame(Game):
         self.angular_velocity_b = self.quadcopter_angular_variation
         mat = self._quad2mat(self.quadcopter_quaternion)
         self.linear_velocity_b = mat.transpose().dot(self.linear_velocity_g)
+
+        _, self.target_neck_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_neck, self.camera_handle, vrep.simx_opmode_buffer)
+        _, self.target_leftshoulder_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_leftshoulder, self.camera_handle, vrep.simx_opmode_buffer)
+        _, self.target_rightshoulder_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_rightshoulder, self.camera_handle, vrep.simx_opmode_buffer)
+        _, self.target_leftfoot_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_leftfoot, self.camera_handle, vrep.simx_opmode_buffer)
+        _, self.target_rightfoot_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_rightfoot, self.camera_handle, vrep.simx_opmode_buffer)
+
 
     def print_vrep_data(self):
         print 'absolute linear velocity: %.4f\t%.4f\t%.4f' % (self.linear_velocity_g[0], self.linear_velocity_g[1], self.linear_velocity_g[2])
@@ -147,32 +177,86 @@ class VREPGame(Game):
 
         return mat
 
+    def _transform_coordinates(self, vrep_pos):
+        pos = numpy.array(
+                [vrep_pos[0]/vrep_pos[2], vrep_pos[1]/vrep_pos[2]])
+        pos = numpy.array(self.resolution)/2 - pos * self.resolution
+        return pos
+
+
     def _get_track_coordinates(self):
-        # TODO: use tracking or camera transformation to get the target position on the camera image
-        self.target_coordinates = numpy.array([1, 1, 1, 1])
+        # use built in APIs in V-REP to get the target position on the camera image
+        neck = self._transform_coordinates(self.target_neck_pos)
+        leftshoulder = self._transform_coordinates(self.target_leftshoulder_pos)
+        rightshoulder = self._transform_coordinates(self.target_rightshoulder_pos)
+        leftfoot = self._transform_coordinates(self.target_leftfoot_pos)
+        rightfoot = self._transform_coordinates(self.target_rightfoot_pos)
+        print 'neck:', neck
+        print 'shoulder:', leftshoulder, rightshoulder
+        print 'foot:', leftfoot, rightfoot
+        x1 = numpy.min([neck[0], leftshoulder[0], rightshoulder[0], leftfoot[0], rightfoot[0]])
+        y1 = numpy.min([neck[1], leftshoulder[1], rightshoulder[1], leftfoot[1], rightfoot[1]])
+        x2 = numpy.max([neck[0], leftshoulder[0], rightshoulder[0], leftfoot[0], rightfoot[0]])
+        y2 = numpy.max([neck[1], leftshoulder[1], rightshoulder[1], leftfoot[1], rightfoot[1]])
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(x2, self.resolution[0]-1)
+        y2 = min(y2, self.resolution[1]-1)
+        print 'xy:', x1, y1, x2, y2
+        w = x2 - x1 + 1
+        h = y2 - y1 + 1
+        cx = x1 + w/2
+        cy = y1 + h/2
+        self.target_coordinates = numpy.array([cx, cy, w, h])
+        print 'target:', self.target_coordinates
+        #self.target_coordinates = numpy.array([x1, y1, x2-x1, y2-y1])
 
     def _get_reward(self):
         # compute an instant reward based on quadcopter orientation velocities, target tracking position
-        shaking_penalty = -0.1
-        penalty_boundary = 0.6
         reward = 0.0
-        reward += max(abs(self.quadcopter_angular_variation[0]) - penalty_boundary, 0) * shaking_penalty + \
-                  max(abs(self.quadcopter_angular_variation[1]) - penalty_boundary, 0) * shaking_penalty
+        velocity = abs(numpy.array(self.linear_velocity_b))
+        velocity_reward = numpy.exp(-numpy.sum((velocity - self.desire_velocity)**2))
+        reward += velocity_reward
 
-        # encourage the quadcopter keep moving
-        reward += 0.1 * (abs(self.linear_velocity_b[0]) + abs(self.linear_velocity_b[1]))
+        # maintain velocity, x,y [0, 1], z [0, 0.25]
+        # velocity = abs(numpy.array(self.linear_velocity_b))
+        # velocity_clip = numpy.clip(velocity, 0, [1, 1, 0.25])
+        # velocity_cross = numpy.int8(velocity - velocity_clip > 0)
+        # velocity_reward = numpy.sum((1 - velocity_cross) * (velocity_clip+1) * [1, 1, 0]) -\
+        #                   numpy.sum(velocity_cross)
+        #                   # numpy.sum(velocity_cross * (velocity - [1, 1, 0.25]))
+        #
+        # # maintain altitude at [1.5, 3]
+        # height = self.quadcopter_pos[2]
+        # height_reward = -((height < 1.5) + (height > 3))
+        #
+        # # maintain angular velocity, x,y [0, 0.5], do not care about yaw
+        # angular = abs(numpy.array(self.angular_velocity_b))
+        # angular_clip = numpy.clip(angular, 0, 0.5)
+        # angular_cross = numpy.int8(angular - angular_clip > 0)
+        # angular_reward = numpy.sum((1 - angular_cross) * [1, 1, 0]) - \
+        #                  numpy.sum(angular_cross * [2, 2, 0])
+        #                  # numpy.sum(angular_cross * (angular - 0.5) * [2, 2, 0])
+        #
+        # # maintain angles, x,y [0, 0.2]
+        # angle = abs(numpy.array(self.quadcopter_orientation))
+        # angle_clip = numpy.clip(angle, 0, 0.2)
+        # # angle_clip = numpy.clip(angle, 0, 0.1)
+        # angle_cross = numpy.int8(angle > angle_clip)
+        # angle_reward = numpy.sum((1 - angle_cross) * [1, 1, 0]) - numpy.sum(numpy.array([1, 1, 0]) * angle_cross)
+        # reward = velocity_reward + height_reward + angular_reward + angle_reward
 
         # width = self.resolution[0]
         # height = self.resolution[1]
         # # define a center area where we should keep the target in
         # center_area = numpy.round([width*0.5, height*0.7, width*0.35, height*0.35])
         # TODO tracking position part
-        reward += 0
         return reward
 
     def start(self):
-        vrep.simxFinish(self.client_id)  # just in case, close all opened connections
-        self.client_id = vrep.simxStart('127.0.0.1', 19997, True, True, 5000, 5)
+        if self.client_id != -1:
+            vrep.simxFinish(self.client_id)  # just in case, close all opened connections
+        self.client_id = vrep.simxStart('127.0.0.1', self.remote_port, True, True, 5000, 5)
         if self.client_id == -1:
             print "Failed connecting to remote API server"
             exit(0)
@@ -186,13 +270,23 @@ class VREPGame(Game):
             self.client_id, 'Bill', vrep.simx_opmode_oneshot_wait)
         _, self.camera_handle = vrep.simxGetObjectHandle(
             self.client_id, 'Quadricopter_frontSensor', vrep.simx_opmode_oneshot_wait)
+        _, self.target_neck = vrep.simxGetObjectHandle(
+            self.client_id, 'Bill_neck', vrep.simx_opmode_oneshot_wait)
+        _, self.target_leftshoulder = vrep.simxGetObjectHandle(
+            self.client_id, 'Bill_leftShoulderJoint', vrep.simx_opmode_oneshot_wait)
+        _, self.target_rightshoulder = vrep.simxGetObjectHandle(
+            self.client_id, 'Bill_rightShoulderJoint', vrep.simx_opmode_oneshot_wait)
+        _, self.target_leftfoot = vrep.simxGetObjectHandle(
+            self.client_id, 'Bill_leftAnkleJoint', vrep.simx_opmode_oneshot_wait)
+        _, self.target_rightfoot = vrep.simxGetObjectHandle(
+            self.client_id, 'Bill_rightAnkleJoint', vrep.simx_opmode_oneshot_wait)
 
         # start the simulation, in blocking mode
         vrep.simxStartSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
 
         # enable streaming of state values and the observation image
-        # _, _, self.image = vrep.simxGetVisionSensorImage(
-        #     self.client_id, self.camera_handle, 0, vrep.simx_opmode_streaming)
+        _, _, self.image = vrep.simxGetVisionSensorImage(
+            self.client_id, self.camera_handle, 0, vrep.simx_opmode_streaming)
         _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
             self.client_id, self.quadcopter_handle, vrep.simx_opmode_streaming)
         _, self.quadcopter_pos = vrep.simxGetObjectPosition(
@@ -210,16 +304,27 @@ class VREPGame(Game):
         self.quadcopter_quaternion = vrep.simxUnpackFloats(
             self.quadcopter_quaternion)
 
+        _, self.target_neck_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_neck, self.camera_handle, vrep.simx_opmode_streaming)
+        _, self.target_leftshoulder_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_leftshoulder, self.camera_handle, vrep.simx_opmode_streaming)
+        _, self.target_rightshoulder_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_rightshoulder, self.camera_handle, vrep.simx_opmode_streaming)
+        _, self.target_leftfoot_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_leftfoot, self.camera_handle, vrep.simx_opmode_streaming)
+        _, self.target_rightfoot_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_rightfoot, self.camera_handle, vrep.simx_opmode_streaming)
+
         self.total_reward = 0
         self.episode_reward = 0
         self.episode_step = 0
         self.max_episode_step = DEFAULT_MAX_EPISODE_STEP
 
     def begin_episode(self, max_episode_step=DEFAULT_MAX_EPISODE_STEP):
-        if self.episode_step > self.max_episode_step or self.episode_terminate():
+        self.max_episode_step = max_episode_step
+        if self.episode_step >= self.max_episode_step or self.episode_terminate():
             vrep.simxStopSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
             self.start()
-        self.max_episode_step = max_episode_step
         self.episode_reward = 0
         self.episode_step = 0
 
@@ -230,11 +335,13 @@ class VREPGame(Game):
     def play(self, a):
         self.episode_step += 1
         reward = 0.0
+        scaled_a = self.normalize_action(a)
+        # scaled_a = a
 
         for i in xrange(self.frame_skip):
             # send control signals
             vrep.simxSetStringSignal(self.client_id, 'thrust',
-                                     vrep.simxPackFloats(a), vrep.simx_opmode_oneshot)
+                                     vrep.simxPackFloats(scaled_a), vrep.simx_opmode_oneshot)
             # trigger next simulation step
             vrep.simxSynchronousTrigger(self.client_id)
             self._read_vrep_data()
@@ -243,6 +350,7 @@ class VREPGame(Game):
             reward += self._get_reward()
 
         self.total_reward += reward
+        # print 'Single step reward:%f' % reward
         self.episode_reward += reward
         # save current observation or next step observation
         ob = self.get_observation()
@@ -252,9 +360,49 @@ class VREPGame(Game):
         return reward, terminate_flag
 
     def episode_terminate(self):
-        return self.episode_step > 0 and (self.quadcopter_pos[2] <= 0
-               or abs(self.quadcopter_angular_variation[0]) >= 1
-               or abs(self.quadcopter_angular_variation[1]) >= 1)
+        return self.episode_step > 0 and (
+            self.quadcopter_pos[2] <= 0
+            or abs(self.quadcopter_pos[2]) >= 5
+            or abs(self.angular_velocity_b[0]) >= 1
+            or abs(self.angular_velocity_b[1]) >= 1
+            or abs(self.quadcopter_orientation[0]) >= 1
+            or abs(self.quadcopter_orientation[1]) >= 1
+                                          )
 
     def get_observation(self):
         return numpy.array(self.linear_velocity_b.tolist() + self.angular_velocity_b, dtype='float32')
+        # return numpy.array(self.linear_velocity_b.tolist() + self.angular_velocity_b + self.quadcopter_orientation[0:2], dtype='float32')
+
+    @property
+    def state_enabled(self):
+        return self.replay_memory.size >= self.replay_memory.history_length
+
+    '''
+    stacking specified history length to represent the state.
+    when history length crosses the border, just use a tile of the current step.
+    '''
+    def current_state(self):
+        # return reset states (currently all reset to zero)
+        if self.episode_step == 0:
+            return numpy.zeros((self.replay_memory.history_length,) + self.replay_memory.state_dim, dtype='float32')
+
+        state = self.replay_memory.states.take(self.replay_memory.top-1, axis=0, mode='wrap')
+        if self.replay_memory.size < self.history_length or \
+                numpy.any(
+                self.replay_memory.terminate_flags.take(
+                    numpy.arange(self.replay_memory.top - self.replay_memory.history_length, self.replay_memory.top))):
+            return numpy.tile(state.reshape((1,) + state.shape),
+                              (self.replay_memory.history_length,) +
+                              tuple(numpy.ones(state.ndim, dtype=numpy.int8)))
+        else:
+            return self.replay_memory.states.take(numpy.arange(
+                self.replay_memory.top - self.replay_memory.history_length, self.replay_memory.top), axis=0, mode='wrap')
+
+
+    def normalize_action(self, action):
+        lb = self.action_bounds[0]
+        ub = self.action_bounds[1]
+        scaled_action = lb + (action + 1.) * 0.5 * (ub - lb)
+        scaled_action = numpy.clip(scaled_action, lb, ub)
+        return scaled_action
+
