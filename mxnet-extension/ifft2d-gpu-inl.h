@@ -30,9 +30,9 @@
 #define FRCNN_NUM_THREADS 1024
 
 template<typename Dtype>
-__global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const int height, const int width) {
+__global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const int height, const int width, const bool is_odd) {
   int end = width;
-  if (width % 2 == 0) {
+  if (!is_odd) {
     end -= 2;
   }
   for (int index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -145,7 +145,7 @@ namespace mxnet {
         cudaStream_t stream = Stream<gpu>::GetStream(ograd.stream_);
         dim3 dimGrid((count + FRCNN_NUM_THREADS - 1) / FRCNN_NUM_THREADS);
         dim3 dimBlock(FRCNN_NUM_THREADS);
-        RescaleIRFFTInGradKernel<real_t> << <dimGrid, dimBlock, 0, stream >> >(count, igrad.dptr_, igrad.shape_[2], igrad.shape_[3]);
+        RescaleIRFFTInGradKernel<real_t> << <dimGrid, dimBlock, 0, stream >> >(count, igrad.dptr_, igrad.shape_[2], igrad.shape_[3], igrad.shape_[3]%2);
         FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 #endif
       }
