@@ -19,6 +19,34 @@
 #include <utility>
 #include <cufft.h>
 
+#define FRCNN_CUDA_CHECK(condition) \
+  /* Code block avoids redefinition of cudaError_t error */ \
+  do { \
+    cudaError_t error = condition; \
+    CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
+      } while (0)
+
+#define FRCNN_DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
+#define FRCNN_NUM_THREADS 1024
+
+template<typename Dtype>
+__global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const int height, const int width) {
+  int end = width;
+  if (width % 2 == 0) {
+    end -= 2;
+  }
+  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+    index < count;
+    index += blockDim.x * gridDim.x) {
+    // (n, c, h, w) coords in bottom data
+    int w = index % width;
+    if (w >= 2 && w < end){
+      in_grad[index] *= (2.0f / static_cast<Dtype>(height * width));
+    }
+  }
+}
+
+
 namespace mxnet {
   namespace op {
     // Declare enumeration of input order to make code more intuitive.
@@ -48,13 +76,17 @@ namespace mxnet {
     class IFFT2DOp : public Operator {
     public:
       explicit IFFT2DOp(IFFT2DParam p) {
-        this->init_cufft_ = false;
+        this->init_forward_cufft_ = false;
+        this->init_backward_cufft_ = false;
         this->param_ = p;
       }
 
       ~IFFT2DOp() {
-        if (init_cufft_) {
-          CHECK_EQ(cufftDestroy(plan), CUFFT_SUCCESS);
+        if (init_forward_cufft_) {
+          CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
+        }
+        if (init_backward_cufft_) {
+          CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
         }
       }
 
@@ -73,12 +105,12 @@ namespace mxnet {
         Tensor<xpu, 4> out = out_data[ifft2d::kOut].get<xpu, 4, real_t>(s);
         CHECK_EQ(data.CheckContiguous(), true);
         CHECK_EQ(out.CheckContiguous(), true);
-        if (!init_cufft_) {
-          Init(s, in_data, out_data);
+        if (!init_forward_cufft_) {
+          Init(out.shape_[0], out.shape_[1], out.shape_[2], out.shape_[3], 0);
         }
         CHECK(0 == (data.shape_[0] * data.shape_[1]) % param_.batchsize);
         for (int i = 0; i < data.shape_[0] * data.shape_[1]; i += param_.batchsize) {
-          CHECK_EQ(cufftExecC2R(plan, (cufftComplex*)(data.dptr_ + i * data.shape_[2] * data.shape_[3]), (cufftReal*)(out.dptr_ + i * out.shape_[2] * out.shape_[3])), CUFFT_SUCCESS);
+          CHECK_EQ(cufftExecC2R(forward_plan, (cufftComplex*)(data.dptr_ + i * data.shape_[2] * data.shape_[3]), (cufftReal*)(out.dptr_ + i * out.shape_[2] * out.shape_[3])), CUFFT_SUCCESS);
         }
         out /= static_cast<real_t>(param_.output_shape[0] * param_.output_shape[1]);
       }
@@ -95,28 +127,50 @@ namespace mxnet {
         CHECK_EQ(out_grad.size(), 1);
         CHECK(in_data.size() == 1 && in_grad.size() == 1);
         CHECK_EQ(req.size(), 1);
-        // LOG(FATAL) << "Backward not implemented yet!";
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Tensor<xpu, 4> igrad = in_grad[ifft2d::kData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> ograd = out_grad[ifft2d::kOut].get<xpu, 4, real_t>(s);
+        CHECK_EQ(igrad.CheckContiguous(), true);
+        CHECK_EQ(ograd.CheckContiguous(), true);
+        if (!init_backward_cufft_) {
+          Init(igrad.shape_[0], igrad.shape_[1], igrad.shape_[2], igrad.shape_[3], 1);
+        }
+        CHECK(0 == (igrad.shape_[0] * igrad.shape_[1]) % param_.batchsize);
+        for (int i = 0; i < igrad.shape_[0] * igrad.shape_[1]; i += param_.batchsize) {
+          CHECK_EQ(cufftExecR2C(backward_plan, (cufftReal*)(ograd.dptr_ + i * ograd.shape_[2] * ograd.shape_[3]),
+            (cufftComplex*)(igrad.dptr_ + i * igrad.shape_[2] * igrad.shape_[3])), CUFFT_SUCCESS);
+        }
+#if defined(__CUDACC__)
+        const int count = ograd.shape_.Size();
+        cudaStream_t stream = Stream<gpu>::GetStream(ograd.stream_);
+        dim3 dimGrid((count + FRCNN_NUM_THREADS - 1) / FRCNN_NUM_THREADS);
+        dim3 dimBlock(FRCNN_NUM_THREADS);
+        RescaleIRFFTInGradKernel<real_t> << <dimGrid, dimBlock, 0, stream >> >(count, igrad.dptr_, igrad.shape_[2], igrad.shape_[3]);
+        FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+#endif
       }
 
     private:
-      inline void Init(mshadow::Stream<xpu> *s,
-        const std::vector<TBlob> &in_data,
-        const std::vector<TBlob> &out_data) {
-        using namespace mshadow;
-        using namespace mshadow::expr;
-        Tensor<xpu, 4> data = in_data[ifft2d::kData].get<xpu, 4, real_t>(s);
-        Tensor<xpu, 4> out = out_data[ifft2d::kOut].get<xpu, 4, real_t>(s);
-        int n[2] = { this->param_.output_shape[0], this->param_.output_shape[1] };
-        if (data.shape_[0] * data.shape_[1] < param_.batchsize) {
-          param_.batchsize = data.shape_[0] * data.shape_[1];
+      inline void Init(int num, int channel, int rows, int cols, int typ) {
+        int n[2] = { rows, cols };
+        if (num * channel < param_.batchsize) {
+          param_.batchsize = num * channel;
         }
-        // TODO This part may be memory-consuming
-        CHECK_EQ(cufftPlanMany(&plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_C2R, param_.batchsize), CUFFT_SUCCESS);
-        init_cufft_ = true;
+        if (0 == typ){
+          CHECK_EQ(cufftPlanMany(&forward_plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_C2R, param_.batchsize), CUFFT_SUCCESS);
+          init_forward_cufft_ = true;
+        }
+        else {
+          CHECK_EQ(cufftPlanMany(&backward_plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_R2C, param_.batchsize), CUFFT_SUCCESS);
+          init_backward_cufft_ = true;
+        }
+        
       }
       IFFT2DParam param_;
-      bool init_cufft_;
-      cufftHandle plan;
+      bool init_forward_cufft_;
+      bool init_backward_cufft_;
+      cufftHandle forward_plan;
+      cufftHandle backward_plan;
     };  // class FFTOp
 
     // Decalre Factory function, used for dispatch specialization
@@ -166,7 +220,7 @@ namespace mxnet {
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ };
+        return{ out_grad[ifft2d::kOut] };
       }
 
       Operator* CreateOperator(Context ctx) const override;
