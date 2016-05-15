@@ -63,11 +63,54 @@ def test_fft():
 
 
 def test_ifft():
+    orig_shape = (12, 11)
     a_fft = mx.symbol.Variable('a_fft')
     b = mx.symbol.Variable('b')
-    a = mx.symbol.IFFT2D(data=a_fft)
-
-
+    a = mx.symbol.IFFT2D(data=a_fft, output_shape=orig_shape)
+    loss = mx.symbol.Reshape(mx.symbol.sum(mx.symbol.square(a - b)), shape=(1, 1))
+    loss = mx.symbol.MakeLoss(loss)
+    a_fft_shape = (1, 2) + (orig_shape[0], 2*(orig_shape[1]/2 + 1))
+    b_shape = (1, 2) + orig_shape
+    a_npy = numpy.random.rand(*b_shape)
+    b_npy = numpy.random.rand(*b_shape)
+    a_fft_unfold_npy = numpy.empty(a_fft_shape)
+    a_fft_npy = pyfftw.interfaces.numpy_fft.rfft2(a_npy)
+    a_fft_unfold_npy[:, :, :, ::2] = numpy.real(a_fft_npy)
+    a_fft_unfold_npy[:, :, :, 1::2] = numpy.imag(a_fft_npy)
+    a_fft_grad = nd.empty(a_fft_shape, ctx=mx.gpu())
+    a_fft_ndarray = nd.array(a_fft_unfold_npy, ctx=mx.gpu())
+    b_ndarray = nd.array(b_npy, ctx=mx.gpu())
+    net = loss.bind(mx.gpu(), args={'a_fft': a_fft_ndarray, 'b': b_ndarray},
+                 args_grad={'a_fft': a_fft_grad})
+    net.forward(is_train=True)
+    base_loss = net.outputs[0].asnumpy()
+    print base_loss
+    net.backward()
+    grad_compute_backward = a_fft_grad.asnumpy()
+    print grad_compute_backward
+    eps = 1E-4
+    grad_finite_difference_cufft = numpy.empty((a_fft_unfold_npy.size), dtype=numpy.float32)
+    # grad_finite_difference_fftw = numpy.empty((a_npy.size), dtype=numpy.float32)
+    for i in range(a_fft_unfold_npy.size):
+        z = numpy.zeros((a_fft_unfold_npy.size,), dtype=numpy.float32)
+        z[i] = eps
+        dat = a_fft_unfold_npy + z.reshape(a_fft_unfold_npy.shape)
+        net.arg_dict['a_fft'][:] = dat
+        net.forward(is_train=False)
+        loss = net.outputs[0].asnumpy()
+        grad_finite_difference_cufft[i] = (loss[0] - base_loss[0]) / eps
+    grad_finite_difference_cufft = grad_finite_difference_cufft.reshape(a_fft_unfold_npy.shape)
+    print "Compute By Backward:", grad_compute_backward
+    print "Compute By FD-CUFFT:", grad_finite_difference_cufft
+    # print "Compute By FD-FFTW", grad_finite_difference_fftw
+    print numpy.square(grad_finite_difference_cufft - grad_compute_backward).mean()
+    lr = 10
+    for i in range(100):
+        net.forward(is_train=True)
+        loss = net.outputs[0].asnumpy()
+        print loss
+        net.backward()
+        net.arg_dict['a_fft'][:] -= lr * a_fft_grad
 
 def speed_compare_cufft_fftw():
     a = mx.symbol.Variable('a')
@@ -103,5 +146,6 @@ def speed_compare_cufft_fftw():
         print numpy.square(output_mxnet - output_fftw.real).sum()
     print cpu_time
     print gpu_time
-test_fft()
+#test_fft()
+test_ifft()
 #speed_compare_cufft_fftw()
