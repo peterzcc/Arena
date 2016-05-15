@@ -30,7 +30,7 @@
 #define FRCNN_NUM_THREADS 1024
 
 template<typename Dtype>
-__global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const int height, const int width, const bool is_odd) {
+__global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const int width, const bool is_odd) {
   int end = width;
   if (!is_odd) {
     end -= 2;
@@ -41,7 +41,7 @@ __global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const 
     // (n, c, h, w) coords in bottom data
     int w = index % width;
     if (w >= 2 && w < end){
-      in_grad[index] *= (2.0f / static_cast<Dtype>(height * width));
+      in_grad[index] *= 2.0f;
     }
   }
 }
@@ -127,13 +127,14 @@ namespace mxnet {
         CHECK_EQ(out_grad.size(), 1);
         CHECK(in_data.size() == 1 && in_grad.size() == 1);
         CHECK_EQ(req.size(), 1);
+        CHECK_NE(req[ifft2d::kData], kAddTo) << "AddTo not yet suported";
         Stream<xpu> *s = ctx.get_stream<xpu>();
         Tensor<xpu, 4> igrad = in_grad[ifft2d::kData].get<xpu, 4, real_t>(s);
         Tensor<xpu, 4> ograd = out_grad[ifft2d::kOut].get<xpu, 4, real_t>(s);
         CHECK_EQ(igrad.CheckContiguous(), true);
         CHECK_EQ(ograd.CheckContiguous(), true);
         if (!init_backward_cufft_) {
-          Init(igrad.shape_[0], igrad.shape_[1], igrad.shape_[2], igrad.shape_[3], 1);
+          Init(ograd.shape_[0], ograd.shape_[1], ograd.shape_[2], ograd.shape_[3], 1);
         }
         CHECK(0 == (igrad.shape_[0] * igrad.shape_[1]) % param_.batchsize);
         for (int i = 0; i < igrad.shape_[0] * igrad.shape_[1]; i += param_.batchsize) {
@@ -141,13 +142,14 @@ namespace mxnet {
             (cufftComplex*)(igrad.dptr_ + i * igrad.shape_[2] * igrad.shape_[3])), CUFFT_SUCCESS);
         }
 #if defined(__CUDACC__)
-        const int count = ograd.shape_.Size();
-        cudaStream_t stream = Stream<gpu>::GetStream(ograd.stream_);
+        const int count = igrad.shape_.Size();
+        cudaStream_t stream = Stream<gpu>::GetStream(igrad.stream_);
         dim3 dimGrid((count + FRCNN_NUM_THREADS - 1) / FRCNN_NUM_THREADS);
         dim3 dimBlock(FRCNN_NUM_THREADS);
-        RescaleIRFFTInGradKernel<real_t> << <dimGrid, dimBlock, 0, stream >> >(count, igrad.dptr_, igrad.shape_[2], igrad.shape_[3], igrad.shape_[3]%2);
+        RescaleIRFFTInGradKernel<real_t> << <dimGrid, dimBlock, 0, stream >> >(count, igrad.dptr_, igrad.shape_[3], ograd.shape_[3]%2);
         FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 #endif
+        igrad /= static_cast<real_t>(ograd.shape_[2] * ograd.shape_[3]);
       }
 
     private:
