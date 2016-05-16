@@ -29,6 +29,7 @@
 #define FRCNN_DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
 #define FRCNN_NUM_THREADS 1024
 
+/* TODO Use cufftXtSetCallback() */
 template<typename Dtype>
 __global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const int width, const bool is_odd) {
   int end = width;
