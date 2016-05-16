@@ -49,32 +49,44 @@ class TrackingIterator(object):
         return nd_mean
 
     '''
-    Choose a video and draw minibatch samples from this video.
-
+    Function: sample
+    Description: Choose a video and draw minibatch samples from this video.
+    Params:
+        length: the length of the sampled sequence,
+        batch_size:
+        interval_step: frame skip,
+        verbose:
+        random_perturbation_noise: whether to randomly perturb the initial ROI like the SRE measurement described in
+            [PAMI2015] Object Tracking Benchmark. Set to zero to disable
+        video_index: if not None, use the given video_index, can be used in testing script
+        start_index: if not None, use the given start_index, can be used in testing script
     '''
-    def sample(self, length=20, batch_size=1, interval_step=1, verbose=False, random_perturbation=False):
-        assert 1 == batch_size
-        video_index = self.rng.randint(0, self.video_num)
-        # make sure choose video have enough frames
-        while len(self.img_lists[video_index]) < length * interval_step:
+    #TODO Add illuminance change and random noise to the sequence for data augmentation
+    def sample(self, length=20, batch_size=1, interval_step=1, verbose=False,
+               random_perturbation_noise=0.1,
+               video_index=None, start_index=None):
+        assert 1 == batch_size, 'Currently we constrain batch_size to 1'
+        if video_index is None:
             video_index = self.rng.randint(0, self.video_num)
+            # We need to make sure that the chosen video has enough frames
+            while len(self.img_lists[video_index]) < length * interval_step:
+                video_index = self.rng.randint(0, self.video_num)
         im_shape = cv2.imread(self.img_lists[video_index][0]).shape
         if self.resize:
             seq_data_batch = numpy.zeros((length, 3) + self.output_size, dtype=numpy.uint8)
         else:
-            seq_data_batch = numpy.zeros((length, 3) + (im_shape[0], im_shape[1]),
-                                         dtype=numpy.uint8)
+            seq_data_batch = numpy.zeros((length, 3) + (im_shape[0], im_shape[1]), dtype=numpy.uint8)
         seq_roi_batch = numpy.zeros((length, 4), dtype=numpy.float32)
         counter = 0
         while counter < batch_size:
-            start_index = self.rng.randint(0, len(self.img_lists[video_index]) - (length - 1)*interval_step)
+            if start_index is None:
+                start_index = self.rng.randint(0, len(self.img_lists[video_index]) - (length - 1) * interval_step)
             if verbose:
                 print 'Sampled image from video %s, Start Index = %d\n' % (self.img_lists[video_index][0], start_index)
             for i in xrange(length):
-                im = cv2.imread(self.img_lists[video_index][start_index+i])
+                im = cv2.imread(self.img_lists[video_index][start_index + i])
                 if self.resize:
-                    im = cv2.resize(im, (self.output_size[1], self.output_size[0]),
-                                interpolation=cv2.INTER_LINEAR)
+                    im = cv2.resize(im, (self.output_size[1], self.output_size[0]), interpolation=cv2.INTER_LINEAR)
                 if im.ndim == 2:
                     im = numpy.tile(im.reshape((1, 3, 3)), (3, 1, 1))
                 else:
@@ -86,10 +98,15 @@ class TrackingIterator(object):
         seq_roi_batch[:, 0:2] += seq_roi_batch[:, 2:4] / 2 - 1
         seq_roi_batch[:, ::2] = seq_roi_batch[:, ::2] / im_shape[1]
         seq_roi_batch[:, 1::2] = seq_roi_batch[:, 1::2] / im_shape[0]
-        if random_perturbation:
-            seq_roi_batch[0, 0:2] = numpy.clip(seq_roi_batch[0, 0:2] + 0.1 * self.rng.rand(2) * seq_roi_batch[0, 2:4],
-                                               0, 1)
-            seq_roi_batch[0, 2:4] = numpy.clip(seq_roi_batch[0, 2:4] * (1 + 0.2 * self.rng.rand(2)), 0, 1)
+        if not(0 == random_perturbation_noise):
+            # Perturb the initial ROI if the noise is not zero for data augmentation
+            seq_roi_batch[0, 0:2] = \
+                numpy.clip(seq_roi_batch[0, 0:2] +
+                           self.rng.uniform(low=-random_perturbation_noise, high=random_perturbation_noise, size=2) *
+                           seq_roi_batch[0, 2:4], 0, 1)
+            seq_roi_batch[0, 2:4] = \
+                numpy.clip(seq_roi_batch[0, 2:4] * self.rng.uniform(low=1 - random_perturbation_noise,
+                                                                    high=1 + random_perturbation_noise, size=2), 0, 1)
         seq_data_batch = nd.array(seq_data_batch, ctx=self.ctx)
         seq_data_batch -= self.img_mean(seq_data_batch.shape)
         seq_roi_batch = nd.array(seq_roi_batch, ctx=self.ctx)
