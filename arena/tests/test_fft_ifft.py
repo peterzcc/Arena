@@ -146,6 +146,6 @@ def speed_compare_cufft_fftw():
         print numpy.square(output_mxnet - output_fftw.real).sum()
     print cpu_time
     print gpu_time
-#test_fft()
+test_fft()
 test_ifft()
-#speed_compare_cufft_fftw()
+speed_compare_cufft_fftw()
