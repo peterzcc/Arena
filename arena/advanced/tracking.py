@@ -140,6 +140,14 @@ class CorrelationFilterHandler(object):
     def scoremap_shape(self):
         return (self.scale_num, self.channel_size, self.rows, self.cols)
 
+    @property
+    def numerator_shape(self):
+        return (self.scale_num, self.channel_size, self.out_rows, self.out_cols)
+
+    @property
+    def denominator_shape(self):
+        return (self.scale_num, 1, self.out_rows, self.out_cols)
+
     def get_multiscale_template(self, glimpse, postfix=''):
         multiscale_feature = self.perception_handler.perceive(
             data_sym=glimpse.data,

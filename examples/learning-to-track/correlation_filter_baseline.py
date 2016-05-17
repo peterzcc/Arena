@@ -86,7 +86,8 @@ scoremap_computation_net = build_scoremap_computation_net(glimpse_handler=glimps
                                                           perception_handler=perception_handler,
                                                           scoremap_processor=scoremap_processor,
                                                           cf_handler=cf_handler)
-seq_images, seq_rois = tracking_iterator.sample(length=sample_length, interval_step=1, verbose=False, random_perturbation=False)
+seq_images, seq_rois = tracking_iterator.sample(length=sample_length, interval_step=1, verbose=False,
+                                                random_perturbation_noise=0)
 init_image_ndarray = seq_images[:1].reshape((1,) + seq_images.shape[1:])
 init_roi_ndarray = seq_rois[:1]
 outputs = template_extraction_net.forward(image=init_image_ndarray, roi=init_roi_ndarray)
