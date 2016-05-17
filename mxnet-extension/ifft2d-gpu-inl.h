@@ -19,15 +19,15 @@
 #include <utility>
 #include <cufft.h>
 
-#define FRCNN_CUDA_CHECK(condition) \
+#define IFFT_CUDA_CHECK(condition) \
   /* Code block avoids redefinition of cudaError_t error */ \
   do { \
     cudaError_t error = condition; \
     CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
       } while (0)
 
-#define FRCNN_DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
-#define FRCNN_NUM_THREADS 1024
+#define kIFFTMaxThreadsPerBlock 1024
+#define kIFFTMaxGridNum 65535
 
 /* TODO Use cufftXtSetCallback() */
 template<typename Dtype>
@@ -113,6 +113,9 @@ namespace mxnet {
         for (int i = 0; i < data.shape_[0] * data.shape_[1]; i += param_.batchsize) {
           CHECK_EQ(cufftExecC2R(forward_plan, (cufftComplex*)(data.dptr_ + i * data.shape_[2] * data.shape_[3]), (cufftReal*)(out.dptr_ + i * out.shape_[2] * out.shape_[3])), CUFFT_SUCCESS);
         }
+        if (init_forward_cufft_) {
+          CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
+        }
         out /= static_cast<real_t>(param_.output_shape[0] * param_.output_shape[1]);
       }
 
@@ -142,13 +145,17 @@ namespace mxnet {
           CHECK_EQ(cufftExecR2C(backward_plan, (cufftReal*)(ograd.dptr_ + i * ograd.shape_[2] * ograd.shape_[3]),
             (cufftComplex*)(igrad.dptr_ + i * igrad.shape_[2] * igrad.shape_[3])), CUFFT_SUCCESS);
         }
+        if (init_backward_cufft_) {
+          CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
+        }
 #if defined(__CUDACC__)
         const int count = igrad.shape_.Size();
+        const int gridSize = (count + kIFFTMaxThreadsPerBlock - 1) / kIFFTMaxThreadsPerBlock;
+        dim3 dimGrid(kIFFTMaxGridNum, (gridSize + kIFFTMaxGridNum - 1) / kIFFTMaxGridNum);
+        dim3 dimBlock(kIFFTMaxThreadsPerBlock);
         cudaStream_t stream = Stream<gpu>::GetStream(igrad.stream_);
-        dim3 dimGrid((count + FRCNN_NUM_THREADS - 1) / FRCNN_NUM_THREADS);
-        dim3 dimBlock(FRCNN_NUM_THREADS);
         RescaleIRFFTInGradKernel<real_t> << <dimGrid, dimBlock, 0, stream >> >(count, igrad.dptr_, igrad.shape_[3], ograd.shape_[3]%2);
-        FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+        IFFT_CUDA_CHECK(cudaPeekAtLastError());
 #endif
         igrad /= static_cast<real_t>(ograd.shape_[2] * ograd.shape_[3]);
       }

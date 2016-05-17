@@ -19,15 +19,15 @@
 #include <utility>
 #include <cufft.h>
 
-#define FRCNN_CUDA_CHECK(condition) \
+#define FFT_CUDA_CHECK(condition) \
   /* Code block avoids redefinition of cudaError_t error */ \
   do { \
     cudaError_t error = condition; \
     CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
     } while (0)
 
-#define FRCNN_DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
-#define FRCNN_NUM_THREADS 1024
+#define kFFTMaxThreadsPerBlock 1024
+#define kFFTMaxGridNum 65535
 
 /* TODO Use cufftXtSetCallback() */
 template<typename Dtype>
@@ -36,9 +36,9 @@ __global__ void RescaleRFFTOutGradKernel(const int count, Dtype* out_grad, const
   if (!is_odd){
     end -= 2;
   }
-  for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+  for (int index = int(blockIdx.x) * int(blockDim.x) + int(threadIdx.x);
     index < count;
-    index += blockDim.x * gridDim.x) {
+    index += int(blockDim.x) * int(gridDim.x)) {
     // (n, c, h, w) coords in bottom data
     int w = index % width;
     if (w >= 2 && w < end){
@@ -109,6 +109,9 @@ namespace mxnet {
           CHECK_EQ(cufftExecR2C(forward_plan, (cufftReal*)(data.dptr_ + i * data.shape_[2] * data.shape_[3]), 
             (cufftComplex*)(out.dptr_ + i * out.shape_[2] * out.shape_[3])), CUFFT_SUCCESS);
         }
+        if (init_forward_cufft_) {
+          CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
+        }
         
       }
 
@@ -134,16 +137,21 @@ namespace mxnet {
         }
         #if defined(__CUDACC__)
         const int count = ograd.shape_.Size();
+        const int gridSize = (count + kFFTMaxThreadsPerBlock - 1) / kFFTMaxThreadsPerBlock;
+        dim3 dimGrid(kFFTMaxGridNum, (gridSize + kFFTMaxGridNum - 1) / kFFTMaxGridNum);
+        dim3 dimBlock(kFFTMaxThreadsPerBlock);
         cudaStream_t stream = Stream<gpu>::GetStream(ograd.stream_);
-        dim3 dimGrid((count + FRCNN_NUM_THREADS - 1) / FRCNN_NUM_THREADS);
-        dim3 dimBlock(FRCNN_NUM_THREADS);
+        //CheckLaunchParam(dimGrid, dimBlock, "RFFT2D Backward");
         RescaleRFFTOutGradKernel<real_t> <<<dimGrid, dimBlock, 0, stream >>>(count, ograd.dptr_, ograd.shape_[3], igrad.shape_[3]%2);
-        FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+        FFT_CUDA_CHECK(cudaPeekAtLastError());
         #endif
         CHECK(0 == (igrad.shape_[0] * igrad.shape_[1]) % param_.batchsize);
         for (int i = 0; i < igrad.shape_[0] * igrad.shape_[1]; i += param_.batchsize) {
           CHECK_EQ(cufftExecC2R(backward_plan, (cufftComplex*)(ograd.dptr_ + i * ograd.shape_[2] * ograd.shape_[3]),
             (cufftReal*)(igrad.dptr_ + i * igrad.shape_[2] * igrad.shape_[3])), CUFFT_SUCCESS);
+        }
+        if (init_backward_cufft_) {
+          CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
         }
       }
 
