@@ -13,13 +13,13 @@ Description:
 '''
 
 
-def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL):
+def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL, save_path=None):
     if 4 == data.ndim:
         data = data.transpose(0, 2, 3, 1)
     data = (data - data.min()) / (data.max() - data.min())
     n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
     padding = (((0, n ** 2 - data.shape[0]),
-                (0, 1), (0, 1))
+                (0, 0), (0, 0))
                + ((0, 0),) * (data.ndim - 3))
     data = numpy.pad(data, padding, mode='constant', constant_values=1)
 
@@ -29,8 +29,14 @@ def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NO
     data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
     win = cv2.namedWindow(win_name, win_typ)
     if 3 == data.ndim:
+        if save_path is not None:
+            cv2.imwrite(os.path.join(save_path, win_name + '.png'), cv2.resize(data[:, :, ::-1]*256, (480, 480),
+                                                                               interpolation=cv2.INTER_LINEAR))
         cv2.imshow(win_name, data[:, :, ::-1])
     else:
+        if save_path is not None:
+            cv2.imwrite(os.path.join(save_path, win_name + '.png'), cv2.resize(data[:, :]*256, (480, 480),
+                                                                               interpolation=cv2.INTER_LINEAR))
         cv2.imshow(win_name, data[:, :])
     if delay is not None:
         cv2.waitKey(delay)
@@ -43,7 +49,7 @@ roi, normalized version from [0, 1]
 '''
 
 
-def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking", win_typ=cv2.WINDOW_AUTOSIZE):
+def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking", win_typ=cv2.WINDOW_AUTOSIZE, save_path=None):
     im = im.transpose(1, 2, 0)
     width = im.shape[1]
     height = im.shape[0]
@@ -56,6 +62,8 @@ def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking", 
     cv2.rectangle(im2, pt1, pt2, color, 1)
     win = cv2.namedWindow(win_name, win_typ)
     cv2.imshow(win_name, im2[:, :, ::-1] / 255.0)
+    if save_path is not None:
+        cv2.imwrite(os.path.join(save_path, win_name + '.png'), im2[:, :, ::-1])
     if delay is not None:
         cv2.waitKey(delay)
 
