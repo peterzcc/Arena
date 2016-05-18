@@ -252,7 +252,7 @@ class AttentionHandler(object):
             if self.verbose_sym_out:
                 sym_out[self.name + ':attention_scoremap' + postfix] = scoremap
                 sym_out[self.name + ':processed_scoremap' + postfix] = mx.symbol.BlockGrad(processed_scoremap)
-            flatten_map = mx.symbol.Reshape(processed_scoremap, target_shape=(1, 0))
+            flatten_map = mx.symbol.Reshape(processed_scoremap, shape=(1, 0))
             tracking_states = step_stack_lstm(indata=flatten_map, prev_states=tracking_states,
                                          lstm_props=self.lstm_layer_props,
                                          params=self.lstm_params.values(),
