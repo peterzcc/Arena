@@ -61,7 +61,7 @@ namespace mxnet {
       TShape output_shape;
       uint32_t batchsize;
       DMLC_DECLARE_PARAMETER(IFFT2DParam) {
-        DMLC_DECLARE_FIELD(batchsize).set_default(16).set_range(1, 256)
+        DMLC_DECLARE_FIELD(batchsize).set_default(32).set_range(1, 256)
           .describe("Batchsize of the cuda operator.");
         DMLC_DECLARE_FIELD(output_shape)
           .set_expect_ndim(2).enforce_nonzero()
@@ -115,6 +115,7 @@ namespace mxnet {
         }
         if (init_forward_cufft_) {
           CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
+          init_forward_cufft_ = false;
         }
         out /= static_cast<real_t>(param_.output_shape[0] * param_.output_shape[1]);
       }
@@ -147,6 +148,7 @@ namespace mxnet {
         }
         if (init_backward_cufft_) {
           CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
+          init_backward_cufft_ = false;
         }
 #if defined(__CUDACC__)
         const int count = igrad.shape_.Size();

@@ -59,7 +59,7 @@ namespace mxnet {
     struct FFT2DParam : public dmlc::Parameter<FFT2DParam> {
       uint32_t batchsize;
       DMLC_DECLARE_PARAMETER(FFT2DParam) {
-        DMLC_DECLARE_FIELD(batchsize).set_default(16).set_range(1, 256)
+        DMLC_DECLARE_FIELD(batchsize).set_default(32).set_range(1, 256)
         .describe("Batchsize of the cuda operator.");
       }
     };
@@ -79,9 +79,11 @@ namespace mxnet {
 
       ~FFT2DOp() {
         if (init_forward_cufft_) {
+          init_forward_cufft_ = false;
           CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
         }
         if (init_backward_cufft_) {
+          init_backward_cufft_ = false;
           CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
         }
       }
@@ -111,6 +113,7 @@ namespace mxnet {
         }
         if (init_forward_cufft_) {
           CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
+          init_forward_cufft_ = false;
         }
         
       }
@@ -152,6 +155,7 @@ namespace mxnet {
         }
         if (init_backward_cufft_) {
           CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
+          init_backward_cufft_ = false;
         }
       }
 
