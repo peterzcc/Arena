@@ -1,6 +1,7 @@
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
+import cv2
 from scipy.stats import entropy
 
 from utils import *
@@ -374,6 +375,7 @@ class LogSoftmaxPolicyProp(mx.operator.CustomOpProp):
                                 entropy_regularization=self.entropy_regularization,
                                 grad_scale=self.grad_scale)
 
+#TODO Add HOG layer: hog = cv2.HOGDescriptor()
 
 def spatial_softmax(data, channel_num, rows, cols, name=None):
     out = mx.symbol.Reshape(data, target_shape=(0, rows*cols))
