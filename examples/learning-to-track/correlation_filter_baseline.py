@@ -46,10 +46,11 @@ def build_scoremap_computation_net(glimpse_handler, perception_handler, cf_handl
     scoremap = cf_handler.get_multiscale_scoremap(multiscale_template=ScaleCFTemplate(numerator=numerator,
                                                                                       denominator=denominator),
                                                   glimpse=glimpse)
-    scoremap = scoremap_processor.scoremap_processing(multiscale_scoremap=scoremap, postfix="_t0")
+    processed_scoremap = scoremap_processor.scoremap_processing(multiscale_scoremap=scoremap, postfix="_t0")
     data_shapes = {'image': (1, 3) + image_size, 'roi': (1, 4), 'numerator': cf_handler.numerator_shape,
                    'denominator': cf_handler.denominator_shape}
-    scoremap_computation_net = Base(sym=scoremap, data_shapes=data_shapes, initializer=TrackerInitializer(sigma=0.01))
+    scoremap_computation_net = Base(sym=mx.symbol.Group([processed_scoremap, scoremap]), data_shapes=data_shapes,
+                                    initializer=TrackerInitializer(sigma=0.01))
     perception_handler.set_params(scoremap_computation_net.params)
     return scoremap_computation_net
 
@@ -102,6 +103,9 @@ for t in range(1, sample_length):
                                                numerator=template.numerator, denominator=template.denominator)
     #scoremap = outputs[0].asnumpy()[0].sum(axis=0)
     #scoremap = scoremap/scoremap.max()
+    original_scoremap = outputs[1].asnumpy()
+    visualize_weights(original_scoremap[0], win_name='OriginalScoremap', save_path='.')
+    print original_scoremap.shape
     scoremap = outputs[0].asnumpy()[0,0]
     print scoremap.shape
     indx = scoremap.argmax()
@@ -109,16 +113,16 @@ for t in range(1, sample_length):
     dx = coordinates[1] / float(scoremap.shape[1]) - 0.5
     dy = coordinates[0] / float(scoremap.shape[0]) - 0.5
     old_cx, old_cy, old_sx, old_sy = init_roi_ndarray.asnumpy()[0].tolist()
-    new_cx = old_cx + dx * old_sx *scale_mult
-    new_cy = old_cy + dy * old_sy *scale_mult
+    new_cx = old_cx + dx * old_sx * scale_mult
+    new_cy = old_cy + dy * old_sy * scale_mult
     print new_cx, new_cy
     init_roi_ndarray = nd.array([[new_cx, new_cy, old_sx, old_sy]])
     template_outputs = template_extraction_net.forward(image=image_ndarray, roi=init_roi_ndarray)
     alpha = 0.003
     template = ScaleCFTemplate(numerator=(1-alpha)*template.numerator + alpha*template_outputs[0].asnumpy(),
                                denominator=(1-alpha)*template.denominator + alpha*template_outputs[1].asnumpy())
-    visualize_weights(outputs[0].asnumpy().sum(axis=1))
-    draw_track_res(im=data_img_npy[0], roi=init_roi_ndarray.asnumpy()[0])
+    visualize_weights(outputs[0].asnumpy().sum(axis=1), win_name='Scoremap+Relu+Softmax', save_path='.')
+    draw_track_res(im=data_img_npy[0], roi=init_roi_ndarray.asnumpy()[0], win_name="Tracking", save_path='.')
     draw_track_res(im=data_img_npy[0], roi=seq_rois[t:(t+1)].asnumpy()[0], win_name="T2")
     cv2.waitKey()
 
