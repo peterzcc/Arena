@@ -378,10 +378,10 @@ class LogSoftmaxPolicyProp(mx.operator.CustomOpProp):
 #TODO Add HOG layer: hog = cv2.HOGDescriptor()
 
 def spatial_softmax(data, channel_num, rows, cols, name=None):
-    out = mx.symbol.Reshape(data, target_shape=(0, rows*cols))
+    out = mx.symbol.Reshape(data, shape=(-1, rows*cols))
     out = mx.symbol.SoftmaxActivation(data=out, mode='instance')
     if name is None:
-        out = mx.symbol.Reshape(data=out, target_shape=(0, channel_num, rows, cols))
+        out = mx.symbol.Reshape(data=out, shape=(-1, channel_num, rows, cols))
     else:
-        out = mx.symbol.Reshape(data=out, target_shape=(0, channel_num, rows, cols), name=name)
+        out = mx.symbol.Reshape(data=out, shape=(-1, channel_num, rows, cols), name=name)
     return out

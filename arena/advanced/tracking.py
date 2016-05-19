@@ -96,7 +96,7 @@ class HannWindowGeneratorOp(mx.operator.NumpyOp):
 
 class CorrelationFilterHandler(object):
     def __init__(self, rows, cols, gaussian_sigma_factor, regularizer, perception_handler,
-                 glimpse_handler, fft_batchsize=8):
+                 glimpse_handler, fft_batchsize=96):
         super(CorrelationFilterHandler, self).__init__()
         self.rows = numpy.int32(rows)
         self.cols = numpy.int32(cols)
@@ -216,11 +216,11 @@ class PerceptionHandler(object):
                 conv1 = mx.symbol.Convolution(data=data_sym,
                                               weight=self.params_sym['arg:conv1_weight'],
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
-                                              stride=(2, 2), num_filter=96, workspace=50)
+                                              stride=(2, 2), num_filter=96, workspace=200)
             else:
                 conv1 = mx.symbol.Convolution(data=data_sym, weight=self.params_sym['arg:conv1_weight'],
                                               bias=self.params_sym['arg:conv1_bias'], kernel=(7, 7),
-                                              stride=(2, 2), num_filter=96, workspace=50)
+                                              stride=(2, 2), num_filter=96, workspace=200)
                 conv1 = mx.symbol.BlockGrad(data=conv1, name=name)
             return conv1
         else:
@@ -270,7 +270,7 @@ class ScoreMapProcessor(object):
                                           kernel=(5, 5), pad=(2, 2),
                                           num_filter=self.num_filter,
                                           name=self.name + (':scale%d:conv1' %i) + postfix,
-                                          workspace=50)
+                                          workspace=200)
             #TODO Use Softmax for Activation to reduce scale variation
             act1 = mx.symbol.Activation(data=conv1, act_type='relu',
                                         name=self.name + (':scale%d:act1' %i) + postfix)
@@ -281,7 +281,7 @@ class ScoreMapProcessor(object):
                                           kernel=(5, 5), pad=(2, 2), stride=(2, 2),
                                           num_filter=1,
                                           name=self.name + (':scale%d:conv2' %i) + postfix,
-                                          workspace=50)
+                                          workspace=200)
 
             parsed_scoremaps.append(conv2)
         parsed_scoremap = mx.symbol.Concat(*parsed_scoremaps, num_args=self.scale_num, dim=1)

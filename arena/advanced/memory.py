@@ -289,7 +289,7 @@ class MemoryHandler(object):
             sym_out[prefix + ':control_flag' + postfix + '_action'] = control_flag[0]
             sym_out[prefix + ':control_flag' + postfix + '_prob'] = control_flag[1]
             init_shapes[prefix + ':control_flag' + postfix + '_score'] = (1,)
-            control_flag = mx.symbol.Reshape(control_flag[0], target_shape=(0,))
+            control_flag = mx.symbol.Reshape(control_flag[0], shape=(-1,))
             control_flag = mx.symbol.BlockGrad(control_flag)
         # 2. Update the memory status
         # TODO Change the updating logic (Train the update factor using Reinforcement Unit like Beta-Policy)
@@ -372,7 +372,7 @@ class MemoryHandler(object):
 
         # 3. Choose the memory indices based on the computed score and the memory status
         chosen_ind = mx.symbol.Custom(data=score,
-                                      mask=mx.symbol.Reshape(memory.status.counter, target_shape=(1, 0)),
+                                      mask=mx.symbol.Reshape(memory.status.counter, shape=(1, -1)),
                                       name=prefix + ':chosen_ind' + postfix,
                                       deterministic=deterministic,
                                       use_mask=1,
@@ -381,21 +381,21 @@ class MemoryHandler(object):
 
     def reshape_to_cf(self, memory_ele_sym, name=None):
         if name is None:
-            return mx.symbol.Reshape(memory_ele_sym, target_shape=(self.scale_num, 0,
+            return mx.symbol.Reshape(memory_ele_sym, shape=(self.scale_num, -1,
                                                     self.cf_handler.out_rows,
                                                     self.cf_handler.out_cols))
         else:
-            return mx.symbol.Reshape(memory_ele_sym, name=name, target_shape=(self.scale_num, 0,
+            return mx.symbol.Reshape(memory_ele_sym, name=name, shape=(self.scale_num, -1,
                                                             self.cf_handler.out_rows,
                                                             self.cf_handler.out_cols))
 
     def reshape_to_memory_ele(self, cf_sym, name=None):
         if name is None:
-            return mx.symbol.Reshape(cf_sym, target_shape=(1, 0,
+            return mx.symbol.Reshape(cf_sym, shape=(1, -1,
                                                     self.cf_handler.out_rows,
                                                     self.cf_handler.out_cols))
         else:
-            return mx.symbol.Reshape(cf_sym, name=name, target_shape=(1, 0,
+            return mx.symbol.Reshape(cf_sym, name=name, shape=(1, -1,
                                                     self.cf_handler.out_rows,
                                                     self.cf_handler.out_cols))
 
