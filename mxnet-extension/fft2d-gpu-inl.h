@@ -130,6 +130,7 @@ namespace mxnet {
         CHECK_EQ(out_grad.size(), 1);
         CHECK(in_data.size() == 1 && in_grad.size() == 1);
         CHECK_EQ(req.size(), 1);
+        CHECK_NE(req[fft2d::kData], kAddTo) << "AddTo not yet suported";
         Stream<xpu> *s = ctx.get_stream<xpu>();
         Tensor<xpu, 4> igrad = in_grad[fft2d::kData].get<xpu, 4, real_t>(s);
         Tensor<xpu, 4> ograd = out_grad[fft2d::kOut].get<xpu, 4, real_t>(s);
