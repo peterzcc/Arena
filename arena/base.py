@@ -109,12 +109,12 @@ class Base(object):
             output.wait_to_read()
         return exe.outputs
 
-    def backward(self, batch_size=None, data_shapes=None, **arg_dict):
+    def backward(self, out_grads=None, batch_size=None, data_shapes=None, **arg_dict):
         exe = self.executor_pool.get(batch_size=batch_size,
                                      data_shapes=data_shapes)
         for k, v in arg_dict.items():
             exe.arg_dict[k][:] = v
-        exe.backward()
+        exe.backward(out_grads=out_grads)
 
     def update(self, updater, params_grad=None):
         if params_grad is None:
