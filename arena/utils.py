@@ -69,6 +69,18 @@ def safe_eval(expr):
     else:
         return expr
 
+def norm_clipping(params_grad, threshold):
+    assert type(params_grad) in (dict, OrderedDict)
+    for grad in params_grad.values():
+        grad.wait_to_read()
+    norm_val = numpy.sqrt(sum([nd.sum(nd.square(grad)) for grad in params_grad.values()]))
+    print 'norm:', norm_val
+    ratio = 1.0
+    if norm_val > threshold:
+        ratio = threshold / norm_val
+        print 'ratio:', ratio
+    for grad in params_grad.values():
+        grad[:] *= ratio
 
 def block_all(sym_list):
     return [mx.symbol.BlockGrad(sym) for sym in sym_list]
