@@ -35,7 +35,7 @@ def policy_sym(action_num, output_op):
 
 
 def simple_game(data, action):
-    return (numpy.square(action - data*data).sum(axis=1) < 2)*1000 + \
+    return (numpy.square(action - data*data).sum(axis=1) < 2)*200 + \
            (numpy.square(action - data*data).sum(axis=1) < 10)*100 + 1
 
 
@@ -60,7 +60,9 @@ def test_lognormal():
     net_mean = mx.symbol.FullyConnected(data=net_mean, name='fc_mean_3', num_hidden=10)
     net_var = mx.symbol.FullyConnected(data=data, name='fc_var_1', num_hidden=10)
     net_var = mx.symbol.Activation(data=net_var, name='fc_var_softplus_1', act_type='softrelu')
-    net = mx.symbol.Custom(mean=net_mean, var=net_var, name='policy', deterministic=False, op_type='LogNormalPolicy')
+    net = mx.symbol.Custom(mean=net_mean, var=net_var, name='policy', deterministic=False,
+                           entropy_regularization=2.0,
+                           op_type='LogNormalPolicy')
     ctx = mx.gpu()
     minibatch_size = 100
     data_shapes = {'data': (minibatch_size, 10), 'policy_score': (minibatch_size,)} #, 'var':(minibatch_size,)}
@@ -70,7 +72,7 @@ def test_lognormal():
     print qnet.internal_sym_names
 
     lr = 0.00001
-    optimizer = mx.optimizer.create(name='sgd', learning_rate=0.00001,
+    optimizer = mx.optimizer.create(name='sgd', learning_rate=0.000001, momentum=0.9,
                                     clip_gradient=None,
                                     rescale_grad=1.0, wd=0.)
     updater = mx.optimizer.get_updater(optimizer)
