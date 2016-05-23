@@ -5,6 +5,7 @@ from arena import Base
 from arena.utils import *
 import matplotlib.pyplot as plt
 from arena.operators import *
+from mxnet.lr_scheduler import FactorScheduler
 
 
 '''
@@ -35,8 +36,8 @@ def policy_sym(action_num, output_op):
 
 
 def simple_game(data, action):
-    return (numpy.square(action - data*data).sum(axis=1) < 2)*200 + \
-           (numpy.square(action - data*data).sum(axis=1) < 10)*100 + 1
+    return (numpy.square(action - data*data).sum(axis=1) < 2)*2 + \
+           (numpy.square(action - data*data).sum(axis=1) < 10)*1
 
 
 def simple_game_discrete(data, action):
@@ -61,7 +62,7 @@ def test_lognormal():
     net_var = mx.symbol.FullyConnected(data=data, name='fc_var_1', num_hidden=10)
     net_var = mx.symbol.Activation(data=net_var, name='fc_var_softplus_1', act_type='softrelu')
     net = mx.symbol.Custom(mean=net_mean, var=net_var, name='policy', deterministic=False,
-                           entropy_regularization=2.0,
+                           entropy_regularization=0.01,
                            op_type='LogNormalPolicy')
     ctx = mx.gpu()
     minibatch_size = 100
@@ -71,9 +72,11 @@ def test_lognormal():
                 ctx=ctx)
     print qnet.internal_sym_names
 
-    lr = 0.00001
-    optimizer = mx.optimizer.create(name='sgd', learning_rate=0.000001, momentum=0.9,
+    lr = 0.001
+    lr_scheduler = FactorScheduler(1000, 1.0/1.5)
+    optimizer = mx.optimizer.create(name='sgd', learning_rate=lr, #momentum=0.9,
                                     clip_gradient=None,
+                                    lr_scheduler=lr_scheduler,
                                     rescale_grad=1.0, wd=0.)
     updater = mx.optimizer.get_updater(optimizer)
     total_iter = 1000000
@@ -93,11 +96,12 @@ def test_lognormal():
         outputs = qnet.forward(batch_size=minibatch_size, is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
         action = outputs[0].asnumpy()
         score = simple_game(data, action)
-        baseline = baseline - 0.001 * (baseline - score.mean())
+        baseline = baseline - 0.01 * (baseline - score.mean())
         print 'score=', score.mean(), 'err=', numpy.square(means - data*data).mean(), 'var=', vars.mean(), 'baseline=', baseline
         stats[i] = [score.mean(), numpy.square(means - data*data).mean(), vars.mean()]
         qnet.backward(batch_size=minibatch_size, policy_score=score-baseline)
         qnet.update(updater)
+        norm_clipping(qnet.params_grad, 5)
         update_line(lines, fig, ax, i, score.mean())#numpy.square(means - data*data).mean())
 
 def test_logsoftmax():
