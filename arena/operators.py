@@ -177,23 +177,14 @@ class LogNormalPolicy(mx.operator.CustomOp):
         grad_var = in_grad[1]
         self.assign(grad_mu, req[0], - (action - mean) * score.reshape((score.shape[0], 1)) * self.grad_scale / var)
         self.assign(grad_var, req[1], self.grad_scale *
-                    ((- nd.square(action - mean) / (2 * nd.square(var)) + 1.0 / (2 * var)) *
+                    ((- nd.square(action - mean) / (2.0 * nd.square(var)) + 1.0 / (2.0 * var)) *
                      score.reshape((score.shape[0], 1)) -
-                     numpy.float32(self.entropy_regularization) /(2.0 * var)))
-        # mean = in_data[0].asnumpy()
-        # var = in_data[1].asnumpy()
-        # action = out_data[0].asnumpy()
-        # score = in_data[2].asnumpy()
-        # grad_mu = in_grad[0]
-        # grad_var = in_grad[1]
-        # self.assign(grad_mu, req[0], nd.array(- (action - mean) * score.reshape((score.shape[0], 1)) / var))
-        # self.assign(grad_var, req[1], nd.array(- numpy.square(action - mean) * score.reshape((score.shape[0], 1)) \
-        #                   / numpy.square(var) / 2))
+                     numpy.float32(self.entropy_regularization) / (2.0 * var)))
 
 
 @mx.operator.register("LogNormalPolicy")
 class LogNormalPolicyProp(mx.operator.CustomOpProp):
-    def __init__(self, deterministic=0, implicit_backward=1, entropy_regularization=0.01, grad_scale=1.0):
+    def __init__(self, deterministic=0, implicit_backward=1, entropy_regularization=0.0, grad_scale=1.0):
         super(LogNormalPolicyProp, self).__init__(need_top_grad=False)
         self.deterministic = safe_eval(deterministic)
         self.implicit_backward = safe_eval(implicit_backward)
