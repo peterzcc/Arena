@@ -41,8 +41,7 @@ class VREPGame(Game):
         self.target_handle = None
         self.camera_handle = None
         self.target_neck = None
-        self.target_leftshoulder = None
-        self.target_rightshoulder = None
+        self.target_back = None
         self.target_leftfoot = None
         self.target_rightfoot = None
         # width by height ie column by row
@@ -67,15 +66,14 @@ class VREPGame(Game):
         self.target_coordinates = None
         # auxiliary variables used to compute self.target_coordinates
         self.target_neck_pos = None
-        self.target_leftshoulder_pos = None
-        self.target_rightshoulder_pos = None
+        self.target_back_pos = None
         self.target_leftfoot_pos = None
         self.target_rightfoot_pos = None
         # self.action_bounds = [4.8, 6.0]
         self.action_bounds = [4.583759, 6.501942]
         # bounding box coordinates and scale are normalized to range [0,1]
         # desired [cx, cy, height]
-        self.desire_goal = numpy.array([0.5, 0.5, 0.4])
+        self.desire_goal = numpy.array([0., 0., 0.4])
         self.desire_velocity = numpy.array([2, 2, 0])
 
         self.start()
@@ -84,11 +82,8 @@ class VREPGame(Game):
         states configuration: [linear_velocity_g, angular_velocity_g, target_coordinates]
         action: low-level motor command outputs, 4-dimensional motor velocities
         Note: in the future, we may want to directly use the raw camera image content as the state representation
-        1. test stability
-        2. test target following
-        for now, focus on 1.
         '''
-        self.replay_memory = ReplayMemory(state_dim=(6,),
+        self.replay_memory = ReplayMemory(state_dim=(6+3,),
                                           action_dim=(4,),
                                           state_dtype='float32', action_dtype='float32',
                                           history_length=history_length,
@@ -102,13 +97,14 @@ class VREPGame(Game):
             self.client_id, self.camera_handle, 0, vrep.simx_opmode_buffer)
         self.image = numpy.array(self.image).reshape((self.resolution[1], self.resolution[0], 3))
         self.image = numpy.flipud(self.image)
-        index = numpy.zeros(self.image.shape)
+        index = numpy.zeros(self.image.shape, dtype=self.image.dtype)
         index[self.image < 0] = 1
         self.image += 256 * index
+        self.image = self.image.transpose(2, 0, 1)
 
 
     def _read_vrep_data(self):
-        self._read_camera_image()
+        # self._read_camera_image()
         _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
             self.client_id, self.quadcopter_handle, vrep.simx_opmode_buffer)
         _, self.quadcopter_pos = vrep.simxGetObjectPosition(
@@ -132,10 +128,8 @@ class VREPGame(Game):
 
         _, self.target_neck_pos = vrep.simxGetObjectPosition(
             self.client_id, self.target_neck, self.camera_handle, vrep.simx_opmode_buffer)
-        _, self.target_leftshoulder_pos = vrep.simxGetObjectPosition(
-            self.client_id, self.target_leftshoulder, self.camera_handle, vrep.simx_opmode_buffer)
-        _, self.target_rightshoulder_pos = vrep.simxGetObjectPosition(
-            self.client_id, self.target_rightshoulder, self.camera_handle, vrep.simx_opmode_buffer)
+        _, self.target_back_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_back, self.camera_handle, vrep.simx_opmode_buffer)
         _, self.target_leftfoot_pos = vrep.simxGetObjectPosition(
             self.client_id, self.target_leftfoot, self.camera_handle, vrep.simx_opmode_buffer)
         _, self.target_rightfoot_pos = vrep.simxGetObjectPosition(
@@ -183,41 +177,25 @@ class VREPGame(Game):
         pos = numpy.array(self.resolution)/2 - pos * self.resolution
         return pos
 
-
     def _get_track_coordinates(self):
         # use built in APIs in V-REP to get the target position on the camera image
-        neck = self._transform_coordinates(self.target_neck_pos)
-        leftshoulder = self._transform_coordinates(self.target_leftshoulder_pos)
-        rightshoulder = self._transform_coordinates(self.target_rightshoulder_pos)
-        leftfoot = self._transform_coordinates(self.target_leftfoot_pos)
-        rightfoot = self._transform_coordinates(self.target_rightfoot_pos)
-        print 'neck:', neck
-        print 'shoulder:', leftshoulder, rightshoulder
-        print 'foot:', leftfoot, rightfoot
-        x1 = numpy.min([neck[0], leftshoulder[0], rightshoulder[0], leftfoot[0], rightfoot[0]])
-        y1 = numpy.min([neck[1], leftshoulder[1], rightshoulder[1], leftfoot[1], rightfoot[1]])
-        x2 = numpy.max([neck[0], leftshoulder[0], rightshoulder[0], leftfoot[0], rightfoot[0]])
-        y2 = numpy.max([neck[1], leftshoulder[1], rightshoulder[1], leftfoot[1], rightfoot[1]])
-        x1 = max(0, x1)
-        y1 = max(0, y1)
-        x2 = min(x2, self.resolution[0]-1)
-        y2 = min(y2, self.resolution[1]-1)
-        print 'xy:', x1, y1, x2, y2
-        w = x2 - x1 + 1
-        h = y2 - y1 + 1
-        cx = x1 + w/2
-        cy = y1 + h/2
-        self.target_coordinates = numpy.array([cx, cy, w, h])
-        print 'target:', self.target_coordinates
-        #self.target_coordinates = numpy.array([x1, y1, x2-x1, y2-y1])
+        # for scale, we only consider the height information and ignore the width
+        cx = self.target_back_pos[0] / self.target_back_pos[2]
+        y_top = self.target_neck_pos[1] / self.target_neck_pos[2]
+        y_bottom = (self.target_leftfoot_pos[1]/self.target_leftfoot_pos[2] +
+                    self.target_rightfoot_pos[1]/self.target_rightfoot_pos[2]) / 2.0
+        h = abs(y_bottom - y_top)
+        cy = (y_bottom + y_top) / 2.0
+        self.target_coordinates = numpy.array([cx, cy, h])
+        # print 'target:', self.target_coordinates
 
     def _get_reward(self):
         # compute an instant reward based on quadcopter orientation velocities, target tracking position
-        reward = 0.0
-        velocity = abs(numpy.array(self.linear_velocity_b))
-        velocity_reward = numpy.exp(-numpy.sum((velocity - self.desire_velocity)**2))
-        reward += velocity_reward
-
+        # reward = 0.0
+        # velocity = abs(numpy.array(self.linear_velocity_b))
+        # velocity_reward = numpy.exp(-numpy.sum((velocity - self.desire_velocity)**2))
+        # reward += velocity_reward
+        reward = numpy.exp(-numpy.sum((self.target_coordinates - self.desire_goal)**2))
         # maintain velocity, x,y [0, 1], z [0, 0.25]
         # velocity = abs(numpy.array(self.linear_velocity_b))
         # velocity_clip = numpy.clip(velocity, 0, [1, 1, 0.25])
@@ -246,11 +224,6 @@ class VREPGame(Game):
         # angle_reward = numpy.sum((1 - angle_cross) * [1, 1, 0]) - numpy.sum(numpy.array([1, 1, 0]) * angle_cross)
         # reward = velocity_reward + height_reward + angular_reward + angle_reward
 
-        # width = self.resolution[0]
-        # height = self.resolution[1]
-        # # define a center area where we should keep the target in
-        # center_area = numpy.round([width*0.5, height*0.7, width*0.35, height*0.35])
-        # TODO tracking position part
         return reward
 
     def start(self):
@@ -271,15 +244,13 @@ class VREPGame(Game):
         _, self.camera_handle = vrep.simxGetObjectHandle(
             self.client_id, 'Quadricopter_frontSensor', vrep.simx_opmode_oneshot_wait)
         _, self.target_neck = vrep.simxGetObjectHandle(
-            self.client_id, 'Bill_neck', vrep.simx_opmode_oneshot_wait)
-        _, self.target_leftshoulder = vrep.simxGetObjectHandle(
-            self.client_id, 'Bill_leftShoulderJoint', vrep.simx_opmode_oneshot_wait)
-        _, self.target_rightshoulder = vrep.simxGetObjectHandle(
-            self.client_id, 'Bill_rightShoulderJoint', vrep.simx_opmode_oneshot_wait)
+            self.client_id, 'Mark_Head', vrep.simx_opmode_oneshot_wait)
+        _, self.target_back = vrep.simxGetObjectHandle(
+            self.client_id, 'Mark_Back', vrep.simx_opmode_oneshot_wait)
         _, self.target_leftfoot = vrep.simxGetObjectHandle(
-            self.client_id, 'Bill_leftAnkleJoint', vrep.simx_opmode_oneshot_wait)
+            self.client_id, 'Mark_LeftFoot', vrep.simx_opmode_oneshot_wait)
         _, self.target_rightfoot = vrep.simxGetObjectHandle(
-            self.client_id, 'Bill_rightAnkleJoint', vrep.simx_opmode_oneshot_wait)
+            self.client_id, 'Mark_RightFoot', vrep.simx_opmode_oneshot_wait)
 
         # start the simulation, in blocking mode
         vrep.simxStartSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
@@ -306,10 +277,8 @@ class VREPGame(Game):
 
         _, self.target_neck_pos = vrep.simxGetObjectPosition(
             self.client_id, self.target_neck, self.camera_handle, vrep.simx_opmode_streaming)
-        _, self.target_leftshoulder_pos = vrep.simxGetObjectPosition(
-            self.client_id, self.target_leftshoulder, self.camera_handle, vrep.simx_opmode_streaming)
-        _, self.target_rightshoulder_pos = vrep.simxGetObjectPosition(
-            self.client_id, self.target_rightshoulder, self.camera_handle, vrep.simx_opmode_streaming)
+        _, self.target_back_pos = vrep.simxGetObjectPosition(
+            self.client_id, self.target_back, self.camera_handle, vrep.simx_opmode_streaming)
         _, self.target_leftfoot_pos = vrep.simxGetObjectPosition(
             self.client_id, self.target_leftfoot, self.camera_handle, vrep.simx_opmode_streaming)
         _, self.target_rightfoot_pos = vrep.simxGetObjectPosition(
@@ -367,10 +336,14 @@ class VREPGame(Game):
             or abs(self.angular_velocity_b[1]) >= 1
             or abs(self.quadcopter_orientation[0]) >= 1
             or abs(self.quadcopter_orientation[1]) >= 1
+            or abs(self.target_coordinates[0]) > 0.5
+            or abs(self.target_coordinates[1]) > 0.5
                                           )
 
     def get_observation(self):
-        return numpy.array(self.linear_velocity_b.tolist() + self.angular_velocity_b, dtype='float32')
+        return numpy.array(self.linear_velocity_b.tolist() +
+                           self.angular_velocity_b +
+                           self.target_coordinates.tolist(), dtype='float32')
         # return numpy.array(self.linear_velocity_b.tolist() + self.angular_velocity_b + self.quadcopter_orientation[0:2], dtype='float32')
 
     @property
