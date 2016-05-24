@@ -5,6 +5,7 @@ import numpy
 import json
 import re
 from collections import namedtuple, OrderedDict
+import scipy.signal
 
 ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['data_shapes_items', 'sym_name'])
 ExecutorPoolKey.__new__.__defaults__ = (None, None)
@@ -73,6 +74,15 @@ def load_misc(dir_path="", epoch=None, name=""):
     with open(misc_saving_path, 'r') as fp:
         misc = json.load(fp)
     return misc
+
+def discount_cumsum(x, discount):
+    # See https://docs.scipy.org/doc/scipy/reference/tutorial/signal.html#difference-equation-filtering
+    # Here, we have y[t] - discount*y[t+1] = x[t]
+    # or rev(y)[t] - discount*rev(y)[t-1] = rev(x)[t]
+    return scipy.signal.lfilter([1], [1, -discount], x[::-1], axis=0)[::-1]
+
+def discount_return(x, discount):
+    return numpy.sum(x * (discount ** numpy.arange(len(x))))
 
 
 def update_on_kvstore(kv, params, params_grad):
