@@ -134,7 +134,7 @@ namespace mxnet {
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ out_grad[sum_channel::kOut], out_data[sum_channel::kOut] };
+        return{ };
       }
 
       Operator* CreateOperator(Context ctx) const override;

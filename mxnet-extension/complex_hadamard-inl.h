@@ -132,7 +132,7 @@ namespace mxnet {
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ out_data[complex_hadamard::kOut] };
+        return{ };
       }
 
       Operator* CreateOperator(Context ctx) const override;

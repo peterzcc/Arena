@@ -17,9 +17,36 @@
 #include <vector>
 #include <string>
 #include <utility>
-
-
 #include <cufft.h>
+
+#define FFT_CUDA_CHECK(condition) \
+  /* Code block avoids redefinition of cudaError_t error */ \
+  do { \
+    cudaError_t error = condition; \
+    CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
+    } while (0)
+
+#define kFFTMaxThreadsPerBlock 1024
+#define kFFTMaxGridNum 65535
+
+/* TODO Use cufftXtSetCallback() */
+template<typename Dtype>
+__global__ void RescaleRFFTOutGradKernel(const int count, Dtype* out_grad, const int width, const bool is_odd) {
+  int end = width;
+  if (!is_odd){
+    end -= 2;
+  }
+  for (int index = int(blockIdx.x) * int(blockDim.x) + int(threadIdx.x);
+    index < count;
+    index += int(blockDim.x) * int(gridDim.x)) {
+    // (n, c, h, w) coords in bottom data
+    int w = index % width;
+    if (w >= 2 && w < end){
+      out_grad[index] /= 2;
+    }
+  }
+}
+
 namespace mxnet {
   namespace op {
     // Declare enumeration of input order to make code more intuitive.
@@ -30,7 +57,10 @@ namespace mxnet {
     }  // fft2d
 
     struct FFT2DParam : public dmlc::Parameter<FFT2DParam> {
+      uint32_t batchsize;
       DMLC_DECLARE_PARAMETER(FFT2DParam) {
+        DMLC_DECLARE_FIELD(batchsize).set_default(32).set_range(1, 256)
+        .describe("Batchsize of the cuda operator.");
       }
     };
 
@@ -42,13 +72,19 @@ namespace mxnet {
     class FFT2DOp : public Operator {
     public:
       explicit FFT2DOp(FFT2DParam p) {
-        this->init_cufft_ = false;
+        this->init_forward_cufft_ = false;
+        this->init_backward_cufft_ = false;
         this->param_ = p;
       }
 
       ~FFT2DOp() {
-        if (init_cufft_) {
-          CHECK_EQ(cufftDestroy(plan), CUFFT_SUCCESS);
+        if (init_forward_cufft_) {
+          init_forward_cufft_ = false;
+          CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
+        }
+        if (init_backward_cufft_) {
+          init_backward_cufft_ = false;
+          CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
         }
       }
 
@@ -67,10 +103,19 @@ namespace mxnet {
         Tensor<xpu, 4> out = out_data[fft2d::kOut].get<xpu, 4, real_t>(s);
         CHECK_EQ(data.CheckContiguous(), true);
         CHECK_EQ(out.CheckContiguous(), true);
-        if (!init_cufft_) {
-          Init(s, in_data, out_data);
+        if (!init_forward_cufft_) {
+          Init(data.shape_[0], data.shape_[1], data.shape_[2], data.shape_[3], 0);
         }
-        CHECK_EQ(cufftExecR2C(plan, (cufftReal*)data.dptr_, (cufftComplex*)out.dptr_), CUFFT_SUCCESS);
+        CHECK(0 == (data.shape_[0] * data.shape_[1]) % param_.batchsize);
+        for (index_t i = 0; i < data.shape_[0] * data.shape_[1]; i += param_.batchsize) {
+          CHECK_EQ(cufftExecR2C(forward_plan, (cufftReal*)(data.dptr_ + i * data.shape_[2] * data.shape_[3]), 
+            (cufftComplex*)(out.dptr_ + i * out.shape_[2] * out.shape_[3])), CUFFT_SUCCESS);
+        }
+        if (init_forward_cufft_) {
+          CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
+          init_forward_cufft_ = false;
+        }
+        
       }
 
       virtual void Backward(const OpContext &ctx,
@@ -85,25 +130,60 @@ namespace mxnet {
         CHECK_EQ(out_grad.size(), 1);
         CHECK(in_data.size() == 1 && in_grad.size() == 1);
         CHECK_EQ(req.size(), 1);
-        // LOG(FATAL) << "Backward not implemented yet!";
+        CHECK_NE(req[fft2d::kData], kAddTo) << "AddTo not yet suported";
+        Stream<xpu> *s = ctx.get_stream<xpu>();
+        Tensor<xpu, 4> igrad = in_grad[fft2d::kData].get<xpu, 4, real_t>(s);
+        Tensor<xpu, 4> ograd = out_grad[fft2d::kOut].get<xpu, 4, real_t>(s);
+        CHECK_EQ(igrad.CheckContiguous(), true);
+        CHECK_EQ(ograd.CheckContiguous(), true);
+        if (!init_backward_cufft_) {
+          Init(igrad.shape_[0], igrad.shape_[1], igrad.shape_[2], igrad.shape_[3], 1);
+        }
+        #if defined(__CUDACC__)
+        const int count = ograd.shape_.Size();
+        const int gridSize = (count + kFFTMaxThreadsPerBlock - 1) / kFFTMaxThreadsPerBlock;
+        dim3 dimGrid(kFFTMaxGridNum, (gridSize + kFFTMaxGridNum - 1) / kFFTMaxGridNum);
+        dim3 dimBlock(kFFTMaxThreadsPerBlock);
+        cudaStream_t stream = Stream<gpu>::GetStream(ograd.stream_);
+        //CheckLaunchParam(dimGrid, dimBlock, "RFFT2D Backward");
+        RescaleRFFTOutGradKernel<real_t> <<<dimGrid, dimBlock, 0, stream >>>(count, ograd.dptr_, ograd.shape_[3], igrad.shape_[3]%2);
+        FFT_CUDA_CHECK(cudaPeekAtLastError());
+        #endif
+        CHECK(0 == (igrad.shape_[0] * igrad.shape_[1]) % param_.batchsize);
+        for (int i = 0; i < igrad.shape_[0] * igrad.shape_[1]; i += param_.batchsize) {
+          CHECK_EQ(cufftExecC2R(backward_plan, (cufftComplex*)(ograd.dptr_ + i * ograd.shape_[2] * ograd.shape_[3]),
+            (cufftReal*)(igrad.dptr_ + i * igrad.shape_[2] * igrad.shape_[3])), CUFFT_SUCCESS);
+        }
+        if (init_backward_cufft_) {
+          CHECK_EQ(cufftDestroy(backward_plan), CUFFT_SUCCESS);
+          init_backward_cufft_ = false;
+        }
       }
 
     private:
-      inline void Init(mshadow::Stream<xpu> *s,
-        const std::vector<TBlob> &in_data,
-        const std::vector<TBlob> &out_data) {
+      inline void Init(int num, int channel, int rows, int cols, int typ) {
         using namespace mshadow;
         using namespace mshadow::expr;
-        Tensor<xpu, 4> data = in_data[fft2d::kData].get<xpu, 4, real_t>(s);
-        Tensor<xpu, 4> out = out_data[fft2d::kOut].get<xpu, 4, real_t>(s);
-        int n[2] = { data.shape_[2], data.shape_[3] };
+        int n[2] = { rows, cols };
         // TODO This part may be memory-consuming
-        CHECK_EQ(cufftPlanMany(&plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_R2C, data.shape_[0] * data.shape_[1]), CUFFT_SUCCESS);
-        init_cufft_ = true;
+        if (num * channel < param_.batchsize) {
+          param_.batchsize = num * channel;
+        }
+        if (0 == typ) {
+          CHECK_EQ(cufftPlanMany(&forward_plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_R2C, param_.batchsize), CUFFT_SUCCESS);
+          init_forward_cufft_ = true;
+        }
+        else {
+          CHECK_EQ(cufftPlanMany(&backward_plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_C2R, param_.batchsize), CUFFT_SUCCESS);
+          init_backward_cufft_ = true;
+        }
+        
       }
       FFT2DParam param_;
-      bool init_cufft_;
-      cufftHandle plan;
+      bool init_forward_cufft_;
+      bool init_backward_cufft_;
+      cufftHandle forward_plan;
+      cufftHandle backward_plan;
     };  // class FFTOp
 
     // Decalre Factory function, used for dispatch specialization
@@ -128,6 +208,9 @@ namespace mxnet {
         CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
         const TShape &dshape = in_shape->at(fft2d::kData);
         if (dshape.ndim() == 0) return false;
+        CHECK(0 == (dshape[0] * dshape[1]) % param_.batchsize || dshape[0] * dshape[1] < param_.batchsize) 
+          << "In FFT2D, the dim[0] * dim[1] must be smaller than or be divide by batchsize. dim[0] = " << dshape[0] << ", dim[1] = " 
+          << dshape[1] << ", batchsize = " << param_.batchsize;
         TShape oshape = dshape;
         oshape[3] = (dshape[3] / 2 + 1) * 2;
         out_shape->clear();
@@ -150,7 +233,7 @@ namespace mxnet {
         const std::vector<int> &out_grad,
         const std::vector<int> &in_data,
         const std::vector<int> &out_data) const override {
-        return{ out_data[fft2d::kOut] };
+        return{ out_grad[fft2d::kOut] };
       }
 
       Operator* CreateOperator(Context ctx) const override;

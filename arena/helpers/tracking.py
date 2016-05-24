@@ -12,16 +12,37 @@ def get_roi_center_size(roi):
     roi_size = roi[1]
     return roi_center, roi_size
 
+'''
+Name: roi_transform
+Description: Transform the roi based on the anchor
 
-def roi_transform(anchor_roi, roi):
+new_cx = (cx - anchor_cx) / anchor_sx
+new_cy = (cy - anchor_cy) / anchor_sy
+new_sx = log(sx/anchor_sx)
+new_sy = log(sy/anchor_sy)
+
+'''
+
+def roi_transform(anchor_roi, roi, eps=1E-9):
     anchor_center, anchor_size = get_roi_center_size(anchor_roi)
     roi_center, roi_size = get_roi_center_size(roi)
-    transformed_center = (roi_center - anchor_center) / anchor_size
-    transformed_size = mx.symbol.log(roi_size / anchor_size)
+    transformed_center = (roi_center - anchor_center) / (anchor_size + eps)
+    transformed_size = mx.symbol.log((roi_size + eps) / (anchor_size + eps))
     transformed_center = mx.symbol.BlockGrad(transformed_center)
     transformed_size = mx.symbol.BlockGrad(transformed_size)
     return transformed_center, transformed_size
 
+
+'''
+Name: roi_transform_inv
+Description: Transform back the roi based on the anchor. The result will be clipped to [0, 1] after the transformation
+
+cx = anchor_cx + transformation_cx * anchor_sx
+cy = anchor_cy + transformation_cy * anchor_sy
+sx = exp(transformation_sx) * anchor_sx
+sy = exp(transformation_sy) * anchor_sy
+
+'''
 
 def roi_transform_inv(anchor_roi, transformed_roi):
     anchor_center, anchor_size = get_roi_center_size(anchor_roi)
@@ -29,7 +50,7 @@ def roi_transform_inv(anchor_roi, transformed_roi):
     roi_center = anchor_center + transformed_roi_center * anchor_size
     roi_size = mx.symbol.exp(transformed_roi_size) * anchor_size
     roi_center = mx.symbol.clip_zero_one(roi_center)
-    roi_size = mx.symbol.clip_zero_one(roi_size)
+    roi_size = mx.symbol.clip_zero_one((roi_size - 0.001)/0.999) * 0.999 + 0.001
     roi_center = mx.symbol.BlockGrad(roi_center)
     roi_size = mx.symbol.BlockGrad(roi_size)
     return roi_center, roi_size
@@ -37,6 +58,12 @@ def roi_transform_inv(anchor_roi, transformed_roi):
 
 def get_timestamp(key):
     l = re.findall('_t(\d+)', key)
+    assert len(l) == 1
+    return int(l[0])
+
+
+def get_attention_step(key):
+    l = re.findall('_step(\d+)', key)
     assert len(l) == 1
     return int(l[0])
 
