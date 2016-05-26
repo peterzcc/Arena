@@ -75,7 +75,7 @@ def norm_clipping(params_grad, threshold):
     for grad in params_grad.values():
         grad.wait_to_read()
     norm_val = numpy.sqrt(sum([nd.sum(nd.square(grad)) for grad in params_grad.values()]))
-    # print 'norm:', norm_val
+    print 'grad norm:', norm_val
     ratio = 1.0
     if norm_val > threshold:
         ratio = threshold / norm_val
