@@ -134,6 +134,7 @@ def mog_backward_test(batch_size=5, num_centers=11, sample_dim=33):
     print 'prob_grad_diff:', numpy.square(op_prob_grad - fd_prob_grad).sum()
     print 'mean_grad_diff:', numpy.square(op_mean_grad - fd_mean_grad).sum()
     print 'var_grad_diff:', numpy.square(op_var_grad - fd_var_grad).sum()
+#mog_sample_test()
 mog_backward_test(batch_size=5, num_centers=11, sample_dim=33)
 mog_backward_test(batch_size=4, num_centers=8, sample_dim=33)
 mog_backward_test(batch_size=5, num_centers=11, sample_dim=64)
