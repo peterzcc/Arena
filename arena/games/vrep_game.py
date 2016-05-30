@@ -232,6 +232,7 @@ class VREPGame(Game):
         return reward
 
     def start(self):
+
         # get object handles
         _, self.quadcopter_handle = vrep.simxGetObjectHandle(
             self.client_id, 'Quadricopter_base',vrep.simx_opmode_oneshot_wait)
