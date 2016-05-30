@@ -36,9 +36,16 @@ def policy_sym(action_num, output_op):
 
 
 def simple_game(data, action):
-    return (numpy.square(action - data*data).sum(axis=1) < 2)*2 + \
+    return (numpy.square(action - data*data).sum(axis=1) < 2)*1 + \
            (numpy.square(action - data*data).sum(axis=1) < 10)*1
 
+
+def simple_game_multimodal(data, action, modal_num = 5):
+    ret = numpy.zeros(data.shape[0], dtype=numpy.float32)
+    for flag in range(modal_num):
+        ret += ((numpy.square(action - (flag + 1 ) * (data*data + flag *data)).sum(axis=1) < 2)*1 + \
+           (numpy.square(action - (flag + 1 ) * (data*data + flag *data)).sum(axis=1) < 10)*1)*(flag + 1)/float(modal_num)
+    return ret
 
 def simple_game_discrete(data, action):
     return (action == numpy.argmax(data*data, axis=1)) * 100 + 1
@@ -95,14 +102,15 @@ def test_lognormal():
 
         outputs = qnet.forward(batch_size=minibatch_size, is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
         action = outputs[0].asnumpy()
-        score = simple_game(data, action)
+        score = simple_game_multimodal(data, action, 1)
         baseline = baseline - 0.01 * (baseline - score.mean())
         print 'score=', score.mean(), 'err=', numpy.square(means - data*data).mean(), 'var=', vars.mean(), 'baseline=', baseline
         stats[i] = [score.mean(), numpy.square(means - data*data).mean(), vars.mean()]
         qnet.backward(batch_size=minibatch_size, policy_score=score-baseline)
         qnet.update(updater)
         norm_clipping(qnet.params_grad, 5)
-        update_line(lines, fig, ax, i, score.mean())#numpy.square(means - data*data).mean())
+        if i%10 == 0:
+            update_line(lines, fig, ax, i, score.mean())#numpy.square(means - data*data).mean())
 
 def test_logsoftmax():
     var = mx.symbol.Variable('var')
@@ -147,5 +155,67 @@ def test_logsoftmax():
         qnet.backward(batch_size=minibatch_size, policy_score=score - baseline)
         qnet.update(updater)
         update_line(lines, fig, ax, i, score.mean())  # numpy.square(means - data*data).mean())
-test_lognormal()
+
+def test_logmog():
+    center_num = 5
+    var = mx.symbol.Variable('var')
+    data = mx.symbol.Variable('data')
+    net_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_1', num_hidden=20)
+    net_mean = mx.symbol.Activation(data=net_mean, name='fc_mean_relu_1', act_type='relu')
+    net_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_2', num_hidden=20)
+    net_mean = mx.symbol.Activation(data=net_mean, name='fc_mean_relu_2', act_type='relu')
+    net_mean = mx.symbol.FullyConnected(data=net_mean, name='fc_mean_3', num_hidden=10*center_num)
+    net_mean = mx.symbol.Reshape(data=net_mean, name='fc_mean_3_reshape', shape=(0, center_num, 10))
+    net_var = mx.symbol.FullyConnected(data=data, name='fc_var_1', num_hidden=10*center_num)
+    net_var = mx.symbol.Reshape(data=net_var, name='fc_var_1_reshape', shape=(0, center_num, 10))
+    net_var = mx.symbol.Activation(data=net_var, name='fc_var_softplus_1', act_type='softrelu')
+    net_prob = mx.symbol.FullyConnected(data=data, name='fc_prob_1', num_hidden=center_num)
+    net_prob = mx.symbol.SoftmaxActivation(data=net_prob, name='fc_prob_softmax')
+    net = mx.symbol.Custom(prob=net_prob, mean=net_mean, var=net_var, name='policy', deterministic=False,
+                           op_type='LogMoGPolicy')
+    ctx = mx.gpu()
+    minibatch_size = 100
+    data_shapes = {'data': (minibatch_size, 10), 'policy_score': (minibatch_size,)} #, 'var':(minibatch_size,)}
+    qnet = Base(data_shapes=data_shapes, sym=net, name='PolicyNet',
+                initializer=mx.initializer.Xavier(factor_type="in", magnitude=1.0),
+                ctx=ctx)
+    print qnet.internal_sym_names
+
+    lr = 0.005
+    lr_scheduler = FactorScheduler(1000, 1.0/1.5)
+    optimizer = mx.optimizer.create(name='sgd', learning_rate=lr, #momentum=0.9,
+                                    clip_gradient=None,
+                                    lr_scheduler=lr_scheduler,
+                                    rescale_grad=1.0, wd=0.)
+    updater = mx.optimizer.get_updater(optimizer)
+    total_iter = 1000000
+    stats = numpy.zeros((total_iter, 3), dtype=numpy.float32)
+    plt.ion()
+    fig, ax = plt.subplots()
+    lines, = ax.plot([], [])
+    ax.set_autoscaley_on(True)
+    baseline = 0
+    for i in range(total_iter):
+    #    for k, v in qnet.params.items():
+    #        print k, v.asnumpy()
+        data = numpy.random.randn(minibatch_size, 10)
+        mean_npy = qnet.forward(batch_size=minibatch_size, sym_name="fc_mean_3_reshape_output", data=data)[0].asnumpy()
+        var_npy = qnet.forward(batch_size=minibatch_size, sym_name="fc_var_softplus_1_output", data=data)[0].asnumpy()
+        prob_npy = qnet.forward(batch_size=minibatch_size, sym_name="fc_prob_softmax_output", data=data)[0].asnumpy()
+        outputs = qnet.forward(batch_size=minibatch_size, is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
+        action = outputs[0].asnumpy()
+        score = simple_game_multimodal(data, action, 5)
+        baseline = baseline - 0.01 * (baseline - score.mean())
+        chosen_mean = mean_npy[numpy.arange(mean_npy.shape[0]), numpy.argmax(prob_npy, axis=1), :]
+        print 'score=', score.mean(), 'err=', numpy.square(chosen_mean - data*data).mean(), 'var=', var_npy.mean(), 'baseline=', baseline
+        print 'prob=', prob_npy
+        stats[i] = [score.mean(), numpy.square(chosen_mean - data*data).mean(), var_npy.mean()]
+        qnet.backward(batch_size=minibatch_size, policy_score=score-baseline)
+        qnet.update(updater)
+        norm_clipping(qnet.params_grad, 5)
+        if i % 10 == 0:
+            update_line(lines, fig, ax, i, score.mean())#numpy.square(means - data*data).mean())
+
+#test_lognormal()
 #test_logsoftmax()
+test_logmog()

@@ -16,7 +16,7 @@ namespace expr {
           Also, zero padding is used if the ROI goes outside the boundary.
  * \tparam SrcExp type of source tensor expression, shape: (N, C, H, W) 
  * \tparam ROIExp type of ROI matrix expression, shape: (N_R, 5) or (N, 4). If each roi has 5 elements, these elements are (batch_ind, cx, cy, sx, sy). 
-                  Otherwise, the elements are (cx, cy, sx, sy). All the cx,cy,sx,sy are noramlized to be between (0.0, 1.0)
+                  Otherwise, the elements are (cx, cy, sx, sy). All the cx,cy,sx,sy are normalized to be between (0.0, 1.0)
  * \tparam DType the content data type
  */
 template<typename SrcExp, typename ROIExp, typename DType>
