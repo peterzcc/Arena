@@ -36,7 +36,6 @@ class VREPGame(Game):
         self.remote_port = remote_port
 
         # members about the vrep environment
-        self.client_id = -1
         self.quadcopter_handle = None
         self.target_handle = None
         self.camera_handle = None
@@ -76,6 +75,12 @@ class VREPGame(Game):
         self.desire_goal = numpy.array([0., 0., 0.4])
         self.desire_velocity = numpy.array([2, 2, 0])
 
+        self.client_id = vrep.simxStart('127.0.0.1', self.remote_port, True, True, 5000, 5)
+        if self.client_id == -1:
+            raise ValueError("Failed connecting to remote API server")
+        # enable the synchronous mode on the client
+        vrep.simxSynchronous(self.client_id, True)
+
         self.start()
 
         '''
@@ -104,7 +109,7 @@ class VREPGame(Game):
 
 
     def _read_vrep_data(self):
-        # self._read_camera_image()
+        self._read_camera_image()
         _, self.linear_velocity_g, self.angular_velocity_g = vrep.simxGetObjectVelocity(
             self.client_id, self.quadcopter_handle, vrep.simx_opmode_buffer)
         _, self.quadcopter_pos = vrep.simxGetObjectPosition(
@@ -227,15 +232,6 @@ class VREPGame(Game):
         return reward
 
     def start(self):
-        if self.client_id != -1:
-            vrep.simxFinish(self.client_id)  # just in case, close all opened connections
-        self.client_id = vrep.simxStart('127.0.0.1', self.remote_port, True, True, 5000, 5)
-        if self.client_id == -1:
-            print "Failed connecting to remote API server"
-            exit(0)
-        # enable the synchronous mode on the client
-        vrep.simxSynchronous(self.client_id, True)
-
         # get object handles
         _, self.quadcopter_handle = vrep.simxGetObjectHandle(
             self.client_id, 'Quadricopter_base',vrep.simx_opmode_oneshot_wait)
