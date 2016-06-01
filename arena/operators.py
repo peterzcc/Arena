@@ -157,8 +157,10 @@ class LogNormalPolicy(mx.operator.CustomOp):
         self.assign(out_data[2], req[2], var)
         if self.deterministic == True:
             self.assign(out_data[0], req[0], mean)
+            # self.assign(out_data[0], req[0], nd.array(mean))
         else:
-            self.assign(out_data[0], req[0], nd.array(sample_normal(mean=mean, var=var, rng=get_numpy_rng())))
+            # self.assign(out_data[0], req[0], mean + nd.sqrt(var) * mx.random.normal(0, 1, shape=mean.shape,ctx=mean.context))
+            self.assign(out_data[0], req[0], nd.array(sample_normal(mean=mean.asnumpy(), var=var.asnumpy(), rng=get_numpy_rng())))
         # TODO(sxjscience) There seems to be some problems when I try to use `mx.random.normal`
         # mean = in_data[0]
         # var = in_data[1]
@@ -172,7 +174,7 @@ class LogNormalPolicy(mx.operator.CustomOp):
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         mean = in_data[0]
         var = in_data[1]
-        if self.implicit_backward:
+        if self.implicit_backward == True:
             action = out_data[0]
         else:
             action = in_data[3]
@@ -196,7 +198,7 @@ class LogNormalPolicyProp(mx.operator.CustomOpProp):
         self.grad_scale = grad_scale
 
     def list_arguments(self):
-        if self.implicit_backward:
+        if self.implicit_backward == True:
             return ['mean', 'var', 'score']
         else:
             return ['mean', 'var', 'score', 'backward_action']
@@ -209,7 +211,7 @@ class LogNormalPolicyProp(mx.operator.CustomOpProp):
         var_shape = in_shape[1]
         score_shape = (in_shape[0][0],)
         output_shape = in_shape[0]
-        if self.implicit_backward:
+        if self.implicit_backward == True:
             return [mean_shape, var_shape, score_shape], [output_shape, mean_shape, var_shape], []
         else:
             backward_action_shape = in_shape[0]
