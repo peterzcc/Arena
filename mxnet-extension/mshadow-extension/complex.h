@@ -73,6 +73,15 @@ namespace op {
         return real_val * real_val + image_val * image_val;
       }
     };
+    struct sum_real_imag{
+      template<typename TA, typename DType>
+      MSHADOW_XINLINE static DType RealMap(const expr::Plan<TA, DType> &src_,
+        index_t real_i, index_t real_j, index_t imag_i, index_t imag_j) {
+        DType real_val = src_.Eval(real_i, real_j);
+        DType image_val = src_.Eval(imag_i, imag_j);
+        return real_val + image_val;
+      }
+    };
   }
 }
 
@@ -162,7 +171,7 @@ complex_exchange(const Exp<SrcExp, DType, e1> &src) {
 }
 
 /*!
-* \brief complex_abs calculate the modulus of A where A is a complex tensor
+* \brief complex_abs_square calculate the square of the modulus of A where A is a complex tensor
 * \param src source tensor
 * \tparam e1 type of source expression
 */
@@ -173,6 +182,12 @@ complex_abs_square(const Exp<SrcExp, DType, e1> &src) {
   return ComplexF<op::complex::kUnitaryC2R, op::complex::abs_square>(src);
 }
 
+template<typename SrcExp, typename DType, int e1>
+inline ComplexUnitaryExp<op::complex::kUnitaryC2R, op::complex::sum_real_imag,
+  SrcExp, DType, (e1 | type::kMapper)>
+complex_sum_real_imag(const Exp<SrcExp, DType, e1> &src) {
+  return ComplexF<op::complex::kUnitaryC2R, op::complex::sum_real_imag>(src);
+}
 
 template<int dim, int calctype, typename OP, typename TA, typename TB,
   typename DType, int etype>
