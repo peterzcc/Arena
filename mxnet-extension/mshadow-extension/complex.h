@@ -17,23 +17,60 @@ namespace op {
     struct mul{
       /*! \brief map a_real, a_imag, b_real, b_imag to result using defined operation */
       template<typename DType>
-      MSHADOW_XINLINE static DType RealMap(DType a_real, DType a_imag, DType b_real, DType b_imag) {
+      MSHADOW_XINLINE static DType RealMap(DType a_real, DType a_imag,
+        DType b_real, DType b_imag) {
         return a_real * b_real - a_imag * b_imag;
       }
       template<typename DType>
-      MSHADOW_XINLINE static DType ImagMap(DType a_real, DType a_imag, DType b_real, DType b_imag) {
+      MSHADOW_XINLINE static DType ImagMap(DType a_real, DType a_imag,
+        DType b_real, DType b_imag) {
         return a_real * b_imag + b_real * a_imag;
       }
     };
     struct div{
       /*! \brief map a_real, a_imag, b_real, b_imag to result using defined operation */
       template<typename DType>
-      MSHADOW_XINLINE static DType RealMap(DType a_real, DType a_imag, DType b_real, DType b_imag) {
+      MSHADOW_XINLINE static DType RealMap(DType a_real, DType a_imag,
+        DType b_real, DType b_imag) {
         return (a_real * b_real + a_imag * b_imag) / (b_real * b_real + b_imag * b_imag);
       }
       template<typename DType>
-      MSHADOW_XINLINE static DType ImagMap(DType a_real, DType a_imag, DType b_real, DType b_imag) {
+      MSHADOW_XINLINE static DType ImagMap(DType a_real, DType a_imag,
+        DType b_real, DType b_imag) {
         return (b_real * a_imag - a_real * b_imag) / (b_real * b_real + b_imag * b_imag);
+      }
+    };
+    struct conjugate{
+      template<typename TA, typename DType>
+      MSHADOW_XINLINE static DType RealMap(const expr::Plan<TA, DType> &src_,
+        index_t real_i, index_t real_j, index_t imag_i, index_t imag_j) {
+        return src_.Eval(real_i, real_j);
+      }
+      template<typename TA, typename DType>
+      MSHADOW_XINLINE static DType ImagMap(const expr::Plan<TA, DType> &src_,
+        index_t real_i, index_t real_j, index_t imag_i, index_t imag_j) {
+        return -src_.Eval(imag_i, imag_j);
+      }
+    };
+    struct exchange{
+      template<typename TA, typename DType>
+      MSHADOW_XINLINE static DType RealMap(const expr::Plan<TA, DType> &src_,
+        index_t real_i, index_t real_j, index_t imag_i, index_t imag_j) {
+        return src_.Eval(imag_i, imag_j);
+      }
+      template<typename TA, typename DType>
+      MSHADOW_XINLINE static DType ImagMap(const expr::Plan<TA, DType> &src_,
+        index_t real_i, index_t real_j, index_t imag_i, index_t imag_j) {
+        return src_.Eval(real_i, real_j);
+      }
+    };
+    struct abs_square{
+      template<typename TA, typename DType>
+      MSHADOW_XINLINE static DType RealMap(const expr::Plan<TA, DType> &src_,
+        index_t real_i, index_t real_j, index_t imag_i, index_t imag_j) {
+        DType real_val = src_.Eval(real_i, real_j);
+        DType image_val = src_.Eval(imag_i, imag_j);
+        return real_val * real_val + image_val * image_val;
       }
     };
   }
@@ -71,47 +108,13 @@ struct ComplexBinaryMapExp : public Exp<ComplexBinaryMapExp<calctype, OP, TA, TB
 * \tparam TA type of src
 * \tparam etype expression type, sa namespace::type
 */
-template<typename TA, typename DType, int etype>
-struct ComplexConjugateExp : public Exp<ComplexConjugateExp<TA, DType, etype>,
+template<int calctype, typename OP, typename TA, typename DType, int etype>
+struct ComplexUnitaryExp : public Exp<ComplexUnitaryExp<calctype, OP, TA, DType, etype>,
   DType, etype> {
   /*! \brief source expression */
   const TA &src_;
   /*! \brief constructor */
-  explicit ComplexConjugateExp(const TA &src) : src_(src) {}
-};
-
-//-------------------
-// ComplexExchangeExp
-//-------------------
-/*!
-* \brief compute the complex conjugate of src
-* \tparam TA type of src
-* \tparam etype expression type, sa namespace::type
-*/
-template<typename TA, typename DType, int etype>
-struct ComplexExchangeExp : public Exp<ComplexExchangeExp<TA, DType, etype>,
-  DType, etype> {
-  /*! \brief source expression */
-  const TA &src_;
-  /*! \brief constructor */
-  explicit ComplexExchangeExp(const TA &src) : src_(src) {}
-};
-
-//-------------------
-// ComplexAbsSquareExp
-//-------------------
-/*!
-* \brief compute the complex modulus of src
-* \tparam TA type of src
-* \tparam etype expression type, sa namespace::type
-*/
-template<typename TA, typename DType, int etype>
-struct ComplexAbsSquareExp : public Exp<ComplexAbsSquareExp<TA, DType, etype>,
-  DType, etype> {
-  /*! \brief source expression */
-  const TA &src_;
-  /*! \brief constructor */
-  explicit ComplexAbsSquareExp(const TA &src) : src_(src) {}
+  explicit ComplexUnitaryExp(const TA &src) : src_(src) {}
 };
 
 
@@ -128,10 +131,22 @@ ComplexF(const Exp<TA, DType, ta> &lhs, const Exp<TB, DType, tb> &rhs) {
 * \param src source tensor
 * \tparam e1 type of source expression
 */
+template<int calctype, typename OP, typename SrcExp, typename DType, int e1>
+inline ComplexUnitaryExp<calctype, OP, SrcExp, DType, (e1 | type::kMapper)>
+ComplexF(const Exp<SrcExp, DType, e1> &src) {
+  return ComplexUnitaryExp<calctype, OP, SrcExp, DType, (e1 | type::kMapper)>(src.self());
+}
+
+/*!
+* \brief conj Negation the imaginary part of A where A is a complex tensor
+* \param src source tensor
+* \tparam e1 type of source expression
+*/
 template<typename SrcExp, typename DType, int e1>
-inline ComplexConjugateExp<SrcExp, DType, (e1|type::kMapper)>
+inline ComplexUnitaryExp<op::complex::kUnitaryC2C, op::complex::conjugate,
+  SrcExp, DType, (e1|type::kMapper)>
 conj(const Exp<SrcExp, DType, e1> &src) {
-  return ComplexConjugateExp<SrcExp, DType, (e1|type::kMapper)>(src.self());
+  return ComplexF<op::complex::kUnitaryC2C, op::complex::conjugate>(src);
 }
 
 /*!
@@ -140,9 +155,10 @@ conj(const Exp<SrcExp, DType, e1> &src) {
 * \tparam e1 type of source expression
 */
 template<typename SrcExp, typename DType, int e1>
-inline ComplexExchangeExp<SrcExp, DType, (e1|type::kMapper)>
+inline ComplexUnitaryExp<op::complex::kUnitaryC2C, op::complex::exchange,
+  SrcExp, DType, (e1|type::kMapper)>
 complex_exchange(const Exp<SrcExp, DType, e1> &src) {
-  return ComplexExchangeExp<SrcExp, DType, (e1|type::kMapper)>(src.self());
+  return ComplexF<op::complex::kUnitaryC2C, op::complex::exchange>(src);
 }
 
 /*!
@@ -151,11 +167,11 @@ complex_exchange(const Exp<SrcExp, DType, e1> &src) {
 * \tparam e1 type of source expression
 */
 template<typename SrcExp, typename DType, int e1>
-inline ComplexAbsSquareExp<SrcExp, DType, (e1 | type::kMapper)>
+inline ComplexUnitaryExp<op::complex::kUnitaryC2R, op::complex::abs_square,
+  SrcExp, DType, (e1 | type::kMapper)>
 complex_abs_square(const Exp<SrcExp, DType, e1> &src) {
-  return ComplexAbsSquareExp<SrcExp, DType, (e1 | type::kMapper)>(src.self());
+  return ComplexF<op::complex::kUnitaryC2R, op::complex::abs_square>(src);
 }
-
 
 
 template<int dim, int calctype, typename OP, typename TA, typename TB,
@@ -169,58 +185,53 @@ struct ShapeCheck<dim, ComplexBinaryMapExp<calctype, OP, TA, TB, DType, etype> >
     if (shape2[0] == 0) return shape1;
     if (calctype == op::complex::kBinaryCC) {
       CHECK_EQ(shape1, shape2) << "ComplexBinaryMapExp (CC): Shapes of operands are not the same.";
-      CHECK_EQ(shape1[dim - 1] % 2, 0) << "ComplexBinaryMapExp (CC): Shape of the last dimension is not even. "
+      CHECK_EQ(shape1[dim - 1] % 2, 0) <<
+        "ComplexBinaryMapExp (CC): Shape of the last dimension is not even. "
         "We must have real part + imaginary part.";
       return shape1;
     } else if (calctype == op::complex::kBinaryCR) {
       for (int i = 0; i < dim - 1; ++i) {
-        CHECK_EQ(shape1.shape_[i], shape2.shape_[i]) << "ComplexBinaryMapExp (CR): Shapes of operands are not the same.";
+        CHECK_EQ(shape1.shape_[i], shape2.shape_[i]) <<
+          "ComplexBinaryMapExp (CR): Shapes of operands are not the same.";
       }
-      CHECK_EQ(shape1[dim - 1], shape2[dim - 1] * 2) << "ComplexBinaryMapExp (CR): Shapes of operands do not match.";
+      CHECK_EQ(shape1[dim - 1], shape2[dim - 1] * 2) <<
+        "ComplexBinaryMapExp (CR): Shapes of operands do not match.";
       return shape1;
     } else if (calctype == op::complex::kBinaryRC) {
       for (int i = 0; i < dim - 1; ++i) {
-        CHECK_EQ(shape1.shape_[i], shape2.shape_[i]) << "ComplexBinaryMapExp (RC): Shapes of operands are not the same.";
+        CHECK_EQ(shape1.shape_[i], shape2.shape_[i]) <<
+          "ComplexBinaryMapExp (RC): Shapes of operands are not the same.";
       }
-      CHECK_EQ(shape2[dim - 1], shape1[dim - 1] * 2) << "ComplexBinaryMapExp (RC): Shapes of operands do not match.";
+      CHECK_EQ(shape2[dim - 1], shape1[dim - 1] * 2) <<
+        "ComplexBinaryMapExp (RC): Shapes of operands do not match.";
       return shape2;
     } else {
       LOG(FATAL) << "ComplexBinaryMapExp: Unexpected Calculation Type!";
+      return shape1;
     }
   }
 };
 
-template<int dim, typename TA, typename DType, int etype>
-struct ShapeCheck<dim, ComplexConjugateExp<TA, DType, etype> > {
-  inline static Shape<dim> Check(const ComplexConjugateExp<TA, DType, etype> &t) {
+template<int dim, int calctype, typename OP, typename TA, typename DType, int etype>
+struct ShapeCheck<dim, ComplexUnitaryExp<calctype, OP, TA, DType, etype> > {
+  inline static Shape<dim> Check(const ComplexUnitaryExp<calctype, OP, TA, DType, etype> &t) {
     Shape<dim> s = ShapeCheck<dim, TA>::Check(t.src_);
-    CHECK_EQ(s[dim - 1] % 2, 0) << "ComplexConjExp: Shape of the last dimension is not even. "
+    CHECK_EQ(s[dim - 1] % 2, 0) << "ComplexUnitaryExp: Shape of the last dimension is not even. "
       "We must have real + imaginary.";
-    return s;
-  }
-};
-
-template<int dim, typename TA, typename DType, int etype>
-struct ShapeCheck<dim, ComplexExchangeExp<TA, DType, etype> > {
-  inline static Shape<dim> Check(const ComplexExchangeExp<TA, DType, etype> &t) {
-    Shape<dim> s = ShapeCheck<dim, TA>::Check(t.src_);
-    CHECK_EQ(s[dim - 1] % 2, 0) << "ComplexExchangeExp: Shape of the last dimension is not even. "
-      "We must have real + imaginary.";
+    if (calctype == op::complex::kUnitaryC2C) {
       return s;
+    } else if (calctype == op::complex::kUnitaryC2R) {
+      Shape<dim> s_ret = s;
+      s_ret[dim - 1] /= 2;
+      return s_ret;
+    } else {
+      LOG(FATAL) << "ComplexUnitaryExp: Unexpected Calculation Type!";
+      return s;
+    }
   }
 };
 
-template<int dim, typename TA, typename DType, int etype>
-struct ShapeCheck<dim, ComplexAbsSquareExp<TA, DType, etype> > {
-  inline static Shape<dim> Check(const ComplexAbsSquareExp<TA, DType, etype> &t) {
-    Shape<dim> s = ShapeCheck<dim, TA>::Check(t.src_);
-    CHECK_EQ(s[dim - 1] % 2, 0) << "ComplexAbsSquareExp: Shape of the last dimension is not even. "
-      "We must have real + imaginary.";
-    Shape<dim> s_ret = s;
-    s_ret[dim - 1] /= 2;
-    return s_ret;
-  }
-};
+
 
 // complex binary expression (cc)
 template<typename OP, typename TA, typename TB, int etype, typename DType>
@@ -231,9 +242,11 @@ public:
   MSHADOW_XINLINE DType Eval(index_t y, index_t x) const {
     const index_t base_x = static_cast<index_t>(x / 2) * 2;
     if (x % 2 == 0) {
-      return OP::RealMap(lhs_.Eval(y, base_x), lhs_.Eval(y, base_x + 1), rhs_.Eval(y, base_x), rhs_.Eval(y, base_x + 1));
+      return OP::RealMap(lhs_.Eval(y, base_x), lhs_.Eval(y, base_x + 1),
+        rhs_.Eval(y, base_x), rhs_.Eval(y, base_x + 1));
     } else{
-      return OP::ImagMap(lhs_.Eval(y, base_x), lhs_.Eval(y, base_x + 1), rhs_.Eval(y, base_x), rhs_.Eval(y, base_x + 1));
+      return OP::ImagMap(lhs_.Eval(y, base_x), lhs_.Eval(y, base_x + 1),
+        rhs_.Eval(y, base_x), rhs_.Eval(y, base_x + 1));
     }
   }
 
@@ -290,18 +303,18 @@ private:
 };
 
 
-// complex conjugate expression
-template<typename TA, int etype, typename DType>
-class Plan<ComplexConjugateExp<TA, DType, etype>, DType> {
+// complex unitary expression (c2c)
+template<typename OP, typename TA, int etype, typename DType>
+class Plan<ComplexUnitaryExp<op::complex::kUnitaryC2C, OP, TA, DType, etype>, DType> {
 public:
   explicit Plan(const Plan<TA, DType> &src) : src_(src) {}
   MSHADOW_XINLINE DType Eval(index_t y, index_t x) const {
     const index_t base_x = static_cast<index_t>(x / 2) * 2;
     if (0 == x % 2) {
-      return src_.Eval(y, base_x);
+      return OP::RealMap(src_, y, base_x, y, base_x + 1);
     }
     else {
-      return - src_.Eval(y, base_x + 1);
+      return OP::ImagMap(src_, y, base_x, y, base_x + 1);
     }
   }
 
@@ -309,33 +322,13 @@ private:
   Plan<TA, DType> src_;
 };
 
-// complex exchange expression
-template<typename TA, int etype, typename DType>
-class Plan<ComplexExchangeExp<TA, DType, etype>, DType> {
+// complex unitary expression (c2r)
+template<typename OP, typename TA, int etype, typename DType>
+class Plan<ComplexUnitaryExp<op::complex::kUnitaryC2R, OP, TA, DType, etype>, DType> {
 public:
   explicit Plan(const Plan<TA, DType> &src) : src_(src) {}
   MSHADOW_XINLINE DType Eval(index_t y, index_t x) const {
-    const index_t base_x = static_cast<index_t>(x / 2) * 2;
-    if (0 == x % 2) {
-      return src_.Eval(y, base_x + 1);
-    }
-    else {
-      return src_.Eval(y, base_x);
-    }
-  }
-
-private:
-  Plan<TA, DType> src_;
-};
-
-// complex abs expression
-template<typename TA, int etype, typename DType>
-class Plan<ComplexAbsSquareExp<TA, DType, etype>, DType> {
-public:
-  explicit Plan(const Plan<TA, DType> &src) : src_(src) {}
-  MSHADOW_XINLINE DType Eval(index_t y, index_t x) const {
-    return src_.Eval(y, 2 * x) * src_.Eval(y, 2 * x) +
-      src_.Eval(y, 2 * x + 1) * src_.Eval(y, 2 * x + 1);
+    return OP::RealMap(src_, y, x * 2, y, x * 2 + 1);
   }
 
 private:
@@ -351,23 +344,13 @@ MakePlan(const ComplexBinaryMapExp<calctype, OP, TA, TB, DType, etype> &e) {
     DType>(MakePlan(e.lhs_), MakePlan(e.rhs_));
 }
 
-template<typename TA, typename DType, int etype>
-inline Plan<ComplexConjugateExp<TA, DType, etype>, DType>
-MakePlan(const ComplexConjugateExp<TA, DType, etype> &e) {
-  return Plan<ComplexConjugateExp<TA, DType, etype>, DType>(MakePlan(e.src_));
+template<int calctype, typename OP, typename TA, typename DType, int etype>
+inline Plan<ComplexUnitaryExp<calctype, OP, TA, DType, etype>, DType>
+MakePlan(const ComplexUnitaryExp<calctype, OP, TA, DType, etype> &e) {
+  return Plan<ComplexUnitaryExp<calctype, OP, TA, DType, etype>,
+    DType>(MakePlan(e.src_));
 }
 
-template<typename TA, typename DType, int etype>
-inline Plan<ComplexExchangeExp<TA, DType, etype>, DType>
-MakePlan(const ComplexExchangeExp<TA, DType, etype> &e) {
-  return Plan<ComplexExchangeExp<TA, DType, etype>, DType>(MakePlan(e.src_));
-}
-
-template<typename TA, typename DType, int etype>
-inline Plan<ComplexAbsSquareExp<TA, DType, etype>, DType>
-MakePlan(const ComplexAbsSquareExp<TA, DType, etype> &e) {
-  return Plan<ComplexAbsSquareExp<TA, DType, etype>, DType>(MakePlan(e.src_));
-}
 
 
 template<int calctype, typename OP, typename TA, typename TB, typename DType, int etype>
@@ -381,23 +364,12 @@ struct ExpInfo<ComplexBinaryMapExp<calctype, OP, TA, TB, DType, etype> > {
   static const int kDevMask = ExpInfo<TA>::kDevMask & ExpInfo<TB>::kDevMask;
 };
 
-template<typename TA, typename DType, int etype>
-struct ExpInfo<ComplexConjugateExp<TA, DType, etype> > {
+template<int calctype, typename OP, typename TA, typename DType, int etype>
+struct ExpInfo<ComplexUnitaryExp<calctype, OP, TA, DType, etype> > {
   static const int kDim = ExpInfo<TA>::kDim;
   static const int kDevMask = ExpInfo<TA>::kDevMask;
 };
 
-template<typename TA, typename DType, int etype>
-struct ExpInfo<ComplexExchangeExp<TA, DType, etype> > {
-  static const int kDim = ExpInfo<TA>::kDim;
-  static const int kDevMask = ExpInfo<TA>::kDevMask;
-};
-
-template<typename TA, typename DType, int etype>
-struct ExpInfo<ComplexAbsSquareExp<TA, DType, etype> > {
-  static const int kDim = ExpInfo<TA>::kDim;
-  static const int kDevMask = ExpInfo<TA>::kDevMask;
-};
 }  // namespace expr
 }  // namespace mshadow
 #endif  // MSHADOW_EXTENSION_COMPLEX_H_
