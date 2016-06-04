@@ -52,7 +52,7 @@ class Base(object):
                 initializer(k, v)
         else:
             assert set(self.arg_name_shape.items()) == set(data_shapes.items() + [(k, v.shape)
-                                                                     for k, v in params.items()])
+                                                                                  for k, v in params.items()])
             self.params = OrderedDict([(k, v.copyto(ctx)) for k, v in params.items()])
             self.params_grad = OrderedDict([(n, nd.empty(v.shape, ctx=ctx))
                                             for n, v in self.params.items()])
@@ -69,18 +69,22 @@ class Base(object):
 
     def save_params(self, dir_path="", epoch=None):
         param_saving_path = save_params(dir_path=dir_path, name=self.name, epoch=epoch,
-                                            params=self.params,
-                                            aux_states=self.aux_states)
+                                        params=self.params,
+                                        aux_states=self.aux_states)
         misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
-                                     data_shapes=self.data_shapes)
+                                     content={'data_shapes': {k: map(int, v) for k, v in self.data_shapes.items()}})
         logging.info('Saving %s, params: \"%s\", misc: \"%s\"',
                      self.name, param_saving_path, misc_saving_path)
 
     def load_params(self, name="", dir_path="", epoch=None):
         params, aux_states, param_loading_path = load_params(dir_path=dir_path, epoch=epoch, name=name)
-        logging.info('Loading params from \"%s\" to %s' %(param_loading_path, self.name))
+        logging.info('Loading params from \"%s\" to %s' % (param_loading_path, self.name))
         for k, v in params.items():
-            self.params[k][:] = v
+            if k in self.params:
+                logging.debug('   Loading %s %s' %(k, str(v.shape)))
+                self.params[k][:] = v
+            else:
+                logging.warn("Found unused param in the saved model file: %s" % k)
         for k, v in aux_states.items():
             self.aux_states[k][:] = v
 
@@ -92,15 +96,12 @@ class Base(object):
     def default_batchsize(self):
         return self.data_shapes.values()[0].shape[0]
 
-    def forward(self, batch_size=default_batchsize, data_shapes=None, sym_name=None, is_train=False, **input_dict):
+    def forward(self, batch_size=None, data_shapes=None, sym_name=None, is_train=False, **input_dict):
         exe = self.executor_pool.get(batch_size=batch_size, data_shapes=data_shapes,
                                      internal_sym_name=sym_name)
         if sym_name is not None:
             assert is_train is False, "We can only view the internal symbols using the " \
                                       "forward function!"
-        #TODO `wait_to_read()` here seems unnecessary, remove it in the future!
-        for v in self.params.values():
-            v.wait_to_read()
         for k, v in input_dict.items():
             exe.arg_dict[k][:] = v
         exe.forward(is_train=is_train)
@@ -108,12 +109,12 @@ class Base(object):
             output.wait_to_read()
         return exe.outputs
 
-    def backward(self, batch_size=default_batchsize, data_shapes=None, **arg_dict):
+    def backward(self, out_grads=None, batch_size=None, data_shapes=None, **arg_dict):
         exe = self.executor_pool.get(batch_size=batch_size,
                                      data_shapes=data_shapes)
         for k, v in arg_dict.items():
             exe.arg_dict[k][:] = v
-        exe.backward()
+        exe.backward(out_grads=out_grads)
 
     def update(self, updater, params_grad=None):
         if params_grad is None:
@@ -136,10 +137,11 @@ class Base(object):
     """
     Can be used to calculate the gradient of Q(s,a) over a
     """
-    #TODO Test this part!
-    def get_grads(self, keys, ctx=None, batch_size=default_batchsize, **input_dict):
+
+    # TODO Test this part!
+    def get_grads(self, keys, ctx=None, batch_size=None, data_shapes=None, **input_dict):
         if len(input_dict) != 0:
-            exe = self.executor_pool.get(batch_size)
+            exe = self.executor_pool.get(batch_size, data_shapes)
             for k, v in input_dict.items():
                 exe.arg_dict[k][:] = v
                 exe.forward(is_train=True)
@@ -159,13 +161,13 @@ class Base(object):
         if name is None:
             name = self.name + '-copy-' + str(ctx)
         return Base(data_shapes=self.data_shapes, sym=self.sym,
-                      params=self.params,
-                      aux_states=self.aux_states, ctx=ctx, name=name)
+                    params=self.params,
+                    aux_states=self.aux_states, ctx=ctx, name=name)
 
     def copy_params_to(self, dst):
         for k, v in self.params.items():
             dst.params[k][:] = v
-            #TODO `wait_to_read()` here seems unnecessary, remove it in the future!
+            # TODO `wait_to_read()` here seems unnecessary, remove it in the future!
             dst.params[k].wait_to_read()
 
     @property

@@ -26,36 +26,6 @@ mx.random.seed(100)
 npy_rng = get_numpy_rng()
 
 
-def dqn_sym_nips(action_num, output_op):
-    net = mx.symbol.Variable('data')
-    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=16)
-    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
-    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=32)
-    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
-    net = mx.symbol.Flatten(data=net)
-    net = mx.symbol.FullyConnected(data=net, name='fc3', num_hidden=256)
-    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
-    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=action_num)
-    net = output_op(data=net, name='dqn')
-    return net
-
-
-def dqn_sym_nature(action_num, output_op):
-    net = mx.symbol.Variable('data')
-    net = mx.symbol.Convolution(data=net, name='conv1', kernel=(8, 8), stride=(4, 4), num_filter=32)
-    net = mx.symbol.Activation(data=net, name='relu1', act_type="relu")
-    net = mx.symbol.Convolution(data=net, name='conv2', kernel=(4, 4), stride=(2, 2), num_filter=64)
-    net = mx.symbol.Activation(data=net, name='relu2', act_type="relu")
-    net = mx.symbol.Convolution(data=net, name='conv3', kernel=(3, 3), stride=(1, 1), num_filter=64)
-    net = mx.symbol.Activation(data=net, name='relu3', act_type="relu")
-    net = mx.symbol.Flatten(data=net)
-    net = mx.symbol.FullyConnected(data=net, name='fc4', num_hidden=512)
-    net = mx.symbol.Activation(data=net, name='relu4', act_type="relu")
-    net = mx.symbol.FullyConnected(data=net, name='fc5', num_hidden=action_num)
-    net = output_op(data=net, name='dqn')
-    return net
-
-
 class DQNInitializer(mx.initializer.Xavier):
     def _init_bias(self, _, arr):
         arr[:] = .1
@@ -92,7 +62,7 @@ def main():
                         help='type of kvstore, default will not use kvstore, could also be dist_async')
     parser.add_argument('--optimizer', required=False, type=str, default="adagrad",
                         help='type of optimizer')
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_args()
 
     if args.dir_path == '':
         rom_name = os.path.splitext(os.path.basename(args.rom))[0]
@@ -129,9 +99,7 @@ def main():
 
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
-
-    dqn_output_op = DQNOutputNpyOp()
-    dqn_sym = dqn_sym_nature(action_num, dqn_output_op)
+    dqn_sym = dqn_sym_nature(action_num)
     qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
@@ -139,7 +107,7 @@ def main():
 
     use_easgd = False
     if args.optimizer != "easgd":
-        optimizer = mx.optimizer.create(name='adagrad', learning_rate=args.lr, eps=args.eps,
+        optimizer = mx.optimizer.create(name=args.optimizer, learning_rate=args.lr, eps=args.eps,
                         clip_gradient=args.clip_gradient,
                         rescale_grad=1.0, wd=args.wd)
     else:
@@ -303,7 +271,11 @@ def main():
         end = time.time()
         fps = steps_per_epoch / (end - start)
         qnet.save_params(dir_path=args.dir_path, epoch=epoch)
-        logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d"
+        if args.kv_type != None:
+            logging.info("Node[%d]: Epoch:%d, FPS:%f, Avg Reward: %f/%d"
+                     % (kv.rank, epoch, fps, epoch_reward / float(episode), episode))
+        else:
+            logging.info("Epoch:%d, FPS:%f, Avg Reward: %f/%d"
                      % (epoch, fps, epoch_reward / float(episode), episode))
 
 if __name__ == '__main__':

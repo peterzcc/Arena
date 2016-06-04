@@ -1,9 +1,9 @@
 import numpy
 from arena.utils import *
 import mxnet.ndarray as nd
-import matplotlib.pyplot as plt
 import cv2
 import logging
+
 
 '''
 Function: visualize_weights
@@ -13,13 +13,13 @@ Description:
 '''
 
 
-def visualize_weights(data, delay=0):
+def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL, save_path=None):
     if 4 == data.ndim:
         data = data.transpose(0, 2, 3, 1)
     data = (data - data.min()) / (data.max() - data.min())
     n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
     padding = (((0, n ** 2 - data.shape[0]),
-                (0, 1), (0, 1))
+                (0, 0), (0, 0))
                + ((0, 0),) * (data.ndim - 3))
     data = numpy.pad(data, padding, mode='constant', constant_values=1)
 
@@ -27,35 +27,45 @@ def visualize_weights(data, delay=0):
     data = data.reshape((n, n) + data.shape[1:]).transpose(
         (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
     data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
-    win = cv2.namedWindow("Weight", cv2.WINDOW_NORMAL)
+    win = cv2.namedWindow(win_name, win_typ)
     if 3 == data.ndim:
-        cv2.imshow("Weight", data[:, :, ::-1])
+        if save_path is not None:
+            cv2.imwrite(os.path.join(save_path, win_name + '.png'), cv2.resize(data[:, :, ::-1]*256, (480, 480),
+                                                                               interpolation=cv2.INTER_LINEAR))
+        cv2.imshow(win_name, data[:, :, ::-1])
     else:
-        cv2.imshow("Weight", data[:, :])
-    cv2.waitKey(delay)
+        if save_path is not None:
+            cv2.imwrite(os.path.join(save_path, win_name + '.png'), cv2.resize(data[:, :]*256, (480, 480),
+                                                                               interpolation=cv2.INTER_LINEAR))
+        cv2.imshow(win_name, data[:, :])
+    if delay is not None:
+        cv2.waitKey(delay)
 
 
 '''
 plot the roi bounding box on the image
 im, shape (3, height, width)
-roi, normalized version from [-1,1]
+roi, normalized version from [0, 1]
 '''
 
 
-def draw_track_res(im, roi, delay=0):
+def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking", win_typ=cv2.WINDOW_AUTOSIZE, save_path=None):
     im = im.transpose(1, 2, 0)
     width = im.shape[1]
     height = im.shape[0]
-    roi = (roi + 1) / 2 * [width, height, width, height]
-    roi = numpy.uint8(roi)
+    roi = roi * [width, height, width, height]
+    roi = numpy.uint32(roi)
     pt1 = (roi[0] - roi[2] / 2, roi[1] - roi[3] / 2)
     pt2 = (roi[0] + roi[2] / 2, roi[1] + roi[3] / 2)
     im2 = numpy.zeros(im.shape)
     im2[:] = im
-    cv2.rectangle(im2, pt1, pt2, (0, 0, 255), 1)
-    win = cv2.namedWindow("Tracking", cv2.WINDOW_NORMAL)
-    cv2.imshow('Tracking', im2[:, :, ::-1] / 255.0)
-    cv2.waitKey(delay)
+    cv2.rectangle(im2, pt1, pt2, color, 1)
+    win = cv2.namedWindow(win_name, win_typ)
+    cv2.imshow(win_name, im2[:, :, ::-1] / 255.0)
+    if save_path is not None:
+        cv2.imwrite(os.path.join(save_path, win_name + '.png'), im2[:, :, ::-1])
+    if delay is not None:
+        cv2.waitKey(delay)
 
 
 '''
@@ -77,4 +87,4 @@ if __name__ == '__main__':
 
     for i in xrange(data_batch.shape[0]):
         for j in xrange(data_batch.shape[1]):
-            draw_track_res(data_batch[i, j], roi_batch[i, j], delay=50)
+            draw_track_res(data_batch.asnumpy()[i, j], roi_batch.asnumpy()[i, j], delay=50)

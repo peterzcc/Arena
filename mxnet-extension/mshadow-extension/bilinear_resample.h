@@ -16,7 +16,7 @@ namespace expr {
           Also, zero padding is used if the ROI goes outside the boundary.
  * \tparam SrcExp type of source tensor expression, shape: (N, C, H, W) 
  * \tparam ROIExp type of ROI matrix expression, shape: (N_R, 5) or (N, 4). If each roi has 5 elements, these elements are (batch_ind, cx, cy, sx, sy). 
-                  Otherwise, the elements are (cx, cy, sx, sy). All the cx,cy,sx,sy are noramlized to be between (-1.0, 1.0)
+                  Otherwise, the elements are (cx, cy, sx, sy). All the cx,cy,sx,sy are normalized to be between (0.0, 1.0)
  * \tparam DType the content data type
  */
 template<typename SrcExp, typename ROIExp, typename DType>
@@ -138,17 +138,17 @@ struct Plan<BilinearResamplingExp<SrcExp, ROIExp, DType>, DType> {
     DType roi_cx, roi_cy, roi_sx, roi_sy;
     if (sroi_ == 5) {
       src_b = static_cast<index_t>(roi_.Eval(b, 0));
-      roi_cx = (roi_.Eval(b, 1) + 1.0f) / 2.0f * src_width_f;
-      roi_cy = (roi_.Eval(b, 2) + 1.0f) / 2.0f * src_height_f;
-      roi_sx = max((roi_.Eval(b, 3) + 1.0f) / 2.0f * src_width_f * scale_, 1.0f);
-      roi_sy = max((roi_.Eval(b, 4) + 1.0f) / 2.0f * src_height_f * scale_, 1.0f);
+      roi_cx = roi_.Eval(b, 1) * src_width_f;
+      roi_cy = roi_.Eval(b, 2) * src_height_f;
+      roi_sx = max(roi_.Eval(b, 3) * src_width_f * scale_, 1.0f);
+      roi_sy = max(roi_.Eval(b, 4) * src_height_f * scale_, 1.0f);
     }
     else {
       src_b = b;
-      roi_cx = (roi_.Eval(b, 0) + 1.0f) / 2.0f * src_width_f;
-      roi_cy = (roi_.Eval(b, 1) + 1.0f) / 2.0 * src_height_f;
-      roi_sx = max((roi_.Eval(b, 2) + 1.0f) / 2.0f * src_width_f * scale_, 1.0f);
-      roi_sy = max((roi_.Eval(b, 3) + 1.0f) / 2.0f * src_height_f * scale_, 1.0f);
+      roi_cx = roi_.Eval(b, 0) * src_width_f;
+      roi_cy = roi_.Eval(b, 1) * src_height_f;
+      roi_sx = max(roi_.Eval(b, 2) * src_width_f * scale_, 1.0f);
+      roi_sy = max(roi_.Eval(b, 3) * src_height_f * scale_, 1.0f);
     }
     const DType roi_y1 = roi_cy - roi_sy / 2.0f;
     const DType roi_x1 = roi_cx - roi_sx / 2.0f;
