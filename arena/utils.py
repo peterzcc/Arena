@@ -6,6 +6,8 @@ import json
 import re
 from collections import namedtuple, OrderedDict
 import scipy.signal
+import ast
+import logging
 
 ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['data_shapes_items', 'sym_name'])
 ExecutorPoolKey.__new__.__defaults__ = (None, None)
@@ -71,7 +73,8 @@ def norm_clipping(params_grad, threshold):
     assert type(params_grad) in (dict, OrderedDict)
     for grad in params_grad.values():
         grad.wait_to_read()
-    norm_val = numpy.sqrt(sum([nd.sum(nd.square(grad)) for grad in params_grad.values()]))
+    norm_val = [nd.sum(nd.square(grad)) / grad.size for grad in params_grad.values()]
+    norm_val = numpy.sqrt(sum(norm_val)) / len(norm_val)
     print 'grad norm:', norm_val
     ratio = 1.0
     if norm_val > threshold:
