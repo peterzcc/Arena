@@ -1,22 +1,10 @@
-from arena.games.cartpole_box2d import CartpoleSwingupEnv
 import numpy as np
 import mxnet as mx
-from arena.utils import *
 from arena.operators import *
+from arena.utils import *
 from arena import Base
-
-class NormalInitializer(mx.initializer.Xavier):
-    def _init_weight(self, name, arr):
-        super(NormalInitializer, self)._init_weight(name, arr)
-    #     if name == 'fc_var_1_weight':
-    #         arr[:] = 0
-
-    def _init_bias(self, name, arr):
-        super(NormalInitializer, self)._init_bias(name, arr)
-    #     if name == 'fc_var_1_bias':
-    #         arr[:] = 0.5
-            # arr[:] = np.log(np.e - 1)
-
+from arena.games.cartpole_box2d import CartpoleSwingupEnv
+import argparse
 
 def actor_critic_policy_sym(action_num):
     data = mx.symbol.Variable('data')
@@ -47,16 +35,28 @@ def actor_critic_policy_sym(action_num):
     return net
 
 
+parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
+parser.add_argument('--lr', required=False, type=float, help='learning rate of the choosen optimizer')
+parser.add_argument('--opt', required=True, type=str, help='choice of the optimizer, adam or sgd')
+
+args, unknow = parser.parse_known_args()
+if args.lr == None:
+    if args.opt == 'adam':
+        args.lr = 0.001
+    elif args.opt == 'sgd':
+        args.lr = 0.0001
 
 # Each trajectory will have at most 500 time steps
 T = 500
 # Number of iterations
-n_itr = 1000
+n_itr = 200
 batch_size = 4000
 # Set the discount factor for the problem
 discount = 0.99
 # Learning rate for the gradient update
-learning_rate = 0.001
+learning_rate = args.lr
+
+ctx = mx.gpu()
 
 action_dimension = 1
 state_dimension = 4
@@ -71,31 +71,27 @@ data_shapes = {'data': (T, state_dimension),
                'var': (T, action_dimension),
                }
 sym = actor_critic_policy_sym(action_dimension)
+
 net = Base(data_shapes=data_shapes, sym=sym, name='ACNet',
-           initializer=NormalInitializer(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=mx.gpu())
-# optimizer = mx.optimizer.create(name='sgd', learning_rate=0.0001,
-#                                 clip_gradient=None, rescale_grad=1.0, wd=0.)
-optimizer = mx.optimizer.create(name='adam', learning_rate=learning_rate)
+           initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
+if args.opt == 'sgd':
+    optimizer = mx.optimizer.create(name='sgd', learning_rate=learning_rate,
+                                    clip_gradient=None, rescale_grad=1.0, wd=0.)
+elif args.opt == 'adam':
+    optimizer = mx.optimizer.create(name='adam', learning_rate=learning_rate)
 updater = mx.optimizer.get_updater(optimizer)
 
-# net.load_params(name=net.name, dir_path='./models/good', epoch=n_itr-1)
-
-baseline = 0
 for itr in xrange(n_itr):
-
     paths = []
-
     counter = batch_size
     N = 0
     while counter > 0:
-    # for _ in xrange(1):
         N += 1
         observations = []
         actions = []
         rewards = []
 
         observation = env.reset()
-        # print 'initial observation:', observation
         for step in xrange(T):
             action = net.forward(batch_size=1, is_train=False,
                                  data=observation.reshape(1, observation.size),
@@ -110,40 +106,28 @@ for itr in xrange(n_itr):
             if terminal:
                 break
 
-        path_length = step + 1
-        counter -= path_length
+        counter -= (step + 1)
+        observations = np.array(observations)
+        rewards = np.array(rewards)
+        outputs = net.forward(batch_size=observations.shape[0], is_train=False,
+                              data=observations,
+                              var=1.*np.ones((observations.shape[0],1)),
+                              )
+        critics = outputs[3].asnumpy().reshape(rewards.shape)
+        q_estimations = discount_cumsum(rewards, discount)
+        advantages = q_estimations - critics
         path = dict(
-            observations=np.array(observations),
             actions=np.array(actions),
-            rewards=np.array(rewards),
+            rewards=rewards,
+            observations=observations,
+            q_estimations = q_estimations,
+            advantages = advantages,
         )
-
-        returns = []
-        advantages = []
-        # if terminal:
-        return_so_far = 0
-        # else:
-        #     outputs = net.forward(batch_size=1, is_train=False,
-        #                           data=np.array(observation).reshape(1, -1))
-        #     return_so_far = outputs[3].asnumpy()[0, 0]
-        outputs =net.forward(batch_size=path['observations'].shape[0], is_train=False,
-                             data=path['observations'],
-                             var=1.*np.ones((path['observations'].shape[0],1)),
-                             )
-        critics = outputs[3].asnumpy().reshape(path['rewards'].shape)
-        for t in xrange(len(rewards) - 1, -1, -1):
-            return_so_far = rewards[t] + discount * return_so_far
-            returns.append(return_so_far)
-            advantage = return_so_far - critics[t]
-            advantages.append(advantage)
-
-        path['returns'] = np.array(returns[::-1])
-        path['advantages'] = np.array(advantages[::-1])
         paths.append(path)
 
     observations = np.concatenate([p["observations"] for p in paths])
     actions = np.concatenate([p["actions"] for p in paths])
-    returns = np.concatenate([p["returns"] for p in paths])
+    q_estimations = np.concatenate([p["q_estimations"] for p in paths])
     advantages = np.concatenate([p['advantages'] for p in paths])
     cur_batch_size = observations.shape[0]
     outputs = net.forward(batch_size=cur_batch_size, is_train=True, data=observations,
@@ -156,13 +140,14 @@ for itr in xrange(n_itr):
     net.backward(batch_size=cur_batch_size,
                  policy_score=advantages,
                  policy_backward_action=actions,
-                 critic_label=returns.reshape(returns.size, 1),
+                 critic_label=q_estimations.reshape(q_estimations.size, 1),
                  )
-    # net.update(updater)
-    for ind, k in enumerate(net.params.keys()):
-        updater(index=ind, grad=net.params_grad[k]/cur_batch_size, weight=net.params[k])
-    #print 'Epoch:%d, Average Return:%f' %(itr, np.mean([sum(p["rewards"]) for p in paths]))
-    print 'Epoch:%d, Batchsize:%d, Average Return:%f, Estimated Baseline:%f, Num Traj:%d, Variance:%f, Mean:%f' %(itr, cur_batch_size, np.mean([sum(p["rewards"]) for p in paths]), critics.mean(), N, variance.mean(), action_mean.mean())
+    for grad in net.params_grad.values():
+        grad[:] = grad[:] / cur_batch_size
+    norm_clipping(net.params_grad, 5)
+    net.update(updater)
+    print 'Epoch:%d, Batchsize:%d, Average Return:%f, Max Return:%f, Min Return:%f' %(itr, cur_batch_size, np.mean([sum(p["rewards"]) for p in paths]), np.max([sum(p["rewards"]) for p in paths]), np.min([sum(p["rewards"]) for p in paths]))
+    print 'Epoch:%d, Estimated Baseline:%f, Num Traj:%d, Variance:%f, Mean:%f' %(itr, critics.mean(), N, variance.mean(), action_mean.mean())
 
-net.save_params(dir_path='./models/ac2/', epoch=itr)
+#net.save_params(dir_path='./models/ac2/', epoch=itr)
 
