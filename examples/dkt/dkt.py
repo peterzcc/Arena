@@ -2,7 +2,7 @@
 # pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "python")))
+sys.path.insert(0, "/Users/jenny/Documents/mxnet/python")
 #sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "rnn")))
 import numpy as np
 import mxnet as mx
@@ -12,20 +12,7 @@ import os
 import os.path
 data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'ASSISTment'))
 
-#def Perplexity(label, pred):
-#    label = label.T.reshape((-1,))
-#    loss = 0.
-    #print label
-#    for i in range(pred.shape[0]):
-#        next_label = int(label[i])
-#        if next_label > 111:
-#            next_label -= 111
-#        next_label -= 1
-#        loss += -np.log(max(1e-10, pred[i][next_label]))
-#    return np.exp(loss / label.size)
 
-# label = batch_size * bucket _size
-# pred = (batch_size*bucket _size) * output_size
 def binaryEntropy(label, pred):
     label = label.T.reshape((-1,))
     loss = 0.
@@ -91,9 +78,9 @@ if __name__ == '__main__':
     data_train = BucketQuestionIter(path = os.path.join(data_dir, "builder_train.csv"),
                                     buckets = buckets, max_n_question = max_length,
                                     batch_size = batch_size, init_states = init_states)
-    data_test = BucketQuestionIter(path = os.path.join(data_dir, "builder_test.csv"),
+    data_test  = BucketQuestionIter(path = os.path.join(data_dir, "builder_test.csv"),
                                     buckets = buckets, max_n_question = max_length,
-                                   batch_size = batch_size, init_states = init_states)
+                                    batch_size = batch_size, init_states = init_states)
 
     #########################   model parameter setting         #########################
     state_names = [x[0] for x in init_states]
@@ -126,5 +113,99 @@ if __name__ == '__main__':
             optimizer = 'sgd',
             optimizer_params = {'learning_rate':learning_rate, 'momentum':momentum , 'wd': 0.00001})
 
+    # compute AUC
+    pred_truth_array = np.zeros((1, 2))
+    for pred, i_batch, batch in mod.iter_predict(eval_data=data_test):
+        # pred: list of only one object: [ mxnet.ndarray.NDArray object ]
+        # i_batch is a integer
+        # batch is the data batch from the data iterator
 
+        # print "pred[0].asnumpy().shape", pred[0].asnumpy().shape # 'list' object has no attribute 'asnumpy'
+        pred = pred[0].asnumpy()
+        # print "pred.shape:", pred.shape # (batch_size * bucket_length, 111L)
+        # print "batch.label[0].asnumpy().shape:",batch.label[0].asnumpy().shape # (batch_size, bucket_length)
+        label = batch.label[0].asnumpy().T.reshape((-1,)).astype(np.int)
+        # print "label:",label
+        # print "label.shape:",label.shape # label.shape: (1000L,) --> (batch_size*bucket_length)
+
+        zero_index = np.flatnonzero(label == 0)
+        non_zero_index = np.flatnonzero(label)
+        # print "zero_index",zero_index.shape,zero_index
+        # print "non_zero_index", non_zero_index.shape, non_zero_index
+        all_prediction_num = label.size - zero_index.size
+        # print "all_prediction_num", all_prediction_num
+        next_label = (label - 1) % n_q
+        truth = (label - 1) / n_q
+        next_label[zero_index] = 0
+        truth[zero_index] = 0
+        next_label = next_label.tolist()
+        # print 'next_label', next_label
+        # print 'truth',truth
+        prediction = pred[np.arange(len(next_label)), next_label]
+        # print "prediction",prediction
+        tru = truth[non_zero_index].tolist()
+        pre = prediction[non_zero_index].tolist()
+        # print "tru", len(tru), tru
+        # print "pre", len(pre), pre
+        one_batch_pre_truth = []
+        one_batch_pre_truth.append(pre)
+        one_batch_pre_truth.append(tru)
+        one_batch_pre_truth = np.asarray(one_batch_pre_truth).T
+        # print 'one_batch_pre_truth',one_batch_pre_truth.shape,one_batch_pre_truth
+        pred_truth_array = np.concatenate((pred_truth_array, one_batch_pre_truth), axis=0)
+        # print "\n\n"
+
+    # Get all prediction results
+    pred_truth_array = pred_truth_array[1:, :]
+    # print 'pre_truth',pred_truth_array.shape, pred_truth_array
+    print "\n\n\n\nStart computing AUC ......"
+    # sort the array according to the the first column
+    pred_truth_array = pred_truth_array[pred_truth_array[:, 0].argsort()[::-1]]
+    print 'pred_truth_array', pred_truth_array.shape, pred_truth_array
+    f_save = open('pred_truth_array', 'wb')
+    np.save(f_save, pred_truth_array)
+    f_save.close()
+    # start computing AUC
+    allPredictions = pred_truth_array.shape[0]
+    total_positives = np.sum(pred_truth_array[:, 1])
+    total_negatives = allPredictions - total_positives
+    print 'total_positives', total_positives
+    print 'total_negatives', total_negatives
+    true_positives = 0
+    false_positives = 0
+    correct = 0
+    auc = 0.0
+    # pred_truth_list[i,0] --> predicted value; pred_truth_list[i,1] --> truth value
+    lastTpr = 0.0
+    lastFpr = 0.0
+    for i in range(allPredictions):
+        truth = int(pred_truth_array[i, 1])  # truth in {0,1}
+        if truth == 1:
+            true_positives += 1
+        else:
+            # print "false_positives:",false_positives
+            false_positives += 1
+        fpr = float(false_positives) / float(total_negatives)
+        tpr = float(true_positives) / float(total_positives)
+        # using trapezoid method to compute auc
+
+        if i % 500 == 0:
+            # print i
+            trapezoid = (tpr + lastTpr) * (fpr - lastFpr) * 0.5
+            # print "trapzoid:",trapezoid
+            # print "auc:",auc
+            auc += trapezoid
+            lastTpr = tpr
+            lastFpr = fpr
+        # computing accuracy
+        if pred_truth_array[i, 0] > 0.5:
+            guess = 1
+        else:
+            guess = 0
+        if guess == truth:
+            correct += 1
+
+    accuracy = float(correct) / float(allPredictions)
+
+    print "======> accuracy of testing is ", accuracy, "auc of testing is ", auc
 
