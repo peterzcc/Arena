@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=open(os.path.join(os.path.dirname(
         os.path.abspath(__file__)), 'README.md')).read(),
     license='MIT',
-    url='https://github.com/peterzcc/dist_train/tree/arena',
+    url='https://github.com/peterzcc/Arena/tree/arena',
     install_requires=['numpy', 'scipy', 'pillow'],
     classifiers=['Development Status :: 2 - Pre-Alpha',
                  'Intended Audience :: Science/Research',
