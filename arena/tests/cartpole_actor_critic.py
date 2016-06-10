@@ -1,28 +1,27 @@
 import numpy as np
 import mxnet as mx
 from arena.operators import *
+from mxnet.lr_scheduler import FactorScheduler
 from arena.utils import *
 from arena import Base
 from arena.games.cartpole_box2d import CartpoleSwingupEnv
 import argparse
 
 def actor_critic_policy_sym(action_num):
+    # define the network structure of Gaussian policy
     data = mx.symbol.Variable('data')
     policy_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_1', num_hidden=128)
     policy_mean = mx.symbol.Activation(data=policy_mean, name='fc_mean_tanh_1', act_type='tanh')
     policy_mean = mx.symbol.FullyConnected(data=policy_mean, name='fc_mean_2', num_hidden=128)
     policy_mean = mx.symbol.Activation(data=policy_mean, name='fc_mean_tanh_2', act_type='tanh')
     policy_mean = mx.symbol.FullyConnected(data=policy_mean, name='fc_output', num_hidden=action_dimension)
-    # policy_mean = mx.symbol.Activation(data=policy_mean, name='fc_output_tanh', act_type='tanh')
+
     policy_var = mx.symbol.Variable('var')
-    # policy_var = mx.symbol.FullyConnected(data=data, name='fc_var_1', num_hidden=action_num)
-    # policy_var = mx.symbol.Activation(data=policy_var, name='var_output', act_type='softrelu')
-    # policy_var = mx.symbol.exp(data=policy_var, name='var_output')
-    # op = LogNormalPolicy(implicit_backward=False)
-    # policy_net = op(mean=policy_mean, var=policy_var, name='policy')
+
     policy_net = mx.symbol.Custom(mean=policy_mean, var=policy_var,
             name='policy', op_type='LogNormalPolicy', implicit_backward=False)
 
+    # define the network structure of critics network
     critic_net = mx.symbol.FullyConnected(data=data, name='fc_critic_1', num_hidden=128)
     critic_net = mx.symbol.Activation(data=critic_net, name='fc_critic_relu_1', act_type='relu')
     critic_net = mx.symbol.FullyConnected(data=critic_net, name='fc_critic_2', num_hidden=128)
@@ -37,32 +36,26 @@ def actor_critic_policy_sym(action_num):
 
 parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
 parser.add_argument('--lr', required=False, type=float, help='learning rate of the choosen optimizer')
-parser.add_argument('--opt', required=True, type=str, help='choice of the optimizer, adam or sgd')
-
+parser.add_argument('--optimizer', required=True, type=str, help='choice of the optimizer, adam or sgd')
+parser.add_argument('--clip-gradient', default=True, type=str, help='whether to clip the gradient')
+parser.add_argument('--save-model', default=False, type=str, help='whether to save the final model')
 args, unknow = parser.parse_known_args()
-if args.lr == None:
-    if args.opt == 'adam':
-        args.lr = 0.001
-    elif args.opt == 'sgd':
-        args.lr = 0.0001
+
+if args.lr is None:
+    args.lr = 0.005
 
 # Each trajectory will have at most 500 time steps
 T = 500
-# Number of iterations
-n_itr = 200
-batch_size = 4000
 # Set the discount factor for the problem
 discount = 0.99
-# Learning rate for the gradient update
-learning_rate = args.lr
 
+n_itr = 500
+batch_size = 4000
 ctx = mx.gpu()
 
+env = CartpoleSwingupEnv()
 action_dimension = 1
 state_dimension = 4
-
-
-env = CartpoleSwingupEnv()
 
 data_shapes = {'data': (T, state_dimension),
                'policy_score': (T, ),
@@ -71,15 +64,20 @@ data_shapes = {'data': (T, state_dimension),
                'var': (T, action_dimension),
                }
 sym = actor_critic_policy_sym(action_dimension)
-
 net = Base(data_shapes=data_shapes, sym=sym, name='ACNet',
            initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
-if args.opt == 'sgd':
-    optimizer = mx.optimizer.create(name='sgd', learning_rate=learning_rate,
+lr_scheduler = FactorScheduler(500, 0.1)
+if args.optimizer == 'sgd':
+    optimizer = mx.optimizer.create(name='sgd', learning_rate=args.lr,
+                                    lr_scheduler=lr_scheduler, momentum=0.9,
                                     clip_gradient=None, rescale_grad=1.0, wd=0.)
-elif args.opt == 'adam':
-    optimizer = mx.optimizer.create(name='adam', learning_rate=learning_rate)
+elif args.optimizer == 'adam':
+    optimizer = mx.optimizer.create(name='adam', learning_rate=args.lr,
+                                    lr_scheduler=lr_scheduler)
+else:
+    raise ValueError('optimizer must be chosen between adam and sgd')
 updater = mx.optimizer.get_updater(optimizer)
+
 
 for itr in xrange(n_itr):
     paths = []
@@ -95,7 +93,7 @@ for itr in xrange(n_itr):
         for step in xrange(T):
             action = net.forward(batch_size=1, is_train=False,
                                  data=observation.reshape(1, observation.size),
-                                 var=1.*np.ones((1,1)),
+                                 var=1.*np.ones((1, 1)),
                                  )[0].asnumpy()
             action = action.flatten()
             next_observation, reward, terminal, _ = env.step(action)
@@ -111,7 +109,7 @@ for itr in xrange(n_itr):
         rewards = np.array(rewards)
         outputs = net.forward(batch_size=observations.shape[0], is_train=False,
                               data=observations,
-                              var=1.*np.ones((observations.shape[0],1)),
+                              var=1.*np.ones((observations.shape[0], 1)),
                               )
         critics = outputs[3].asnumpy().reshape(rewards.shape)
         q_estimations = discount_cumsum(rewards, discount)
@@ -120,8 +118,8 @@ for itr in xrange(n_itr):
             actions=np.array(actions),
             rewards=rewards,
             observations=observations,
-            q_estimations = q_estimations,
-            advantages = advantages,
+            q_estimations=q_estimations,
+            advantages=advantages,
         )
         paths.append(path)
 
@@ -131,7 +129,7 @@ for itr in xrange(n_itr):
     advantages = np.concatenate([p['advantages'] for p in paths])
     cur_batch_size = observations.shape[0]
     outputs = net.forward(batch_size=cur_batch_size, is_train=True, data=observations,
-                          var=1.*np.ones((cur_batch_size,1)),
+                          var=1.*np.ones((cur_batch_size, 1)),
                           )
     policy_actions = outputs[0].asnumpy()
     critics = outputs[3].asnumpy()
@@ -144,10 +142,16 @@ for itr in xrange(n_itr):
                  )
     for grad in net.params_grad.values():
         grad[:] = grad[:] / cur_batch_size
-    norm_clipping(net.params_grad, 5)
+    if args.clip_gradient:
+        norm_clipping(net.params_grad, 10)
     net.update(updater)
-    print 'Epoch:%d, Batchsize:%d, Average Return:%f, Max Return:%f, Min Return:%f' %(itr, cur_batch_size, np.mean([sum(p["rewards"]) for p in paths]), np.max([sum(p["rewards"]) for p in paths]), np.min([sum(p["rewards"]) for p in paths]))
-    print 'Epoch:%d, Estimated Baseline:%f, Num Traj:%d, Variance:%f, Mean:%f' %(itr, critics.mean(), N, variance.mean(), action_mean.mean())
+    print 'Epoch:%d, Average Return:%f, Max Return:%f, Min Return:%f, Num Traj:%d\n, Mean:%f, Var:%f, Average Baseline:%f' \
+          %(itr, np.mean([sum(p["rewards"]) for p in paths]),
+            np.max([sum(p["rewards"]) for p in paths]),
+            np.min([sum(p["rewards"]) for p in paths]),
+            N, action_mean.mean(), variance.mean(), critics.mean()
+            )
 
-#net.save_params(dir_path='./models/ac2/', epoch=itr)
+if args.save_model:
+    net.save_params(dir_path='./', epoch=itr)
 
