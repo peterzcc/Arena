@@ -5,8 +5,8 @@ import setuptools
 setuptools.setup(
     name='Arena',
     version="0.1.dev0",
-    author="SHI Xingjian, Canceng Zeng, Siyi Li",
-    author_email="xshiab@cse.ust.hk, czeng@connect.ust.hk, sliay@cse.ust.hk",
+    author="SHI Xingjian, Canceng Zeng, Siyi Li, Jiani Zhang",
+    author_email="xshiab@cse.ust.hk, czeng@connect.ust.hk, sliay@cse.ust.hk, jnzhang@cse.cuhk.edu.hk",
     packages=setuptools.find_packages(),
     description='A Distributed Asynchronous Reinforcement Learning Toolbox',
     long_description=open(os.path.join(os.path.dirname(
