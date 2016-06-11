@@ -30,16 +30,18 @@ def actor_critic_policy_sym(action_num):
     target = mx.symbol.Variable('critic_label')
     critic_net = mx.symbol.LinearRegressionOutput(data=critic_net, name='critic', label=target, grad_scale=1)
 
-    net = mx.symbol.Group([policy_net, critic_net])
+    net = mx.symbol.Group([policy_net, mx.symbol.BlockGrad(policy_mean),
+                           mx.symbol.BlockGrad(policy_var), critic_net])
     return net
 
 
 parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
 parser.add_argument('--lr', required=False, type=float, help='learning rate of the choosen optimizer')
-parser.add_argument('--optimizer', required=True, type=str, help='choice of the optimizer, adam or sgd')
-parser.add_argument('--clip-gradient', default=True, type=str, help='whether to clip the gradient')
-parser.add_argument('--save-model', default=False, type=str, help='whether to save the final model')
-args, unknow = parser.parse_known_args()
+parser.add_argument('--optimizer', required=False, type=str, default='sgd',
+                    help='choice of the optimizer, adam or sgd')
+parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
+parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
+args = parser.parse_args()
 
 if args.lr is None:
     args.lr = 0.005

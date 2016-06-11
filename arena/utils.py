@@ -4,6 +4,7 @@ import os
 import numpy
 import json
 import re
+import scipy.signal
 import logging
 import ast
 from collections import namedtuple, OrderedDict
@@ -37,7 +38,6 @@ def get_saving_path(prefix="", epoch=None,):
 def save_params(dir_path=os.curdir, epoch=None, name="", params=None, aux_states=None, ctx=mx.cpu()):
     prefix = os.path.join(dir_path, name)
     _, param_saving_path, _ = get_saving_path(prefix, epoch)
-    #TODO Remove the (dir_path == "") condition in the future
     if not os.path.isdir(dir_path) and not (dir_path == ""):
         os.makedirs(dir_path)
     save_dict = {('arg:%s' % k): v.copyto(ctx) for k, v in params.items()}
@@ -163,6 +163,7 @@ def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
     _, param_loading_path, _ = get_saving_path(prefix, epoch)
     while not os.path.isfile(param_loading_path):
+        logging.info("in load_param, %s Not Found!" %param_loading_path)
         time.sleep(60)
     save_dict = nd.load(param_loading_path)
     arg_params = {}
@@ -182,6 +183,15 @@ def load_misc(dir_path="", epoch=None, name=""):
     with open(misc_saving_path, 'r') as fp:
         misc = json.load(fp)
     return misc
+
+def discount_cumsum(x, discount):
+    # See https://docs.scipy.org/doc/scipy/reference/tutorial/signal.html#difference-equation-filtering
+    # Here, we have y[t] - discount*y[t+1] = x[t]
+    # or rev(y)[t] - discount*rev(y)[t-1] = rev(x)[t]
+    return scipy.signal.lfilter([1], [1, -discount], x[::-1], axis=0)[::-1]
+
+def discount_return(x, discount):
+    return numpy.sum(x * (discount ** numpy.arange(len(x))))
 
 
 def update_on_kvstore(kv, params, params_grad):
