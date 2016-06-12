@@ -155,7 +155,7 @@ class LogNormalPolicy(mx.operator.CustomOp):
         var = in_data[1]
         self.assign(out_data[1], req[1], mean)
         self.assign(out_data[2], req[2], var)
-        if self.deterministice:
+        if self.deterministic:
             self.assign(out_data[0], req[0], mean)
             # self.assign(out_data[0], req[0], nd.array(mean))
         else:
