@@ -155,7 +155,7 @@ class LogNormalPolicy(mx.operator.CustomOp):
         var = in_data[1]
         self.assign(out_data[1], req[1], mean)
         self.assign(out_data[2], req[2], var)
-        if self.deterministic == True:
+        if self.deterministice:
             self.assign(out_data[0], req[0], mean)
             # self.assign(out_data[0], req[0], nd.array(mean))
         else:
@@ -174,7 +174,7 @@ class LogNormalPolicy(mx.operator.CustomOp):
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         mean = in_data[0]
         var = in_data[1]
-        if self.implicit_backward == True:
+        if self.implicit_backward:
             action = out_data[0]
         else:
             action = in_data[3]
@@ -192,10 +192,10 @@ class LogNormalPolicy(mx.operator.CustomOp):
 class LogNormalPolicyProp(mx.operator.CustomOpProp):
     def __init__(self, deterministic=False, implicit_backward=True, entropy_regularization=0, grad_scale=1.0):
         super(LogNormalPolicyProp, self).__init__(need_top_grad=False)
-        self.deterministic = deterministic
-        self.implicit_backward = implicit_backward
-        self.entropy_regularization = entropy_regularization
-        self.grad_scale = grad_scale
+        self.deterministic = safe_eval(deterministic)
+        self.implicit_backward = safe_eval(implicit_backward)
+        self.entropy_regularization = safe_eval(entropy_regularization)
+        self.grad_scale = safe_eval(grad_scale)
 
     def list_arguments(self):
         if self.implicit_backward == True:
