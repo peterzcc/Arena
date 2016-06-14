@@ -6,6 +6,7 @@ from arena.utils import *
 from arena import Base
 import argparse
 import gym
+import gym.spaces
 
 def normal_sym(action_num):
     # define the network structure of Gaussian policy
@@ -20,9 +21,9 @@ def normal_sym(action_num):
     policy_var = mx.symbol.FullyConnected(data=data, name='fc_var', num_hidden=action_num)
     policy_var = mx.symbol.exp(data=policy_var, name='var_out')
 
-    policy_net = mx.symbol.Custom(mean=policy_mean, var=policy_var,
-            name='policy', op_type='LogNormalPolicy', implicit_backward=False)
-    return policy_net
+    net = mx.symbol.Custom(mean=policy_mean, var=policy_var,
+                           name='policy', op_type='LogNormalPolicy', implicit_backward=False)
+    return net
 
 def softmax_sym(action_num):
     data = mx.symbol.Variable('data')
@@ -58,39 +59,44 @@ parser.add_argument('--save-model', default=False, type=str, help='whether to sa
 args, unknow = parser.parse_known_args()
 
 if args.lr is None:
-    args.lr = 0.005
+    args.lr = 0.001
 
-# Each trajectory will have at most 500 time steps
-T = 500
 # Set the discount factor for the problem
 discount = 0.99
 n_itr = 500
 batch_size = 4000
 ctx = mx.gpu()
 
-env = gym.make('CartPole-v0')
+# discrete action space environment
+# env = gym.make('CartPole-v0')
+# continuous action space environment
+env = gym.make('Pendulum-v0')
+T = env.spec.timestep_limit
+
 observation_shape = env.observation_space.shape
-if 'Discrete' in env.action_space.__repr__():
+if isinstance(env.action_space, gym.spaces.Discrete):
     action_shape = (env.action_space.n, )
     policy_data_shapes = {'data': (T,) + observation_shape,
                           'policy_score': (T,),
                           'policy_backward_action': (T,),
                           }
     policy_sym = softmax_sym(action_shape[0])
-elif 'Box' in env.action_space.__repr__():
+    env_type = 'discrete'
+elif isinstance(env.action_space, gym.spaces.Box):
     action_shape = env.action_space.shape
     policy_data_shapes = {'data': (T,) + observation_shape,
                           'policy_score': (T,),
                           'policy_backward_action': (T,) + action_shape,
                           }
     policy_sym = normal_sym(action_shape[0])
+    env_type = 'continuous'
 else:
     raise ValueError('Unrecognized action space type')
 policy_net = Base(data_shapes=policy_data_shapes, sym=policy_sym, name='a2c-a',
                   initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
 
 critic_data_shapes = {'data': (T,) + observation_shape,
-                      'critic_label':(T, 1),
+                      'critic_label': (T, 1),
                       }
 critic_sym = critic_sym()
 critic_net = Base(data_shapes=critic_data_shapes, sym=critic_sym, name='a2c-c',
@@ -125,7 +131,8 @@ for itr in xrange(n_itr):
             action = policy_net.forward(batch_size=1, is_train=False,
                                         data=observation.reshape(1, observation.size),
                                         )[0].asnumpy()
-            next_observation, reward, terminal, _ = env.step(action[0])
+            action = action[0]
+            next_observation, reward, terminal, _ = env.step(action)
             observations.append(observation)
             actions.append(action)
             rewards.append(reward)
@@ -160,9 +167,13 @@ for itr in xrange(n_itr):
     critic_outputs = critic_net.forward(batch_size=cur_batch_size, is_train=True,
                                         data=observations)
     policy_actions = policy_outputs[0].asnumpy()
+    if env_type == 'continuous':
+        means = policy_outputs[1].asnumpy()
+        vars = policy_outputs[2].asnumpy()
+        print 'AveragePolicyMean:%f, AveragePolicyVar:%f' %(means.mean(),vars.mean())
     critics = critic_outputs[0].asnumpy()
     policy_net.backward(batch_size=cur_batch_size, policy_score=advantages,
-                        policy_backward_action=actions.reshape((actions.size,)))
+                        policy_backward_action=actions.reshape(actions.shape))
     critic_net.backward(batch_size=cur_batch_size,
                         critic_label=q_estimations.reshape(q_estimations.size, 1))
     for grad in policy_net.params_grad.values():
