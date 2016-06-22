@@ -44,7 +44,7 @@ parser.add_argument('--save-model', default=False, type=bool, help='whether to s
 args = parser.parse_args()
 
 if args.lr is None:
-    args.lr = 0.005
+    args.lr = 0.01
 
 # Each trajectory will have at most 500 time steps
 T = 500
@@ -59,14 +59,14 @@ env = CartpoleSwingupEnv()
 action_dimension = 1
 state_dimension = 4
 
-data_shapes = {'data': (T, state_dimension),
-               'policy_score': (T, ),
-               'policy_backward_action': (T, action_dimension),
-               'critic_label': (T, 1),
-               'var': (T, action_dimension),
+data_shapes = {'data': (batch_size, state_dimension),
+               'policy_score': (batch_size, ),
+               'policy_backward_action': (batch_size, action_dimension),
+               'critic_label': (batch_size,),
+               'var': (batch_size, action_dimension),
                }
 sym = actor_critic_policy_sym(action_dimension)
-net = Base(data_shapes=data_shapes, sym=sym, name='ACNet',
+net = Base(data_shapes=data_shapes, sym_gen=sym, name='ACNet',
            initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
 lr_scheduler = FactorScheduler(500, 0.1)
 if args.optimizer == 'sgd':
@@ -93,7 +93,7 @@ for itr in xrange(n_itr):
 
         observation = env.reset()
         for step in xrange(T):
-            action = net.forward(batch_size=1, is_train=False,
+            action = net.forward(is_train=False,
                                  data=observation.reshape(1, observation.size),
                                  var=1.*np.ones((1, 1)),
                                  )[0].asnumpy()
@@ -109,7 +109,7 @@ for itr in xrange(n_itr):
         counter -= (step + 1)
         observations = np.array(observations)
         rewards = np.array(rewards)
-        outputs = net.forward(batch_size=observations.shape[0], is_train=False,
+        outputs = net.forward(is_train=False,
                               data=observations,
                               var=1.*np.ones((observations.shape[0], 1)),
                               )
@@ -130,17 +130,16 @@ for itr in xrange(n_itr):
     q_estimations = np.concatenate([p["q_estimations"] for p in paths])
     advantages = np.concatenate([p['advantages'] for p in paths])
     cur_batch_size = observations.shape[0]
-    outputs = net.forward(batch_size=cur_batch_size, is_train=True, data=observations,
+    outputs = net.forward(is_train=True, data=observations,
                           var=1.*np.ones((cur_batch_size, 1)),
                           )
     policy_actions = outputs[0].asnumpy()
     critics = outputs[3].asnumpy()
     variance = outputs[2].asnumpy()
     action_mean = outputs[1].asnumpy()
-    net.backward(batch_size=cur_batch_size,
-                 policy_score=advantages,
+    net.backward(policy_score=advantages,
                  policy_backward_action=actions,
-                 critic_label=q_estimations.reshape(q_estimations.size, 1),
+                 critic_label=q_estimations.reshape(q_estimations.size,),
                  )
     for grad in net.params_grad.values():
         grad[:] = grad[:] / cur_batch_size
