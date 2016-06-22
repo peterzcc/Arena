@@ -188,14 +188,9 @@ class Base(object):
         return exe.outputs[0]
 
     def forward(self, is_train=False, bucket_kwargs=None, **arg_dict):
-        data_shapes = {k : v.shape for k, v in arg_dict.items()}
-        import time
-        start = time.time()
+        data_shapes = {k: v.shape for k, v in arg_dict.items()}
         self.switch_bucket(bucket_kwargs=bucket_kwargs,
                            data_shapes=data_shapes)
-        end = time.time()
-        #print "switch_bucket:", end-start
-        start = time.time()
         for k, v in arg_dict.items():
             assert self.exe.arg_dict[k].shape == v.shape,\
                 "Shape not match: key %s, need %s, received %s" \
@@ -204,8 +199,6 @@ class Base(object):
         self.exe.forward(is_train=is_train)
         for output in self.exe.outputs:
             output.wait_to_read()
-        end = time.time()
-        #print "forward:", end - start
         return self.exe.outputs
 
     def backward(self, out_grads=None, **arg_dict):
