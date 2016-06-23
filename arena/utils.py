@@ -234,4 +234,3 @@ def get_npy_list(ndarray_list):
 def get_bucket_key(bucket_kwargs):
     assert isinstance(bucket_kwargs, dict)
     return tuple(bucket_kwargs.items())
->>>>>>> arena

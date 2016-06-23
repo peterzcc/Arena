@@ -68,38 +68,38 @@ batch_size = 4000
 ctx = mx.gpu()
 
 # discrete action space environment
-# env = gym.make('CartPole-v0')
+env = gym.make('CartPole-v0')
 # continuous action space environment
-env = gym.make('Pendulum-v0')
+# env = gym.make('Pendulum-v0')
 T = env.spec.timestep_limit
 
 observation_shape = env.observation_space.shape
 if isinstance(env.action_space, gym.spaces.Discrete):
     action_shape = (env.action_space.n, )
-    policy_data_shapes = {'data': (T,) + observation_shape,
-                          'policy_score': (T,),
-                          'policy_backward_action': (T,),
+    policy_data_shapes = {'data': (batch_size,) + observation_shape,
+                          'policy_score': (batch_size,),
+                          'policy_backward_action': (batch_size,),
                           }
     policy_sym = softmax_sym(action_shape[0])
     env_type = 'discrete'
 elif isinstance(env.action_space, gym.spaces.Box):
     action_shape = env.action_space.shape
-    policy_data_shapes = {'data': (T,) + observation_shape,
-                          'policy_score': (T,),
-                          'policy_backward_action': (T,) + action_shape,
+    policy_data_shapes = {'data': (batch_size,) + observation_shape,
+                          'policy_score': (batch_size,),
+                          'policy_backward_action': (batch_size,) + action_shape,
                           }
     policy_sym = normal_sym(action_shape[0])
     env_type = 'continuous'
 else:
     raise ValueError('Unrecognized action space type')
-policy_net = Base(data_shapes=policy_data_shapes, sym=policy_sym, name='a2c-a',
+policy_net = Base(data_shapes=policy_data_shapes, sym_gen=policy_sym, name='a2c-a',
                   initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
 
-critic_data_shapes = {'data': (T,) + observation_shape,
-                      'critic_label': (T, 1),
+critic_data_shapes = {'data': (batch_size,) + observation_shape,
+                      'critic_label': (batch_size,),
                       }
 critic_sym = critic_sym()
-critic_net = Base(data_shapes=critic_data_shapes, sym=critic_sym, name='a2c-c',
+critic_net = Base(data_shapes=critic_data_shapes, sym_gen=critic_sym, name='a2c-c',
                   initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
 
 lr_scheduler = FactorScheduler(500, 0.1)
@@ -128,7 +128,7 @@ for itr in xrange(n_itr):
 
         observation = env.reset()
         for step in xrange(T):
-            action = policy_net.forward(batch_size=1, is_train=False,
+            action = policy_net.forward(is_train=False,
                                         data=observation.reshape(1, observation.size),
                                         )[0].asnumpy()
             action = action[0]
@@ -143,7 +143,7 @@ for itr in xrange(n_itr):
         counter -= (step + 1)
         observations = np.array(observations)
         rewards = np.array(rewards)
-        critic_outputs = critic_net.forward(batch_size=observations.shape[0], is_train=False,
+        critic_outputs = critic_net.forward(is_train=False,
                                             data=observations,)
         critics = critic_outputs[0].asnumpy().reshape(rewards.shape)
         q_estimations = discount_cumsum(rewards, discount)
@@ -162,9 +162,9 @@ for itr in xrange(n_itr):
     q_estimations = np.concatenate([p["q_estimations"] for p in paths])
     advantages = np.concatenate([p['advantages'] for p in paths])
     cur_batch_size = observations.shape[0]
-    policy_outputs = policy_net.forward(batch_size=cur_batch_size, is_train=True,
+    policy_outputs = policy_net.forward(is_train=True,
                                         data=observations,)
-    critic_outputs = critic_net.forward(batch_size=cur_batch_size, is_train=True,
+    critic_outputs = critic_net.forward(is_train=True,
                                         data=observations)
     policy_actions = policy_outputs[0].asnumpy()
     if env_type == 'continuous':
@@ -172,10 +172,9 @@ for itr in xrange(n_itr):
         vars = policy_outputs[2].asnumpy()
         print 'AveragePolicyMean:%f, AveragePolicyVar:%f' %(means.mean(),vars.mean())
     critics = critic_outputs[0].asnumpy()
-    policy_net.backward(batch_size=cur_batch_size, policy_score=advantages,
+    policy_net.backward(policy_score=advantages,
                         policy_backward_action=actions.reshape(actions.shape))
-    critic_net.backward(batch_size=cur_batch_size,
-                        critic_label=q_estimations.reshape(q_estimations.size, 1))
+    critic_net.backward(critic_label=q_estimations.reshape(q_estimations.size,))
     for grad in policy_net.params_grad.values():
         grad[:] = grad[:] / cur_batch_size
     for grad in critic_net.params_grad.values():
