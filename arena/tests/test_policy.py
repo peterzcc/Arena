@@ -74,12 +74,12 @@ def test_lognormal():
     ctx = mx.gpu()
     minibatch_size = 100
     data_shapes = {'data': (minibatch_size, 10), 'policy_score': (minibatch_size,)} #, 'var':(minibatch_size,)}
-    qnet = Base(data_shapes=data_shapes, sym=net, name='PolicyNet',
+    qnet = Base(data_shapes=data_shapes, sym_gen=net, name='PolicyNet',
                 initializer=mx.initializer.Xavier(factor_type="in", magnitude=1.0),
                 ctx=ctx)
     print qnet.internal_sym_names
 
-    lr = 0.001
+    lr = 0.01
     lr_scheduler = FactorScheduler(1000, 1.0/1.5)
     optimizer = mx.optimizer.create(name='sgd', learning_rate=lr, #momentum=0.9,
                                     clip_gradient=None,
@@ -97,18 +97,18 @@ def test_lognormal():
     #    for k, v in qnet.params.items():
     #        print k, v.asnumpy()
         data = numpy.random.randn(minibatch_size, 10)
-        means = qnet.forward(batch_size=minibatch_size, sym_name="fc_mean_3_output", data=data)[0].asnumpy()
-        vars = qnet.forward(batch_size=minibatch_size, sym_name="fc_var_softplus_1_output", data=data)[0].asnumpy()
+        means = qnet.compute_internal(sym_name="fc_mean_3_output", data=data).asnumpy()
+        vars = qnet.compute_internal(sym_name="fc_var_softplus_1_output", data=data).asnumpy()
 
-        outputs = qnet.forward(batch_size=minibatch_size, is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
+        outputs = qnet.forward(is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
         action = outputs[0].asnumpy()
         score = simple_game_multimodal(data, action, 1)
         baseline = baseline - 0.01 * (baseline - score.mean())
         print 'score=', score.mean(), 'err=', numpy.square(means - data*data).mean(), 'var=', vars.mean(), 'baseline=', baseline
         stats[i] = [score.mean(), numpy.square(means - data*data).mean(), vars.mean()]
-        qnet.backward(batch_size=minibatch_size, policy_score=score-baseline)
+        qnet.backward(policy_score=score-baseline)
+        norm_clipping(qnet.params_grad, 10)
         qnet.update(updater)
-        norm_clipping(qnet.params_grad, 5)
         if i%10 == 0:
             update_line(lines, fig, ax, i, score.mean())#numpy.square(means - data*data).mean())
 
@@ -123,7 +123,7 @@ def test_logsoftmax():
     minibatch_size = 100
     data_shapes = {'data': (minibatch_size, 4),
                    'policy_score': (minibatch_size,)}
-    qnet = Base(data_shapes=data_shapes, sym=net, name='PolicyNet',
+    qnet = Base(data_shapes=data_shapes, sym_gen=net, name='PolicyNet',
                 initializer=mx.initializer.Xavier(factor_type="in", magnitude=1.0),
                 ctx=ctx)
     print qnet.internal_sym_names
@@ -142,7 +142,7 @@ def test_logsoftmax():
     baseline = 0
     for i in range(total_iter):
         data = numpy.random.randn(minibatch_size, 4)
-        outputs = qnet.forward(batch_size=minibatch_size, is_train=True, data=data)
+        outputs = qnet.forward(is_train=True, data=data)
         action = outputs[0].asnumpy()
         prob = outputs[1].asnumpy()
         #print 'data=', data, 'action=', action, 'prob=', prob
@@ -152,7 +152,7 @@ def test_logsoftmax():
         print 'score=', score.mean(), 'acc=', numpy.sum(
             action == numpy.argmax(data * data, axis=1)).mean(), 'baseline=', baseline
         stats[i] = [score.mean(), numpy.sum(action == numpy.argmax(data * data, axis=1)).mean(), baseline]
-        qnet.backward(batch_size=minibatch_size, policy_score=score - baseline)
+        qnet.backward(policy_score=score - baseline)
         qnet.update(updater)
         update_line(lines, fig, ax, i, score.mean())  # numpy.square(means - data*data).mean())
 
@@ -176,7 +176,7 @@ def test_logmog():
     ctx = mx.gpu()
     minibatch_size = 100
     data_shapes = {'data': (minibatch_size, 10), 'policy_score': (minibatch_size,)} #, 'var':(minibatch_size,)}
-    qnet = Base(data_shapes=data_shapes, sym=net, name='PolicyNet',
+    qnet = Base(data_shapes=data_shapes, sym_gen=net, name='PolicyNet',
                 initializer=mx.initializer.Xavier(factor_type="in", magnitude=1.0),
                 ctx=ctx)
     print qnet.internal_sym_names
@@ -199,10 +199,10 @@ def test_logmog():
     #    for k, v in qnet.params.items():
     #        print k, v.asnumpy()
         data = numpy.random.randn(minibatch_size, 10)
-        mean_npy = qnet.forward(batch_size=minibatch_size, sym_name="fc_mean_3_reshape_output", data=data)[0].asnumpy()
-        var_npy = qnet.forward(batch_size=minibatch_size, sym_name="fc_var_softplus_1_output", data=data)[0].asnumpy()
-        prob_npy = qnet.forward(batch_size=minibatch_size, sym_name="fc_prob_softmax_output", data=data)[0].asnumpy()
-        outputs = qnet.forward(batch_size=minibatch_size, is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
+        mean_npy = qnet.compute_internal(sym_name="fc_mean_3_reshape_output", data=data).asnumpy()
+        var_npy = qnet.compute_internal(sym_name="fc_var_softplus_1_output", data=data).asnumpy()
+        prob_npy = qnet.compute_internal(sym_name="fc_prob_softmax_output", data=data).asnumpy()
+        outputs = qnet.forward(is_train=True, data=data) #, var=0.5*numpy.ones((minibatch_size, )))
         action = outputs[0].asnumpy()
         score = simple_game_multimodal(data, action, 5)
         baseline = baseline - 0.01 * (baseline - score.mean())
@@ -210,12 +210,12 @@ def test_logmog():
         print 'score=', score.mean(), 'err=', numpy.square(chosen_mean - data*data).mean(), 'var=', var_npy.mean(), 'baseline=', baseline
         print 'prob=', prob_npy
         stats[i] = [score.mean(), numpy.square(chosen_mean - data*data).mean(), var_npy.mean()]
-        qnet.backward(batch_size=minibatch_size, policy_score=score-baseline)
+        qnet.backward(policy_score=score-baseline)
         qnet.update(updater)
         norm_clipping(qnet.params_grad, 5)
         if i % 10 == 0:
             update_line(lines, fig, ax, i, score.mean())#numpy.square(means - data*data).mean())
 
 #test_lognormal()
-#test_logsoftmax()
-test_logmog()
+test_logsoftmax()
+#test_logmog()

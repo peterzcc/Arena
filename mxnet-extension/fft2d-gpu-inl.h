@@ -29,6 +29,7 @@
 #define kFFTMaxThreadsPerBlock 1024
 #define kFFTMaxGridNum 65535
 
+#if defined(__CUDACC__)
 /* TODO Use cufftXtSetCallback() */
 template<typename Dtype>
 __global__ void RescaleRFFTOutGradKernel(const int count, Dtype* out_grad, const int width, const bool is_odd) {
@@ -46,6 +47,7 @@ __global__ void RescaleRFFTOutGradKernel(const int count, Dtype* out_grad, const
     }
   }
 }
+#endif
 
 namespace mxnet {
   namespace op {

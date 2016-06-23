@@ -29,6 +29,7 @@
 #define kIFFTMaxThreadsPerBlock 1024
 #define kIFFTMaxGridNum 65535
 
+#if defined(__CUDACC__)
 /* TODO Use cufftXtSetCallback() */
 template<typename Dtype>
 __global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const int width, const bool is_odd) {
@@ -46,7 +47,7 @@ __global__ void RescaleIRFFTInGradKernel(const int count, Dtype* in_grad, const 
     }
   }
 }
-
+#endif
 
 namespace mxnet {
   namespace op {

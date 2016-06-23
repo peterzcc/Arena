@@ -3,7 +3,7 @@ import mxnet.ndarray as nd
 import numpy
 from utils import *
 import os
-import cPickle
+import pickle
 from collections import OrderedDict
 import logging
 
@@ -28,44 +28,101 @@ class Base(object):
 
     """
 
-    def __init__(self, data_shapes, sym, params=None, aux_states=None,
+    def __init__(self, data_shapes, sym_gen, params=None, aux_states=None,
+                 default_bucket_kwargs=None,
                  initializer=mx.init.Uniform(0.07), ctx=mx.gpu(), name='Net'):
-        self.sym = sym
+        self.sym_gen = sym_gen
+        bucket_kwargs = default_bucket_kwargs.copy() if \
+            default_bucket_kwargs is not None else dict()
+        self.curr_bucket_key = None
         self.ctx = ctx
-        self.data_shapes = data_shapes.copy()
         self.name = name
         self.initializer = initializer
-        arg_names = sym.list_arguments()
-        aux_names = sym.list_auxiliary_states()
-        param_names = [n for n in arg_names if n not in self.data_shapes.keys()]
-        arg_shapes, output_shapes, aux_shapes = sym.infer_shape(**self.data_shapes)
-        self.arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
         if params is None:
-            self.params = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
-                                       for n in param_names])
-            self.params_grad = OrderedDict([(n, nd.empty(self.arg_name_shape[n], ctx=ctx))
-                                            for n in param_names])
-            if len(self.params) > 0:
-                assert initializer is not None, 'We must set the initializer if we donnot initialize' \
-                                                'manually the free parameters of the network!!'
-            for k, v in self.params.items():
-                initializer(k, v)
+            self.params = None
+            self.params_grad = None
         else:
-            assert set(self.arg_name_shape.items()) == set(data_shapes.items() + [(k, v.shape)
-                                                                                  for k, v in params.items()])
             self.params = OrderedDict([(k, v.copyto(ctx)) for k, v in params.items()])
             self.params_grad = OrderedDict([(n, nd.empty(v.shape, ctx=ctx))
                                             for n, v in self.params.items()])
         if aux_states is not None:
             self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
         else:
-            self.aux_states = OrderedDict([(k, nd.empty(s, ctx=ctx))
-                                           for k, s in zip(aux_names, aux_shapes)])
+            self.aux_states = None
+        self._buckets = dict()
+        self.switch_bucket(bucket_kwargs=bucket_kwargs, data_shapes=data_shapes)
         self.acc_grad = None
-        self.executor_pool = ExecutorDataShapePool(ctx=self.ctx, sym=self.sym,
-                                                   data_shapes=self.data_shapes,
-                                                   params=self.params, params_grad=self.params_grad,
-                                                   aux_states=self.aux_states)
+
+    @property
+    def exe(self):
+        return self._buckets[self.curr_bucket_key]['exe'][tuple(self.data_shapes.items())]
+
+    @property
+    def data_shapes(self):
+        return self._buckets[self.curr_bucket_key]['data_shapes']
+
+    @property
+    def sym(self):
+        return self._buckets[self.curr_bucket_key]['sym']
+
+    def switch_bucket(self, bucket_kwargs=None, data_shapes=None):
+        if bucket_kwargs is not None:
+            self.curr_bucket_key = get_bucket_key(bucket_kwargs=bucket_kwargs)
+        # 1. Check if bucket key exists
+        if self.curr_bucket_key in self._buckets:
+            if data_shapes is not None:
+                if tuple(data_shapes.items()) not in self._buckets[self.curr_bucket_key]['exe']:
+                    #TODO Optimize the reshaping functionality!
+                    self._buckets[self.curr_bucket_key]['exe'][tuple(data_shapes.items())] = \
+                        self.exe.reshape(partial_shaping=True, allow_up_sizing=True,**data_shapes)
+                    self._buckets[self.curr_bucket_key]['data_shapes'] = data_shapes
+                else:
+                    self._buckets[self.curr_bucket_key]['data_shapes'] = data_shapes
+            return
+        # 2. If the bucket key does not exist, create new symbol + executor
+        assert data_shapes is not None, "Must set data_shapes for new bucket!"
+        if isinstance(self.sym_gen, mx.symbol.Symbol):
+            sym = self.sym_gen
+        else:
+            sym = self.sym_gen(**dict(self.curr_bucket_key))
+        arg_names = sym.list_arguments()
+        aux_names = sym.list_auxiliary_states()
+        param_names = [n for n in arg_names if n not in data_shapes.keys()]
+        arg_shapes, _, aux_shapes = sym.infer_shape(**data_shapes)
+        arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
+        if self.params is None:
+            self.params = OrderedDict([(n, nd.empty(arg_name_shape[n], ctx=self.ctx))
+                                       for n in param_names])
+            self.params_grad = OrderedDict([(n, nd.empty(arg_name_shape[n], ctx=self.ctx))
+                                            for n in param_names])
+            if len(self.params) > 0:
+                assert self.initializer is not None, \
+                    'We must set the initializer if we donnot initialize' \
+                    'manually the free parameters of the network!!'
+            for k, v in self.params.items():
+                self.initializer(k, v)
+        else:
+            assert set(arg_name_shape.items()) == \
+                   set(data_shapes.items() + [(k, v.shape) for k, v in self.params.items()])
+        if self.aux_states is None:
+            self.aux_states = OrderedDict([(k, nd.empty(s, ctx=self.ctx))
+                                           for k, s in zip(aux_names, aux_shapes)])
+        data_inputs = {k: mx.nd.empty(v, ctx=self.ctx) for k, v in data_shapes.items()}
+        if len(self._buckets) > 0:
+            shared_exe = self._buckets.values()[0]['exe']
+        else:
+            shared_exe = None
+        self._buckets[self.curr_bucket_key] = {
+            'exe': {tuple(data_shapes.items()):
+                    sym.bind(ctx=self.ctx,
+                             args=dict(self.params, **data_inputs),
+                             args_grad=dict(self.params_grad.items()),
+                             aux_states=self.aux_states,
+                             shared_exec=shared_exe)
+                    },
+            'data_shapes': data_shapes,
+            'sym': sym
+        }
 
     def save_params(self, dir_path="", epoch=None):
         param_saving_path = save_params(dir_path=dir_path, name=self.name, epoch=epoch,
@@ -90,31 +147,79 @@ class Base(object):
 
     @property
     def internal_sym_names(self):
-        return self.executor_pool.internal_syms.list_outputs()
+        return self.sym.get_internals().list_outputs()
 
     @property
-    def default_batchsize(self):
-        return self.data_shapes.values()[0].shape[0]
+    def output_keys(self):
+        return self.sym.list_outputs()
 
-    def forward(self, batch_size=None, data_shapes=None, sym_name=None, is_train=False, **input_dict):
-        exe = self.executor_pool.get(batch_size=batch_size, data_shapes=data_shapes,
-                                     internal_sym_name=sym_name)
-        if sym_name is not None:
-            assert is_train is False, "We can only view the internal symbols using the " \
-                                      "forward function!"
-        for k, v in input_dict.items():
-            exe.arg_dict[k][:] = v
-        exe.forward(is_train=is_train)
-        for output in exe.outputs:
-            output.wait_to_read()
-        return exe.outputs
+    def compute_internal(self, sym_name, bucket_kwargs=None, **arg_dict):
+        """
+        View the internal symbols using the forward function.
 
-    def backward(self, out_grads=None, batch_size=None, data_shapes=None, **arg_dict):
-        exe = self.executor_pool.get(batch_size=batch_size,
-                                     data_shapes=data_shapes)
+        :param sym_name:
+        :param bucket_kwargs:
+        :param input_dict:
+        :return:
+        """
+        data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        self.switch_bucket(bucket_kwargs=bucket_kwargs,
+                           data_shapes=data_shapes)
+        internal_sym = self.sym.get_internals()[sym_name]
+        data_inputs = {k: mx.nd.empty(v, ctx=self.ctx)
+                       for k, v in self.data_shapes.items()
+                       if k in internal_sym.list_arguments()}
+        params = {k: v for k, v in self.params.items() if
+                  k in internal_sym.list_arguments()}
+        aux_states = {k: v for k, v in self.aux_states.items()
+                      if k in internal_sym.list_auxiliary_states()}
+        exe = internal_sym.bind(ctx=self.ctx,
+                                args=dict(params, **data_inputs),
+                                args_grad=None,
+                                grad_req='null',
+                                aux_states=aux_states,
+                                shared_exec=self.exe)
         for k, v in arg_dict.items():
             exe.arg_dict[k][:] = v
-        exe.backward(out_grads=out_grads)
+        exe.forward(is_train=False)
+        assert 1 == len(exe.outputs)
+        for output in exe.outputs:
+            output.wait_to_read()
+        return exe.outputs[0]
+
+    def forward(self, is_train=False, bucket_kwargs=None, **arg_dict):
+        data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        self.switch_bucket(bucket_kwargs=bucket_kwargs,
+                           data_shapes=data_shapes)
+        for k, v in arg_dict.items():
+            assert self.exe.arg_dict[k].shape == v.shape,\
+                "Shape not match: key %s, need %s, received %s" \
+                %(k, str(self.exe.arg_dict[k].shape), str(v.shape))
+            self.exe.arg_dict[k][:] = v
+        self.exe.forward(is_train=is_train)
+        for output in self.exe.outputs:
+            output.wait_to_read()
+        return self.exe.outputs
+
+    def backward(self, out_grads=None, **arg_dict):
+        for k, v in arg_dict.items():
+            assert self.exe.arg_dict[k].shape == v.shape, \
+                "Shape not match: key %s, need %s, received %s" \
+                % (k, str(self.exe.arg_dict[k].shape), str(v.shape))
+            self.exe.arg_dict[k][:] = v
+        self.exe.backward(out_grads=out_grads)
+
+    def forward_backward(self, bucket_kwargs=None, out_grads=None, **arg_dict):
+        data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        self.switch_bucket(bucket_kwargs=bucket_kwargs,
+                           data_shapes=data_shapes)
+        for k, v in arg_dict.items():
+            self.exe.arg_dict[k][:] = v
+        self.exe.forward(is_train=True)
+        self.exe.backward(out_grads=out_grads)
+        for output in self.exe.outputs:
+            output.wait_to_read()
+        return self.exe.outputs
 
     def update(self, updater, params_grad=None):
         if params_grad is None:
@@ -138,29 +243,24 @@ class Base(object):
     Can be used to calculate the gradient of Q(s,a) over a
     """
 
-    # TODO Test this part!
-    def get_grads(self, keys, ctx=None, batch_size=None, data_shapes=None, **input_dict):
-        if len(input_dict) != 0:
-            exe = self.executor_pool.get(batch_size, data_shapes)
-            for k, v in input_dict.items():
-                exe.arg_dict[k][:] = v
-                exe.forward(is_train=True)
-                exe.backward()
-        all_grads = OrderedDict(
-            self.params_grad.items() + self.executor_pool.inputs_grad_dict[batch_size].items())
+    # TODO Finish this part!
+    def get_grads(self, keys, bucket_kwargs=None, **arg_dict):
+        data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        self.switch_bucket(bucket_kwargs=bucket_kwargs,
+                           data_shapes=data_shapes)
         # TODO I'm not sure whether copy is needed here, need to test in the future
-        if ctx is None:
-            grads = OrderedDict([(k, all_grads[k].copyto(all_grads[k].contenxt)) for k in keys])
-        else:
-            grads = OrderedDict([(k, all_grads[k].copyto(ctx)) for k in keys])
-        return grads
+        #grads = OrderedDict([(k, all_grads[k].copyto(self.ctx)) for k in keys])
+        #return grads
+        return
 
     def copy(self, name=None, ctx=None):
         if ctx is None:
             ctx = self.ctx
         if name is None:
             name = self.name + '-copy-' + str(ctx)
-        return Base(data_shapes=self.data_shapes, sym=self.sym,
+        return Base(data_shapes=self.data_shapes,
+                    sym_gen=self.sym_gen,
+                    default_bucket_kwargs=dict(self.curr_bucket_key),
                     params=self.params,
                     aux_states=self.aux_states, ctx=ctx, name=name)
 
