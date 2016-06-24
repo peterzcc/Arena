@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# TODO Support RNN for sym, refer to the LSTM example
+# TODO Test RNN, Also we need to find a way to support DPG
 class Base(object):
     """Basic wrapper for the symbols
 
