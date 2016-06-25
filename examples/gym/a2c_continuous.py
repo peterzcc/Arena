@@ -17,23 +17,12 @@ def normal_sym(action_num):
     policy_mean = mx.symbol.Activation(data=policy_mean, name='fc_mean_tanh_2', act_type='tanh')
     policy_mean = mx.symbol.FullyConnected(data=policy_mean, name='fc_output', num_hidden=action_num)
 
-    # policy_var = mx.symbol.Variable('var')
-    policy_var = mx.symbol.FullyConnected(data=data, name='fc_var', num_hidden=action_num)
-    policy_var = mx.symbol.exp(data=policy_var, name='var_out')
+    policy_var = mx.symbol.Variable('var')
+    # policy_var = mx.symbol.FullyConnected(data=data, name='fc_var', num_hidden=action_num)
+    # policy_var = mx.symbol.exp(data=policy_var, name='var_out')
 
     net = mx.symbol.Custom(mean=policy_mean, var=policy_var,
                            name='policy', op_type='LogNormalPolicy', implicit_backward=False)
-    return net
-
-def softmax_sym(action_num):
-    data = mx.symbol.Variable('data')
-    net = mx.symbol.FullyConnected(data=data, name='fc1', num_hidden=128)
-    net = mx.symbol.Activation(data=net, name='relu1', act_type='relu')
-    net = mx.symbol.FullyConnected(data=net, name='fc2', num_hidden=128)
-    net = mx.symbol.Activation(data=net, name='relu2', act_type='relu')
-    net = mx.symbol.FullyConnected(data=net, name='fc_out', num_hidden=action_num)
-
-    net = mx.symbol.Custom(data=net, name='policy', op_type='LogSoftmaxPolicy', implicit_backward=False)
     return net
 
 
@@ -50,48 +39,53 @@ def critic_sym():
 
     return critic_net
 
+# convert normalized action [-1,1] back to original action space
+def scale_action(action, action_space):
+    lb = action_space.low
+    ub = action_space.high
+    scaled_action = lb + (action + 1.) * 0.5 * (ub - lb)
+    return scaled_action
 
-parser = argparse.ArgumentParser(description='Script to train controllers in the gym environment by advantage actor-critic algorithm.')
-parser.add_argument('--lr', required=False, type=float, help='learning rate of the choosen optimizer')
-parser.add_argument('--optimizer', default='sgd', type=str, help='choice of the optimizer, adam or sgd')
-parser.add_argument('--clip-gradient', default=True, type=str, help='whether to clip the gradient')
-parser.add_argument('--save-model', default=False, type=str, help='whether to save the final model')
-args, unknow = parser.parse_known_args()
 
-if args.lr is None:
-    args.lr = 0.001
+parser = argparse.ArgumentParser(description='Script to train controllers for continuous environments in gym by advantage actor-critic algorithm.')
+parser.add_argument('--lr', type=float, default=.001, help='the initial learning rate')
+parser.add_argument('--lr-factor', type=float, default=1.,
+                    help='times the lr with a factor for every lr-factor-iter iter')
+parser.add_argument('--lr-factor-iter', type=float, default=1.,
+                    help='the number of iteration to factor the lr')
+parser.add_argument('--num-iters', type=int, default=500,
+                    help='the number of training iterations')
+parser.add_argument('--batch-size', type=int, default=4000,
+                    help='the batch size')
+parser.add_argument('--ctx', type=str, default='gpu',
+                    help='Running Context. E.g `--ctx gpu` or `--ctx gpu1` or `--ctx cpu`')
+parser.add_argument('--optimizer', default='sgd', type=str, choices=['sgd', 'adam'],
+                    help='choice of the optimizer, adam or sgd')
+parser.add_argument('--clip-gradient', default=True, type=str,
+                    help='whether to clip the gradient')
+parser.add_argument('--save-model', default=False, type=str,
+                    help='whether to save the final model')
+args = parser.parse_args()
 
-# Set the discount factor for the problem
 discount = 0.99
-n_itr = 500
-batch_size = 4000
-ctx = mx.gpu()
+n_itr = args.num_iters
+batch_size = args.batch_size
+lr_scheduler = FactorScheduler(n_itr, args.lr_factor)
+ctx = parse_ctx(args.ctx)
+ctx = mx.Context(*ctx[0])
 
-# discrete action space environment
-env = gym.make('CartPole-v0')
 # continuous action space environment
-# env = gym.make('Pendulum-v0')
+env = gym.make('Pendulum-v0')
 T = env.spec.timestep_limit
 
 observation_shape = env.observation_space.shape
-if isinstance(env.action_space, gym.spaces.Discrete):
-    action_shape = (env.action_space.n, )
-    policy_data_shapes = {'data': (batch_size,) + observation_shape,
-                          'policy_score': (batch_size,),
-                          'policy_backward_action': (batch_size,),
-                          }
-    policy_sym = softmax_sym(action_shape[0])
-    env_type = 'discrete'
-elif isinstance(env.action_space, gym.spaces.Box):
-    action_shape = env.action_space.shape
-    policy_data_shapes = {'data': (batch_size,) + observation_shape,
-                          'policy_score': (batch_size,),
-                          'policy_backward_action': (batch_size,) + action_shape,
-                          }
-    policy_sym = normal_sym(action_shape[0])
-    env_type = 'continuous'
-else:
-    raise ValueError('Unrecognized action space type')
+action_shape = env.action_space.shape
+policy_data_shapes = {'data': (batch_size,) + observation_shape,
+                      'var': (batch_size, ) + action_shape,
+                      'policy_score': (batch_size,),
+                      'policy_backward_action': (batch_size,) + action_shape,
+                      }
+policy_sym = normal_sym(action_shape[0])
 policy_net = Base(data_shapes=policy_data_shapes, sym_gen=policy_sym, name='a2c-a',
                   initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
 
@@ -102,7 +96,6 @@ critic_sym = critic_sym()
 critic_net = Base(data_shapes=critic_data_shapes, sym_gen=critic_sym, name='a2c-c',
                   initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
 
-lr_scheduler = FactorScheduler(500, 0.1)
 if args.optimizer == 'sgd':
     optimizer = mx.optimizer.create(name='sgd', learning_rate=args.lr,
                                     lr_scheduler=lr_scheduler, momentum=0.9,
@@ -110,11 +103,8 @@ if args.optimizer == 'sgd':
 elif args.optimizer == 'adam':
     optimizer = mx.optimizer.create(name='adam', learning_rate=args.lr,
                                     lr_scheduler=lr_scheduler)
-else:
-    raise ValueError('optimizer must be chosen between adam and sgd')
 updater1 = mx.optimizer.get_updater(optimizer)
 updater2 = mx.optimizer.get_updater(optimizer)
-
 
 for itr in xrange(n_itr):
     paths = []
@@ -130,9 +120,10 @@ for itr in xrange(n_itr):
         for step in xrange(T):
             action = policy_net.forward(is_train=False,
                                         data=observation.reshape(1, observation.size),
+                                        var=1.*np.ones((1,)+action_shape),
                                         )[0].asnumpy()
             action = action[0]
-            next_observation, reward, terminal, _ = env.step(action)
+            next_observation, reward, terminal, _ = env.step(scale_action(action, env.action_space))
             observations.append(observation)
             actions.append(action)
             rewards.append(reward)
@@ -163,14 +154,14 @@ for itr in xrange(n_itr):
     advantages = np.concatenate([p['advantages'] for p in paths])
     cur_batch_size = observations.shape[0]
     policy_outputs = policy_net.forward(is_train=True,
-                                        data=observations,)
+                                        data=observations,
+                                        var=1.*np.ones((cur_batch_size,)+action_shape),
+                                        )
     critic_outputs = critic_net.forward(is_train=True,
                                         data=observations)
     policy_actions = policy_outputs[0].asnumpy()
-    if env_type == 'continuous':
-        means = policy_outputs[1].asnumpy()
-        vars = policy_outputs[2].asnumpy()
-        print 'AveragePolicyMean:%f, AveragePolicyVar:%f' %(means.mean(),vars.mean())
+    means = policy_outputs[1].asnumpy()
+    vars = policy_outputs[2].asnumpy()
     critics = critic_outputs[0].asnumpy()
     policy_net.backward(policy_score=advantages,
                         policy_backward_action=actions.reshape(actions.shape))
@@ -184,13 +175,13 @@ for itr in xrange(n_itr):
         norm_clipping(critic_net.params_grad, 10)
     policy_net.update(updater1)
     critic_net.update(updater2)
-    print 'Epoch:%d, Average Return:%f, Max Return:%f, Min Return:%f, Num Traj:%d, Average Baseline:%f' \
+    print 'Epoch:%d, Average Return:%f, Max Return:%f, Min Return:%f, Num Traj:%d, Average Baseline:%f, AveragePolicyMean:%f, AveragePolicyVar:%f' \
           %(itr, np.mean([sum(p["rewards"]) for p in paths]),
             np.max([sum(p["rewards"]) for p in paths]),
             np.min([sum(p["rewards"]) for p in paths]),
-            N, critics.mean()
+            N, critics.mean(),
+            means.mean(),vars.mean()
             )
 
 if args.save_model:
     policy_net.save_params(dir_path='./', epoch=itr)
-
