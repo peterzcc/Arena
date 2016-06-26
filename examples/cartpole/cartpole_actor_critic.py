@@ -35,25 +35,34 @@ def actor_critic_policy_sym(action_num):
     return net
 
 
-parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
-parser.add_argument('--lr', required=False, type=float, help='learning rate of the choosen optimizer')
-parser.add_argument('--optimizer', required=False, type=str, default='sgd',
+parser = argparse.ArgumentParser(description='Script to test gaussian control policy network on cartpole swingup.')
+parser.add_argument('--optimizer', default='sgd', type=str, choices=['sgd', 'adam'],
                     help='choice of the optimizer, adam or sgd')
+parser.add_argument('--lr', default=0.01, type=float, help='the initial learning rate of the choosen optimizer')
+parser.add_argument('--lr-factor', type=float, default=1.,
+                    help='times the lr with a factor for every lr-factor-iter iter')
+parser.add_argument('--lr-factor-iter', type=float, default=1.,
+                    help='the number of iteration to factor the lr')
+parser.add_argument('--num-iters', type=int, default=500,
+                    help='the number of training iterations')
+parser.add_argument('--batch-size', type=int, default=4000,
+                    help='the batch size')
+parser.add_argument('--ctx', type=str, default='gpu',
+                    help='Running Context. E.g `--ctx gpu` or `--ctx gpu1` or `--ctx cpu`')
 parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
 parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
 args = parser.parse_args()
-
-if args.lr is None:
-    args.lr = 0.01
 
 # Each trajectory will have at most 500 time steps
 T = 500
 # Set the discount factor for the problem
 discount = 0.99
 
-n_itr = 500
-batch_size = 4000
-ctx = mx.gpu()
+n_itr = args.num_iters
+batch_size = args.batch_size
+lr_scheduler = FactorScheduler(args.lr_factor_iter, args.lr_factor)
+ctx = parse_ctx(args.ctx)
+ctx = mx.Context(*ctx[0])
 
 env = CartpoleSwingupEnv()
 action_dimension = 1
@@ -68,7 +77,6 @@ data_shapes = {'data': (batch_size, state_dimension),
 sym = actor_critic_policy_sym(action_dimension)
 net = Base(data_shapes=data_shapes, sym_gen=sym, name='ACNet',
            initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0), ctx=ctx)
-lr_scheduler = FactorScheduler(500, 0.1)
 if args.optimizer == 'sgd':
     optimizer = mx.optimizer.create(name='sgd', learning_rate=args.lr,
                                     lr_scheduler=lr_scheduler, momentum=0.9,
