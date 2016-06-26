@@ -4,13 +4,12 @@ import os
 import numpy
 import json
 import re
+import scipy.signal
 import logging
 import ast
 from collections import namedtuple, OrderedDict
 import time
 
-ExecutorPoolKey = namedtuple('ExecutorPoolKey', ['data_shapes_items', 'sym_name'])
-ExecutorPoolKey.__new__.__defaults__ = (None, None)
 
 _ctx = mx.cpu()
 _numpy_rng = numpy.random.RandomState(123456)
@@ -24,7 +23,7 @@ def get_numpy_rng():
     return _numpy_rng
 
 
-def get_saving_path(prefix="", epoch=None,):
+def get_saving_path(prefix="", epoch=None):
     sym_saving_path = os.path.join('%s-symbol.json' % prefix)
     if epoch is not None:
         param_saving_path = os.path.join('%s-%05d.params' % (prefix, epoch))
@@ -34,10 +33,10 @@ def get_saving_path(prefix="", epoch=None,):
     return sym_saving_path, param_saving_path, misc_saving_path
 
 
-def save_params(dir_path=os.curdir, epoch=None, name="", params=None, aux_states=None, ctx=mx.cpu()):
+def save_params(dir_path=os.curdir, epoch=None, name="", params=None, aux_states=None,
+                ctx=mx.cpu()):
     prefix = os.path.join(dir_path, name)
     _, param_saving_path, _ = get_saving_path(prefix, epoch)
-    #TODO Remove the (dir_path == "") condition in the future
     if not os.path.isdir(dir_path) and not (dir_path == ""):
         os.makedirs(dir_path)
     save_dict = {('arg:%s' % k): v.copyto(ctx) for k, v in params.items()}
@@ -74,8 +73,8 @@ def norm_clipping(params_grad, threshold):
     assert type(params_grad) in (dict, OrderedDict)
     for grad in params_grad.values():
         grad.wait_to_read()
-    norm_val = numpy.sqrt(sum([nd.sum(nd.square(grad)) for grad in params_grad.values()]))
-    print 'grad norm:', norm_val
+    norm_val = nd.sqrt(sum([nd.sum(nd.square(grad)) for grad in params_grad.values()])).asnumpy()[0]
+    print('grad norm: %g' % norm_val)
     ratio = 1.0
     if norm_val > threshold:
         ratio = threshold / norm_val
@@ -102,7 +101,9 @@ def sample_categorical(prob, rng):
     """
     ret = numpy.empty(prob.shape[0], dtype=numpy.float32)
     for ind in range(prob.shape[0]):
-        ret[ind] = numpy.searchsorted(numpy.cumsum(prob[ind]), rng.rand()).clip(min=0.0, max=prob.shape[1] - 0.5)
+        ret[ind] = numpy.searchsorted(numpy.cumsum(prob[ind]), rng.rand()).clip(min=0.0,
+                                                                                max=prob.shape[
+                                                                                        1] - 0.5)
     return ret
 
 
@@ -163,6 +164,7 @@ def load_params(dir_path="", epoch=None, name=""):
     prefix = os.path.join(dir_path, name)
     _, param_loading_path, _ = get_saving_path(prefix, epoch)
     while not os.path.isfile(param_loading_path):
+        logging.info("in load_param, %s Not Found!" % param_loading_path)
         time.sleep(60)
     save_dict = nd.load(param_loading_path)
     arg_params = {}
@@ -182,6 +184,17 @@ def load_misc(dir_path="", epoch=None, name=""):
     with open(misc_saving_path, 'r') as fp:
         misc = json.load(fp)
     return misc
+
+
+def discount_cumsum(x, discount):
+    # See https://docs.scipy.org/doc/scipy/reference/tutorial/signal.html#difference-equation-filtering
+    # Here, we have y[t] - discount*y[t+1] = x[t]
+    # or rev(y)[t] - discount*rev(y)[t-1] = rev(x)[t]
+    return scipy.signal.lfilter([1], [1, -discount], x[::-1], axis=0)[::-1]
+
+
+def discount_return(x, discount):
+    return numpy.sum(x * (discount ** numpy.arange(len(x))))
 
 
 def update_on_kvstore(kv, params, params_grad):
@@ -210,70 +223,6 @@ def get_npy_list(ndarray_list):
     return ret
 
 
-class ExecutorDataShapePool(object):
-    def __init__(self, ctx, sym, data_shapes, params, params_grad, aux_states, share_execs=True):
-        self.ctx = ctx
-        self.sym = sym
-        self.internal_syms = self.sym.get_internals()
-        self.params = params
-        self.params_grad = params_grad
-        self.aux_states = aux_states
-        self.inputs_grad_dict = {}
-        self.basic_data_shapes = data_shapes.copy()
-        self.exe_pool = {}
-        self.share_execs = share_execs
-        self.base_exe = None
-        self.base_exe = self.get()
-
-    def get(self, batch_size=None, data_shapes=None, internal_sym_name=None):
-        if batch_size is None and data_shapes is None:
-            if self.base_exe is not None:
-                return self.base_exe
-            data_shapes_items = tuple(self.basic_data_shapes.items())
-        elif data_shapes is not None:
-            # The `data_shapes` field will not be used if `batch_size` is specified.
-            new_data_shapes = self.basic_data_shapes.copy()
-            for k, v in data_shapes.items():
-                new_data_shapes[k] = v
-            data_shapes_items = tuple(new_data_shapes.items())
-        else:
-            assert isinstance(batch_size, (int, long))
-            data_shapes_items = tuple([(k, (batch_size,) + v[1:]) for k, v in
-                               self.basic_data_shapes.items()])
-        exe_key = ExecutorPoolKey(data_shapes_items=data_shapes_items, sym_name=internal_sym_name)
-        if exe_key in self.exe_pool:
-            return self.exe_pool[exe_key]
-        else:
-            if internal_sym_name is not None:
-                # Compile a forward only executor for internal symbol
-                internal_sym = self.internal_syms[internal_sym_name]
-                data_inputs = {k: mx.nd.empty(v, ctx=self.ctx)
-                               for k, v in data_shapes_items
-                                if k in internal_sym.list_arguments()}
-                params = {k: v for k, v in self.params.items() if k in internal_sym.list_arguments()}
-                aux_states = {k: v for k, v in self.aux_states.items()
-                              if k in internal_sym.list_auxiliary_states()}
-                exe = internal_sym.bind(ctx=self.ctx, args=dict(params, **data_inputs),
-                                            args_grad=None, grad_req='null', aux_states=aux_states)
-                self.exe_pool[exe_key] = exe
-            else:
-                data_inputs = {k: mx.nd.empty(v, ctx=self.ctx)
-                               for k, v in data_shapes_items}
-                inputs_grad = {k: mx.nd.empty(v, ctx=self.ctx)
-                               for k, v in data_shapes_items}
-                self.inputs_grad_dict[data_shapes_items] = inputs_grad
-                if len(self.exe_pool) == 0:
-                    exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
-                                    args_grad=dict(self.params_grad.items() + inputs_grad.items()),
-                                    aux_states=self.aux_states)
-                else:
-                    if self.share_execs == True:
-                        exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
-                                            args_grad=dict(self.params_grad.items() + inputs_grad.items()),
-                                            aux_states=self.aux_states, shared_exec=self.base_exe)
-                    else:
-                        exe = self.sym.bind(ctx=self.ctx, args=dict(self.params, **data_inputs),
-                                            args_grad=dict(self.params_grad.items() + inputs_grad.items()),
-                                            aux_states=self.aux_states)
-                self.exe_pool[exe_key] = exe
-            return exe
+def get_bucket_key(bucket_kwargs):
+    assert isinstance(bucket_kwargs, dict)
+    return tuple(bucket_kwargs.items())

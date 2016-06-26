@@ -7,7 +7,7 @@ import os
 import re
 import logging
 import sys
-from arena import Critic
+from arena import Base
 from arena.games import AtariGame
 from arena.utils import *
 from arena.operators import *
@@ -24,24 +24,24 @@ npy_rng = get_numpy_rng()
 
 
 def collect_holdout_samples(game, num_steps=3200, sample_num=3200):
-    print "Begin Collecting Holdout Samples...",
+    print("Begin Collecting Holdout Samples...")
     game.force_restart()
     game.begin_episode()
-    for i in xrange(num_steps):
+    for i in range(num_steps):
         if game.episode_terminate:
             game.begin_episode()
         action = npy_rng.randint(len(game.action_set))
         game.play(action)
     samples, _, _, _, _ = game.replay_memory.sample(batch_size=sample_num)
-    print "Done!"
+    print("Done!")
     return samples
 
 
 def calculate_avg_q(samples, qnet):
     total_q = 0.0
-    for i in xrange(len(samples)):
+    for i in range(len(samples)):
         state = nd.array(samples[i:i + 1], ctx=qnet.ctx) / float(255.0)
-        total_q += qnet.calc_score(batch_size=1, data=state)[0].asnumpy().max(axis=1).sum()
+        total_q += qnet.forward(is_train=False, data=state)[0].asnumpy().max(axis=1).sum()
     avg_q_score = total_q / float(len(samples))
     return avg_q_score
 
@@ -73,7 +73,7 @@ def calculate_avg_reward(game, qnet, test_steps=125000, exploartion=0.05):
                     state = nd.array(current_state.reshape((1,) + current_state.shape),
                                      ctx=qnet.ctx) / float(255.0)
                     action = nd.argmax_channel(
-                        qnet.calc_score(batch_size=1, data=state)[0]).asscalar()
+                        qnet.forward(is_train=False, data=state)[0]).asscalar()
             else:
                 action = npy_rng.randint(action_num)
 
@@ -81,8 +81,8 @@ def calculate_avg_reward(game, qnet, test_steps=125000, exploartion=0.05):
             game.play(action)
         end = time.time()
         steps_left -= game.episode_step
-        print 'Episode:%d, FPS:%s, Steps Left:%d, Reward:%d' \
-              % (episode, game.episode_step / (end - start), steps_left, game.episode_reward)
+        print('Episode:%d, FPS:%s, Steps Left:%d, Reward:%d' \
+              % (episode, game.episode_step / (end - start), steps_left, game.episode_reward))
         total_reward += game.episode_reward
     avg_reward = total_reward / float(episode)
     return avg_reward
@@ -140,17 +140,17 @@ def main():
         dqn_sym = dqn_sym_nips(action_num)
     else:
         raise NotImplementedError
-    qnet = Critic(data_shapes=data_shapes, sym=dqn_sym, name=args.model_prefix, ctx=q_ctx)
+    qnet = Base(data_shapes=data_shapes, sym_gen=dqn_sym, name=args.model_prefix, ctx=q_ctx)
 
     for epoch in epochs:
         qnet.load_params(name=args.model_prefix, dir_path=args.dir_path, epoch=epoch)
         if not args.visualization:
             avg_q_score = calculate_avg_q(holdout_samples, qnet)
             avg_reward = calculate_avg_reward(game, qnet, args.test_steps, exploartion)
-            print "Epoch:%d Avg Reward: %f, Avg Q Score:%f" % (epoch, avg_reward, avg_q_score)
+            print("Epoch:%d Avg Reward: %f, Avg Q Score:%f" % (epoch, avg_reward, avg_q_score))
         else:
             avg_reward = calculate_avg_reward(game, qnet, args.test_steps, exploartion)
-            print "Epoch:%d Avg Reward: %f" % (epoch, avg_reward)
+            print("Epoch:%d Avg Reward: %f" % (epoch, avg_reward))
 
 if __name__ == '__main__':
     main()
