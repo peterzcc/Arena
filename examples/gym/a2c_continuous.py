@@ -44,6 +44,7 @@ def scale_action(action, action_space):
     lb = action_space.low
     ub = action_space.high
     scaled_action = lb + (action + 1.) * 0.5 * (ub - lb)
+    scaled_action = np.clip(scaled_action, lb, ub)
     return scaled_action
 
 
@@ -70,7 +71,7 @@ args = parser.parse_args()
 discount = 0.99
 n_itr = args.num_iters
 batch_size = args.batch_size
-lr_scheduler = FactorScheduler(n_itr, args.lr_factor)
+lr_scheduler = FactorScheduler(args.lr_factor_iter, args.lr_factor)
 ctx = parse_ctx(args.ctx)
 ctx = mx.Context(*ctx[0])
 
