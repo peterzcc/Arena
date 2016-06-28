@@ -100,7 +100,7 @@ def main():
     data_shapes = {'data': (minibatch_size, history_length) + (rows, cols),
                    'dqn_action': (minibatch_size,), 'dqn_reward': (minibatch_size,)}
     dqn_sym = dqn_sym_nature(action_num)
-    qnet = Base(data_shapes=data_shapes, sym=dqn_sym, name='QNet',
+    qnet = Base(data_shapes=data_shapes, sym_gen=dqn_sym, name='QNet',
                   initializer=DQNInitializer(factor_type="in"),
                   ctx=q_ctx)
     target_qnet = qnet.copy(name="TargetQNet", ctx=q_ctx)
@@ -178,7 +178,7 @@ def main():
                         current_state = game.current_state()
                         state = nd.array(current_state.reshape((1,) + current_state.shape),
                                          ctx=q_ctx) / float(255.0)
-                        qval_npy = qnet.forward(is_train=False, batch_size=1, data=state)[0].asnumpy()
+                        qval_npy = qnet.forward(is_train=False, data=state)[0].asnumpy()
                         action = numpy.argmax(qval_npy)
                         episode_q_value += qval_npy[0, action]
                         episode_action_step += 1
@@ -206,24 +206,22 @@ def main():
                     # 3.2 Use the target network to compute the scores and
                     #     get the corresponding target rewards
                     if not args.double_q:
-                        target_qval = target_qnet.forward(is_train=False, batch_size=minibatch_size,
-                                                         data=next_states)[0]
+                        target_qval = target_qnet.forward(is_train=False, data=next_states)[0]
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(target_qval))\
                                            * (1.0 - terminate_flags) * discount
                     else:
-                        target_qval = target_qnet.forward(is_train=False, batch_size=minibatch_size,
-                                                         data=next_states)[0]
-                        qval = qnet.forward(is_train=False, batch_size=minibatch_size,
-                                            data=next_states)[0]
+                        target_qval = target_qnet.forward(is_train=False, data=next_states)[0]
+                        qval = qnet.forward(is_train=False, data=next_states)[0]
 
                         target_rewards = rewards + nd.choose_element_0index(target_qval,
                                                                 nd.argmax_channel(qval))\
                                            * (1.0 - terminate_flags) * discount
-                    outputs = qnet.forward(is_train=True, batch_size=minibatch_size, data=states,
-                                              dqn_action=actions,
-                                              dqn_reward=target_rewards)
-                    qnet.backward(batch_size=minibatch_size)
+                    outputs = qnet.forward(is_train=True,
+                                           data=states,
+                                           dqn_action=actions,
+                                           dqn_reward=target_rewards)
+                    qnet.backward()
 
 
                     if args.kv_type != None:
@@ -243,7 +241,8 @@ def main():
                     # 3.3 Calculate Loss
                     diff = nd.abs(nd.choose_element_0index(outputs[0], actions) - target_rewards)
                     quadratic_part = nd.clip(diff, -1, 1)
-                    loss = 0.5 * nd.sum(nd.square(quadratic_part)) + nd.sum(diff - quadratic_part)
+                    loss = 0.5 * nd.sum(nd.square(quadratic_part)).asnumpy()[0] +\
+                           nd.sum(diff - quadratic_part).asnumpy()[0]
                     episode_loss += loss
 
                     # 3.3 Update the target network every freeze_interval

@@ -1,7 +1,6 @@
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
-from ..critics import Critic
 import logging
 import time
 
