@@ -12,7 +12,7 @@
 namespace mshadow {
 namespace expr {
 /*!
- * \brief Complex hadamard product expression. Calculate res = A .* B where A and B are all complex 4D tensors 
+ * \brief Complex hadamard product expression. Calculate res = A .* B where A and B are all complex 2D tensors
  * \tparam SrcExp type of source tensor expression, shape: (N, C, H, W*2)
  * \tparam DType the content data type
  */
