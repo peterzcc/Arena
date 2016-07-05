@@ -189,7 +189,6 @@ def check_numeric_gradient(sym, locations, ctx=mx.cpu(), grad_nodes=None, aux_st
     for name in grad_nodes:
         fd_grad = numeric_gradients[name]
         sym_grad = symbolic_grads[name]
-        print(sym_grad)
         rel = reldiff(fd_grad, sym_grad)
         if rel > check_eps:
             np.set_printoptions(threshold=4, suppress=True)
@@ -202,19 +201,22 @@ def check_numeric_gradient(sym, locations, ctx=mx.cpu(), grad_nodes=None, aux_st
             raise Exception(msg)
 
 
-def check_speed(sym, ctx=mx.cpu(), scale=1.0, N=100, rng=_rng, grad_req='write', **kwargs):
-    assert grad_req in ('write', 'add')
+def check_speed(sym, ctx=mx.cpu(), scale=1.0, N=100, grad_req=None, rng=_rng, **kwargs):
+    if grad_req is None:
+        grad_req = 'write'
     exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
-    init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe.arg_arrays]
-    for arr, iarr in zip(exe.arg_arrays, init):
-        arr[:] = iarr.astype(arr.dtype)
+    init = {k:np.random.normal(size=arr.shape, scale=scale) for k, arr in exe.arg_dict.items()}
+    if "embedding_weight" in init:
+        init['data'][:] = np.random.randint(0, init['embedding_weight'].shape[0])
+
+    for name, iarr in init.items():
+        exe.arg_dict[name][:] = iarr.astype(exe.arg_dict[name].dtype)
 
     # Warm up
     exe.forward(is_train=True)
     exe.backward(out_grads=exe.outputs)
     for output in exe.outputs:
         output.wait_to_read()
-
     # Test Forward + Backward
     tic = time.time()
     for i in range(N):
@@ -222,6 +224,7 @@ def check_speed(sym, ctx=mx.cpu(), scale=1.0, N=100, rng=_rng, grad_req='write',
         exe.backward(out_grads=exe.outputs)
         for output in exe.outputs:
             output.wait_to_read()
+    mx.nd.waitall()
     toc = time.time()
     forward_backward_time = (toc - tic) * 1.0 / N
     return forward_backward_time
@@ -229,9 +232,12 @@ def check_speed(sym, ctx=mx.cpu(), scale=1.0, N=100, rng=_rng, grad_req='write',
 
 def check_prediction_speed(sym, ctx=mx.cpu(), scale=1.0, N=100, rng=_rng, **kwargs):
     exe = sym.simple_bind(grad_req="null", ctx=ctx, **kwargs)
-    init = [np.random.normal(size=arr.shape, scale=scale) for arr in exe.arg_arrays]
-    for arr, iarr in zip(exe.arg_arrays, init):
-        arr[:] = iarr.astype(arr.dtype)
+    init = {k: np.random.normal(size=arr.shape, scale=scale) for k, arr in exe.arg_dict.items()}
+    if "embedding_weight" in init:
+        init['data'][:] = np.random.randint(0, init['embedding_weight'].shape[0])
+
+    for name, iarr in init.items():
+        exe.arg_dict[name][:] = iarr.astype(exe.arg_dict[name].dtype)
 
     # Warm up
     exe.forward(is_train=False)
@@ -289,3 +295,27 @@ print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 50), b=(2048, 5)))
 print(check_speed(sym=c, ctx=mx.gpu(), a=(2048, 20), b=(2048, 3)))
 print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 20), b=(2048, 3)))
 
+
+a = mx.sym.Variable('a')
+b = mx.sym.Concat(a, a, num_args=2, dim=0)
+check_numeric_gradient(sym=b, ctx=mx.gpu(),
+                       locations=(_rng.normal(0, 1, (10, 10, 10)),),
+                       check_eps=0.01)
+
+a = mx.sym.Variable('a')
+b = mx.sym.Variable('b')
+c = mx.sym.batch_dot(a, b)
+check_numeric_gradient(sym=c, ctx=mx.cpu(),
+                       locations={'a': _rng.normal(0, 1, (5, 3, 2)), 'b': _rng.normal(0, 1, (5, 2, 3))},
+                       check_eps=0.01)
+
+data = mx.sym.Variable('data')
+embedding_weight = mx.sym.Variable('embedding_weight')
+embed = mx.sym.Embedding(data=data, weight=embedding_weight, input_dim=100000, output_dim=150)
+print('Begin Benchmarking embedding')
+print(check_speed(sym=embed, ctx=mx.gpu(), grad_req={'data': 'null', 'embedding_weight': 'write'},
+                  data=(128, 100), embedding_weight=(100000, 150)))
+print(check_speed(sym=embed, ctx=mx.cpu(), grad_req={'data': 'null', 'embedding_weight': 'write'},
+                  data=(128, 100), embedding_weight=(100000, 150)))
+print(check_prediction_speed(sym=embed, ctx=mx.gpu(), data=(128, 100), embedding_weight=(100000, 150)))
+print(check_prediction_speed(sym=embed, ctx=mx.cpu(), data=(128, 100), embedding_weight=(100000, 150)))
