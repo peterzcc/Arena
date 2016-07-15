@@ -227,7 +227,7 @@ def main():
                     if args.kv_type != None:
                         if use_easgd:
                             if total_steps % kvstore_update_period == 0:
-                                for ind, k in range(len(qnet.params)):
+                                for ind, k in enumerate(qnet.params.keys()):
                                     kv.pull(ind, central_weight[k], priority=-ind)
                                     qnet.params[k][:] -= easgd_alpha * \
                                                          (qnet.params[k] - central_weight[k])

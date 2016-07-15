@@ -70,17 +70,14 @@ def safe_eval(expr):
 
 
 def norm_clipping(params_grad, threshold):
-    assert type(params_grad) in (dict, OrderedDict)
-    for grad in params_grad.values():
-        grad.wait_to_read()
-    norm_val = nd.sqrt(sum([nd.sum(nd.square(grad)) for grad in params_grad.values()])).asnumpy()[0]
-    print('grad norm: %g' % norm_val)
+    assert isinstance(params_grad, dict)
+    norm_val = numpy.sqrt(sum([nd.norm(grad).asnumpy()[0]**2 for grad in params_grad.values()]))
+    # print('grad norm: %g' % norm_val)
     ratio = 1.0
     if norm_val > threshold:
         ratio = threshold / norm_val
-        # print 'ratio:', ratio
-    for grad in params_grad.values():
-        grad[:] *= ratio
+        for grad in params_grad.values():
+            grad[:] *= ratio
 
 
 def sample_categorical(prob, rng):
