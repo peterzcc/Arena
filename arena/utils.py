@@ -77,7 +77,7 @@ def norm_clipping(params_grad, threshold):
     if norm_val > threshold:
         ratio = threshold / norm_val
         for grad in params_grad.values():
-            grad[:] *= ratio
+            grad *= ratio
 
 
 def sample_categorical(prob, rng):
