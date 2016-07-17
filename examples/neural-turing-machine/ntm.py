@@ -1,12 +1,11 @@
-from arena import Base
 from arena.operators import *
 import mxnet as mx
 from mxnet import sym
-from generators import *
+
 
 class NTMHead(object):
     def __init__(self, memory_size, memory_state_dim, control_state_dim,
-                 is_write=False, num_shift=3, name="NTMHead"):
+                 init_focus=None, is_write=False, num_shift=3, name="NTMHead"):
         self.memory_size = memory_size
         self.memory_state_dim = memory_state_dim
         self.control_state_dim = control_state_dim
@@ -23,7 +22,8 @@ class NTMHead(object):
         self.shift_bias = sym.Variable(name=name + ":shift_bias")
         self.gamma_weight = sym.Variable(name=name + ":gamma_weight")
         self.gamma_bias = sym.Variable(name=name + ":gamma_bias")
-        self.init_focus = sym.Variable(name=name + ":init_focus")
+        self.init_focus = init_focus if init_focus is not None \
+                                                   else sym.Variable(name=name + ":init_focus")
         if self.is_write:
             self.erase_vec_weight = sym.Variable(name=name + ":erase_vec_weight")
             self.erase_vec_bias = sym.Variable(name=name + ":erase_vec_bias")
@@ -92,14 +92,14 @@ class NTMHead(object):
         # w_t^c = softmax(\beta K(k_t, M_t))
         key = ArenaSym.normalize_channel(key, axis=1)
         memory = ArenaSym.normalize_channel(memory, axis=2)
-        similarity_score = sym.sum(sym.broadcast_mul(sym.expand_dims(key, axis=1), memory), axis=2)
+        similarity_score = sym.sum(sym.broadcast_mul(sym.expand_dims(key, axis=1), memory), axis=2) #TODO Use batch_dot in the future
         wc = sym.SoftmaxActivation(sym.broadcast_mul(beta, similarity_score)) # Shape: (batch_size, memory_size)
         # w_t^g = g_t w_t^c + (1 - g_t) w_{t-1}
         wg = sym.broadcast_mul(gate, wc) + sym.broadcast_mul(1 - gate, self.last_step_focus)
         # w_t = w_t^g * s_t
         w = sym.batch_cconv(wg, shift)
         # w_t = normalize(w_t ** r_t)
-        w = ArenaSym.normalize_channel(sym.broadcast_pow(w, gate), axis=1)
+        w = ArenaSym.normalize_channel(sym.broadcast_pow(w, gamma), axis=1)
         self.last_step_focus = w
         self.address_counter += 1
         return w
@@ -134,7 +134,7 @@ class NTMHead(object):
                                      weight=self.add_vec_weight,
                                      bias=self.add_vec_bias)
         add_vec = sym.Activation(data=add_vec, act_type='tanh',
-                                 name=self.name + "_erase_vec")
+                                 name=self.name + "_add_vec")
         new_memory = memory -\
                      memory * sym.broadcast_mul(sym.expand_dims(write_weight, axis=2),
                                                 sym.expand_dims(erase_vec, axis=1)) + \
@@ -145,23 +145,57 @@ class NTMHead(object):
 
 class NTM(object):
     def __init__(self, num_reads, num_writes, memory_size, memory_state_dim, control_state_dim,
+                 init_memory=None, init_read_weights=None, init_write_weights=None,
                  name="NTM"):
+        """
+        :param num_reads:
+        :param num_writes:
+        :param memory_size:
+        :param memory_state_dim:
+        :param control_state_dim:
+        :param init_memory: Shape (batch_size, memory_size, memory_state_dim)
+        :param init_read_weights: Shape (batch_size, num_reads, memory_size)
+        :param init_write_weights: Shape (batch_size, num_reads, memory_size)
+        :param name:
+        """
         self.name = name
         self.memory_size = memory_size
         self.memory_state_dim = memory_state_dim
         self.control_state_dim = control_state_dim
-        self.init_memory = sym.Variable(self.name + ":init_memory")
-        self.memory = self.init_memory
+        self.init_memory = sym.Variable(self.name + ":init_memory") if init_memory is None\
+                                                                    else init_memory
+
+        self.init_read_weights = sym.Variable(self.name + ":init_read_weights")\
+                                 if init_read_weights is None else init_read_weights
+        self.init_write_weights = sym.Variable(self.name + ":init_write_weights") \
+                                  if init_write_weights is None else init_write_weights
+        self.read_heads = []
+        self.write_heads = []
+        init_read_weights_split = mx.sym.SliceChannel(self.init_read_weights,
+                                                      num_outputs=num_reads,
+                                                      axis=1,
+                                                      squeeze_axis=True,
+                                                      name=self.name + "_split_init_read_weights")
+        init_write_weights_split = mx.sym.SliceChannel(self.init_write_weights,
+                                                       num_outputs=num_reads,
+                                                       axis=1,
+                                                       squeeze_axis=True,
+                                                       name=self.name + "_split_init_write_weights")
+
         self.read_heads = [NTMHead(control_state_dim=control_state_dim,
                                    memory_state_dim=memory_state_dim,
                                    memory_size=memory_size,
                                    is_write=False,
-                                   name=self.name + ":ReadHead%d" %i) for i in range(num_reads)]
+                                   init_focus=init_read_weights_split[i],
+                                   name=self.name + "->ReadHead%d" %i)
+                           for i in range(num_reads)]
         self.write_heads = [NTMHead(control_state_dim=control_state_dim,
                                     memory_state_dim=memory_state_dim,
                                     memory_size=memory_size,
                                     is_write=True,
-                                    name=self.name + ":WriteHead%d" % i) for i in range(num_writes)]
+                                    init_focus=init_write_weights_split[i],
+                                    name=self.name + "->WriteHead%d" % i)
+                            for i in range(num_writes)]
         self.read_counter = 0
         self.write_counter = 0
 
@@ -215,32 +249,3 @@ class NTM(object):
         aggre_write_weight = mx.sym.Concat(write_weights,
                                            name=self.name + "_aggre_write_weight%d" % self.write_counter)
         return aggre_erase_vec, aggre_add_vec, aggre_write_weight
-
-batch_size = 1
-
-def sym_gen(seqlen):
-    num_reads = 1
-    num_writes = 1
-    memory_size = 20
-    memory_state_dim = 128
-    control_state_dim = 100
-    mem = NTM(num_reads=num_reads, num_writes=num_writes, memory_size=memory_size,
-              memory_state_dim=memory_state_dim, control_state_dim=control_state_dim,
-              name="NTM")
-
-    data = sym.Variable('data')
-    data = sym.SliceChannel(num_outputs=seqlen, axis=True)
-    control_weight = sym.Variable('control_weight')
-    control_bias = sym.Variable('control_bias')
-    init_control = sym.Variable('init_control')
-
-    for i in range(seqlen):
-        if 0 == i :
-            control_input = init_control
-        control_input = sym.FullyConnected(data=data[i], weight=control_weight, bias=control_bias,
-                                           num_hidden=control_state_dim)
-
-
-generator = CopyTask(batch_size=batch_size, max_iter=50000, size=8, max_length=5, end_marker=True)
-for i, (example_input, example_output) in generator:
-    print(i, example_input.shape, example_output.shape)
