@@ -3,10 +3,13 @@ import mxnet.ndarray as nd
 import os
 import numpy
 import json
+import sys
 import re
 import scipy.signal
 import logging
 import ast
+import collections
+import numbers
 from collections import namedtuple, OrderedDict
 import time
 
@@ -78,6 +81,7 @@ def norm_clipping(params_grad, threshold):
         ratio = threshold / norm_val
         for grad in params_grad.values():
             grad *= ratio
+    return norm_val
 
 
 def sample_categorical(prob, rng):
@@ -153,6 +157,23 @@ def sample_mog(prob, mean, var, rng):
     return ret
 
 
+def npy_softmax(x, axis=1):
+    e_x = numpy.exp(x - numpy.max(x, axis=axis, keepdims=True))
+    out = e_x / e_x.sum(axis=axis, keepdims=True)
+    return out
+
+
+def npy_sigmoid(x):
+    return 1/(1 + numpy.exp(-x))
+
+
+
+def npy_binary_entropy(prediction, target):
+    return - (numpy.log(prediction + 1E-9) * target +
+              numpy.log(1 - prediction + 1E-9) * (1 - target)).sum()
+
+
+
 def block_all(sym_list):
     return [mx.symbol.BlockGrad(sym) for sym in sym_list]
 
@@ -200,6 +221,7 @@ def update_on_kvstore(kv, params, params_grad):
         kv.pull(ind, params[k], priority=-ind)
 
 
+#TODO Move parsing to another util file
 def parse_ctx(ctx_args):
     ctx = re.findall('([a-z]+)(\d*)', ctx_args)
     ctx = [(device, int(num)) if len(num) > 0 else (device, 0) for device, num in ctx]
@@ -218,6 +240,54 @@ def get_npy_list(ndarray_list):
     """
     ret = [v.asnumpy() for v in ndarray_list]
     return ret
+
+
+def get_sym_list(syms, default_names=None):
+    if syms is None:
+        if default_names is not None:
+            return [mx.sym.Variable(name=name) for name in default_names]
+    assert isinstance(syms, (list, tuple, mx.symbol.Symbol))
+    if isinstance(syms, (list, tuple)):
+        if default_names is not None and len(syms) != len(default_names):
+            raise ValueError("Size of symbols do not match expectation. Received %d, Expected %d. "
+                             "syms=%s, names=%s" %(len(syms), len(default_names),
+                                                   str(list(sym.name for sym in syms)),
+                                                   str(default_names)))
+        return list(syms)
+    else:
+        if default_names is not None and len(default_names) != 1:
+            raise ValueError("Size of symbols do not match expectation. Received 1, Expected %d. "
+                             "syms=%s, names=%s"
+                             % (len(default_names), str([syms.name]), str(default_names)))
+        return [syms]
+
+
+def get_int_list(values):
+    if isinstance(values, numbers.Number):
+        return [numpy.int32(values)]
+    elif isinstance(values, (list, tuple)):
+        try:
+            ret = [numpy.int32(value) for value in values]
+            return ret
+        except(ValueError):
+            print("Need iterable with numeric elements, received: %s" %str(values))
+            sys.exit(1)
+    else:
+        raise ValueError("Unaccepted value type, values=%s" %str(values))
+
+
+def get_float_list(values):
+    if isinstance(values, numbers.Number):
+        return [numpy.float32(values)]
+    elif isinstance(values, (list, tuple)):
+        try:
+            ret = [numpy.float32(value) for value in values]
+            return ret
+        except(ValueError):
+            print("Need iterable with numeric elements, received: %s" %str(values))
+            sys.exit(1)
+    else:
+        raise ValueError("Unaccepted value type, values=%s" % str(values))
 
 
 def get_bucket_key(bucket_kwargs):
