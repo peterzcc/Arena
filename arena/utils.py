@@ -169,9 +169,9 @@ def npy_sigmoid(x):
 
 
 def npy_binary_entropy(prediction, target):
+    assert prediction.shape == target.shape
     return - (numpy.log(prediction + 1E-9) * target +
               numpy.log(1 - prediction + 1E-9) * (1 - target)).sum()
-
 
 
 def block_all(sym_list):
