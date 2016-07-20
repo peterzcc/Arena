@@ -475,11 +475,19 @@ class LogMoGPolicyProp(mx.operator.CustomOpProp):
 
 #TODO Add HOG layer: hog = cv2.HOGDescriptor()
 
-def spatial_softmax(data, channel_num, rows, cols, name=None):
-    out = mx.symbol.Reshape(data, shape=(-1, rows*cols))
-    out = mx.symbol.SoftmaxActivation(data=out, mode='instance')
-    if name is None:
-        out = mx.symbol.Reshape(data=out, shape=(-1, channel_num, rows, cols))
-    else:
+class ArenaSym(object):
+    @staticmethod
+    def spatial_softmax(data, channel_num, rows, cols, name=None):
+        out = mx.symbol.Reshape(data, shape=(-1, rows*cols))
+        out = mx.symbol.SoftmaxActivation(data=out, mode='instance')
         out = mx.symbol.Reshape(data=out, shape=(-1, channel_num, rows, cols), name=name)
-    return out
+        return out
+
+    @staticmethod
+    def normalize_channel(data, axis, name=None):
+        out = mx.symbol.sum(mx.symbol.square(data), axis=axis, keepdims=True)
+        out = mx.symbol.broadcast_div(data, mx.symbol.sqrt(out) + 1E-8, name=name)
+        return out
+
+
+

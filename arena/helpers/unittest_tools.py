@@ -207,7 +207,7 @@ def check_speed(sym, ctx=mx.cpu(), scale=1.0, N=100, grad_req=None, rng=_rng, **
     exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
     init = {k:np.random.normal(size=arr.shape, scale=scale) for k, arr in exe.arg_dict.items()}
     if "embedding_weight" in init:
-        init['data'][:] = np.random.randint(0, init['embedding_weight'].shape[0])
+        init['data'][:] = np.random.randint(0, init['embedding_weight'].shape[0], size=init['data'].shape)
 
     for name, iarr in init.items():
         exe.arg_dict[name][:] = iarr.astype(exe.arg_dict[name].dtype)
@@ -302,20 +302,51 @@ check_numeric_gradient(sym=b, ctx=mx.gpu(),
                        locations=(_rng.normal(0, 1, (10, 10, 10)),),
                        check_eps=0.01)
 
-a = mx.sym.Variable('a')
-b = mx.sym.Variable('b')
-c = mx.sym.batch_dot(a, b)
-check_numeric_gradient(sym=c, ctx=mx.cpu(),
-                       locations={'a': _rng.normal(0, 1, (5, 3, 2)), 'b': _rng.normal(0, 1, (5, 2, 3))},
-                       check_eps=0.01)
+# a = mx.sym.Variable('a')
+# b = mx.sym.transpose(a)
+# print('Begin Benchmarking transpose')
+# print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(100000, 128)))
+# print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(100000, 512)))
+# print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(500000, 1024)))
+
 
 data = mx.sym.Variable('data')
 embedding_weight = mx.sym.Variable('embedding_weight')
 embed = mx.sym.Embedding(data=data, weight=embedding_weight, input_dim=100000, output_dim=150)
 print('Begin Benchmarking embedding')
-print(check_speed(sym=embed, ctx=mx.gpu(), grad_req={'data': 'null', 'embedding_weight': 'write'},
+print(check_speed(sym=embed, ctx=mx.gpu(), grad_req={'data': 'null', 'embedding_weight': 'add'},
                   data=(128, 100), embedding_weight=(100000, 150)))
-print(check_speed(sym=embed, ctx=mx.cpu(), grad_req={'data': 'null', 'embedding_weight': 'write'},
+print(check_speed(sym=embed, ctx=mx.cpu(), grad_req={'data': 'null', 'embedding_weight': 'add'},
                   data=(128, 100), embedding_weight=(100000, 150)))
 print(check_prediction_speed(sym=embed, ctx=mx.gpu(), data=(128, 100), embedding_weight=(100000, 150)))
 print(check_prediction_speed(sym=embed, ctx=mx.cpu(), data=(128, 100), embedding_weight=(100000, 150)))
+
+
+
+a = mx.sym.Variable('a')
+b = mx.sym.Variable('b')
+c = mx.sym.batch_dot(a, b)
+d = mx.sym.broadcast_mul(a, b)
+d = mx.sym.sum(d, axis=2, keepdims=True)
+print('Begin Benchmarking batch_dot')
+print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 100, 1)))
+print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 20, 100), b=(128, 100, 1)))
+print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 128, 1)))
+print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 100, 128), b=(128, 128, 1)))
+print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 500), b=(128, 500, 1)))
+print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 100, 500), b=(128, 500, 1)))
+
+print('Begin Comparing batch_dot Versus broadcast + mul')
+print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 100, 1)))
+print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 1, 100)))
+print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 128, 1)))
+print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 1, 128)))
+print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 500), b=(128, 500, 1)))
+print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 200, 500), b=(128, 1, 500)))
+# print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 1), b=(128, 1, 100)))
+# print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 200, 1), b=(128, 1, 100)))
+# print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 100), b=(128, 100, 100)))
+# print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 200, 100), b=(128, 100, 100)))
+# print(check_speed(sym=c, ctx=mx.gpu(), a=(16, 200, 100), b=(16, 100, 100)))
+# print(check_speed(sym=c, ctx=mx.cpu(), a=(16, 200, 100), b=(16, 100, 100)))
+#
