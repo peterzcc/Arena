@@ -113,6 +113,7 @@ namespace mxnet {
           CHECK_EQ(cufftExecR2C(forward_plan, (cufftReal*)(data.dptr_ + i * data.shape_[2] * data.shape_[3]), 
             (cufftComplex*)(out.dptr_ + i * out.shape_[2] * out.shape_[3])), CUFFT_SUCCESS);
         }
+        // TODO Synchronize Stream Here
         if (init_forward_cufft_) {
           CHECK_EQ(cufftDestroy(forward_plan), CUFFT_SUCCESS);
           init_forward_cufft_ = false;
@@ -173,10 +174,12 @@ namespace mxnet {
         }
         if (0 == typ) {
           CHECK_EQ(cufftPlanMany(&forward_plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_R2C, param_.batchsize), CUFFT_SUCCESS);
+          // TODO Set stream here
           init_forward_cufft_ = true;
         }
         else {
           CHECK_EQ(cufftPlanMany(&backward_plan, 2, n, NULL, 1, 0, NULL, 1, 0, CUFFT_C2R, param_.batchsize), CUFFT_SUCCESS);
+          // TODO Set stream here
           init_backward_cufft_ = true;
         }
         
