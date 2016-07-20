@@ -1,5 +1,5 @@
 from arena.operators import *
-from mxnet.ops.utils import *
+from arena.utils import *
 import mxnet as mx
 
 
@@ -87,7 +87,7 @@ class NTMHead(object):
                                    num_hidden=1,
                                    weight=self.gamma_weight,
                                    bias=self.gamma_bias)
-        gamma = 1.0 + mx.sym.Activation(data=gamma, act_type='relu', name=self.name + ":gamma")
+        gamma = 1.0 + mx.sym.Activation(data=gamma, act_type='softrelu', name=self.name + ":gamma")
         # Shift
         shift = mx.sym.FullyConnected(data=control_input,
                                    num_hidden=self.num_shift,
@@ -100,7 +100,7 @@ class NTMHead(object):
         similarity_score = mx.sym.sum(mx.sym.broadcast_mul(mx.sym.expand_dims(key, axis=1), memory), axis=2) #TODO Use batch_dot in the future
         wc = mx.sym.SoftmaxActivation(mx.sym.broadcast_mul(beta, similarity_score)) # Shape: (batch_size, memory_size)
         # w_t^g = g_t w_t^c + (1 - g_t) w_{t-1}
-        wg = mx.sym.broadcast_mul(gate, wc) - mx.sym.broadcast_mul(gate - 1.0, self.last_step_focus)
+        wg = mx.sym.broadcast_mul(gate, wc) + mx.sym.broadcast_mul(1.0 - gate, self.last_step_focus)
         # w_t = w_t^g * s_t
         w = mx.sym.batch_cconv(wg, shift)
         # w_t = normalize(w_t ** r_t)
