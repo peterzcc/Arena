@@ -50,7 +50,6 @@ class NTMHead(object):
     def read_weight(self, control_input, memory):
         """
             :param control_input: Shape (batch_size, control_state_dim)
-            :param key: Shape (batch_size, memory_state_dim)
             :param memory: Shape (batch_size, memory_size, memory_state_dim)
             :return: Shape (batch_size, memory_size)
         """
@@ -66,15 +65,39 @@ class NTMHead(object):
         memory = ArenaSym.normalize_channel(memory, axis=2)
         similarity_score = mx.sym.sum(mx.sym.broadcast_mul(mx.sym.expand_dims(key, axis=1), memory),
                                       axis=2)  # TODO Use batch_dot in the future
-        wc = mx.sym.SoftmaxActivation(mx.sym.broadcast_mul(beta, similarity_score))  # Shape: (batch_size, memory_size)
-        w_r =wc
-        return w_r
+        W_r = mx.sym.SoftmaxActivation(mx.sym.broadcast_mul(beta, similarity_score))  # Shape: (batch_size, memory_size)
+        return W_r
 
     def read(self, control_input, memory):
-        w_r = self.read_weight(control_input=control_input, memory=memory)
+        """
+            :param control_input: Shape (batch_size, control_state_dim)
+            :param memory: Shape (batch_size, memory_size, memory_state_dim)
+            :return: Shape (batch_size, memory_state_dim)
+        """
+        W_r = self.read_weight(control_input=control_input, memory=memory)
         # w_t^g = g_t w_t^c + (1 - g_t) w_{t-1}
-        content = mx.sym.sum(mx.sym.broadcast_mul(memory, mx.sym.expand_dims(w_r, axis=2)), axis=1)
-        return content, w_r
+        content = mx.sym.sum(mx.sym.broadcast_mul(memory, mx.sym.expand_dims(W_r, axis=2)), axis=1)
+        return content
 
-    def build_LRUA(params, input_data, context, timestamp):
-        return 0
+    def write_weight(self, control_input, memory):
+        """
+            :param control_input: Shape (batch_size, control_state_dim)
+            :param memory: Shape (batch_size, memory_size, memory_state_dim)
+            :return: Shape (batch_size, memory_size)
+        """
+
+        # Gamma
+        gamma = mx.sym.FullyConnected(data=control_input,
+                                      num_hidden=1,
+                                      weight=self.gamma_weight,
+                                      bias=self.gamma_bias)
+        gamma = 1.0 + mx.sym.Activation(data=gamma, act_type='softrelu', name=self.name + ":gamma")
+
+        W_r = self.read_weight(control_input=control_input, memory=memory)
+
+        W_u = mx.sym.Variable('W_u')
+
+        #W_u =
+        W_lu = mx.sym.Variable('W_lu')
+
+        #W_w
