@@ -31,7 +31,7 @@ def gen_data(batch_size, data_dim, min_length, max_length):
 
 batch_size = 1
 data_dim = 10
-max_iter = 2000
+max_iter = 10000
 min_length = 1
 max_length = 20
 num_reads = 1
@@ -61,6 +61,11 @@ def sym_gen(seqlen):
     read_content_l, read_focus_l = mem.read(controller_h)
     erase_signal_l, add_signal_l, write_focus_l = mem.write(controller_h)
     controller_states = []
+    all_read_focus_l = []
+    all_write_focus_l = []
+    all_read_content_l = []
+    all_erase_signal_l = []
+    all_add_signal_l = []
     # Processing the start_symbol + input_sequence + end_symbol
     for i in range(data_seqlen):
         controller_h, controller_c =\
@@ -73,13 +78,38 @@ def sym_gen(seqlen):
         controller_c = controller_c[0]
         read_content_l, read_focus_l = mem.read(controller_h)
         erase_signal_l, add_signal_l, write_focus_l = mem.write(controller_h)
+        all_read_focus_l.append(read_focus_l[0])
+        all_write_focus_l.append(write_focus_l[0])
+        all_erase_signal_l.append(erase_signal_l[0])
+        all_add_signal_l.append(add_signal_l[0])
         controller_states.append(controller_h)
     output_state = mx.sym.Concat(*controller_states[(seqlen+2):], num_args=seqlen, dim=0)
     prediction = mx.sym.FullyConnected(data=output_state, num_hidden=data_dim, name="fc")
     target = mx.sym.Reshape(target, shape=(-1, 1))
     out_sym = mx.sym.LogisticRegressionOutput(data=mx.sym.Reshape(prediction, shape=(-1, 1)),
                                               label=target)
-    return mx.sym.Group([out_sym, mx.sym.BlockGrad(prediction), mx.sym.BlockGrad(target)])
+    return mx.sym.Group([out_sym,
+                         mx.sym.BlockGrad(mx.sym.Reshape(
+                             mx.sym.Concat(*controller_states, dim=0,
+                                           num_args=len(controller_states)),
+                             shape=(data_seqlen, -1, control_state_dim))),
+                         mx.sym.BlockGrad(mx.sym.Reshape(
+                             mx.sym.Concat(*all_read_focus_l, dim=0,
+                                           num_args=len(all_read_focus_l)),
+                             shape=(data_seqlen, -1, memory_size))),
+                         mx.sym.BlockGrad(mx.sym.Reshape(
+                             mx.sym.Concat(*all_write_focus_l, dim=0,
+                                           num_args=len(all_write_focus_l)),
+                             shape=(data_seqlen, -1, memory_size))),
+                         mx.sym.BlockGrad(mx.sym.Reshape(
+                             mx.sym.Concat(*all_erase_signal_l, dim=0,
+                                           num_args=len(all_erase_signal_l)),
+                             shape=(data_seqlen, -1, memory_state_dim))),
+                         mx.sym.BlockGrad(mx.sym.Reshape(
+                             mx.sym.Concat(*all_add_signal_l, dim=0,
+                                           num_args=len(all_add_signal_l)),
+                             shape=(data_seqlen, -1, memory_state_dim)))
+                         ])
 
 vis = PLTVisualizer()
 
@@ -114,6 +144,15 @@ init_h_npy = numpy.zeros((batch_size, control_state_dim), dtype=numpy.float32) +
 init_c_npy = numpy.zeros((batch_size, control_state_dim), dtype=numpy.float32) + 0.0001#numpy.tanh(numpy.random.normal(size=(batch_size, control_state_dim)))
 optimizer = mx.optimizer.create(name='RMSProp', learning_rate=1E-4)
 updater = mx.optimizer.get_updater(optimizer)
+
+cv2.namedWindow("prediction", cv2.WINDOW_NORMAL)
+cv2.namedWindow("target", cv2.WINDOW_NORMAL)
+cv2.namedWindow("state", cv2.WINDOW_NORMAL)
+cv2.namedWindow("read_weight", cv2.WINDOW_NORMAL)
+cv2.namedWindow("write_weight", cv2.WINDOW_NORMAL)
+cv2.namedWindow("erase_signal", cv2.WINDOW_NORMAL)
+cv2.namedWindow("add_signal", cv2.WINDOW_NORMAL)
+
 for i in range(max_iter):
     seqlen, data_in, data_out = gen_data(batch_size=batch_size, data_dim=data_dim,
                                          min_length=min_length, max_length=max_length)
@@ -137,7 +176,23 @@ for i in range(max_iter):
     #     print k, nd.norm(v).asnumpy()
     for k, v in net.params_grad.items():
         print k, nd.norm(v).asnumpy()
-    pred = npy_sigmoid(outputs[1].asnumpy())
-    avg_loss = npy_binary_entropy(pred, data_out.reshape((seqlen*batch_size, data_dim)))/seqlen
+    pred = outputs[0].reshape((seqlen, batch_size, data_dim)).asnumpy()
+    state_over_time = outputs[1].asnumpy()
+    read_weight_over_time = outputs[2].asnumpy()
+    write_weight_over_time = outputs[3].asnumpy()
+    erase_signal_over_time = outputs[4].asnumpy()
+    add_signal_over_time = outputs[5].asnumpy()
+    cv2.imshow("prediction", pred[:, 0, :].T)
+    cv2.imshow("target", data_out[:, 0, :].T)
+    cv2.imshow("state", state_over_time[:, 0, :].T)
+    cv2.imshow("read_weight", read_weight_over_time[:, 0, :].T)
+    cv2.imshow("write_weight", write_weight_over_time[:, 0, :].T)
+    cv2.imshow("erase_signal", erase_signal_over_time[:, 0, :].T)
+    cv2.imshow("add_signal", (add_signal_over_time[:, 0, :].T + 1) / 2)
+
+    #visualize_weights(state_over_time[:, 0, :], win_name="state")
+    #visualize_weights(read_weight_over_time[:, 0, :], win_name="read_weight")
+    #visualize_weights(write_weight_over_time[:, 0, :], win_name="write_weight")
+    avg_loss = npy_binary_entropy(pred, data_out)/seqlen
     print avg_loss
     vis.update(i, avg_loss)
