@@ -107,3 +107,4 @@ Atari2600/
 ### Temporary Ignore ###
 panda3dgames/
 *.pyc
+examples/memory-augmented-network/Omniglot/*
