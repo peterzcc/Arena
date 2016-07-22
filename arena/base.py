@@ -30,7 +30,8 @@ class Base(object):
 
     def __init__(self, data_shapes, sym_gen, params=None, aux_states=None,
                  default_bucket_kwargs=None,
-                 initializer=mx.init.Uniform(0.07), ctx=mx.gpu(), name='Net'):
+                 initializer=mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2),
+                 ctx=mx.gpu(), name='Net'):
         self.sym_gen = sym_gen
         bucket_kwargs = default_bucket_kwargs.copy() if \
             default_bucket_kwargs is not None else dict()
@@ -109,7 +110,7 @@ class Base(object):
                                            for k, s in zip(aux_names, aux_shapes)])
         data_inputs = {k: mx.nd.empty(v, ctx=self.ctx) for k, v in data_shapes.items()}
         if len(self._buckets) > 0:
-            shared_exe = self._buckets.values()[0]['exe']
+            shared_exe = self._buckets.values()[0]['exe'].values()[0]
         else:
             shared_exe = None
         self._buckets[self.curr_bucket_key] = {
@@ -188,9 +189,14 @@ class Base(object):
         return exe.outputs[0]
 
     def forward(self, is_train=False, bucket_kwargs=None, **arg_dict):
+        #import time
+        #start = time.time()
         data_shapes = {k: v.shape for k, v in arg_dict.items()}
         self.switch_bucket(bucket_kwargs=bucket_kwargs,
                            data_shapes=data_shapes)
+        #end = time.time()
+        #print 'Swith Bucket:', end - start
+        #start = time.time()
         for k, v in arg_dict.items():
             assert self.exe.arg_dict[k].shape == v.shape,\
                 "Shape not match: key %s, need %s, received %s" \
@@ -199,6 +205,8 @@ class Base(object):
         self.exe.forward(is_train=is_train)
         for output in self.exe.outputs:
             output.wait_to_read()
+        #end = time.time()
+        #print 'Forward:', end - start
         return self.exe.outputs
 
     def backward(self, out_grads=None, **arg_dict):
