@@ -29,14 +29,14 @@ def gen_data(batch_size, data_dim, min_length, max_length):
     data_out[:] = data_in[1:(seqlen + 1), :, :]
     return seqlen, data_in, data_out
 
-batch_size = 1
+batch_size = 8
 data_dim = 10
-max_iter = 10000
+max_iter = 5000
 min_length = 1
 max_length = 20
 num_reads = 1
 num_writes = 1
-memory_size = 128
+memory_size = 120
 memory_state_dim = 20
 control_state_dim = 100
 
@@ -80,6 +80,7 @@ def sym_gen(seqlen):
         erase_signal_l, add_signal_l, write_focus_l = mem.write(controller_h)
         all_read_focus_l.append(read_focus_l[0])
         all_write_focus_l.append(write_focus_l[0])
+        all_read_content_l.append(read_content_l[0])
         all_erase_signal_l.append(erase_signal_l[0])
         all_add_signal_l.append(add_signal_l[0])
         controller_states.append(controller_h)
@@ -101,6 +102,10 @@ def sym_gen(seqlen):
                              mx.sym.Concat(*all_write_focus_l, dim=0,
                                            num_args=len(all_write_focus_l)),
                              shape=(data_seqlen, -1, memory_size))),
+                         mx.sym.BlockGrad(mx.sym.Reshape(
+                             mx.sym.Concat(*all_read_content_l, dim=0,
+                                           num_args=len(all_read_content_l)),
+                             shape=(data_seqlen, -1, memory_state_dim))),
                          mx.sym.BlockGrad(mx.sym.Reshape(
                              mx.sym.Concat(*all_erase_signal_l, dim=0,
                                            num_args=len(all_erase_signal_l)),
@@ -142,7 +147,7 @@ init_write_focus_npy = npy_softmax(
 
 init_h_npy = numpy.zeros((batch_size, control_state_dim), dtype=numpy.float32) + 0.0001#numpy.tanh(numpy.random.normal(size=(batch_size, control_state_dim)))
 init_c_npy = numpy.zeros((batch_size, control_state_dim), dtype=numpy.float32) + 0.0001#numpy.tanh(numpy.random.normal(size=(batch_size, control_state_dim)))
-optimizer = mx.optimizer.create(name='RMSProp', learning_rate=1E-4)
+optimizer = mx.optimizer.create(name='RMSProp', learning_rate=1E-4, rescale_grad=1.0/batch_size)
 updater = mx.optimizer.get_updater(optimizer)
 
 cv2.namedWindow("prediction", cv2.WINDOW_NORMAL)
@@ -150,6 +155,7 @@ cv2.namedWindow("target", cv2.WINDOW_NORMAL)
 cv2.namedWindow("state", cv2.WINDOW_NORMAL)
 cv2.namedWindow("read_weight", cv2.WINDOW_NORMAL)
 cv2.namedWindow("write_weight", cv2.WINDOW_NORMAL)
+cv2.namedWindow("read_content", cv2.WINDOW_NORMAL)
 cv2.namedWindow("erase_signal", cv2.WINDOW_NORMAL)
 cv2.namedWindow("add_signal", cv2.WINDOW_NORMAL)
 
@@ -180,19 +186,60 @@ for i in range(max_iter):
     state_over_time = outputs[1].asnumpy()
     read_weight_over_time = outputs[2].asnumpy()
     write_weight_over_time = outputs[3].asnumpy()
-    erase_signal_over_time = outputs[4].asnumpy()
-    add_signal_over_time = outputs[5].asnumpy()
+    read_content_over_time = outputs[4].asnumpy()
+    erase_signal_over_time = outputs[5].asnumpy()
+    add_signal_over_time = outputs[6].asnumpy()
     cv2.imshow("prediction", pred[:, 0, :].T)
     cv2.imshow("target", data_out[:, 0, :].T)
     cv2.imshow("state", state_over_time[:, 0, :].T)
     cv2.imshow("read_weight", read_weight_over_time[:, 0, :].T)
     cv2.imshow("write_weight", write_weight_over_time[:, 0, :].T)
+    cv2.imshow("read_content", read_content_over_time[:, 0, :].T)
     cv2.imshow("erase_signal", erase_signal_over_time[:, 0, :].T)
     cv2.imshow("add_signal", (add_signal_over_time[:, 0, :].T + 1) / 2)
 
     #visualize_weights(state_over_time[:, 0, :], win_name="state")
     #visualize_weights(read_weight_over_time[:, 0, :], win_name="read_weight")
     #visualize_weights(write_weight_over_time[:, 0, :], win_name="write_weight")
-    avg_loss = npy_binary_entropy(pred, data_out)/seqlen
+    avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
     print avg_loss
     vis.update(i, avg_loss)
+
+for i in range(5):
+    seqlen, data_in, data_out = gen_data(batch_size=batch_size, data_dim=data_dim,
+                                         min_length=200, max_length=200)
+    print data_in.shape
+    print seqlen
+    print data_out.shape
+    outputs =\
+        net.forward(is_train=False,
+                    bucket_kwargs={'seqlen': seqlen},
+                    **{'data': data_in,
+                       'target': data_out,
+                       'init_memory': init_memory_npy,
+                       'NTM->read_head0:init_focus': init_read_focus_npy,
+                       'NTM->write_head0:init_focus': init_write_focus_npy,
+                       'controller->layer0:init_h': init_h_npy,
+                       'controller->layer0:init_c': init_c_npy})
+    pred = outputs[0].reshape((seqlen, batch_size, data_dim)).asnumpy()
+    state_over_time = outputs[1].asnumpy()
+    read_weight_over_time = outputs[2].asnumpy()
+    write_weight_over_time = outputs[3].asnumpy()
+    read_content_over_time = outputs[4].asnumpy()
+    erase_signal_over_time = outputs[5].asnumpy()
+    add_signal_over_time = outputs[6].asnumpy()
+    cv2.imshow("prediction", pred[:, 0, :].T)
+    cv2.imshow("target", data_out[:, 0, :].T)
+    cv2.imshow("state", state_over_time[:, 0, :].T)
+    cv2.imshow("read_weight", read_weight_over_time[:, 0, :].T)
+    cv2.imshow("write_weight", write_weight_over_time[:, 0, :].T)
+    cv2.imshow("read_content", read_content_over_time[:, 0, :].T)
+    cv2.imshow("erase_signal", erase_signal_over_time[:, 0, :].T)
+    cv2.imshow("add_signal", (add_signal_over_time[:, 0, :].T + 1) / 2)
+
+    #visualize_weights(state_over_time[:, 0, :], win_name="state")
+    #visualize_weights(read_weight_over_time[:, 0, :], win_name="read_weight")
+    #visualize_weights(write_weight_over_time[:, 0, :], win_name="write_weight")
+    avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
+    print(avg_loss)
+    ch = raw_input()
