@@ -31,7 +31,7 @@ def gen_data(batch_size, data_dim, min_length, max_length):
 
 batch_size = 8
 data_dim = 10
-max_iter = 5000
+max_iter = 2500
 min_length = 1
 max_length = 20
 num_reads = 1
