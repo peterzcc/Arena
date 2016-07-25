@@ -1,35 +1,46 @@
+# coding: utf-8
 import numpy
-from arena.utils import *
 import mxnet.ndarray as nd
 import cv2
 import logging
 
+from ..utils import *
 
-def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL,
-                      save_path=None):
-    """
-    Take an numpy array of shape (n, height, width) or (n, 3, height, width)
-    Visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
-    :param data:
-    :param delay:
-    :param win_name:
-    :param win_typ:
-    :param save_path:
-    :return:
-    """
-    if 4 == data.ndim:
-        data = data.transpose(0, 2, 3, 1)
-    data = (data - data.min()) / (data.max() - data.min())
-    n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
-    padding = (((0, n ** 2 - data.shape[0]),
-                (0, 0), (0, 0))
-               + ((0, 0),) * (data.ndim - 3))
-    data = numpy.pad(data, padding, mode='constant', constant_values=1)
+def cv2_visualize(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL,
+                  save_path=None):
+    """Visualize the input tensor using OpenCV
 
-    # tile the filters into an image
-    data = data.reshape((n, n) + data.shape[1:]).transpose(
-        (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
-    data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
+    Take a numpy array of shape (height, width), (n, height, width) or (n, 3, height, width)
+    If the data dimension = 2, the data is directly displayed.
+    Otherwise visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
+
+    Parameters
+    ----------
+    data
+    delay
+    win_name
+    win_typ
+    save_path
+
+    Returns
+    -------
+
+    """
+    assert 2 <= data.ndim <= 4
+    if 2 != data.ndim:
+        if 4 == data.ndim:
+            data = data.transpose(0, 2, 3, 1)
+        data = (data - data.min()) / (data.max() - data.min())
+        n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
+        padding = (((0, n ** 2 - data.shape[0]),
+                    (0, 0), (0, 0))
+                   + ((0, 0),) * (data.ndim - 3))
+        data = numpy.pad(data, padding, mode='constant', constant_values=1)
+
+        # tile the filters into an image
+        data = data.reshape((n, n) + data.shape[1:]).transpose(
+            (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
+        data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
     win = cv2.namedWindow(win_name, win_typ)
     if 3 == data.ndim:
         if save_path is not None:
@@ -47,14 +58,25 @@ def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NO
         cv2.waitKey(delay)
 
 
-'''
-plot the roi bounding box on the image
-im, shape (3, height, width)
-roi, normalized version from [0, 1]
-'''
+def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking",
+                   win_typ=cv2.WINDOW_AUTOSIZE, save_path=None):
+    """Plot the ROI bounding box on the image using OpenCV
 
+    Parameters
+    ----------
+    im : numpy.ndarray
+      shape (3, height, width)
+    roi : numpy.ndarray
+    delay
+    color
+    win_name
+    win_typ
+    save_path
 
-def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking", win_typ=cv2.WINDOW_AUTOSIZE, save_path=None):
+    Returns
+    -------
+
+    """
     im = im.transpose(1, 2, 0)
     width = im.shape[1]
     height = im.shape[0]
@@ -107,7 +129,7 @@ if __name__ == '__main__':
 
     param = vgg_m()
     conv1 = param['arg:conv1_weight'].asnumpy()
-    visualize_weights(conv1)
+    cv2_visualize(conv1)
 
     track_iter = TrackingIterator('D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
                                   output_size=(240, 320), resize=True)
