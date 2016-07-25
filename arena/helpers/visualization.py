@@ -5,15 +5,18 @@ import cv2
 import logging
 
 
-'''
-Function: visualize_weights
-Description:
+def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL,
+                      save_path=None):
+    """
     Take an numpy array of shape (n, height, width) or (n, 3, height, width)
     Visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
-'''
-
-
-def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL, save_path=None):
+    :param data:
+    :param delay:
+    :param win_name:
+    :param win_typ:
+    :param save_path:
+    :return:
+    """
     if 4 == data.ndim:
         data = data.transpose(0, 2, 3, 1)
     data = (data - data.min()) / (data.max() - data.min())
@@ -30,13 +33,15 @@ def visualize_weights(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NO
     win = cv2.namedWindow(win_name, win_typ)
     if 3 == data.ndim:
         if save_path is not None:
-            cv2.imwrite(os.path.join(save_path, win_name + '.png'), cv2.resize(data[:, :, ::-1]*256, (480, 480),
-                                                                               interpolation=cv2.INTER_LINEAR))
+            cv2.imwrite(os.path.join(save_path, win_name + '.png'),
+                        cv2.resize(data[:, :, ::-1]*256, (480, 480),
+                                   interpolation=cv2.INTER_LINEAR))
         cv2.imshow(win_name, data[:, :, ::-1])
     else:
         if save_path is not None:
-            cv2.imwrite(os.path.join(save_path, win_name + '.png'), cv2.resize(data[:, :]*256, (480, 480),
-                                                                               interpolation=cv2.INTER_LINEAR))
+            cv2.imwrite(os.path.join(save_path, win_name + '.png'),
+                        cv2.resize(data[:, :]*256, (480, 480),
+                                   interpolation=cv2.INTER_LINEAR))
         cv2.imshow(win_name, data[:, :])
     if delay is not None:
         cv2.waitKey(delay)
@@ -66,6 +71,31 @@ def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking", 
         cv2.imwrite(os.path.join(save_path, win_name + '.png'), im2[:, :, ::-1])
     if delay is not None:
         cv2.waitKey(delay)
+
+
+class PLTVisualizer(object):
+    def __init__(self, name="PLTVis"):
+        self.enabled = True
+        try:
+            import matplotlib.pyplot as plt
+            plt.ion()
+            self.fig, self.ax = plt.subplots()
+            self.lines, = self.ax.plot([], [])
+            self.ax.set_autoscaley_on(True)
+            self.fig.canvas.set_window_title(name)
+        except(ImportError):
+            print('ImportError: matplotlib cannot be imported! PLTVisualizer will be disabled')
+            self.enabled = False
+            return
+
+    def update(self, new_x, new_y):
+        if self.enabled:
+            self.lines.set_xdata(numpy.append(self.lines.get_xdata(), new_x))
+            self.lines.set_ydata(numpy.append(self.lines.get_ydata(), new_y))
+            self.ax.relim()
+            self.ax.autoscale_view()
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
 
 
 '''
