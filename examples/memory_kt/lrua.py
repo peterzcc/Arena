@@ -4,8 +4,7 @@ import mxnet as mx
 
 class MANNHead(object):
     def __init__(self, memory_size, memory_state_dim, control_state_dim,
-                 init_W_r_focus=None, init_W_w_focus=None, init_W_u_focus=None,
-                 is_write=False, num_shift=3, name="MANNHead", k_smallest=10):
+                 init_focus=None, is_write=False, num_shift=3, name="MANNHead", k_smallest=10):
         self.memory_size = memory_size
         self.memory_state_dim = memory_state_dim
         self.control_state_dim = control_state_dim
@@ -24,6 +23,9 @@ class MANNHead(object):
         self.gamma_weight = mx.sym.Variable(name=name + ":gamma_weight")
         self.gamma_bias = mx.sym.Variable(name=name + ":gamma_bias")
 
+        self.init_focus = init_focus if init_focus is not None \
+            else mx.sym.Variable(name=name + ":init_focus")
+
         #if self.is_write:
         #    self.erase_signal_weight = mx.sym.Variable(name=name + ":erase_signal_weight")
         #    self.erase_signal_bias = mx.sym.Variable(name=name + ":erase_signal_bias")
@@ -31,15 +33,12 @@ class MANNHead(object):
         #    self.add_signal_bias = mx.sym.Variable(name=name + ":add_signal_bias")
 
         #self.last_step_focus = self.init_focus
-        self.last_W_r_focus = init_W_r_focus if init_W_r_focus is not None \
-            else mx.sym.Variable(name=name + ":init_W_r_focus")
-        self.last_W_w_focus = init_W_w_focus if init_W_w_focus is not None \
-            else mx.sym.Variable(name=name + ":init_W_w_focus")
-        self.last_W_u_focus = init_W_u_focus if init_W_u_focus is not None \
-            else mx.sym.Variable(name=name + ":init_W_u_focus")
+        self.last_W_r_focus = self.init_focus ### TODO need to change
+        self.last_W_w_focus = self.init_focus  ### TODO need to change
+        self.last_W_u_focus = self.init_focus  ### TODO need to change
+        self.last_W_lu_focus = self.init_focus  ### TODO need to change
 
         self.address_counter = 0
-
         self.k_smallest = k_smallest
 
     # Controll is FNN
@@ -54,6 +53,7 @@ class MANNHead(object):
                                     bias=self.key_bias)  # Shape: (batch_size, memory_state_dim)
         key = mx.sym.Activation(data=key, act_type='tanh', name=self.name + ":key")
         return key
+    #def compute_beta(self,control_input):
 
     def addressing(self, control_input, memory):
         """
@@ -88,15 +88,16 @@ class MANNHead(object):
                                       axis=2)  # TODO Use batch_dot in the future
         # compute read weight
         W_r = mx.sym.SoftmaxActivation(mx.sym.broadcast_mul(beta, similarity_score))  # Shape: (batch_size, memory_size)
-
         # compute write weight
-        last_W_lu = mx.sym.k_smallest_flags(self.last_W_u_focus, k=self.k_smallest)  # Shape (batch_size, memory_size)
         W_w = mx.sym.broadcast_mul(alpha, self.last_W_r_focus) + \
-              mx.sym.broadcast_mul((1.0 - alpha), last_W_lu)
+              mx.sym.broadcast_mul((1.0 - alpha), self.last_W_lu_focus)
+
         W_u = mx.sym.broadcast_mul(gamma, self.last_W_u_focus) + W_r + W_w  # Shape (batch_size, memory_size)
+        W_lu = mx.sym.k_smallest_flags(W_u, k=self.k_smallest)  # Shape (batch_size, memory_size)
         self.last_W_r_focus = W_r
         self.last_W_w_focus = W_w
         self.last_W_u_focus = W_u
+        self.last_W_lu_focus = W_lu
 
         return W_r, W_w
 
@@ -124,6 +125,8 @@ class MANNHead(object):
 
 
 
+
+
 class MANN(object):
     def __init__(self, num_reads, num_writes, memory_size, memory_state_dim, control_state_dim,
                  init_memory=None, init_read_focus=None, init_write_focus=None,
@@ -145,18 +148,14 @@ class MANN(object):
         self.control_state_dim = control_state_dim
         self.init_memory = mx.sym.Variable(self.name + ":init_memory") if init_memory is None\
                                                                        else init_memory
-        # TODO need to change
         self.init_read_focus = get_sym_list(init_read_focus,
                                             default_names=[(self.name + ":init_read_focus%d" %i)
                                                            for i in range(num_reads)])
         self.init_write_focus = get_sym_list(init_write_focus,
                                              default_names=[(self.name + ":init_write_focus%d" %i)
-                                                            for i in range(num_writes)])
+                                                            for i in range(num_reads)])
         self.read_heads = []
         self.write_heads = []
-        # def __init__(self, memory_size, memory_state_dim, control_state_dim,
-        #         init_W_r_focus=None, init_W_w_focus=None, init_W_u_focus=None,
-        #         is_write=False, num_shift=3, name="MANNHead", k_smallest=10):
         self.read_heads = [MANNHead(control_state_dim=control_state_dim,
                                    memory_state_dim=memory_state_dim,
                                    memory_size=memory_size,

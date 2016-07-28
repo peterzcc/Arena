@@ -45,11 +45,12 @@ def sym_gen(seqlen):
     data_seqlen = 2*seqlen + 2
     data = mx.sym.Variable('data')
     target = mx.sym.Variable('target')
-    data = mx.sym.SliceChannel(data, num_outputs=data_seqlen, axis=0, squeeze_axis=True) # (batch_size, data_dim) * seqlen
+    #data = mx.sym.SliceChannel(data, num_outputs=data_seqlen, axis=0, squeeze_axis=True) # (batch_size, data_dim) * seqlen
     # Initialize Memory
     init_memory = mx.sym.Variable('init_memory')
-    init_read_focus = [mx.sym.Variable('NTM->read_head%d:init_focus' %i) for i in range(num_reads)]
-    init_write_focus = [mx.sym.Variable('NTM->write_head%d:init_focus' % i) for i in range(num_writes)]
+
+    init_read_focus = [mx.sym.Variable('NTM->read_head%d:init_focus' %i) for i in range(num_reads)] # TODO
+    init_write_focus = [mx.sym.Variable('NTM->write_head%d:init_focus' % i) for i in range(num_writes)] # TODO
     # Initialize Control Network
     controller = LSTM(num_hidden=control_state_dim, name="controller")
     mem = NTM(num_reads=num_reads, num_writes=num_writes, memory_size=memory_size,
