@@ -6,26 +6,8 @@ import logging
 
 from ..utils import *
 
-def cv2_visualize(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL,
-                  save_path=None):
-    """Visualize the input tensor using OpenCV
 
-    Take a numpy array of shape (height, width), (n, height, width) or (n, 3, height, width)
-    If the data dimension = 2, the data is directly displayed.
-    Otherwise visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
-
-    Parameters
-    ----------
-    data
-    delay
-    win_name
-    win_typ
-    save_path
-
-    Returns
-    -------
-
-    """
+def cv2_get_display_data(data):
     assert 2 <= data.ndim <= 4
     if 2 != data.ndim:
         if 4 == data.ndim:
@@ -41,21 +23,51 @@ def cv2_visualize(data, delay=None, win_name="Weight", win_typ=cv2.WINDOW_NORMAL
         data = data.reshape((n, n) + data.shape[1:]).transpose(
             (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
         data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
-    win = cv2.namedWindow(win_name, win_typ)
-    if 3 == data.ndim:
-        if save_path is not None:
-            cv2.imwrite(os.path.join(save_path, win_name + '.png'),
-                        cv2.resize(data[:, :, ::-1]*256, (480, 480),
-                                   interpolation=cv2.INTER_LINEAR))
-        cv2.imshow(win_name, data[:, :, ::-1])
-    else:
-        if save_path is not None:
-            cv2.imwrite(os.path.join(save_path, win_name + '.png'),
-                        cv2.resize(data[:, :]*256, (480, 480),
-                                   interpolation=cv2.INTER_LINEAR))
+    return data
+
+
+def cv2_visualize(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None):
+    """Visualize the input tensor using OpenCV
+
+    Take a numpy array of shape (height, width), (n, height, width) or (n, 3, height, width)
+    If the data dimension = 2, the data is directly displayed.
+    Otherwise visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
+
+    Parameters
+    ----------
+    data
+    win_name
+    win_typ
+    delay
+
+    Returns
+    -------
+
+    """
+    assert 2 <= data.ndim <= 4
+    cv2.namedWindow(win_name, win_typ)
+    data = cv2_get_display_data(data)
+    cv2.namedWindow(win_name, win_typ)
+    if 2 == data.ndim:
         cv2.imshow(win_name, data[:, :])
+    else:
+        cv2.imshow(win_name, data[:, :, ::-1])
     if delay is not None:
         cv2.waitKey(delay)
+
+
+def cv2_save(data, path=None, win_name=None, size=None):
+    data = cv2_get_display_data(data)
+    if path is None and win_name is not None:
+        path = os.path.join('.', win_name + '.png')
+    if size is None:
+        size = (480, 480)
+    if 2 == data.ndim:
+        cv2.imwrite(path, cv2.resize(data[:, :] * 256, size,
+                                     interpolation=cv2.INTER_LINEAR))
+    else:
+        cv2.imwrite(path, cv2.resize(data[:, :, ::-1] * 256, size,
+                                     interpolation=cv2.INTER_LINEAR))
 
 
 def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking",
