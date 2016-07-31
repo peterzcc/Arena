@@ -230,9 +230,10 @@ class NTM(object):
                                                                     else init_memory
 
         self.init_read_focus = init_read_focus if init_read_focus is not None\
-                                               else self.name + ":init_read_focus"
+                                               else mx.sym.Variable(self.name + ":init_read_focus")
         self.init_write_focus = init_write_focus if init_write_focus is not None\
-                                                 else self.name + ":init_write_focus"
+                                                 else mx.sym.Variable(self.name +
+                                                                      ":init_write_focus")
         self.read_head = NTMHeadGroup(control_state_dim=control_state_dim,
                                       num_heads=num_reads,
                                       memory_state_dim=memory_state_dim,
