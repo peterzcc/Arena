@@ -57,7 +57,7 @@ def sym_gen(seqlen):
     data_seqlen = 2*seqlen + 2
     data = mx.sym.Variable('data')
     target = mx.sym.Variable('target')
-    #data = mx.sym.SliceChannel(data, num_outputs=data_seqlen, axis=0, squeeze_axis=True) # (batch_size, data_dim) * seqlen
+    data = mx.sym.SliceChannel(data, num_outputs=data_seqlen, axis=0, squeeze_axis=True) # (batch_size, data_dim) * seqlen
     # Initialize Memory
     init_memory = mx.sym.Variable('init_memory')
 

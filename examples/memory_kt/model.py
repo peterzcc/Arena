@@ -146,12 +146,13 @@ class MODEL(object):
         # embed_data Shape ()
         embed_data = mx.sym.Embedding(data=data, input_dim=self.n_question*2,
                                       weight=embed_weight, output_dim=self.embed_dim, name='embed')
+        slice_embed_data = mx.sym.SliceChannel(embed_data, num_outputs=self.seqlen, axis=0, squeeze_axis=True)
         ### Step2:
         ### at each time step:
         ###      one_time_input     -(LSTM)->       controller_h
         ### (batch_size, embed_dim) -(LSTM)-> (batch_size, control_state_dim)
         for i in range(self.seqlen):
-            controller_h, controller_c = controller.step(data=embed_data[i],
+            controller_h, controller_c = controller.step(data=slice_embed_data[i],
                                                          prev_h=controller_h, prev_c=controller_c,
                                                          seq_length=1)
             controller_h = controller_h[0]
@@ -168,11 +169,11 @@ class MODEL(object):
             controller_states.append(controller_h)
             all_read_focus_l.append(read_focus_l[0])
             all_write_focus_l.append(write_focus_l[0])
-            all_read_content_l.append(read_content_l) # TODO check read_content format
+            all_read_content_l.append(read_content_l[0]) # TODO check read_content format
         ### Step5:
         ###       all_read_content_l         -(Concat)->          all_read_content
         ### [(batch_size, memory_state_dim)] -(Concat)-> (batch_size*seqlen, memory_state_dim)
-        all_read_content = mx.sym.Concat(*all_read_content_l, dim=0)
+        all_read_content = mx.sym.Concat(*all_read_content_l, num_args=self.seqlen, dim=0)
         ### Step6:
         ###           all_read_content            -(FC)->        pred
         ### (batch_size*seqlen, memory_state_dim) -(FC)-> (batch_size*seqlen, n_question)
