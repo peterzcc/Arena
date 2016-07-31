@@ -474,6 +474,3 @@ class ArenaSym(object):
         out = mx.symbol.sum(mx.symbol.square(data), axis=axis, keepdims=True)
         out = mx.symbol.broadcast_div(data, mx.symbol.sqrt(out) + 1E-8, name=name)
         return out
-
-
-

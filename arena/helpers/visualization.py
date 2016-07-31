@@ -26,7 +26,8 @@ def cv2_get_display_data(data):
     return data
 
 
-def cv2_visualize(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None):
+def cv2_visualize(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None,
+                  save_image=False, save_path=None, save_size=None):
     """Visualize the input tensor using OpenCV
 
     Take a numpy array of shape (height, width), (n, height, width) or (n, 3, height, width)
@@ -39,6 +40,10 @@ def cv2_visualize(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None):
     win_name
     win_typ
     delay
+    save_image : bool
+        Whether to save the visualization result
+    save_path
+    save_size
 
     Returns
     -------
@@ -52,14 +57,16 @@ def cv2_visualize(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None):
         cv2.imshow(win_name, data[:, :])
     else:
         cv2.imshow(win_name, data[:, :, ::-1])
+    if save_image:
+        if save_path is None:
+            save_path = os.path.join('.', win_name + '.jpg')
+        cv2_save(data, path=save_path, size=save_size)
     if delay is not None:
         cv2.waitKey(delay)
 
 
-def cv2_save(data, path=None, win_name=None, size=None):
+def cv2_save(data, path, size=None):
     data = cv2_get_display_data(data)
-    if path is None and win_name is not None:
-        path = os.path.join('.', win_name + '.png')
     if size is None:
         size = (480, 480)
     if 2 == data.ndim:
