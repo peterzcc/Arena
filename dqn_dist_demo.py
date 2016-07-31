@@ -270,7 +270,7 @@ def main():
         end = time.time()
         fps = steps_per_epoch / (end - start)
         qnet.save_params(dir_path=args.dir_path, epoch=epoch)
-        if args.kv_type != None:
+        if args.kv_type is not None:
             logging.info("Node[%d]: Epoch:%d, FPS:%f, Avg Reward: %f/%d"
                      % (kv.rank, epoch, fps, epoch_reward / float(episode), episode))
         else:

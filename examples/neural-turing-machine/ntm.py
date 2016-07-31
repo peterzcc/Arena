@@ -175,7 +175,7 @@ class NTM(object):
                                                              for i in range(num_reads)])
         self.init_write_focus = get_sym_list(init_write_focus,
                                               default_names=[(self.name + ":init_write_focus%d" %i)
-                                                             for i in range(num_reads)])
+                                                             for i in range(num_writes)])
         self.read_heads = []
         self.write_heads = []
 

@@ -34,7 +34,8 @@ class ReplayMemory(object):
 
     def latest_slice(self):
         if self.size >= self.history_length:
-            return self.states.take(numpy.arange(self.top - self.history_length, self.top), axis=0, mode="wrap")
+            return self.states.take(numpy.arange(self.top - self.history_length, self.top),
+                                    axis=0, mode="wrap")
         else:
             assert False, "We can only slice from the replay memory if the " \
                           "replay size is larger than the length of frames we want to take" \
@@ -44,11 +45,10 @@ class ReplayMemory(object):
     def sample_enabled(self):
         return self.size > self.replay_start_size
 
-    '''
-    Function: clear
-    Description: Clear all contents in the relay memory
-    '''
     def clear(self):
+        """
+        Clear all contents in the relay memory
+        """
         self.states[:] = 0
         self.actions[:] = 0
         self.rewards[:] = 0
@@ -56,16 +56,16 @@ class ReplayMemory(object):
         self.top = 0
         self.size = 0
 
-    '''
-    Function: reset
-    Description: Reset all the flags stored in the replay memory. It's a light/quick version of clear()
-    '''
     def reset(self):
+        """
+        Reset all the flags stored in the replay memory.
+        It will not clear the inner-content and is a light/quick version of clear()
+        """
         self.top = 0
         self.size = 0
 
-    #TODO Test the copy function
     def copy(self):
+        # TODO Test the copy function
         replay_memory = copy.copy(self)
         replay_memory.states = numpy.zeros(self.states.shape, dtype=self.states.dtype)
         replay_memory.actions = numpy.zeros(self.actions.shape, dtype=self.actions.dtype)
@@ -95,8 +95,9 @@ class ReplayMemory(object):
         assert(0 <= self.size <= self.memory_size)
         assert(0 <= self.top <= self.memory_size)
         if self.size <= self.replay_start_size:
-            raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
-                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
+            raise ValueError("Size of the effective samples of the ReplayMemory must be "
+                             "bigger than start_size! Currently, size=%d, start_size=%d"
+                             %(self.size, self.replay_start_size))
         actions = numpy.empty((batch_size,) + self.action_dim, dtype=self.actions.dtype)
         rewards = numpy.empty(batch_size, dtype='float32')
         terminate_flags = numpy.empty(batch_size, dtype='bool')
@@ -123,7 +124,8 @@ class ReplayMemory(object):
         assert(0 <= self.top <= self.memory_size)
         if self.size <= self.replay_start_size:
             raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
-                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
+                             "start_size! Currently, size=%d, start_size=%d"
+                             %(self.size, self.replay_start_size))
         actions = numpy.empty((batch_size,) + self.action_dim, dtype=self.actions.dtype)
         rewards = numpy.empty(batch_size, dtype='float32')
         terminate_flags = numpy.empty(batch_size, dtype='bool')
@@ -150,9 +152,9 @@ class ReplayMemory(object):
         assert(0 <= self.size <= self.memory_size)
         assert(0 <= self.top <= self.memory_size)
         if self.size <= self.replay_start_size:
-            raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
-                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
-
+            raise ValueError("Size of the effective samples of the ReplayMemory must be "
+                             "bigger than start_size! Currently, size=%d, start_size=%d"
+                             %(self.size, self.replay_start_size))
         actions = numpy.zeros((batch_size,) + self.action_dim, dtype=self.actions.dtype)
         rewards = numpy.zeros(batch_size, dtype='float32')
         terminate_flags = numpy.zeros(batch_size, dtype='bool')
@@ -180,7 +182,8 @@ class ReplayMemory(object):
         assert(0 <= self.top <= self.memory_size)
         if self.size <= self.replay_start_size:
             raise ValueError("Size of the effective samples of the ReplayMemory must be bigger than "
-                             "start_size! Currently, size=%d, start_size=%d" %(self.size, self.replay_start_size))
+                             "start_size! Currently, size=%d, start_size=%d"
+                             %(self.size, self.replay_start_size))
         #TODO Possibly states + inds for less memory access
         states = numpy.zeros((batch_size, self.history_length) + self.state_dim,
                              dtype=self.states.dtype)
