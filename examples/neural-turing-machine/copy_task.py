@@ -61,7 +61,6 @@ def sym_gen(seqlen):
     # Initialize Memory
     init_memory = mx.sym.Variable('init_memory')
 
-
     init_read_focus = mx.sym.Variable('NTM->read_head:init_focus')
     init_write_focus = mx.sym.Variable('NTM->write_head:init_focus')
 
