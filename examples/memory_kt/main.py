@@ -28,12 +28,11 @@ def train(net, params, data, label):
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
     np.random.shuffle(data)
     N = int(math.floor(len(data) / params.batch_size))
+    data = data.T # Shape: (200,3633)
     cost = 0
-
     #one_seq = np.ndarray([params.batch_size, params.seqlen], dtype=np.float32)
     #input_x = np.ndarray([params.batch_size, params.seqlen-1], dtype=np.float32)
     #target = np.ndarray([params.batch_size, params.seqlen-1], dtype=np.float32)
-
     if params.show:
         from utils import ProgressBar
         bar = ProgressBar(label, max=N)
@@ -42,6 +41,7 @@ def train(net, params, data, label):
                              dtype=np.float32) + 0.0001  # numpy.tanh(numpy.random.normal(size=(batch_size, control_state_dim)))
     init_c_npy = np.zeros((params.batch_size, params.control_state_dim),
                              dtype=np.float32) + 0.0001  # numpy.tanh(numpy.random.normal(size=(batch_size, control_state_dim)))
+    # TODO need to change
     init_read_focus_npy = npy_softmax(
         np.broadcast_to(np.arange(params.memory_size, 0, -1), (params.batch_size, params.memory_size)),
         axis=1)
@@ -50,9 +50,9 @@ def train(net, params, data, label):
         axis=1)
     for idx in xrange(N):
         if params.show: bar.next()
-        one_seq = data[idx*params.batch_size : (idx+1)*params.batch_size ]
-        input_x = one_seq[:,:-1]
-        target = one_seq[:,1:]
+        one_seq = data[: , idx*params.batch_size:(idx+1)*params.batch_size]
+        input_x = one_seq[:-1,:]
+        target = one_seq[1:,:]
         # data_shapes = {'data': (params.batch_size, params.seqlen),
         #           'target': (params.batch_size, params.seqlen),
         #           'init_memory': (params.batch_size, params.memory_size, params.memory_state_dim),
@@ -100,6 +100,7 @@ if __name__ == '__main__':
     parser.add_argument('--control_state_dim', type=int, default=100, help='hidden states of the controller')
     parser.add_argument('--memory_size', type=int, default=128, help='memory size')
     parser.add_argument('--memory_state_dim', type=int, default=20, help='internal state dimension')
+    parser.add_argument('--k_smallest', type=int, default=20, help='parmeter of k smallest flags')
 
     parser.add_argument('--max_iter', type=int, default=10000, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')

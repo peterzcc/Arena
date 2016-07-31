@@ -64,6 +64,7 @@ class DATA(object):
             dat = data[j]
             dataArray[j, :len(dat)] = dat
         # dataArray: [ array([[],[],..])] Shape: (3633, 200)
+        #dataArray = dataArray.T # Shape: (200, 3633)
         return dataArray
 
 

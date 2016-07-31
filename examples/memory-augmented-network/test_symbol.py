@@ -2,7 +2,7 @@
 ###################################### Embedding ######################################
 
 import mxnet as mx
-ctx_haha = mx.gpu(0)
+ctx_haha = mx.cpu()
 
 context = mx.symbol.Variable('context')
 embed_weight = mx.sym.Variable("embed_weight")
@@ -19,17 +19,23 @@ print result
 
 ###################################### Reshape ######################################
 import mxnet as mx
-ctx_haha = mx.gpu(0)
+ctx_haha = mx.cpu()
 
-i = mx.symbol.Variable('i')
-ii = mx.nd.array([[1,2,3],[2,3,4],[3,4,5]],ctx=ctx_haha)
+target = mx.symbol.Variable('target')
+
+ii = mx.nd.array([[1,2],[3,4],[5,6]],ctx=ctx_haha)
 ii.asnumpy()
-re = mx.sym.Reshape(i, shape=(-1, 3, 1))
-re_exec = re.bind(ctx=ctx_haha, args={'i' : ii})
+
+#target = mx.sym.transpose(data=target)
+target = mx.sym.Reshape(data=target, shape=(-1,))
+
+re_exec = target.bind(ctx=ctx_haha, args={'target' : ii})
 
 re_exec.forward()
 result = re_exec.outputs[0].asnumpy()
-print result
+print result# [ 1.  2.  3.  4.  5.  6.]
+print result.shape
+
 
 ###################################### dot ######################################
 
@@ -309,3 +315,37 @@ mm_exec = MM.bind(ctx=ctx_haha, args={'Bin' : B, 'probs3dim': P})
 mm_exec.forward()
 result = mm_exec.outputs[0].asnumpy()
 print result
+
+###################################### concat ######################################
+
+import mxnet as mx
+
+data = mx.nd.array([[ 0., 1., 2.], [ 3., 4., 5.]])
+a = mx.sym.Variable('a')
+b = mx.sym.Variable('b')
+for dim in range(2):
+    cat = mx.sym.Concat(a, b, dim=dim)
+    exe = cat.bind(ctx=mx.cpu(), args={'a': data, 'b': data})
+    exe.forward()
+    out = exe.outputs[0]
+    print "concat at dim = %d" % dim
+    print "shape = %s" % (out.shape,)
+    print "results = %s" % (out.asnumpy(),)
+
+
+###################################### concat ######################################
+
+import mxnet as mx
+
+data = mx.nd.array([[ 0., 1., 2.], [ 3., 4., 5.]])
+a = mx.sym.Variable('a')
+b = mx.sym.Variable('b')
+for dim in range(2):
+    cat = mx.sym.Concat(a, b, dim=dim)
+    exe = cat.bind(ctx=mx.cpu(), args={'a': data, 'b': data})
+    exe.forward()
+    out = exe.outputs[0]
+    print "concat at dim = %d" % dim
+    print "shape = %s" % (out.shape,)
+    print "results = %s" % (out.asnumpy(),)
+

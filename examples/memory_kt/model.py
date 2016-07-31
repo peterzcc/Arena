@@ -18,6 +18,10 @@ os.environ["MXNET_CPU_WORKER_NTHREADS"] = "2"
 class BinaryEntropyLoss(mx.operator.CustomOp):
     # The forward function takes a list of input
     # and a list of output NDArrays.
+    ### data:
+    ###         pred  /  target         -(LOSS)->        loss
+    ### (batch_size*seqlen, n_question)/
+    ### (batch_size*seqlen, )           -(LOSS)-> (batch_size*seqlen, )
     def forward(self, is_train, req, in_data, out_data, aux):
         x = in_data[0].asnumpy()
         #print "x", x
@@ -139,6 +143,7 @@ class MODEL(object):
         ###     input_data      -(embed)->          embed_data
         ### (batch_size,seqlen) -(embed)-> (batch_size, seqlen, embed_dim)
         embed_weight = mx.sym.Variable("embed_weight")
+        # embed_data Shape ()
         embed_data = mx.sym.Embedding(data=data, input_dim=self.n_question*2,
                                       weight=embed_weight, output_dim=self.embed_dim, name='embed')
         ### Step2:
@@ -146,7 +151,7 @@ class MODEL(object):
         ###      one_time_input     -(LSTM)->       controller_h
         ### (batch_size, embed_dim) -(LSTM)-> (batch_size, control_state_dim)
         for i in range(self.seqlen):
-            controller_h, controller_c = controller.step(data=embed_data[:,i,:],
+            controller_h, controller_c = controller.step(data=embed_data[i],
                                                          prev_h=controller_h, prev_c=controller_c,
                                                          seq_length=1)
             controller_h = controller_h[0]
@@ -165,20 +170,32 @@ class MODEL(object):
             all_write_focus_l.append(write_focus_l[0])
             all_read_content_l.append(read_content_l) # TODO check read_content format
         ### Step5:
-        ###       all_read_content_l        -(Concat)->        all_read_content
-        ### [(batch_size, memory_state_dim)] -(Concat)-> (batch_size, memory_size) TODO need to check
+        ###       all_read_content_l         -(Concat)->          all_read_content
+        ### [(batch_size, memory_state_dim)] -(Concat)-> (batch_size*seqlen, memory_state_dim)
         all_read_content = mx.sym.Concat(*all_read_content_l, dim=0)
         ### Step6:
-        ###         all_read_content            -(FC)->        write_focus_l
-        ### (batch_size, control_state_dim) -(FC)-> (batch_size, memory_size)
+        ###           all_read_content            -(FC)->        pred
+        ### (batch_size*seqlen, memory_state_dim) -(FC)-> (batch_size*seqlen, n_question)
         fc_weight = mx.sym.Variable("fc_weight")
         fc_bias = mx.sym.Variable("fc_bias")
         pred = mx.sym.FullyConnected(data=all_read_content, num_hidden = self.n_question,
                                      weight=fc_weight, bias=fc_bias, name="final_fc")
-        # TODO label format needs to check
-        target = mx.sym.transpose(data=target)
-        target = mx.sym.Reshape(data=target, shape=(-1,))
-        be = mx.symbol.Custom(data=pred, label=target, name='BinaryEntropyLoss', op_type='BinaryEntropyLoss')
-        return be
+        ### Step7:
+        ###       target        -(Reshape)->        target
+        ### (seqlen,batch_size) -(Reshape)-> (batch_size*seqlen, )
+        ### l = in_data[1].asnumpy().ravel().astype(np.int)
+        ### since in the custom opearation, there is
+        ### l = in_data[1].asnumpy().ravel().astype(np.int)
+        ### so the following exression does not need
+        #target = mx.sym.Reshape(data=target, shape=(-1,))
+        ### Step8:
+        ###               pred              -(BinaryEntropyLoss)->          pred_prob
+        ### (batch_size*seqlen, n_question) -(BinaryEntropyLoss)-> (batch_size*seqlen, n_question)
+        pred_prob = mx.symbol.Custom(data=pred, label=target, name='BinaryEntropyLoss', op_type='BinaryEntropyLoss')
+        return pred_prob
+        ### Step9:
+        ###      pred_prob  /  target        -(LOSS)->        loss
+        ### (batch_size*seqlen, n_question)/
+        ### (batch_size*seqlen, )            -(LOSS)-> (batch_size*seqlen, )
 
 

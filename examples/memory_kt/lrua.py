@@ -6,6 +6,19 @@ class MANNHead(object):
     def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest,
                  init_W_r_focus=None, init_W_w_focus=None, init_W_u_focus=None,
                  is_write=False, name="MANNHead"):
+        """
+        :param control_state_dim:
+        :param k_smallest:
+        :param memory_size:
+        :param memory_state_dim:
+        :param init_read_W_r_focus: Shape (batch_size, num_reads, memory_size)
+        :param init_read_W_w_focus: Shape (batch_size, num_reads, memory_size)
+        :param init_read_W_u_focus: Shape (batch_size, num_reads, memory_size)
+        :param init_write_W_r_focus: Shape (batch_size, num_write, memory_size)
+        :param init_write_W_w_focus: Shape (batch_size, num_write, memory_size)
+        :param init_write_W_u_focus: Shape (batch_size, num_write, memory_size)
+        :param name:
+        """
         self.name = name
         self.control_state_dim = control_state_dim
         self.memory_size = memory_size
@@ -45,7 +58,6 @@ class MANNHead(object):
                                     bias=self.key_bias)  # Shape: (batch_size, memory_state_dim)
         key = mx.sym.Activation(data=key, act_type='tanh', name=self.name+":key")
         return key
-    #def compute_beta(self,control_input):
 
     def addressing(self, control_input, memory):
         """
@@ -73,7 +85,6 @@ class MANNHead(object):
                                       weight=self.alpha_weight,
                                       bias=self.alpha_bias)
         alpha = mx.sym.Activation(data=alpha, act_type='sigmoid', name=self.name + ":alpha")
-
         # compute cosine similarity
         key = ArenaSym.normalize_channel(key, axis=1)
         memory = ArenaSym.normalize_channel(memory, axis=2)
@@ -81,7 +92,6 @@ class MANNHead(object):
                                       axis=2)  # TODO Use batch_dot in the future
         # compute read weight
         W_r = mx.sym.SoftmaxActivation(mx.sym.broadcast_mul(beta, similarity_score))  # Shape: (batch_size, memory_size)
-
         # compute write weight
         last_W_lu = mx.sym.k_smallest_flags(self.last_W_u_focus, k=self.k_smallest)  # Shape (batch_size, memory_size)
         W_w = mx.sym.broadcast_mul(alpha, self.last_W_r_focus) + \
@@ -106,7 +116,7 @@ class MANNHead(object):
     def write(self, control_input, memory):
         assert self.is_write
         key = self.controller(control_input)
-        _, write_focus = self.write_weight(control_input=control_input, memory=memory)
+        _, write_focus = self.addressing(control_input=control_input, memory=memory)
         new_memory = memory + \
                      mx.sym.broadcast_mul( mx.sym.expand_dims(write_focus, axis=2), mx.sym.expand_dims(key, axis=1) )
         return new_memory, write_focus
@@ -120,11 +130,12 @@ class MANN(object):
                  init_write_W_r_focus=None, init_write_W_w_focus=None, init_write_W_u_focus=None,
                  name="MANN"):
         """
-        :param num_reads:
-        :param num_writes:
+        :param control_state_dim:
+        :param k_smallest:
         :param memory_size:
         :param memory_state_dim:
-        :param control_state_dim:
+        :param num_reads:
+        :param num_writes:
         :param init_memory: Shape (batch_size, memory_size, memory_state_dim)
         :param init_read_W_r_focus: Shape (batch_size, num_reads, memory_size)
         :param init_read_W_w_focus: Shape (batch_size, num_reads, memory_size)
@@ -189,7 +200,7 @@ class MANN(object):
 
     def read(self, control_input):
         """
-        :param control_input   : Shape (batch_size, control_state_dim)
+        :param control_input  : Shape (batch_size, control_state_dim)
         :return read_content_l: Shape (batch_size, memory_state_dim)
         :return read_focus_l  : Shape (batch_size, memory_size)
         """
@@ -204,6 +215,10 @@ class MANN(object):
         return read_content_l, read_focus_l
 
     def write(self, control_input):
+        """
+        :param control_input  : Shape (batch_size, control_state_dim)
+        :return write_focus_l : Shape (batch_size, memory_size)
+        """
         assert isinstance(control_input, mx.symbol.Symbol)
         write_focus_l = []
         for write_head in self.write_heads:
