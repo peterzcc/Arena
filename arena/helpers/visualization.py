@@ -1,4 +1,6 @@
 # coding: utf-8
+from __future__ import absolute_import, division, print_function
+
 import numpy
 import mxnet.ndarray as nd
 import cv2
@@ -7,66 +9,82 @@ import logging
 from ..utils import *
 
 
-def cv2_get_display_data(data):
-    assert 2 <= data.ndim <= 4
-    if 2 != data.ndim:
-        if 4 == data.ndim:
-            data = data.transpose(0, 2, 3, 1)
-        data = (data - data.min()) / (data.max() - data.min())
-        n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
-        padding = (((0, n ** 2 - data.shape[0]),
-                    (0, 0), (0, 0))
-                   + ((0, 0),) * (data.ndim - 3))
-        data = numpy.pad(data, padding, mode='constant', constant_values=1)
+class CV2Vis(object):
+    _win_reg = dict()
+    @staticmethod
+    def get_window(name, typ=cv2.WINDOW_NORMAL):
+        cv2.namedWindow(name, typ)
+        if name not in CV2Vis._win_reg:
+            cv2.resizeWindow(winname=name, width=240, height=240)
+            CV2Vis._win_reg[name] = typ
 
-        # tile the filters into an image
-        data = data.reshape((n, n) + data.shape[1:]).transpose(
-            (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
-        data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
-    return data
+    @staticmethod
+    def destroy_window(name):
+        assert name in CV2Vis._win_reg, "Window %s not found in the registry!" %name
+        cv2.destroyWindow(name)
 
+    @staticmethod
+    def get_display_data(data):
+        assert 2 <= data.ndim <= 4
+        if 2 != data.ndim:
+            if 4 == data.ndim:
+                data = data.transpose(0, 2, 3, 1)
+            data = (data - data.min()) / (data.max() - data.min())
+            n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
+            padding = (((0, n ** 2 - data.shape[0]),
+                        (0, 0), (0, 0))
+                       + ((0, 0),) * (data.ndim - 3))
+            data = numpy.pad(data, padding, mode='constant', constant_values=1)
 
-def cv2_visualize(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None):
-    """Visualize the input tensor using OpenCV
+            # tile the filters into an image
+            data = data.reshape((n, n) + data.shape[1:]).transpose(
+                (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
+            data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
+        if 3 == data.ndim:
+            data = data[:, :, ::-1]  # Opencv uses BGR
+        return data
 
-    Take a numpy array of shape (height, width), (n, height, width) or (n, 3, height, width)
-    If the data dimension = 2, the data is directly displayed.
-    Otherwise visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
+    @staticmethod
+    def display(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None,
+                save_image=False, save_path=None, save_size=None):
+        """Visualize the input data using OpenCV
 
-    Parameters
-    ----------
-    data
-    win_name
-    win_typ
-    delay
+        Take a numpy array of shape (height, width), (n, height, width) or (n, 3, height, width)
+        If the data dimension = 2, the data is directly displayed.
+        Otherwise visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
 
-    Returns
-    -------
+        Parameters
+        ----------
+        data
+        win_name
+        win_typ
+        delay
+        save_image : bool
+            Whether to save the visualization result
+        save_path
+        save_size
 
-    """
-    assert 2 <= data.ndim <= 4
-    cv2.namedWindow(win_name, win_typ)
-    data = cv2_get_display_data(data)
-    cv2.namedWindow(win_name, win_typ)
-    if 2 == data.ndim:
-        cv2.imshow(win_name, data[:, :])
-    else:
-        cv2.imshow(win_name, data[:, :, ::-1])
-    if delay is not None:
-        cv2.waitKey(delay)
+        Returns
+        -------
 
+        """
+        assert 2 <= data.ndim <= 4
+        CV2Vis.get_window(win_name, win_typ)
+        data = CV2Vis.get_display_data(data)
+        cv2.imshow(win_name, data)
+        if save_image:
+            if save_path is None:
+                save_path = os.path.join('.', win_name + '.jpg')
+            CV2Vis.save(data, path=save_path, size=save_size)
+        if delay is not None:
+            cv2.waitKey(delay)
 
-def cv2_save(data, path=None, win_name=None, size=None):
-    data = cv2_get_display_data(data)
-    if path is None and win_name is not None:
-        path = os.path.join('.', win_name + '.png')
-    if size is None:
-        size = (480, 480)
-    if 2 == data.ndim:
-        cv2.imwrite(path, cv2.resize(data[:, :] * 256, size,
-                                     interpolation=cv2.INTER_LINEAR))
-    else:
-        cv2.imwrite(path, cv2.resize(data[:, :, ::-1] * 256, size,
+    @staticmethod
+    def save(data, path, size=None):
+        data = CV2Vis.get_display_data(data)
+        if size is None:
+            size = (480, 480)
+        cv2.imwrite(path, cv2.resize(data * 256, size,
                                      interpolation=cv2.INTER_LINEAR))
 
 
@@ -141,14 +159,14 @@ if __name__ == '__main__':
 
     param = vgg_m()
     conv1 = param['arg:conv1_weight'].asnumpy()
-    cv2_visualize(conv1)
+    CV2Vis.display(conv1, 'conv1')
 
     track_iter = TrackingIterator('D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
                                   output_size=(240, 320), resize=True)
 
     data_batch, roi_batch = track_iter.sample(batch_size=32, length=10, interval_step=2)
-    print data_batch.shape, roi_batch.shape
+    print(data_batch.shape, roi_batch.shape)
 
-    for i in xrange(data_batch.shape[0]):
-        for j in xrange(data_batch.shape[1]):
+    for i in range(data_batch.shape[0]):
+        for j in range(data_batch.shape[1]):
             draw_track_res(data_batch.asnumpy()[i, j], roi_batch.asnumpy()[i, j], delay=50)

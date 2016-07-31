@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 from arena.utils import *
 import mxnet as mx
 
@@ -9,17 +11,21 @@ class LSTM(object):
                  init_h=None, init_c=None,
                  skip_connection=False, name="LSTM"):
         """
-        :param num_hidden:
-        :param dropout:
-        :param zoneout:
-        :param i2h_weight:
-        :param i2h_bias:
-        :param h2h_bias:
-        :param h2h_weight:
-        :param init_h:
-        :param init_c:
-        :param skip_connection: http://arxiv.org/abs/1308.0850
-        :param name:
+
+        Parameters
+        ----------
+        num_hidden
+        dropout
+        zoneout
+        i2h_weight
+        i2h_bias
+        h2h_bias
+        h2h_weight
+        init_h
+        init_c
+        skip_connection:
+            http://arxiv.org/abs/1308.0850
+        name
         """
         self.name = name
         self.num_hidden = get_int_list(num_hidden)

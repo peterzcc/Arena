@@ -167,6 +167,11 @@ def npy_sigmoid(x):
     return 1/(1 + numpy.exp(-x))
 
 
+def npy_onehot(x, num):
+    ret = numpy.zeros(shape=(x.size, num))
+    ret[numpy.arange(x.size), x.ravel()] = 1
+    ret = ret.reshape(x.shape + (num,))
+    return ret
 
 def npy_binary_entropy(prediction, target):
     assert prediction.shape == target.shape
