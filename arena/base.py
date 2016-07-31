@@ -1,11 +1,13 @@
+from __future__ import absolute_import, division, print_function
+
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
-from utils import *
 import os
 import pickle
 from collections import OrderedDict
 import logging
+from .utils import *
 
 logger = logging.getLogger(__name__)
 
