@@ -1,11 +1,6 @@
-import mxnet as mx
-import mxnet.ndarray as nd
-import numpy
-import matplotlib.pyplot as plt
-from ntm import NTM
 from arena import Base
 from arena.helpers.visualization import *
-from arena.ops import LSTM
+from arena.ops import LSTM, NTM
 from arena.utils import *
 
 root = logging.getLogger()
@@ -53,7 +48,7 @@ memory_state_dim = 20
 control_state_dim = 100
 
 def sym_gen(seqlen):
-    print seqlen
+    print(seqlen)
     data_seqlen = 2*seqlen + 2
     data = mx.sym.Variable('data')
     target = mx.sym.Variable('target')
@@ -176,9 +171,9 @@ updater = mx.optimizer.get_updater(optimizer)
 for i in range(max_iter):
     seqlen, data_in, data_out = gen_data(batch_size=batch_size, data_dim=data_dim,
                                          min_length=min_length, max_length=max_length)
-    print data_in.shape
-    print seqlen
-    print data_out.shape
+    print(data_in.shape)
+    print(seqlen)
+    print(data_out.shape)
     outputs =\
         net.forward(is_train=True,
                     bucket_kwargs={'seqlen': seqlen},
@@ -195,7 +190,7 @@ for i in range(max_iter):
     # for k, v in net.params.items():
     #     print k, nd.norm(v).asnumpy()
     for k, v in net.params_grad.items():
-        print k, nd.norm(v).asnumpy()
+        print(k, nd.norm(v).asnumpy())
     pred = outputs[0].reshape((seqlen, batch_size, data_dim)).asnumpy()
     state_over_time = outputs[1].asnumpy()
     read_weight_over_time = outputs[2].asnumpy()
@@ -203,23 +198,23 @@ for i in range(max_iter):
     read_content_over_time = outputs[4].asnumpy()
     erase_signal_over_time = outputs[5].asnumpy()
     add_signal_over_time = outputs[6].asnumpy()
-    cv2_visualize(data=pred[:, 0, :].T, win_name="prediction")
-    cv2_visualize(data=data_out[:, 0, :].T, win_name="target")
-    cv2_visualize(data=state_over_time[:, 0, :].T, win_name="state")
+    CV2Vis.display(data=pred[:, 0, :].T, win_name="prediction")
+    CV2Vis.display(data=data_out[:, 0, :].T, win_name="target")
+    CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state")
     for read_id in range(num_reads):
-        cv2_visualize(data=read_weight_over_time[:, 0, read_id, :].T,
+        CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
                       win_name="read_weight%d" %read_id)
-        cv2_visualize(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
+        CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
                       win_name="read_content%d" %read_id)
     for write_id in range(num_writes):
-        cv2_visualize(data=write_weight_over_time[:, 0, write_id, :].T,
+        CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
                       win_name="write_weight%d" %write_id)
-        cv2_visualize(data=erase_signal_over_time[:, 0, write_id, :].T,
+        CV2Vis.display(data=erase_signal_over_time[:, 0, write_id, :].T,
                       win_name="erase_signal%d" %write_id)
-        cv2_visualize(data=(add_signal_over_time[:, 0, write_id, :].T + 1) / 2,
+        CV2Vis.display(data=(add_signal_over_time[:, 0, write_id, :].T + 1) / 2,
                       win_name="add_signal%d" %write_id)
     avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
-    print avg_loss
+    print(avg_loss)
     vis.update(i, avg_loss)
 
 test_seq_len_l = [120, 129]
@@ -228,9 +223,9 @@ for j in range(2):
         seqlen, data_in, data_out = gen_data(batch_size=batch_size, data_dim=data_dim,
                                              min_length=test_seq_len_l[j],
                                              max_length=test_seq_len_l[j])
-        print data_in.shape
-        print seqlen
-        print data_out.shape
+        print(data_in.shape)
+        print(seqlen)
+        print(data_out.shape)
         outputs =\
             net.forward(is_train=False,
                         bucket_kwargs={'seqlen': seqlen},
@@ -248,37 +243,37 @@ for j in range(2):
         read_content_over_time = outputs[4].asnumpy()
         erase_signal_over_time = outputs[5].asnumpy()
         add_signal_over_time = outputs[6].asnumpy()
-        cv2_visualize(data=pred[:, 0, :].T, win_name="prediction", save_image=True,
+        CV2Vis.display(data=pred[:, 0, :].T, win_name="prediction", save_image=True,
                       save_path="./prediction_seqlen%d_%d.jpg" %(seqlen, i))
-        cv2_visualize(data=data_out[:, 0, :].T, win_name="target", save_image=True,
+        CV2Vis.display(data=data_out[:, 0, :].T, win_name="target", save_image=True,
                       save_path="./target_seqlen%d_%d.jpg" %(seqlen, i))
-        cv2_visualize(data=state_over_time[:, 0, :].T, win_name="state", save_image=True,
+        CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state", save_image=True,
                       save_path="./state_seqlen%d_%d.jpg" %(seqlen, i))
         for read_id in range(num_reads):
-            cv2_visualize(data=read_weight_over_time[:, 0, read_id, :].T,
+            CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
                           win_name="read_weight%d" % read_id,
                           save_image=True,
                           save_path="./read_weight_seqlen%d_%d.jpg" %(seqlen, i))
-            cv2_visualize(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
+            CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
                           win_name="read_content%d" % read_id,
                           save_image=True,
                           save_path="./read_content_seqlen%d_%d.jpg" %(seqlen, i))
         for write_id in range(num_writes):
-            cv2_visualize(data=write_weight_over_time[:, 0, write_id, :].T,
+            CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
                           win_name="write_weight%d" % write_id,
                           save_image=True,
                           save_path="./write_weight_seqlen%d_%d.jpg" %(seqlen, i))
-            cv2_visualize(data=erase_signal_over_time[:, 0, write_id, :].T,
+            CV2Vis.display(data=erase_signal_over_time[:, 0, write_id, :].T,
                           win_name="erase_signal%d" % write_id,
                           save_image=True,
                           save_path="./erase_signal_seqlen%d_%d.jpg" %(seqlen, i))
-            cv2_visualize(data=(add_signal_over_time[:, 0, write_id, :].T + 1) / 2,
+            CV2Vis.display(data=(add_signal_over_time[:, 0, write_id, :].T + 1) / 2,
                           win_name="add_signal%d" % write_id,
                           save_image=True,
                           save_path="./add_signal_seqlen%d_%d.jpg" %(seqlen, i))
         avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
         print(avg_loss)
-        ch = raw_input()
+        ch = input()
 
 test_seq_len_l = [120, 129]
 for j in range(2):
@@ -286,9 +281,9 @@ for j in range(2):
         seqlen, data_in, data_out = gen_data_same(batch_size=batch_size, data_dim=data_dim,
                                              min_length=test_seq_len_l[j],
                                              max_length=test_seq_len_l[j])
-        print data_in.shape
-        print seqlen
-        print data_out.shape
+        print(data_in.shape)
+        print(seqlen)
+        print(data_out.shape)
         outputs =\
             net.forward(is_train=False,
                         bucket_kwargs={'seqlen': seqlen},
@@ -306,34 +301,34 @@ for j in range(2):
         read_content_over_time = outputs[4].asnumpy()
         erase_signal_over_time = outputs[5].asnumpy()
         add_signal_over_time = outputs[6].asnumpy()
-        cv2_visualize(data=pred[:, 0, :].T, win_name="prediction", save_image=True,
-                      save_path="./same_prediction_seqlen%d_%d.jpg" %(seqlen, i))
-        cv2_visualize(data=data_out[:, 0, :].T, win_name="target", save_image=True,
-                      save_path="./same_target_seqlen%d_%d.jpg" %(seqlen, i))
-        cv2_visualize(data=state_over_time[:, 0, :].T, win_name="state", save_image=True,
-                      save_path="./same_state_seqlen%d_%d.jpg" %(seqlen, i))
+        CV2Vis.display(data=pred[:, 0, :].T, win_name="prediction", save_image=True,
+                       save_path="./same_prediction_seqlen%d_%d.jpg" %(seqlen, i))
+        CV2Vis.display(data=data_out[:, 0, :].T, win_name="target", save_image=True,
+                       save_path="./same_target_seqlen%d_%d.jpg" %(seqlen, i))
+        CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state", save_image=True,
+                       save_path="./same_state_seqlen%d_%d.jpg" %(seqlen, i))
         for read_id in range(num_reads):
-            cv2_visualize(data=read_weight_over_time[:, 0, read_id, :].T,
-                          win_name="read_weight%d" % read_id,
-                          save_image=True,
-                          save_path="./same_read_weight_seqlen%d_%d.jpg" %(seqlen, i))
-            cv2_visualize(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
+            CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
+                           win_name="read_weight%d" % read_id,
+                           save_image=True,
+                           save_path="./same_read_weight_seqlen%d_%d.jpg" %(seqlen, i))
+            CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
                           win_name="read_content%d" % read_id,
                           save_image=True,
                           save_path="./same_read_content_seqlen%d_%d.jpg" %(seqlen, i))
         for write_id in range(num_writes):
-            cv2_visualize(data=write_weight_over_time[:, 0, write_id, :].T,
-                          win_name="write_weight%d" % write_id,
-                          save_image=True,
-                          save_path="./same_write_weight_seqlen%d_%d.jpg" %(seqlen, i))
-            cv2_visualize(data=erase_signal_over_time[:, 0, write_id, :].T,
-                          win_name="erase_signal%d" % write_id,
-                          save_image=True,
-                          save_path="./same_erase_signal_seqlen%d_%d.jpg" %(seqlen, i))
-            cv2_visualize(data=(add_signal_over_time[:, 0, write_id, :].T + 1) / 2,
-                          win_name="add_signal%d" % write_id,
-                          save_image=True,
-                          save_path="./same_add_signal_seqlen%d_%d.jpg" %(seqlen, i))
+            CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
+                           win_name="write_weight%d" % write_id,
+                           save_image=True,
+                           save_path="./same_write_weight_seqlen%d_%d.jpg" %(seqlen, i))
+            CV2Vis.display(data=erase_signal_over_time[:, 0, write_id, :].T,
+                           win_name="erase_signal%d" % write_id,
+                           save_image=True,
+                           save_path="./same_erase_signal_seqlen%d_%d.jpg" %(seqlen, i))
+            CV2Vis.display(data=(add_signal_over_time[:, 0, write_id, :].T + 1) / 2,
+                           win_name="add_signal%d" % write_id,
+                           save_image=True,
+                           save_path="./same_add_signal_seqlen%d_%d.jpg" %(seqlen, i))
         avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
         print(avg_loss)
-        ch = raw_input()
+        ch = input()
