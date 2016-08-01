@@ -8,7 +8,7 @@ class DATA(object):
         #        seqlen = 200
         self.separate_char = separate_char
         self.n_question = n_question
-        self.seqlen = seqlen
+        self.seqlen = seqlen+1
 
     ### data format
     ### 15

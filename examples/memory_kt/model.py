@@ -101,25 +101,17 @@ class MODEL(object):
 
         ### Initialize Control Network
         controller = LSTM(num_hidden=self.control_state_dim, name="controller")
+        ### TODO input variable 'controller_init_h'/'controller_init_c'
         controller_h = controller.init_h[0]
         controller_c = controller.init_c[0]
         ### Initialize Memory
-        # TODO input variable 'init_memory'
+        ### TODO input variable 'init_memory'
         init_memory = mx.sym.Variable('init_memory')
-        # TODO input variable 'init_read_W_r_focus' / 'init_read_W_w_focus' / 'init_read_W_u_focus'
-        init_read_W_r_focus = [mx.sym.Variable('MANN->read_head%d:init_W_r_focus' % i) for i in range(self.num_reads)]
-        init_read_W_w_focus = [mx.sym.Variable('MANN->read_head%d:init_W_w_focus' % i) for i in range(self.num_reads)]
-        init_read_W_u_focus = [mx.sym.Variable('MANN->read_head%d:init_W_u_focus' % i) for i in range(self.num_reads)]
-        # TODO input variable 'init_write_W_r_focus' / 'init_write_W_w_focus' / 'init_write_W_u_focus'
-        init_write_W_r_focus = [mx.sym.Variable('MANN->write_head%d:init_W_r_focus' % i) for i in range(self.num_writes)]
-        init_write_W_w_focus = [mx.sym.Variable('MANN->write_head%d:init_W_w_focus' % i) for i in range(self.num_writes)]
-        init_write_W_u_focus = [mx.sym.Variable('MANN->write_head%d:init_W_u_focus' % i) for i in range(self.num_writes)]
 
-        ### def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest,
-        ###         num_reads, num_writes, init_memory=None,
-        ###         init_read_W_r_focus=None, init_read_W_w_focus=None, init_read_W_u_focus=None,
-        ###         init_write_W_r_focus=None, init_write_W_w_focus=None, init_write_W_u_focus=None,
-        ###         name="MANN"):
+        ### TODO input variable 'MANN->write_head:init_W_r_focus' / 'MANN->write_head:init_W_u_focus'
+        init_write_W_r_focus = mx.sym.Variable('MANN->write_head:init_W_r_focus' )
+        init_write_W_u_focus = mx.sym.Variable('MANN->write_head:init_W_u_focus')
+
         mem = MANN(control_state_dim=self.control_state_dim,
                    memory_size=self.memory_size,
                    memory_state_dim=self.memory_state_dim,
@@ -127,13 +119,9 @@ class MODEL(object):
                    num_reads=self.num_reads,
                    num_writes=self.num_writes,
                    init_memory=init_memory,
-                   init_read_W_r_focus=init_read_W_r_focus,
-                   init_read_W_w_focus=init_read_W_w_focus,
-                   init_read_W_u_focus=init_read_W_u_focus,
                    init_write_W_r_focus=init_write_W_r_focus,
-                   init_write_W_w_focus=init_write_W_w_focus,
                    init_write_W_u_focus=init_write_W_u_focus,
-                   name="MANN") # TODO init_read_focus / init_write_focus
+                   name="MANN")
         controller_states = []
         all_read_focus_l = []
         all_write_focus_l = []
@@ -188,7 +176,7 @@ class MODEL(object):
         ### since in the custom opearation, there is
         ### l = in_data[1].asnumpy().ravel().astype(np.int)
         ### so the following exression does not need
-        #target = mx.sym.Reshape(data=target, shape=(-1,))
+        target = mx.sym.Reshape(data=target, shape=(-1,))
         ### Step8:
         ###               pred              -(BinaryEntropyLoss)->          pred_prob
         ### (batch_size*seqlen, n_question) -(BinaryEntropyLoss)-> (batch_size*seqlen, n_question)

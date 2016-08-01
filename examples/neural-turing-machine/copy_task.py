@@ -134,6 +134,8 @@ def sym_gen(seqlen):
 
 vis = PLTVisualizer()
 
+
+
 max_input_seq_len = max_length*2 + 2
 max_output_seq_len = max_length
 sym = sym_gen(max_length)

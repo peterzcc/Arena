@@ -18,23 +18,7 @@ result = c_exec.outputs[0].asnumpy()
 print result
 
 ###################################### Reshape ######################################
-import mxnet as mx
-ctx_haha = mx.cpu()
 
-target = mx.symbol.Variable('target')
-
-ii = mx.nd.array([[1,2],[3,4],[5,6]],ctx=ctx_haha)
-ii.asnumpy()
-
-#target = mx.sym.transpose(data=target)
-target = mx.sym.Reshape(data=target, shape=(-1,))
-
-re_exec = target.bind(ctx=ctx_haha, args={'target' : ii})
-
-re_exec.forward()
-result = re_exec.outputs[0].asnumpy()
-print result# [ 1.  2.  3.  4.  5.  6.]
-print result.shape
 
 
 ###################################### dot ######################################
@@ -62,14 +46,14 @@ print result
 ###################################### expand_dims ######################################
 
 import mxnet as mx
-ctx_haha = mx.gpu(0)
+ctx_haha = mx.cpu()
 
 key = mx.symbol.Variable('key')
 
-k = mx.nd.array([[1,2,3],[1,3,5]],ctx=ctx_haha)
+k = mx.nd.array([[1,2,3],[1,3,5],[2,4,6],[4,6,8]],ctx=ctx_haha)
 k.asnumpy()
 
-MM = mx.sym.expand_dims(key, axis=2)
+MM = mx.sym.expand_dims(key, axis=1)
 
 mm_exec = MM.bind(ctx=ctx_haha, args={'key' : k})
 
@@ -106,7 +90,7 @@ print result
 ###################################### sum ######################################
 
 import mxnet as mx
-ctx_haha = mx.gpu(0)
+ctx_haha = mx.cpu()
 
 probs3dim = mx.symbol.Variable('probs3dim')
 Bin = mx.symbol.Variable('Bin')
@@ -144,6 +128,25 @@ B.asnumpy()
 MM = mx.sym.batch_dot(Bin, probs3dim)
 
 mm_exec = MM.bind(ctx=ctx_haha, args={'Bin' : B, 'probs3dim': P})
+
+mm_exec.forward()
+result = mm_exec.outputs[0].asnumpy()
+print result
+
+###################################### SwapAxis ######################################
+
+import mxnet as mx
+ctx_haha = mx.cpu()
+
+Bin = mx.symbol.Variable('Bin')
+
+B = mx.nd.array([[[1,2,3],[1,3,5],[1,2,5],[10,20,50],[1,2,5]],[[10,20,30],[1,3,5],[1,2,5],[1,2,5],[1,2,5]]],ctx=ctx_haha)
+B.asnumpy()
+
+
+MM = mx.sym.SwapAxis(Bin, dim1=1,dim2=2)
+
+mm_exec = MM.bind(ctx=ctx_haha, args={'Bin' : B})
 
 mm_exec.forward()
 result = mm_exec.outputs[0].asnumpy()
@@ -349,3 +352,4 @@ for dim in range(2):
     print "shape = %s" % (out.shape,)
     print "results = %s" % (out.asnumpy(),)
 
+###################################### norm ######################################
