@@ -3,16 +3,35 @@ from __future__ import absolute_import, division, print_function
 
 import numpy
 import mxnet.ndarray as nd
-import cv2
 import logging
-
+try:
+    import cv2
+except ImportError:
+    raise ImportError('OpenCV plugin is not installed. '
+                      'Some visualization features will be disabled.')
 from ..utils import *
 
 
 class CV2Vis(object):
     _win_reg = dict()
+
     @staticmethod
     def get_window(name, typ=cv2.WINDOW_NORMAL):
+        """Switch to a window
+
+        New window names will be registered in the inner registry
+
+        Parameters
+        ----------
+        name : str
+            Name of the window
+        typ :
+            cv2.WINDOW_NORMAL
+
+        Returns
+        -------
+
+        """
         cv2.namedWindow(name, typ)
         if name not in CV2Vis._win_reg:
             cv2.resizeWindow(winname=name, width=240, height=240)
@@ -20,11 +39,32 @@ class CV2Vis(object):
 
     @staticmethod
     def destroy_window(name):
+        """Destroy window
+
+        Parameters
+        ----------
+        name : str
+            Name of the window
+
+        Returns
+        -------
+
+        """
         assert name in CV2Vis._win_reg, "Window %s not found in the registry!" %name
         cv2.destroyWindow(name)
 
     @staticmethod
     def get_display_data(data):
+        """Transform the input ndarray to the opencv format
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+
+        Returns
+        -------
+
+        """
         assert 2 <= data.ndim <= 4
         if 2 != data.ndim:
             if 4 == data.ndim:
@@ -55,14 +95,18 @@ class CV2Vis(object):
 
         Parameters
         ----------
-        data
-        win_name
-        win_typ
-        delay
+        data : numpy.ndarray
+        win_name : str
+        win_typ :
+        delay :
+            Set this variable to wait for key event after displaying the image.
+            delay <=0 means to wait the key forever
         save_image : bool
             Whether to save the visualization result
-        save_path
-        save_size
+        save_path : str or None
+            If save_path is not given, image will be saved to the current directory
+            and the name will be the window name.
+        save_size : tuple or None
 
         Returns
         -------
@@ -81,6 +125,18 @@ class CV2Vis(object):
 
     @staticmethod
     def save(data, path, size=None):
+        """
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+        path : str
+        size : tuple or None
+            (width, height)
+        Returns
+        -------
+
+        """
         data = CV2Vis.get_display_data(data)
         if size is None:
             size = (480, 480)
