@@ -137,4 +137,48 @@ def train(net, params, data, label):
     return one_epoch_loss
 
 
+def test(net, params, data, label):
+    # dataArray: [ array([[],[],..])] Shape: (3633, 200)
+    np.random.shuffle(data)
+    N = int(math.floor(len(data) / params.batch_size))
+    data = data.T # Shape: (200,3633)
+    cost = 0
 
+    ### Initialization
+    init_memory_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_state_dim)))
+    #init_h_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
+    #init_c_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
+    init_h_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
+    init_c_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
+    init_write_W_r_focus_npy = npy_softmax(numpy.broadcast_to(
+                                            numpy.arange(params.memory_size, 0, -1),
+                                            (params.batch_size, params.num_writes, params.memory_size)),
+                               axis=2)
+    init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
+    if params.show:
+        from utils import ProgressBar
+        bar = ProgressBar(label, max=N)
+
+    for idx in xrange(N):
+        if params.show: bar.next()
+        one_seq = data[: , idx*params.batch_size:(idx+1)*params.batch_size]
+        input_x = one_seq[:-1,:] # Shape (seqlen, batch_size)
+        target = one_seq[1:,:]
+
+        outputs = net.forward(is_train=True,
+                              **{'data': input_x,
+                                 'target': target,
+                                 'init_memory': init_memory_npy,
+                                 'MANN->write_head:init_W_r_focus': init_write_W_r_focus_npy,
+                                 'MANN->write_head:init_W_u_focus': init_write_W_u_focus_npy,
+                                 'controller->layer0:init_h': init_h_npy,
+                                 'controller->layer0:init_c': init_c_npy})
+        pred = outputs[0].asnumpy()
+        avg_loss = binaryEntropy(params, target, pred)
+        cost += avg_loss
+        #print avg_loss
+    if params.show: bar.finish()
+
+    one_epoch_loss = cost / N
+    print label, "loss:", one_epoch_loss
+    return one_epoch_loss

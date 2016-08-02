@@ -6,6 +6,7 @@ from arena import Base
 from model import MODEL
 from arena.utils import *
 from run import train
+from run import test
 import mxnet.ndarray as nd
 
 from numpy import linalg as LA
@@ -27,13 +28,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test MANN.')
     parser.add_argument('--gpus', type=str, help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--batch_size', type=int, default=10, help='the batch size')
-    parser.add_argument('--embed_dim', type=int, default=6, help='embedding dimensions')
-    parser.add_argument('--control_state_dim', type=int, default=7, help='hidden states of the controller')
+    parser.add_argument('--embed_dim', type=int, default=100, help='embedding dimensions')
+    parser.add_argument('--control_state_dim', type=int, default=200, help='hidden states of the controller')
     parser.add_argument('--memory_size', type=int, default=128, help='memory size')
-    parser.add_argument('--memory_state_dim', type=int, default=8, help='internal state dimension')
-    parser.add_argument('--k_smallest', type=int, default=2, help='parmeter of k smallest flags')
+    parser.add_argument('--memory_state_dim', type=int, default=200, help='internal state dimension')
+    parser.add_argument('--k_smallest', type=int, default=10, help='parmeter of k smallest flags')
 
-    parser.add_argument('--max_iter', type=int, default=10, help='number of iterations')
+    parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, default='data', help='data directory [data]')
     parser.add_argument('--data_name', type=str, default='builder', help='data set name [ptb]')
     #parser.add_argument('--load', type=str, default='MemNN', help='model file to load')
-    #parser.add_argument('--save', type=str, default='MemNN', help='path to save model')
+    parser.add_argument('--save', type=str, default='Memory_kt', help='path to save model')
     params = parser.parse_args()
 
     # Reading data
@@ -123,12 +124,12 @@ if __name__ == '__main__':
     if not params.test:
         for idx in xrange(params.max_iter):
             train_loss = train(net, params, train_data, label='Train')
-            #valid_loss = test(net, params, valid_data, label='Validation')
+            valid_loss = test(net, params, test_data, label='Validation')
 
             # logging for each epoch
             m = len(g_log_cost) + 1
-            #g_log_cost[m] = [m, train_loss, valid_loss]
-            g_log_cost[m] = [m, train_loss]
+            g_log_cost[m] = [m, train_loss, valid_loss]
+            #g_log_cost[m] = [m, train_loss]
             output_state = {'epoch': idx + 1,
                             "train_loss": train_loss,
                             #"valid_perplexity": np.exp(valid_loss),
