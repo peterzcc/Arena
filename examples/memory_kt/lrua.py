@@ -52,7 +52,7 @@ class MANNHeadGroup(object):
                                     num_hidden=self.num_heads*self.memory_state_dim,
                                     weight=self.key_weight,
                                     bias=self.key_bias)  # Shape: (batch_size, num_reads*memory_state_dim)
-        key = mx.sym.Reshape(key, shape=(0, self.num_heads, self.memory_state_dim)) # Shape: (batch_size, num_heads, memory_state_dim)
+        key = mx.sym.Reshape(key, shape=(-1, self.num_heads, self.memory_state_dim)) # Shape: (batch_size, num_heads, memory_state_dim)
         key = mx.sym.Activation(data=key, act_type='tanh', name=self.name+":key")
         return key
 
@@ -73,18 +73,18 @@ class MANNHeadGroup(object):
         beta = mx.sym.Activation(data=beta, act_type='softrelu', name=self.name + ":beta")
 
         # compute cosine similarity
-        key = ArenaSym.normalize_channel(key, axis=2)
-        memory = ArenaSym.normalize_channel(memory, axis=2)
+        norm_key = ArenaSym.normalize_channel(key, axis=2)
+        norm_memory = ArenaSym.normalize_channel(memory, axis=2)
         ### key            (batch_size, num_heads, memory_state_dim)
         ### swapped_memory (batch_size, memory_state_dim, memory_size)
-        similarity_score = mx.sym.batch_dot(key, mx.sym.SwapAxis(memory, dim1=1, dim2=2)) # Shape: (batch_size, num_heads, memory_size)
+        similarity_score = mx.sym.batch_dot(norm_key, mx.sym.SwapAxis(norm_memory, dim1=1, dim2=2)) # Shape: (batch_size, num_heads, memory_size)
 
         # compute read weight
         W_r = mx.sym.Reshape(mx.sym.SoftmaxActivation(mx.sym.Reshape(mx.sym.broadcast_mul(beta, similarity_score),
                                                                     shape=(-1, self.memory_size))),
                             shape=(-1, self.num_heads, self.memory_size))  # Shape: (batch_size, num_heads, memory_size)
         if self.is_write == False:
-            return W_r
+            return norm_key, norm_memory, similarity_score, W_r
         else:
             # Alpha
             alpha = mx.sym.FullyConnected(data=control_input,
@@ -99,8 +99,9 @@ class MANNHeadGroup(object):
                                           weight=self.gamma_weight,
                                           bias=self.gamma_bias)
             gamma = mx.sym.expand_dims(gamma, axis=2)  # Shape: (batch_size, num_heads, 1)
-            gamma = 1.0 + mx.sym.Activation(data=gamma, act_type='softrelu', name=self.name + ":gamma")
+            gamma = mx.sym.Activation(data=gamma, act_type='sigmoid', name=self.name + ":gamma")
             # compute write weight
+            #last_W_lu = self.last_W_u_focus
             last_W_lu = mx.sym.Reshape(mx.sym.k_smallest_flags(mx.sym.Reshape(self.last_W_u_focus,
                                                                               shape=(-1, self.memory_size)),
                                                                k=self.k_smallest),
@@ -123,10 +124,10 @@ class MANNHeadGroup(object):
             The read focus   --> Shape (batch_size, num_heads, memory_size)
         """
         assert not self.is_write
-        read_focus = self.addressing(control_input=control_input, memory=memory)
+        norm_key, norm_memory, similarity_score, read_focus = self.addressing(control_input=control_input, memory=memory)
         content = mx.sym.batch_dot(read_focus, memory)
         content = mx.sym.sum(content, axis=1) # Shape (batch_size, memory_state_dim)
-        return content, read_focus
+        return content, read_focus, norm_key, norm_memory, similarity_score
 
     def write(self, control_input, memory):
         """Write into the memory
@@ -208,9 +209,9 @@ class MANN(object):
             The read focus   --> Shape (batch_size, num_heads, memory_size)
         """
         assert isinstance(control_input, mx.symbol.Symbol)
-        read_content, read_focus = self.read_head.read(control_input=control_input, memory=self.memory)
+        read_content, read_focus, norm_key, norm_memory, similarity_score = self.read_head.read(control_input=control_input, memory=self.memory)
         self.read_counter += 1
-        return read_content, read_focus
+        return read_content, read_focus, norm_key, norm_memory, similarity_score
 
     def write(self, control_input):
         """Write into the memory

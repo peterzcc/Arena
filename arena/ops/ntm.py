@@ -1,5 +1,4 @@
 from arena.operators import *
-from arena.utils import *
 import mxnet as mx
 
 
@@ -92,7 +91,7 @@ class NTMHeadGroup(object):
                                  num_hidden=self.num_heads * self.memory_state_dim,
                                  weight=self.key_weight,
                                  bias=self.key_bias) # Shape: (batch_size, num_heads * memory_state_dim)
-        key = mx.sym.Reshape(key, shape=(0, self.num_heads, self.memory_state_dim)) # Shape: (batch_size, num_heads, memory_state_dim)
+        key = mx.sym.Reshape(key, shape=(-1, self.num_heads, self.memory_state_dim)) # Shape: (batch_size, num_heads, memory_state_dim)
         key = mx.sym.Activation(data=key, act_type='tanh', name=self.name + ":key")
         # Beta
         beta = mx.sym.FullyConnected(data=control_input,

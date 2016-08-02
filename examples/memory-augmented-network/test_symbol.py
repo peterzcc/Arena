@@ -19,7 +19,21 @@ print result
 
 ###################################### Reshape ######################################
 
+import mxnet as mx
+ctx_haha = mx.cpu()
 
+data = mx.symbol.Variable('data')
+
+C = mx.nd.array([[1,2,3,4,5],[1,3,5,7,4],[1,2,5,7,8]],ctx=ctx_haha)
+C.asnumpy()
+#E = mx.random.uniform(1,10,shape=(10,3),ctx=ctx_haha)
+
+Ain_c = mx.sym.Reshape(data, shape=(-1,))
+c_exec = Ain_c.bind(ctx=ctx_haha, args={'data' : C})
+
+c_exec.forward()
+result = c_exec.outputs[0].asnumpy()
+print result
 
 ###################################### dot ######################################
 
@@ -323,7 +337,8 @@ print result
 
 import mxnet as mx
 
-data = mx.nd.array([[ 0., 1., 2.], [ 3., 4., 5.]])
+data = mx.nd.array([[ 0., 1., 2.],[0.0,0.1,0.2]])
+data.asnumpy()
 a = mx.sym.Variable('a')
 b = mx.sym.Variable('b')
 for dim in range(2):

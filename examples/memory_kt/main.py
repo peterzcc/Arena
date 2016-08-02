@@ -27,13 +27,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test MANN.')
     parser.add_argument('--gpus', type=str, help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--batch_size', type=int, default=10, help='the batch size')
-    parser.add_argument('--embed_dim', type=int, default=100, help='embedding dimensions')
-    parser.add_argument('--control_state_dim', type=int, default=100, help='hidden states of the controller')
+    parser.add_argument('--embed_dim', type=int, default=6, help='embedding dimensions')
+    parser.add_argument('--control_state_dim', type=int, default=7, help='hidden states of the controller')
     parser.add_argument('--memory_size', type=int, default=128, help='memory size')
-    parser.add_argument('--memory_state_dim', type=int, default=20, help='internal state dimension')
-    parser.add_argument('--k_smallest', type=int, default=20, help='parmeter of k smallest flags')
+    parser.add_argument('--memory_state_dim', type=int, default=8, help='internal state dimension')
+    parser.add_argument('--k_smallest', type=int, default=2, help='parmeter of k smallest flags')
 
-    parser.add_argument('--max_iter', type=int, default=10000, help='number of iterations')
+    parser.add_argument('--max_iter', type=int, default=10, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
@@ -106,17 +106,17 @@ if __name__ == '__main__':
                )
     print "net.params.items()================================================="
     for k, v in net.params.items():
-        print k, LA.norm(v.asnumpy())
-    print "==========================================================================="
-    for k, v in net.params.items():
-        print k, "\n", v.asnumpy()
-        print "                                                                         ---->",\
-            k, nd.norm(v).asnumpy()
-        print "                                                                         ---->", \
-            k, np.sqrt((v.asnumpy() ** 2).sum())
-        print "                                                                         ---->", \
-            k, LA.norm(v.asnumpy())
-    print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        print k, "\t\t", LA.norm(v.asnumpy())
+    #print "==========================================================================="
+    #for k, v in net.params.items():
+    #    print k, "\n", v.asnumpy()
+    #    print "                                                                         ---->",\
+    #        k, nd.norm(v).asnumpy()
+    #    print "                                                                         ---->", \
+    #        k, np.sqrt((v.asnumpy() ** 2).sum())
+    #    print "                                                                         ---->", \
+    #        k, LA.norm(v.asnumpy())
+    #print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     net.print_stat()
 
     # run -train

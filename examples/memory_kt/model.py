@@ -95,9 +95,9 @@ class MODEL(object):
 
     def sym_gen(self):
         # TODO input variable 'data'
-        data = mx.sym.Variable('data') # (batch_size, seqlen)
+        data = mx.sym.Variable('data') # (seqlen, batch_size)
         # TODO input variable 'target'
-        target = mx.sym.Variable('target') #(batch_size, seqlen)
+        target = mx.sym.Variable('target') #(seqlen, batch_size)
 
         ### Initialize Control Network
         controller = LSTM(num_hidden=self.control_state_dim, name="controller")
@@ -126,12 +126,15 @@ class MODEL(object):
         all_read_focus_l = []
         all_write_focus_l = []
         all_read_content_l = []
+
+        all_norm_key_l = []
+        all_norm_memory_l = []
+        all_similarity_score_l = []
         ### model start
         ### Step1:
         ###     input_data      -(embed)->          embed_data
-        ### (batch_size,seqlen) -(embed)-> (batch_size, seqlen, embed_dim)
+        ### (seqlen, batch_size) -(embed)-> (seqlen, batch_size, embed_dim)
         embed_weight = mx.sym.Variable("embed_weight")
-        # embed_data Shape ()
         embed_data = mx.sym.Embedding(data=data, input_dim=self.n_question*2,
                                       weight=embed_weight, output_dim=self.embed_dim, name='embed')
         slice_embed_data = mx.sym.SliceChannel(embed_data, num_outputs=self.seqlen, axis=0, squeeze_axis=True)
@@ -148,16 +151,20 @@ class MODEL(object):
             ### Step3:
             ###         controller_h            -(read)->       read_content_l          /       read_focus_l
             ### (batch_size, control_state_dim) -(read)-> (batch_size, memory_state_dim)/(batch_size, memory_size)
-            read_content_l, read_focus_l = mem.read(controller_h)
+            read_content, read_focus, norm_key, norm_memory, similarity_score = mem.read(controller_h)
+            # internal results used for checking
+            all_norm_key_l.append(norm_key)
+            all_norm_memory_l.append(norm_memory)
+            all_similarity_score_l.append(similarity_score)
             ### Step4:
             ###         controller_h            -(write)->        write_focus_l
             ### (batch_size, control_state_dim) -(write)-> (batch_size, memory_size)
-            write_focus_l = mem.write(controller_h)
+            write_focus = mem.write(controller_h)
             ### save intermedium data
             controller_states.append(controller_h)
-            all_read_focus_l.append(read_focus_l[0])
-            all_write_focus_l.append(write_focus_l[0])
-            all_read_content_l.append(read_content_l[0]) # TODO check read_content format
+            all_read_focus_l.append(read_focus)
+            all_write_focus_l.append(write_focus)
+            all_read_content_l.append(read_content)
         ### Step5:
         ###       all_read_content_l         -(Concat)->          all_read_content
         ### [(batch_size, memory_state_dim)] -(Concat)-> (batch_size*seqlen, memory_state_dim)
@@ -180,8 +187,29 @@ class MODEL(object):
         ### Step8:
         ###               pred              -(BinaryEntropyLoss)->          pred_prob
         ### (batch_size*seqlen, n_question) -(BinaryEntropyLoss)-> (batch_size*seqlen, n_question)
+        #pred_prob = mx.symbol.SoftmaxOutput(data=pred, label=target)
         pred_prob = mx.symbol.Custom(data=pred, label=target, name='BinaryEntropyLoss', op_type='BinaryEntropyLoss')
-        return pred_prob
+        # pred_prob
+        return mx.sym.Group([pred_prob,
+                             mx.sym.BlockGrad(mx.sym.Reshape(
+                                 mx.sym.Concat(*controller_states, dim=0,
+                                               num_args=len(controller_states)),
+                                 shape=(self.seqlen, -1, self.control_state_dim))),
+                             mx.sym.BlockGrad(mx.sym.Reshape(
+                                 mx.sym.Concat(*all_norm_key_l, dim=0,
+                                               num_args=len(all_norm_key_l)),
+                                 shape=(self.seqlen, -1, self.memory_state_dim))),
+                             mx.sym.BlockGrad(mx.sym.Reshape(
+                                 mx.sym.Concat(*all_norm_memory_l, dim=0,
+                                               num_args=len(all_norm_memory_l)),
+                                 shape=(self.seqlen, -1, self.memory_size))),
+                             mx.sym.BlockGrad(mx.sym.Reshape(
+                                 mx.sym.Concat(*all_similarity_score_l, dim=0,
+                                               num_args=len(all_similarity_score_l)),
+                                 shape=(self.seqlen, -1, self.memory_size))),
+
+                             ])
+
         ### Step9:
         ###      pred_prob  /  target        -(LOSS)->        loss
         ### (batch_size*seqlen, n_question)/
