@@ -27,11 +27,11 @@ class LRUAInitializer(mx.initializer.Normal):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test MANN.')
     parser.add_argument('--gpus', type=str, help='the gpus will be used, e.g "0,1,2,3"')
-    parser.add_argument('--batch_size', type=int, default=10, help='the batch size')
+    parser.add_argument('--batch_size', type=int, default=32, help='the batch size')
     parser.add_argument('--embed_dim', type=int, default=100, help='embedding dimensions')
-    parser.add_argument('--control_state_dim', type=int, default=200, help='hidden states of the controller')
+    parser.add_argument('--control_state_dim', type=int, default=100, help='hidden states of the controller')
     parser.add_argument('--memory_size', type=int, default=128, help='memory size')
-    parser.add_argument('--memory_state_dim', type=int, default=200, help='internal state dimension')
+    parser.add_argument('--memory_state_dim', type=int, default=100, help='internal state dimension')
     parser.add_argument('--k_smallest', type=int, default=10, help='parmeter of k smallest flags')
     parser.add_argument('--gamma', type=float, default=0.8, help='hyperparameter of decay W_u')
 
@@ -125,16 +125,20 @@ if __name__ == '__main__':
     # run -train
     if not params.test:
         for idx in xrange(params.max_iter):
-            train_loss = train(net, params, train_data, label='Train')
-            valid_loss = test(net, params, test_data, label='Validation')
+            train_loss, train_accuracy, train_auc = train(net, params, train_data, label='Train')
+            test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
 
             # logging for each epoch
             m = len(g_log_cost) + 1
-            g_log_cost[m] = [m, train_loss, valid_loss]
+            g_log_cost[m] = [m, train_loss, test_loss, train_accuracy, test_accuracy, train_auc, test_auc]
             #g_log_cost[m] = [m, train_loss]
             output_state = {'epoch': idx + 1,
                             "train_loss": train_loss,
-                            #"valid_perplexity": np.exp(valid_loss),
+                            "valid_loss": test_loss,
+                            "train_accuracy": train_accuracy,
+                            "test_accuracy": test_accuracy,
+                            "train_auc": train_auc,
+                            "test_auc": test_auc,
                             "learning_rate": params.lr}
             print output_state
 

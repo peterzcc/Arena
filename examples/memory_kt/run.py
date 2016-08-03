@@ -207,13 +207,10 @@ def train(net, params, data, label):
     if params.show: bar.finish()
 
     one_epoch_loss = cost / N
-    print label, "loss:", one_epoch_loss
+    #print label, "loss:", one_epoch_loss
     all_pred = np.concatenate(pred_list,axis=0)
     all_target = np.concatenate(target_list, axis=0)
-    print all_pred.shape, all_pred
-    print all_target.shape, all_target
     accuracy, auc = compute_auc(params, all_pred, all_target)
-    print "======> accuracy of testing is " , accuracy , "auc of testing is " , auc
     return one_epoch_loss, accuracy, auc
 
 
@@ -226,10 +223,10 @@ def test(net, params, data, label):
 
     ### Initialization
     init_memory_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_state_dim)))
-    #init_h_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
-    #init_c_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
-    init_h_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
-    init_c_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
+    init_h_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
+    init_c_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
+    #init_h_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
+    #init_c_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
     init_write_W_r_focus_npy = npy_softmax(numpy.broadcast_to(
                                             numpy.arange(params.memory_size, 0, -1),
                                             (params.batch_size, params.num_writes, params.memory_size)),
@@ -265,11 +262,8 @@ def test(net, params, data, label):
     if params.show: bar.finish()
 
     one_epoch_loss = cost / N
-    print label, "loss:", one_epoch_loss
+    #print label, "loss:", one_epoch_loss
     all_pred = np.concatenate(pred_list, axis=0)
     all_target = np.concatenate(target_list, axis=0)
-    print all_pred.shape, all_pred
-    print all_target.shape, all_target
     accuracy, auc = compute_auc(params, all_pred, all_target)
-    print "======> accuracy of testing is ", accuracy, "auc of testing is ", auc
-    return one_epoch_loss
+    return one_epoch_loss, accuracy, auc

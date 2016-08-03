@@ -12,6 +12,7 @@ class MANNHeadGroup(object):
         :param memory_size:
         :param memory_state_dim:
         :param k_smallest:
+        :param gamma:
         :param num_heads:
         :param init_W_r_focus: Shape (batch_size, num_heads, memory_size)
         :param init_W_u_focus: Shape (batch_size, num_heads, memory_size)
@@ -150,6 +151,7 @@ class MANN(object):
         :param memory_size:
         :param memory_state_dim:
         :param k_smallest:
+        :param gamma:
         :param num_reads:
         :param num_writes:
         :param init_memory: Shape (batch_size, memory_size, memory_state_dim)
