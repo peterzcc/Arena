@@ -79,7 +79,7 @@ class BinaryEntropyLossProp(mx.operator.CustomOpProp):
 
 class MODEL(object):
     def __init__(self, n_question, seqlen,
-                 embed_dim, control_state_dim, memory_size, memory_state_dim, k_smallest,
+                 embed_dim, control_state_dim, memory_size, memory_state_dim, k_smallest, gamma,
                  num_reads, num_writes,
                  name="KT"):
         self.n_question = n_question
@@ -89,6 +89,7 @@ class MODEL(object):
         self.memory_size = memory_size
         self.memory_state_dim = memory_state_dim
         self.k_smallest = k_smallest
+        self.gamma = gamma
         self.num_reads = num_reads
         self.num_writes = num_writes
         self.name = name
@@ -116,6 +117,7 @@ class MODEL(object):
                    memory_size=self.memory_size,
                    memory_state_dim=self.memory_state_dim,
                    k_smallest=self.k_smallest,
+                   gamma=self.gamma,
                    num_reads=self.num_reads,
                    num_writes=self.num_writes,
                    init_memory=init_memory,
@@ -214,5 +216,3 @@ class MODEL(object):
         ###      pred_prob  /  target        -(LOSS)->        loss
         ### (batch_size*seqlen, n_question)/
         ### (batch_size*seqlen, )            -(LOSS)-> (batch_size*seqlen, )
-
-

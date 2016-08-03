@@ -39,6 +39,7 @@ def compute_auc(params, all_pred, label ):
     Returns
         auc : Shape scalar
     """
+    label = label.astype(np.int)
     zero_index = np.flatnonzero(label == 0)
     non_zero_index = np.flatnonzero(label)
     next_label = (label - 1) % params.n_question # Shape (batch_size*seqlen*N, )
@@ -47,19 +48,16 @@ def compute_auc(params, all_pred, label ):
     truth[zero_index] = 0
     next_label = next_label.tolist()
     prediction = all_pred[np.arange(len(next_label)), next_label] # Shape (batch_size*seqlen*N, )
-    print "prediction.shape",prediction.shape
     pre = prediction[non_zero_index]
-    print "pre.shape", pre.shape
     tru = truth[non_zero_index]
-    print "tru.shape", tru.shape
     pred_truth_array = np.vstack((pre,tru))
     pred_truth_array = pred_truth_array.T
-    print "pred_truth_array.shape", pred_truth_array.shape
+    #print "pred_truth_array.shape", pred_truth_array.shape
 
-    print "\n\n\n\nStart computing AUC ......"
+    #print "\n\n\n\nStart computing AUC ......"
     # sort the array according to the the first column
     pred_truth_array = pred_truth_array[pred_truth_array[:,0].argsort()[::-1]]
-    print 'pred_truth_array', pred_truth_array.shape, pred_truth_array
+    #print 'pred_truth_array', pred_truth_array.shape, pred_truth_array
     #f_save = open('pred_truth_array','wb')
     #np.save(f_save, pred_truth_array)
     #f_save.close()
@@ -67,8 +65,8 @@ def compute_auc(params, all_pred, label ):
     allPredictions = pred_truth_array.shape[0]
     total_positives = np.sum(pred_truth_array[:,1])
     total_negatives = allPredictions - total_positives
-    print 'total_positives', total_positives
-    print 'total_negatives', total_negatives
+    #print 'total_positives', total_positives
+    #print 'total_negatives', total_negatives
 
     true_positives = 0
     false_positives = 0
@@ -103,7 +101,6 @@ def compute_auc(params, all_pred, label ):
         if guess == truth:
             correct += 1
     accuracy = float(correct) /float(allPredictions)
-    print "======> accuracy of testing is " , accuracy , "auc of testing is " , auc
     return accuracy, auc
 
 
@@ -162,8 +159,7 @@ def train(net, params, data, label):
         #print "net.params_grad.items()"
         #for k, v in net.params_grad.items():
         #    print k, "\n", v.asnumpy()
-        #    print "                                                                         ---->", \
-        #        k, nd.norm(v).asnumpy()
+        #    print k, nd.norm(v).asnumpy()
         #print "===========================================================================\n\n\n\n"
         norm_clipping(net.params_grad, params.maxgradnorm)
         optimizer = mx.optimizer.create(name='SGD', learning_rate=params.lr, momentum=params.momentum,
@@ -217,6 +213,7 @@ def train(net, params, data, label):
     print all_pred.shape, all_pred
     print all_target.shape, all_target
     accuracy, auc = compute_auc(params, all_pred, all_target)
+    print "======> accuracy of testing is " , accuracy , "auc of testing is " , auc
     return one_epoch_loss, accuracy, auc
 
 
@@ -238,6 +235,8 @@ def test(net, params, data, label):
                                             (params.batch_size, params.num_writes, params.memory_size)),
                                axis=2)
     init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
+    pred_list = []
+    target_list = []
     if params.show:
         from utils import ProgressBar
         bar = ProgressBar(label, max=N)
@@ -261,8 +260,16 @@ def test(net, params, data, label):
         avg_loss = binaryEntropy(params, pred, target)
         cost += avg_loss
         #print avg_loss
+        pred_list.append(pred)
+        target_list.append(target)
     if params.show: bar.finish()
 
     one_epoch_loss = cost / N
     print label, "loss:", one_epoch_loss
+    all_pred = np.concatenate(pred_list, axis=0)
+    all_target = np.concatenate(target_list, axis=0)
+    print all_pred.shape, all_pred
+    print all_target.shape, all_target
+    accuracy, auc = compute_auc(params, all_pred, all_target)
+    print "======> accuracy of testing is ", accuracy, "auc of testing is ", auc
     return one_epoch_loss

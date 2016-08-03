@@ -33,6 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('--memory_size', type=int, default=128, help='memory size')
     parser.add_argument('--memory_state_dim', type=int, default=200, help='internal state dimension')
     parser.add_argument('--k_smallest', type=int, default=10, help='parmeter of k smallest flags')
+    parser.add_argument('--gamma', type=float, default=0.8, help='hyperparameter of decay W_u')
 
     parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
@@ -42,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
 
     parser.add_argument('--init_std', type=float, default=0.05, help='weight initialization std')
-    parser.add_argument('--init_lr', type=float, default=0.0001, help='initial learning rate')
+    parser.add_argument('--init_lr', type=float, default=0.01, help='initial learning rate')
     parser.add_argument('--momentum', type=float, default=0.0, help='momentum rate')
     parser.add_argument('--maxgradnorm', type=float, default=50, help='maximum gradient norm')
 
@@ -87,6 +88,7 @@ if __name__ == '__main__':
                     memory_size = params.memory_size,
                     memory_state_dim = params.memory_state_dim,
                     k_smallest = params.k_smallest,
+                    gamma = params.gamma,
                     num_reads = params.num_reads,
                     num_writes = params.num_writes)
     # train model

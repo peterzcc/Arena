@@ -3,7 +3,7 @@ from arena.utils import *
 import mxnet as mx
 
 class MANNHeadGroup(object):
-    def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest,
+    def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest, gamma,
                  num_heads=1,
                  init_W_r_focus=None, init_W_u_focus=None,
                  is_write=False, name="MANNHeadGroup"):
@@ -23,6 +23,7 @@ class MANNHeadGroup(object):
         self.memory_state_dim = memory_state_dim
         self.k_smallest = k_smallest
         self.num_heads = num_heads
+        self.gamma = gamma
 
         self.key_weight = mx.sym.Variable(name=name + ":key_weight")
         self.key_bias = mx.sym.Variable(name=name + ":key_bias")
@@ -34,8 +35,6 @@ class MANNHeadGroup(object):
         if self.is_write:
             self.alpha_weight = mx.sym.Variable(name=name + ":alpha_weight")
             self.alpha_bias = mx.sym.Variable(name=name + ":alpha_bias")
-            self.gamma_weight = mx.sym.Variable(name=name + ":gamma_weight")
-            self.gamma_bias = mx.sym.Variable(name=name + ":gamma_bias")
             self.last_W_r_focus = init_W_r_focus if init_W_r_focus is not None \
                 else mx.sym.Variable(name=name + ":init_W_r_focus")
             self.last_W_u_focus = init_W_u_focus if init_W_u_focus is not None \
@@ -93,13 +92,6 @@ class MANNHeadGroup(object):
                                           bias=self.alpha_bias)
             alpha = mx.sym.expand_dims(alpha, axis=2)  # Shape: (batch_size, num_heads, 1)
             alpha = mx.sym.Activation(data=alpha, act_type='sigmoid', name=self.name + ":alpha")
-            # Gamma
-            gamma = mx.sym.FullyConnected(data=control_input,
-                                          num_hidden=self.num_heads,
-                                          weight=self.gamma_weight,
-                                          bias=self.gamma_bias)
-            gamma = mx.sym.expand_dims(gamma, axis=2)  # Shape: (batch_size, num_heads, 1)
-            gamma = mx.sym.Activation(data=gamma, act_type='sigmoid', name=self.name + ":gamma")
             # compute write weight
             #last_W_lu = self.last_W_u_focus
             last_W_lu = mx.sym.Reshape(mx.sym.k_smallest_flags(mx.sym.Reshape(self.last_W_u_focus,
@@ -108,7 +100,7 @@ class MANNHeadGroup(object):
                                        shape=(-1, self.num_heads, self.memory_size))# Shape (batch_size, num_heads, memory_size)
             W_w = mx.sym.broadcast_mul(alpha, self.last_W_r_focus) + \
                   mx.sym.broadcast_mul((1.0 - alpha), last_W_lu)
-            W_u = mx.sym.broadcast_mul(gamma, self.last_W_u_focus) + W_r + W_w  # Shape (batch_size, memory_size)
+            W_u = self.gamma * self.last_W_u_focus + W_r + W_w  # Shape (batch_size, memory_size)
             self.last_W_r_focus = W_r
             self.last_W_u_focus = W_u
             return  W_w
@@ -148,7 +140,7 @@ class MANNHeadGroup(object):
 
 
 class MANN(object):
-    def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest,
+    def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest, gamma,
                  num_reads, num_writes, init_memory=None,
                  init_read_W_r_focus=None, #init_read_W_w_focus=None, init_read_W_u_focus=None,
                  init_write_W_r_focus=None, init_write_W_w_focus=None, init_write_W_u_focus=None,
@@ -170,6 +162,7 @@ class MANN(object):
         self.memory_size = memory_size
         self.memory_state_dim = memory_state_dim
         self.k_smallest = k_smallest
+        self.gamma = gamma
 
         self.init_memory = mx.sym.Variable(self.name + ":init_memory") if init_memory is None\
                                                                        else init_memory
@@ -182,17 +175,19 @@ class MANN(object):
                                         memory_state_dim=memory_state_dim,
                                         k_smallest = k_smallest,
                                         num_heads = num_reads,
+                                        gamma = self.gamma,
                                         is_write=False,
                                         name=self.name + "->read_head")
         self.write_head = MANNHeadGroup(control_state_dim=control_state_dim,
-                                         memory_size=memory_size,
-                                         memory_state_dim=memory_state_dim,
-                                         k_smallest=k_smallest,
-                                         num_heads=num_writes,
-                                         is_write=True,
-                                         init_W_r_focus=self.init_write_W_r_focus,
-                                         init_W_u_focus=self.init_write_W_u_focus,
-                                         name=self.name + "->write_head")
+                                        memory_size=memory_size,
+                                        memory_state_dim=memory_state_dim,
+                                        k_smallest=k_smallest,
+                                        num_heads=num_writes,
+                                        gamma=self.gamma,
+                                        is_write=True,
+                                        init_W_r_focus=self.init_write_W_r_focus,
+                                        init_W_u_focus=self.init_write_W_u_focus,
+                                        name=self.name + "->write_head")
         self.read_counter = 0
         self.write_counter = 0
         self.memory = self.init_memory
