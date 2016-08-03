@@ -2,8 +2,7 @@ import numpy as np
 import math
 from arena.utils import *
 
-def binaryEntropy(params, target, pred):
-    target = target.reshape((-1,))
+def binaryEntropy(params, pred, target):
     loss = 0.
     total = 0
     for i in range(pred.shape[0]):
@@ -31,6 +30,81 @@ def binaryEntropy(params, target, pred):
         return loss / total
 
 
+def compute_auc(params, all_pred, label ):
+    """ compute AUC
+    Parameters
+        pred : Shape (batch_size*seqlen*N, n_question)
+        label : Shape (batch_size*seqlen*N, )
+    ------------------------------------------------------
+    Returns
+        auc : Shape scalar
+    """
+    zero_index = np.flatnonzero(label == 0)
+    non_zero_index = np.flatnonzero(label)
+    next_label = (label - 1) % params.n_question # Shape (batch_size*seqlen*N, )
+    truth = (label - 1) / params.n_question # Shape (batch_size*seqlen*N, )
+    next_label[zero_index] = 0
+    truth[zero_index] = 0
+    next_label = next_label.tolist()
+    prediction = all_pred[np.arange(len(next_label)), next_label] # Shape (batch_size*seqlen*N, )
+    print "prediction.shape",prediction.shape
+    pre = prediction[non_zero_index]
+    print "pre.shape", pre.shape
+    tru = truth[non_zero_index]
+    print "tru.shape", tru.shape
+    pred_truth_array = np.vstack((pre,tru))
+    pred_truth_array = pred_truth_array.T
+    print "pred_truth_array.shape", pred_truth_array.shape
+
+    print "\n\n\n\nStart computing AUC ......"
+    # sort the array according to the the first column
+    pred_truth_array = pred_truth_array[pred_truth_array[:,0].argsort()[::-1]]
+    print 'pred_truth_array', pred_truth_array.shape, pred_truth_array
+    #f_save = open('pred_truth_array','wb')
+    #np.save(f_save, pred_truth_array)
+    #f_save.close()
+    # start computing AUC
+    allPredictions = pred_truth_array.shape[0]
+    total_positives = np.sum(pred_truth_array[:,1])
+    total_negatives = allPredictions - total_positives
+    print 'total_positives', total_positives
+    print 'total_negatives', total_negatives
+
+    true_positives = 0
+    false_positives = 0
+    correct = 0
+    auc = 0.0
+    # pred_truth_list[i,0] --> predicted value; pred_truth_list[i,1] --> truth value
+    lastTpr = 0.0
+    lastFpr = 0.0
+    for i in range(allPredictions):
+        truth = int(pred_truth_array[i,1]) # truth in {0,1}
+        if truth == 1:
+            true_positives += 1
+        else:
+            #print "false_positives:",false_positives
+            false_positives += 1
+        fpr = float(false_positives) / float(total_negatives)
+        tpr = float(true_positives) / float(total_positives)
+        # using trapezoid method to compute auc
+        if i % 500 == 0 :
+            #print i
+            trapezoid = (tpr + lastTpr) * (fpr - lastFpr) * 0.5
+            #print "trapzoid:",trapezoid
+            #print "auc:",auc
+            auc += trapezoid
+            lastTpr = tpr
+            lastFpr = fpr
+        # computing accuracy
+        if pred_truth_array[i,0] > 0.5 :
+            guess = 1
+        else:
+            guess = 0
+        if guess == truth:
+            correct += 1
+    accuracy = float(correct) /float(allPredictions)
+    print "======> accuracy of testing is " , accuracy , "auc of testing is " , auc
+    return accuracy, auc
 
 
 def train(net, params, data, label):
@@ -51,10 +125,11 @@ def train(net, params, data, label):
                                             (params.batch_size, params.num_writes, params.memory_size)),
                                axis=2)
     init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
+    pred_list = []
+    target_list = []
     if params.show:
         from utils import ProgressBar
         bar = ProgressBar(label, max=N)
-
     for idx in xrange(N):
         if params.show: bar.next()
         one_seq = data[: , idx*params.batch_size:(idx+1)*params.batch_size]
@@ -127,14 +202,22 @@ def train(net, params, data, label):
         #print "pred.shape", pred.shape # (200L, 111L)
         #print "target.shape", target, target.shape
 
-        avg_loss = binaryEntropy(params, target, pred)
+        target = target.reshape((-1,))
+        avg_loss = binaryEntropy(params, pred, target)
         cost += avg_loss
+        pred_list.append(pred)
+        target_list.append(target)
         #print avg_loss
     if params.show: bar.finish()
 
     one_epoch_loss = cost / N
     print label, "loss:", one_epoch_loss
-    return one_epoch_loss
+    all_pred = np.concatenate(pred_list,axis=0)
+    all_target = np.concatenate(target_list, axis=0)
+    print all_pred.shape, all_pred
+    print all_target.shape, all_target
+    accuracy, auc = compute_auc(params, all_pred, all_target)
+    return one_epoch_loss, accuracy, auc
 
 
 def test(net, params, data, label):
@@ -174,7 +257,8 @@ def test(net, params, data, label):
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
-        avg_loss = binaryEntropy(params, target, pred)
+        target = target.reshape((-1,))
+        avg_loss = binaryEntropy(params, pred, target)
         cost += avg_loss
         #print avg_loss
     if params.show: bar.finish()
