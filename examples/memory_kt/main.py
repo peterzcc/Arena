@@ -164,11 +164,11 @@ if __name__ == '__main__':
         print all_loss
 
         file_name = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\
-                   'msize'+str(params.memory_size)+ 'mdim'+str(params.memory_state_dim)+\
-                   'k'+str(params.k_smallest)+ 'r'+str(params.num_reads)+ 'w'+str(params.num_writes)+\
-                   'std'+str(params.init_std)+ 'lr'+str(params.init_lr)+ 'g'+str(params.maxgradnorm)+'gamma'+str(params.gamma)
+                   'msize'+str(params.memory_size)+'mdim'+str(params.memory_state_dim)+\
+                   'k'+str(params.k_smallest)+'gamma'+str(params.gamma)+'r'+str(params.num_reads)+'w'+str(params.num_writes)+\
+                   'std'+str(params.init_std)+'lr'+str(params.init_lr)+'mmt'+str(params.momentum)+'gn'+str(params.maxgradnorm)
 
-        net.save_params(dir_path=os.path.join('model', params.save, file_name))
+        net.save_params(dir_path=os.path.join('model', file_name))
 
         f_save_log = open(os.path.join('result', file_name),'w')
         f_save_log.write(str(all_test_auc) + "\n\n")
