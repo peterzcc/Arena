@@ -147,12 +147,12 @@ if __name__ == '__main__':
                 params.lr = params.lr / 1.5
             if params.lr < 1e-5: break
 
-        file_dir = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\
+        file_name = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\
                    'msize'+str(params.memory_size)+ 'mdim'+str(params.memory_state_dim)+\
                    'k'+str(params.k_smallest)+ 'r'+str(params.num_reads)+ 'w'+str(params.num_writes)+\
                    'std'+str(params.init_std)+ 'lr'+str(params.init_lr)+ 'g'+str(params.maxgradnorm)
-        net.save_params(dir_path=os.path.join('model', params.save, file_dir))
-        f_save_log = open(os.path.join('result',params.save,file_dir),'w')
+        net.save_params(dir_path=os.path.join('model', params.save, file_name))
+        f_save_log = open(os.path.join('result', file_name),'w')
         f_save_log.write(str(g_log_cost))
         f_save_log.close()
         print g_log_cost
