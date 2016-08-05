@@ -28,12 +28,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test MANN.')
     parser.add_argument('--gpus', type=str, help='the gpus will be used, e.g "0,1,2,3"')
     parser.add_argument('--batch_size', type=int, default=32, help='the batch size')
-    parser.add_argument('--embed_dim', type=int, default=100, help='embedding dimensions')
-    parser.add_argument('--control_state_dim', type=int, default=100, help='hidden states of the controller')
+    parser.add_argument('--embed_dim', type=int, default=50, help='embedding dimensions')
+    parser.add_argument('--control_state_dim', type=int, default=50, help='hidden states of the controller')
     parser.add_argument('--memory_size', type=int, default=128, help='memory size')
-    parser.add_argument('--memory_state_dim', type=int, default=100, help='internal state dimension')
+    parser.add_argument('--memory_state_dim', type=int, default=50, help='internal state dimension')
     parser.add_argument('--k_smallest', type=int, default=10, help='parmeter of k smallest flags')
-    parser.add_argument('--gamma', type=float, default=0.8, help='hyperparameter of decay W_u')
+    parser.add_argument('--gamma', type=float, default=0.9, help='hyperparameter of decay W_u')
 
     parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
@@ -166,7 +166,8 @@ if __name__ == '__main__':
         file_name = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\
                    'msize'+str(params.memory_size)+ 'mdim'+str(params.memory_state_dim)+\
                    'k'+str(params.k_smallest)+ 'r'+str(params.num_reads)+ 'w'+str(params.num_writes)+\
-                   'std'+str(params.init_std)+ 'lr'+str(pasrams.init_lr)+ 'g'+str(params.maxgradnorm)
+                   'std'+str(params.init_std)+ 'lr'+str(params.init_lr)+ 'g'+str(params.maxgradnorm)+'gamma'+str(params.gamma)
+
         net.save_params(dir_path=os.path.join('model', params.save, file_name))
 
         f_save_log = open(os.path.join('result', file_name),'w')
