@@ -35,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_smallest', type=int, default=10, help='parmeter of k smallest flags')
     parser.add_argument('--gamma', type=float, default=0.8, help='hyperparameter of decay W_u')
 
-    parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
+    parser.add_argument('--max_iter', type=int, default=2, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     print "train_data.shape",train_data.shape ###(3633, 200) = (#sample, seqlen)
     print "test_data.shape",test_data.shape   ###(1566, 200)
 
-    g_log_cost = {}
+    all_loss = {}
 
     params.lr = params.init_lr
 
@@ -129,8 +129,8 @@ if __name__ == '__main__':
             test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
 
             # logging for each epoch
-            m = len(g_log_cost) + 1
-            g_log_cost[m] = [m, train_loss, test_loss, train_accuracy, test_accuracy, train_auc, test_auc]
+            m = len(all_loss) + 1
+            all_loss[m] = [m, train_loss, test_loss, train_accuracy, test_accuracy, train_auc, test_auc]
             #g_log_cost[m] = [m, train_loss]
             output_state = {'epoch': idx + 1,
                             "train_loss": train_loss,
@@ -143,19 +143,22 @@ if __name__ == '__main__':
             print output_state
 
             # Learning rate annealing
-            if m > 1 and g_log_cost[m][2] > g_log_cost[m - 1][2] * 0.9999:
+            if m > 1 and all_loss[m][2] > all_loss[m - 1][2] * 0.9999:
                 params.lr = params.lr / 1.5
             if params.lr < 1e-5: break
+
+        print all_loss
 
         file_name = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\
                    'msize'+str(params.memory_size)+ 'mdim'+str(params.memory_state_dim)+\
                    'k'+str(params.k_smallest)+ 'r'+str(params.num_reads)+ 'w'+str(params.num_writes)+\
                    'std'+str(params.init_std)+ 'lr'+str(params.init_lr)+ 'g'+str(params.maxgradnorm)
         net.save_params(dir_path=os.path.join('model', params.save, file_name))
+
         f_save_log = open(os.path.join('result', file_name),'w')
-        f_save_log.write(str(g_log_cost))
+        f_save_log.write(str(all_loss))
         f_save_log.close()
-        print g_log_cost
+        print all_loss
 
     # run -test
 
