@@ -1,6 +1,9 @@
 import numpy as np
 import math
 from arena.utils import *
+import mxnet as mx
+
+
 
 def binaryEntropy(params, pred, target):
     loss = 0.
@@ -104,7 +107,7 @@ def compute_auc(params, all_pred, label ):
     return accuracy, auc
 
 
-def train(net, params, data, label):
+def train(net, params, data, vis, label):
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
     np.random.shuffle(data)
     N = int(math.floor(len(data) / params.batch_size))
@@ -115,11 +118,11 @@ def train(net, params, data, label):
     init_memory_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_state_dim)))
     init_h_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
     init_c_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
-    #init_h_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
-    #init_c_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
-    init_write_W_r_focus_npy = npy_softmax(numpy.broadcast_to(
-                                            numpy.arange(params.memory_size, 0, -1),
-                                            (params.batch_size, params.num_writes, params.memory_size)),
+    #init_h_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
+    #init_c_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
+    init_write_W_r_focus_npy = npy_softmax(np.broadcast_to(
+                                           np.arange(params.memory_size, 0, -1),
+                                           (params.batch_size, params.num_writes, params.memory_size)),
                                axis=2)
     init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
     pred_list = []
@@ -149,6 +152,20 @@ def train(net, params, data, label):
         norm_key = outputs[2].asnumpy()
         norm_memory = outputs[3].asnumpy()
         similarity_score = outputs[4].asnumpy()
+        if params.vis:
+            from arena.helpers.visualization import *
+            vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
+            CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
+            CV2Vis.display(data=data_out[:, 0, :].T, win_name="target")
+            CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state")
+            for read_id in range(num_reads):
+                CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
+                               win_name="read_weight%d" % read_id)
+                CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
+                               win_name="read_content%d" % read_id)
+            for write_id in range(num_writes):
+                CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
+                               win_name="write_weight%d" % write_id)
 
         #print "Before Updating ......"
         #print "\n"
@@ -227,8 +244,8 @@ def test(net, params, data, label):
     init_c_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
     #init_h_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
     #init_c_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
-    init_write_W_r_focus_npy = npy_softmax(numpy.broadcast_to(
-                                            numpy.arange(params.memory_size, 0, -1),
+    init_write_W_r_focus_npy = npy_softmax(np.broadcast_to(
+                                            np.arange(params.memory_size, 0, -1),
                                             (params.batch_size, params.num_writes, params.memory_size)),
                                axis=2)
     init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))

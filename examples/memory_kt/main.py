@@ -7,9 +7,8 @@ from model import MODEL
 from arena.utils import *
 from run import train
 from run import test
-import mxnet.ndarray as nd
+from arena.helpers.visualization import *
 
-from numpy import linalg as LA
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -49,13 +48,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--test', type=bool, default=False, help='enable testing')
     parser.add_argument('--show', type=bool, default=True, help='print progress')
-    parser.add_argument('--data_dir', type=str, default='data', help='data directory [data]')
-    parser.add_argument('--data_name', type=str, default='builder', help='data set name [ptb]')
+    parser.add_argument('--vis', type=bool, default=False, help='visualize weights and results')
+    parser.add_argument('--data_dir', type=str, default='data', help='data directory')
+    parser.add_argument('--data_name', type=str, default='builder', help='data set name')
     #parser.add_argument('--load', type=str, default='MemNN', help='model file to load')
     parser.add_argument('--save', type=str, default='Memory_kt', help='path to save model')
     params = parser.parse_args()
     print params
-    # Reading data
+    params.lr = params.init_lr
+    ### ================================== Reading data ==================================
     dat = DATA(n_question = params.n_question, seqlen=params.seqlen, separate_char=',')
     train_data_path = params.data_dir + "/" + params.data_name + "_train.csv"
     test_data_path = params.data_dir + "/" + params.data_name + "_test.csv"
@@ -63,24 +64,14 @@ if __name__ == '__main__':
     test_data = dat.load_data(test_data_path)
     print "train_data.shape",train_data.shape ###(3633, 200) = (#sample, seqlen)
     print "test_data.shape",test_data.shape   ###(1566, 200)
-
-
-
-    params.lr = params.init_lr
-
-    # choose ctx
+    ### ================================== choose ctx ==================================
     if params.gpus == None:
         ctx = mx.cpu()
         print "Training with cpu ..."
     else:
         ctx = mx.gpu(int(params.gpus))
         print "Training with gpu(" + params.gpus + ") ..."
-
-    # model
-    ### def __init__(self, n_question, seqlen,
-    ###              embed_dim, control_state_dim, memory_size, memory_state_dim, k_smallest,
-    ###              num_reads, num_writes,
-    ###              name="KT"):
+    ### ================================== model initialization ==================================
     g_model = MODEL(n_question = params.n_question,
                     seqlen = params.seqlen,
                     embed_dim = params.embed_dim,
@@ -91,7 +82,6 @@ if __name__ == '__main__':
                     gamma = params.gamma,
                     num_reads = params.num_reads,
                     num_writes = params.num_writes)
-    # train model
     data_shapes = {'data': (params.seqlen, params.batch_size),
                    'target': (params.seqlen, params.batch_size),
                    'init_memory': (params.batch_size, params.memory_size, params.memory_state_dim),
@@ -107,7 +97,7 @@ if __name__ == '__main__':
                name="LRUA_KT"#,
                #default_bucket_kwargs={'seqlen': params.seqlen}
                )
-    #print "net.params.items()================================================="
+    #print "net.params.items()=====>"
     #for k, v in net.params.items():
     #    print k, "\t\t", LA.norm(v.asnumpy())
     #print "==========================================================================="
@@ -115,14 +105,8 @@ if __name__ == '__main__':
     #    print k, "\n", v.asnumpy()
     #    print "                                                                         ---->",\
     #        k, nd.norm(v).asnumpy()
-    #    print "                                                                         ---->", \
-    #        k, np.sqrt((v.asnumpy() ** 2).sum())
-    #    print "                                                                         ---->", \
-    #        k, LA.norm(v.asnumpy())
-    #print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     net.print_stat()
-
-    # run -train
+    ### ================================== start training ==================================
     all_loss = {}
     all_train_loss = {}
     all_train_accuracy = {}
@@ -130,22 +114,13 @@ if __name__ == '__main__':
     all_test_loss = {}
     all_test_accuracy = {}
     all_test_auc = {}
-
-
+    if params.vis:
+        from arena.helpers.visualization import *
+        vis = PLTVisualizer()
     if not params.test:
         for idx in xrange(params.max_iter):
-            train_loss, train_accuracy, train_auc = train(net, params, train_data, label='Train')
-            test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
-
-            m = len(all_loss) + 1
-            all_loss[m] = [m, train_loss, test_loss, train_accuracy, test_accuracy, train_auc, test_auc]
-            all_train_loss[m] = train_loss
-            all_train_accuracy[m] = train_accuracy
-            all_train_auc[m] = train_auc
-            all_test_loss[m] = test_loss
-            all_test_accuracy = test_accuracy
-            all_test_auc[m] = test_auc
-
+            train_loss, train_accuracy, train_auc = train(net, params, train_data, vis, label='Train')
+            test_loss, test_accuracy, test_auc = test(net, params, test_data, vis, label='Test')
             output_state = {'epoch': idx + 1,
                             "train_loss": train_loss,
                             "valid_loss": test_loss,
@@ -156,6 +131,14 @@ if __name__ == '__main__':
                             "learning_rate": params.lr}
             print output_state
 
+            m = len(all_loss) + 1
+            all_loss[m] = [m, train_loss, test_loss, train_accuracy, test_accuracy, train_auc, test_auc]
+            all_train_loss[m] = train_loss
+            all_train_accuracy[m] = train_accuracy
+            all_train_auc[m] = train_auc
+            all_test_loss[m] = test_loss
+            all_test_accuracy = test_accuracy
+            all_test_auc[m] = test_auc
             # Learning rate annealing
             if m > 1 and all_loss[m][2] > all_loss[m - 1][2] * 0.9999:
                 params.lr = params.lr / 1.5
