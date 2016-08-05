@@ -127,6 +127,9 @@ def train(net, params, data, label):
     if params.show:
         from utils import ProgressBar
         bar = ProgressBar(label, max=N)
+    optimizer = mx.optimizer.create(name='RMSProp', learning_rate=1E-4,#params.lr, #momentum=params.momentum,
+                                    rescale_grad=1.0 / params.batch_size)
+    updater = mx.optimizer.get_updater(optimizer)
     for idx in xrange(N):
         if params.show: bar.next()
         one_seq = data[: , idx*params.batch_size:(idx+1)*params.batch_size]
@@ -158,13 +161,10 @@ def train(net, params, data, label):
         net.backward()
         #print "net.params_grad.items()"
         #for k, v in net.params_grad.items():
-        #    print k, "\n", v.asnumpy()
-        #    print k, nd.norm(v).asnumpy()
+            #print k, "\n", v.asnumpy()
+        #    print k, '\t\t', nd.norm(v).asnumpy()
         #print "===========================================================================\n\n\n\n"
         norm_clipping(net.params_grad, params.maxgradnorm)
-        optimizer = mx.optimizer.create(name='SGD', learning_rate=params.lr, momentum=params.momentum,
-                                        rescale_grad=1.0/ params.batch_size)
-        updater = mx.optimizer.get_updater(optimizer)
         #print "net.params_grad.items()"
         #for k, v in net.params_grad.items():
         #    print k, "\n", v.asnumpy()
