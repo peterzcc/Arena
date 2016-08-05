@@ -64,7 +64,7 @@ if __name__ == '__main__':
     print "train_data.shape",train_data.shape ###(3633, 200) = (#sample, seqlen)
     print "test_data.shape",test_data.shape   ###(1566, 200)
 
-    all_loss = {}
+
 
     params.lr = params.init_lr
 
@@ -123,15 +123,29 @@ if __name__ == '__main__':
     net.print_stat()
 
     # run -train
+    all_loss = {}
+    all_train_loss = {}
+    all_train_accuracy = {}
+    all_train_auc = {}
+    all_test_loss = {}
+    all_test_accuracy = {}
+    all_test_auc = {}
+
+
     if not params.test:
         for idx in xrange(params.max_iter):
             train_loss, train_accuracy, train_auc = train(net, params, train_data, label='Train')
             test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
 
-            # logging for each epoch
             m = len(all_loss) + 1
             all_loss[m] = [m, train_loss, test_loss, train_accuracy, test_accuracy, train_auc, test_auc]
-            #g_log_cost[m] = [m, train_loss]
+            all_train_loss[m] = train_loss
+            all_train_accuracy[m] = train_accuracy
+            all_train_auc[m] = train_auc
+            all_test_loss[m] = test_loss
+            all_test_accuracy = test_accuracy
+            all_test_auc[m] = test_auc
+
             output_state = {'epoch': idx + 1,
                             "train_loss": train_loss,
                             "valid_loss": test_loss,
@@ -152,11 +166,17 @@ if __name__ == '__main__':
         file_name = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\
                    'msize'+str(params.memory_size)+ 'mdim'+str(params.memory_state_dim)+\
                    'k'+str(params.k_smallest)+ 'r'+str(params.num_reads)+ 'w'+str(params.num_writes)+\
-                   'std'+str(params.init_std)+ 'lr'+str(params.init_lr)+ 'g'+str(params.maxgradnorm)
+                   'std'+str(params.init_std)+ 'lr'+str(pasrams.init_lr)+ 'g'+str(params.maxgradnorm)
         net.save_params(dir_path=os.path.join('model', params.save, file_name))
 
         f_save_log = open(os.path.join('result', file_name),'w')
-        f_save_log.write(str(all_loss))
+        f_save_log.write(str(all_test_auc) + "\n\n")
+        f_save_log.write(str(all_train_auc) + "\n\n")
+        f_save_log.write(str(all_test_loss) + "\n\n")
+        f_save_log.write(str(all_train_loss) + "\n\n")
+        f_save_log.write(str(all_test_accuracy) + "\n\n")
+        f_save_log.write(str(all_train_accuracy) + "\n\n")
+        f_save_log.write(str(all_loss)+"\n")
         f_save_log.close()
         print all_loss
 
