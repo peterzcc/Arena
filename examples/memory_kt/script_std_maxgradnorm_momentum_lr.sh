@@ -6,7 +6,7 @@ do
     do
         for momentum in 0.9 0.8 0.5
         do
-            for lr in 0.001 0.01 0.1
+            for lr in 0.1
             do
                 python main.py --gpus 0 --init_lr $lr --momentum $momentum --init_std $std --maxgradnorm $maxgradnorm
             done

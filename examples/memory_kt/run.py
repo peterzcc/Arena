@@ -152,20 +152,20 @@ def train(net, params, data, vis, label):
         norm_key = outputs[2].asnumpy()
         norm_memory = outputs[3].asnumpy()
         similarity_score = outputs[4].asnumpy()
-        if params.vis:
-            from arena.helpers.visualization import *
-            vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
-            CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
-            CV2Vis.display(data=data_out[:, 0, :].T, win_name="target")
-            CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state")
-            for read_id in range(num_reads):
-                CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
-                               win_name="read_weight%d" % read_id)
-                CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
-                               win_name="read_content%d" % read_id)
-            for write_id in range(num_writes):
-                CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
-                               win_name="write_weight%d" % write_id)
+        #if params.vis:
+        #    from arena.helpers.visualization import *
+        #    vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
+        #    CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
+            #CV2Vis.display(data=data_out[:, 0, :].T, win_name="target")
+            #CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state")
+            #for read_id in range(num_reads):
+            #    CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
+            #                   win_name="read_weight%d" % read_id)
+            #    CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
+            #                   win_name="read_content%d" % read_id)
+            #for write_id in range(num_writes):
+            #    CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
+            #                   win_name="write_weight%d" % write_id)
 
         #print "Before Updating ......"
         #print "\n"

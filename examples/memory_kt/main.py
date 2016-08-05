@@ -154,12 +154,12 @@ if __name__ == '__main__':
         net.save_params(dir_path=os.path.join('model', file_name))
 
         f_save_log = open(os.path.join('result', file_name),'w')
-        f_save_log.write(str(all_test_auc) + "\n\n")
-        f_save_log.write(str(all_train_auc) + "\n\n")
-        f_save_log.write(str(all_test_loss) + "\n\n")
-        f_save_log.write(str(all_train_loss) + "\n\n")
-        f_save_log.write(str(all_test_accuracy) + "\n\n")
-        f_save_log.write(str(all_train_accuracy) + "\n\n")
+        f_save_log.write("test_auc:\n"+str(all_test_auc) + "\n\n")
+        f_save_log.write("train_auc:\n"+str(all_train_auc) + "\n\n")
+        f_save_log.write("test_loss:\n"+str(all_test_loss) + "\n\n")
+        f_save_log.write("train_loss:\n"+str(all_train_loss) + "\n\n")
+        f_save_log.write("test_accuracy:\n:"+str(all_test_accuracy) + "\n\n")
+        f_save_log.write("train_accuracy:\n:"+str(all_train_accuracy) + "\n\n")
         f_save_log.write(str(all_loss)+"\n")
         f_save_log.close()
         print all_loss
