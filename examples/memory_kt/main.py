@@ -35,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_smallest', type=int, default=10, help='parmeter of k smallest flags')
     parser.add_argument('--gamma', type=float, default=0.8, help='hyperparameter of decay W_u')
 
-    parser.add_argument('--max_iter', type=int, default=2, help='number of iterations')
+    parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     #parser.add_argument('--load', type=str, default='MemNN', help='model file to load')
     parser.add_argument('--save', type=str, default='Memory_kt', help='path to save model')
     params = parser.parse_args()
-
+    print params
     # Reading data
     dat = DATA(n_question = params.n_question, seqlen=params.seqlen, separate_char=',')
     train_data_path = params.data_dir + "/" + params.data_name + "_train.csv"
@@ -107,9 +107,9 @@ if __name__ == '__main__':
                name="LRUA_KT"#,
                #default_bucket_kwargs={'seqlen': params.seqlen}
                )
-    print "net.params.items()================================================="
-    for k, v in net.params.items():
-        print k, "\t\t", LA.norm(v.asnumpy())
+    #print "net.params.items()================================================="
+    #for k, v in net.params.items():
+    #    print k, "\t\t", LA.norm(v.asnumpy())
     #print "==========================================================================="
     #for k, v in net.params.items():
     #    print k, "\n", v.asnumpy()
