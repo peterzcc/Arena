@@ -2,7 +2,7 @@ import numpy as np
 import math
 from arena.utils import *
 import mxnet as mx
-
+from arena.helpers.visualization import *
 
 
 def binaryEntropy(params, pred, target):
@@ -107,8 +107,22 @@ def compute_auc(params, all_pred, label ):
     return accuracy, auc
 
 
+def onehot_encoding(n_question, seqlen, label):
+    one_hot = np.zeros((seqlen, n_question))
+    label = label.astype(np.int)
+    zero_index = np.flatnonzero(label == 0)
+    non_zero_index = np.flatnonzero(label)
+    next_label = (label - 1) % n_question  # Shape (batch_size*seqlen*N, )
+    truth = (label - 1) / n_question  # Shape (batch_size*seqlen*N, )
+    next_label[zero_index] = 0
+    truth[zero_index] = 0.5
+    next_label = next_label.tolist()
+    one_hot[np.arange(len(next_label)), next_label] = truth[np.arange(len(next_label))]
+    return one_hot
+
+
 #def train(net, params, data, vis, label):
-def train(net, params, data, label):
+def train(net, params, data, vis, label):
 
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
     np.random.shuffle(data)
@@ -154,21 +168,26 @@ def train(net, params, data, label):
         norm_key = outputs[2].asnumpy()
         norm_memory = outputs[3].asnumpy()
         similarity_score = outputs[4].asnumpy()
-        #if params.vis:
-        #    from arena.helpers.visualization import *
-        #    vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
-        #    CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
-            #CV2Vis.display(data=data_out[:, 0, :].T, win_name="target")
-            #CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state")
-            #for read_id in range(num_reads):
-            #    CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
-            #                   win_name="read_weight%d" % read_id)
-            #    CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
-            #                   win_name="read_content%d" % read_id)
-            #for write_id in range(num_writes):
-            #    CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
-            #                   win_name="write_weight%d" % write_id)
+        target = target.reshape((-1,))
+        if params.vis:
+            vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
+            #print target
+            vis_target = onehot_encoding(params.n_question, params.seqlen*params.batch_size, target).reshape((params.seqlen, params.batch_size, params.n_question))
+            #print vis_target
 
+            CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
+            CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target")
+            """"
+            CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state")
+            for read_id in range(num_reads):
+                CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
+                               win_name="read_weight%d" % read_id)
+                CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
+                               win_name="read_content%d" % read_id)
+            for write_id in range(num_writes):
+                CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
+                               win_name="write_weight%d" % write_id)
+            """
         #print "Before Updating ......"
         #print "\n"
         #print "norm_key", norm_key.shape, '\n', norm_key[0]
@@ -217,11 +236,13 @@ def train(net, params, data, label):
         #print "pred.shape", pred.shape # (200L, 111L)
         #print "target.shape", target, target.shape
 
-        target = target.reshape((-1,))
+
         avg_loss = binaryEntropy(params, pred, target)
         cost += avg_loss
         pred_list.append(pred)
         target_list.append(target)
+        if params.vis:
+            vis.update(idx, avg_loss)
         #print avg_loss
     if params.show: bar.finish()
 
@@ -233,7 +254,7 @@ def train(net, params, data, label):
     return one_epoch_loss, accuracy, auc
 
 
-def test(net, params, data, label):
+def test(net, params, data, vis, label):
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
     np.random.shuffle(data)
     N = int(math.floor(len(data) / params.batch_size))
