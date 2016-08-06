@@ -107,7 +107,9 @@ def compute_auc(params, all_pred, label ):
     return accuracy, auc
 
 
-def train(net, params, data, vis, label):
+#def train(net, params, data, vis, label):
+def train(net, params, data, label):
+
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
     np.random.shuffle(data)
     N = int(math.floor(len(data) / params.batch_size))
