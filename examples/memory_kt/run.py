@@ -121,8 +121,7 @@ def onehot_encoding(n_question, seqlen, label):
     return one_hot
 
 
-#def train(net, params, data, vis, label):
-def train(net, params, data, vis, label):
+def train(net, params, data, label):
 
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
     np.random.shuffle(data)
@@ -169,25 +168,7 @@ def train(net, params, data, vis, label):
         norm_memory = outputs[3].asnumpy()
         similarity_score = outputs[4].asnumpy()
         target = target.reshape((-1,))
-        if params.vis:
-            vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
-            #print target
-            vis_target = onehot_encoding(params.n_question, params.seqlen*params.batch_size, target).reshape((params.seqlen, params.batch_size, params.n_question))
-            #print vis_target
 
-            CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
-            CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target")
-            """"
-            CV2Vis.display(data=state_over_time[:, 0, :].T, win_name="state")
-            for read_id in range(num_reads):
-                CV2Vis.display(data=read_weight_over_time[:, 0, read_id, :].T,
-                               win_name="read_weight%d" % read_id)
-                CV2Vis.display(data=(read_content_over_time[:, 0, read_id, :].T + 1) / 2,
-                               win_name="read_content%d" % read_id)
-            for write_id in range(num_writes):
-                CV2Vis.display(data=write_weight_over_time[:, 0, write_id, :].T,
-                               win_name="write_weight%d" % write_id)
-            """
         #print "Before Updating ......"
         #print "\n"
         #print "norm_key", norm_key.shape, '\n', norm_key[0]
@@ -241,8 +222,6 @@ def train(net, params, data, vis, label):
         cost += avg_loss
         pred_list.append(pred)
         target_list.append(target)
-        if params.vis:
-            vis.update(idx, avg_loss)
         #print avg_loss
     if params.show: bar.finish()
 
@@ -251,10 +230,21 @@ def train(net, params, data, vis, label):
     all_pred = np.concatenate(pred_list,axis=0)
     all_target = np.concatenate(target_list, axis=0)
     accuracy, auc = compute_auc(params, all_pred, all_target)
+    if params.vis:
+        vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
+        # print target
+        vis_target = onehot_encoding(params.n_question, params.seqlen * params.batch_size, target).reshape(
+            (params.seqlen, params.batch_size, params.n_question))
+        # print vis_target\
+        print vis_pred[:, 0, :].T.shape
+        print vis_target[:, 0, :].T.shape
+        CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
+        CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target")
+
     return one_epoch_loss, accuracy, auc
 
 
-def test(net, params, data, vis, label):
+def test(net, params, data, label):
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
     np.random.shuffle(data)
     N = int(math.floor(len(data) / params.batch_size))

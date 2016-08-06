@@ -114,13 +114,11 @@ if __name__ == '__main__':
     all_test_loss = {}
     all_test_accuracy = {}
     all_test_auc = {}
-    if params.vis:
-        from arena.helpers.visualization import *
-        vis = PLTVisualizer()
+
     if not params.test:
         for idx in xrange(params.max_iter):
-            train_loss, train_accuracy, train_auc = train(net, params, train_data, vis, label='Train')
-            test_loss, test_accuracy, test_auc = test(net, params, test_data, vis, label='Test')
+            train_loss, train_accuracy, train_auc = train(net, params, train_data, label='Train')
+            test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
             output_state = {'epoch': idx + 1,
                             "train_loss": train_loss,
                             "valid_loss": test_loss,
