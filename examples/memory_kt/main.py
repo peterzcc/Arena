@@ -47,7 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('--maxgradnorm', type=float, default=100, help='maximum gradient norm')
 
     parser.add_argument('--test', type=bool, default=False, help='enable testing')
-    parser.add_argument('--show', type=bool, default=True, help='print progress')
+    parser.add_argument('--show', type=bool, default=False, help='print progress')
     parser.add_argument('--vis', type=bool, default=True, help='visualize weights and results')
     parser.add_argument('--data_dir', type=str, default='data', help='data directory')
     parser.add_argument('--data_name', type=str, default='builder', help='data set name')

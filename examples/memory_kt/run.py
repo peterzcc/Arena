@@ -115,7 +115,7 @@ def onehot_encoding(n_question, seqlen, label):
     next_label = (label - 1) % n_question  # Shape (batch_size*seqlen*N, )
     truth = (label - 1) / n_question  # Shape (batch_size*seqlen*N, )
     next_label[zero_index] = 0
-    truth[zero_index] = 0.5
+    truth[zero_index] = 0
     next_label = next_label.tolist()
     one_hot[np.arange(len(next_label)), next_label] = truth[np.arange(len(next_label))]
     return one_hot
@@ -142,6 +142,7 @@ def train(net, params, data, label):
     init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
     pred_list = []
     target_list = []
+    print params.show
     if params.show:
         from utils import ProgressBar
         bar = ProgressBar(label, max=N)
@@ -168,6 +169,19 @@ def train(net, params, data, label):
         norm_memory = outputs[3].asnumpy()
         similarity_score = outputs[4].asnumpy()
         target = target.reshape((-1,))
+
+        vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
+        # print target
+        vis_target = onehot_encoding(params.n_question, params.seqlen * params.batch_size, target).reshape(
+            (params.seqlen, params.batch_size, params.n_question))
+        # print vis_target\
+        print vis_pred[:, 0, :].T.shape
+        print vis_target[:, 0, :].T.shape
+        print vis_pred
+        CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction", delay=1)
+        CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target", delay=1)
+
+
 
         #print "Before Updating ......"
         #print "\n"
