@@ -206,6 +206,16 @@ def train(net, params, data, label):
         norm_key = outputs[2].asnumpy()
         norm_memory = outputs[3].asnumpy()
         similarity_score = outputs[4].asnumpy()
+        read_content = outputs[5].asnumpy()
+        print "read_content.shape", read_content.shape
+        read_focus = outputs[6].asnumpy()
+        print "read_focus.shape", read_focus.shape
+        print read_focus[:, 0, :]
+        print read_focus[:, 0, :].max(axis=1), read_focus[:, 0, :].max(axis=1).shape
+        write_focus = outputs[7].asnumpy()
+        print "write_focus.shape", write_focus.shape
+        print write_focus[:, 0, :]
+        print write_focus[:, 0, :].max(axis=1), write_focus[:, 0, :].max(axis=1).shape
 
         if params.vis:
 
@@ -218,7 +228,9 @@ def train(net, params, data, label):
             CV2Vis.display(data=vis_pred_all.T, win_name="prediction_all", delay=1)
             CV2Vis.display(data=vis_pred_one_hot.T, win_name="prediction_one_hot", delay=1)
             CV2Vis.display(data=vis_target_one_hot.T, win_name="target_one_hot", delay=1)
-
+            CV2Vis.display(data=read_content[:,0,:].T, win_name="read_content", delay=1)
+            CV2Vis.display(data=read_focus[:, 0, :].T, win_name="read_focus", delay=1)
+            CV2Vis.display(data=write_focus[:, 0, :].T, win_name="write_focus", delay=1)
         #print "Before Updating ......"
         #print "\n"
         #print "norm_key", norm_key.shape, '\n', norm_key[0]

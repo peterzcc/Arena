@@ -209,7 +209,18 @@ class MODEL(object):
                                  mx.sym.Concat(*all_similarity_score_l, dim=0,
                                                num_args=len(all_similarity_score_l)),
                                  shape=(self.seqlen, -1, self.memory_size))),
-
+                             mx.sym.BlockGrad(mx.sym.Reshape(
+                                 mx.sym.Concat(*all_read_content_l, dim=0,
+                                               num_args=len(all_read_content_l)),
+                                 shape=(self.seqlen, -1, self.memory_state_dim))),
+                             mx.sym.BlockGrad(mx.sym.Reshape(
+                                 mx.sym.Concat(*all_read_focus_l, dim=0,
+                                               num_args=len(all_read_focus_l)),
+                                 shape=(self.seqlen, -1, self.memory_size))),
+                             mx.sym.BlockGrad(mx.sym.Reshape(
+                                 mx.sym.Concat(*all_write_focus_l, dim=0,
+                                               num_args=len(all_write_focus_l)),
+                                 shape=(self.seqlen, -1, self.memory_size)))
                              ])
 
         ### Step9:
