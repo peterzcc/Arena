@@ -202,84 +202,55 @@ def train(net, params, data, label):
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
-        control_state = outputs[1].asnumpy()
-        norm_key = outputs[2].asnumpy()
-        norm_memory = outputs[3].asnumpy()
-        similarity_score = outputs[4].asnumpy()
+        #control_state = outputs[1].asnumpy()
+        #norm_key = outputs[2].asnumpy()
+        #norm_memory = outputs[3].asnumpy()
+        #similarity_score = outputs[4].asnumpy()
+        #read_content = outputs[5].asnumpy()
+        #print "read_content.shape", read_content.shape
+        #read_focus = outputs[6].asnumpy()
+        #print "read_focus.shape", read_focus.shape
+        #print read_focus[:, 0, :]
+        #print read_focus[:, 0, :].max(axis=1), read_focus[:, 0, :].max(axis=1).shape
+        #write_focus = outputs[7].asnumpy()
+        #print "write_focus.shape", write_focus.shape
+        #print write_focus[:, 0, :]
+        #print write_focus[:, 0, :].max(axis=1), write_focus[:, 0, :].max(axis=1).shape
 
-        read_content = outputs[5].asnumpy()
-        print "read_content.shape", read_content.shape
-        read_focus = outputs[6].asnumpy()
-        print "read_focus.shape", read_focus.shape
-        print read_focus[:, 0, :]
-        print read_focus[:, 0, :].max(axis=1), read_focus[:, 0, :].max(axis=1).shape
-        write_focus = outputs[7].asnumpy()
-        print "write_focus.shape", write_focus.shape
-        print write_focus[:, 0, :]
-        print write_focus[:, 0, :].max(axis=1), write_focus[:, 0, :].max(axis=1).shape
-
-        if params.vis:
-
-            # print target
-            vis_pred_all, vis_pred_one_hot, vis_target_one_hot = vis_matrix(params, pred, target)
-            # print vis_target\
-            #print vis_pred[:, 0, :].T.shape
-            #print vis_target[:, 0, :].T.shape
-            #print vis_pred
-            CV2Vis.display(data=vis_pred_all.T, win_name="prediction_all", delay=1)
-            CV2Vis.display(data=vis_pred_one_hot.T, win_name="prediction_one_hot", delay=1)
-            CV2Vis.display(data=vis_target_one_hot.T, win_name="target_one_hot", delay=1)
-            CV2Vis.display(data=read_content[:,0,:].T, win_name="read_content", delay=1)
-            CV2Vis.display(data=read_focus[:, 0, :].T, win_name="read_focus", delay=1)
-            CV2Vis.display(data=write_focus[:, 0, :].T, win_name="write_focus", delay=1)
-        #print "Before Updating ......"
-        #print "\n"
-        #print "norm_key", norm_key.shape, '\n', norm_key[0]
-        #print "norm_memory", norm_memory.shape, '\n', norm_memory[0]
-        #print "similarity_score", similarity_score.shape, '\n', similarity_score[0]
-        #print "control_state", control_state.shape, '\n', control_state[0]
+        #print "Before Updating ......\n"
+        #print "norm_key", norm_key.shape, '\n', norm_key[:,0,:]
+        #print "norm_memory", norm_memory.shape, '\n', norm_memory[:,0,:]
+        #print "similarity_score", similarity_score.shape, '\n', similarity_score[:,0,:]
+        #print "control_state", control_state.shape, '\n', control_state[:,0,:]
+        #print "read_content", read_content.shape, '\n', read_content[:,0,:]
+        #print "read_focus", read_focus.shape, '\n', read_focus[:, 0, :]
+        #print "write_focus", write_focus.shape, '\n', write_focus[:, 0, :]
         #print "pred", '\n', pred[0]
 
         net.backward()
-        #print "net.params_grad.items()"
-        #for k, v in net.params_grad.items():
-            #print k, "\n", v.asnumpy()
-        #    print k, '\t\t', nd.norm(v).asnumpy()
-        #print "===========================================================================\n\n\n\n"
         norm_clipping(net.params_grad, params.maxgradnorm)
-        #print "net.params_grad.items()"
+        #print "Before updating,net.params_grad.items()"
         #for k, v in net.params_grad.items():
         #    print k, "\n", v.asnumpy()
         #    print "                                                                         ---->", \
         #        k, nd.norm(v).asnumpy()
         #print "===========================================================================\n\n\n\n"
         net.update(updater=updater)
-        ### print parameter information
-        #print "net.params.items()"
-        #for k, v in net.params.items():
-        #    print k, "\n", v.asnumpy()
-        #    print "                                                                         ---->", \
-        #        k, nd.norm(v).asnumpy()
-        #print "===========================================================================\n\n"
-        #print "net.params_grad.items()"
+        #print "After updating, net.params_grad.items()"
         #for k, v in net.params_grad.items():
         #    print k, "\n", v.asnumpy()
         #    print "                                                                         ---->",\
         #        k, nd.norm(v).asnumpy()
-        #print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\n\n\n\n"
+        #print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\n\n\n\n"\
+        # print "net.params.items()"
+        # for k, v in net.params.items():
+        #    print k, "\n", v.asnumpy()
+        #    print "                                                                         ---->", \
+        #        k, nd.norm(v).asnumpy()
+        # print "===========================================================================\n\n"
 
         ### get results and compute the loss
-
         #print "After Updating ......"
-        #print "\n"
-        #print "norm_key", norm_key.shape, '\n', norm_key[0]
-        #print "norm_memory", norm_memory.shape,'\n', norm_memory[0]
-        #print "similarity_score", similarity_score.shape, '\n', similarity_score[0]
-        #print "control_state", control_state.shape, '\n', control_state[0]
-        #print "pred", '\n', pred[0]
-        #print "pred.shape", pred.shape # (200L, 111L)
-        #print "target.shape", target, target.shape
-
         target = target.reshape((-1,))
         avg_loss = binaryEntropy(params, pred, target)
         cost += avg_loss
@@ -293,17 +264,6 @@ def train(net, params, data, label):
     all_pred = np.concatenate(pred_list,axis=0)
     all_target = np.concatenate(target_list, axis=0)
     accuracy, auc = compute_auc(params, all_pred, all_target)
-    if params.vis:
-        vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
-        # print target
-        vis_target = onehot_encoding(params.n_question, params.seqlen * params.batch_size, target).reshape(
-            (params.seqlen, params.batch_size, params.n_question))
-        # print vis_target\
-        print vis_pred[:, 0, :].T.shape
-        print vis_target[:, 0, :].T.shape
-        CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction")
-        CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target")
-
     return one_epoch_loss, accuracy, auc
 
 
@@ -346,6 +306,32 @@ def test(net, params, data, label):
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
+        control_state = outputs[1].asnumpy()
+        #norm_key = outputs[2].asnumpy()
+        #norm_memory = outputs[3].asnumpy()
+        #similarity_score = outputs[4].asnumpy()
+        read_content = outputs[5].asnumpy()
+        # print "read_content.shape", read_content.shape
+        read_focus = outputs[6].asnumpy()
+        write_focus = outputs[7].asnumpy()
+
+        if params.vis:
+            print "read_focus.shape", read_focus.shape
+            print read_focus[:, 0, :]
+            print read_focus[:, 0, :].max(axis=1), read_focus[:, 0, :].max(axis=1).shape
+            print "write_focus.shape", write_focus.shape
+            print write_focus[:, 0, :]
+            print write_focus[:, 0, :].max(axis=1), write_focus[:, 0, :].max(axis=1).shape
+
+            vis_pred_all, vis_pred_one_hot, vis_target_one_hot = vis_matrix(params, pred, target)
+            CV2Vis.display(data=vis_pred_all.T, win_name="prediction_all", delay=1)
+            CV2Vis.display(data=vis_pred_one_hot.T, win_name="prediction_one_hot", delay=1)
+            CV2Vis.display(data=vis_target_one_hot.T, win_name="target_one_hot", delay=1)
+            CV2Vis.display(data=control_state[:, 0, :].T, win_name="control_state", delay=1)
+            CV2Vis.display(data=read_content[:, 0, :].T, win_name="read_content", delay=1)
+            CV2Vis.display(data=read_focus[:, 0, :].T, win_name="read_focus", delay=1)
+            CV2Vis.display(data=write_focus[:, 0, :].T, win_name="write_focus", delay=1)
+
         target = target.reshape((-1,))
         avg_loss = binaryEntropy(params, pred, target)
         cost += avg_loss

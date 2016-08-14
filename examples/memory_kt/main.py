@@ -106,6 +106,7 @@ if __name__ == '__main__':
     #    print "                                                                         ---->",\
     #        k, nd.norm(v).asnumpy()
     net.print_stat()
+
     ### ================================== start training ==================================
     all_loss = {}
     all_train_loss = {}
@@ -120,28 +121,27 @@ if __name__ == '__main__':
             train_loss, train_accuracy, train_auc = train(net, params, train_data, label='Train')
             test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
             output_state = {'epoch': idx + 1,
-                            "train_loss": train_loss,
-                            "valid_loss": test_loss,
-                            "train_accuracy": train_accuracy,
-                            "test_accuracy": test_accuracy,
-                            "train_auc": train_auc,
                             "test_auc": test_auc,
+                            "train_auc": train_auc,
+                            "test_accuracy": test_accuracy,
+                            "train_accuracy": train_accuracy,
+                            "test_loss": test_loss,
+                            "train_loss": train_loss,
                             "learning_rate": params.lr}
             print output_state
 
             m = len(all_loss) + 1
             all_loss[m] = [m, train_loss, test_loss, train_accuracy, test_accuracy, train_auc, test_auc]
-            all_train_loss[m] = train_loss
-            all_train_accuracy[m] = train_accuracy
+            all_test_auc[m] = test_auc
             all_train_auc[m] = train_auc
             all_test_loss[m] = test_loss
+            all_train_loss[m] = train_loss
             all_test_accuracy = test_accuracy
-            all_test_auc[m] = test_auc
+            all_train_accuracy[m] = train_accuracy
             # Learning rate annealing
             if m > 1 and all_loss[m][2] > all_loss[m - 1][2] * 0.9999:
                 params.lr = params.lr / 1.5
             if params.lr < 1e-5: break
-
         print all_loss
 
         file_name = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\

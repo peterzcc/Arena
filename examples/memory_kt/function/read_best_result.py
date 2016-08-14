@@ -5,7 +5,7 @@ import ast
 mypath = join("..", "result")
 
 thread_auc = 0.87
-
+allFileCount = 0
 for fileName in listdir(mypath):
     current_file = join(mypath, fileName)
     if isfile( current_file ):
@@ -14,6 +14,7 @@ for fileName in listdir(mypath):
         count = 0
         for line in f_result:
             if line[0] == "{" and count < 1:
+                allFileCount += 1
                 line = line.strip("\n")
                 dic = ast.literal_eval(line)
                 #print line
@@ -27,9 +28,8 @@ for fileName in listdir(mypath):
                         one_result_max = test_auc
                         one_result_epoch = i
                 if one_result_max > thread_auc:
-                    print fileName
-                    print "===> one_result_epoch",one_result_epoch, "one_result_max", one_result_max
-            else:
-                break
+                    print fileName," \t ===> one_result_epoch",one_result_epoch, "one_result_max", one_result_max
         #print "~~~~~~"
         f_result.close()
+
+print allFileCount
