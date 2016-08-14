@@ -120,6 +120,44 @@ def onehot_encoding(n_question, seqlen, label):
     one_hot[np.arange(len(next_label)), next_label] = truth[np.arange(len(next_label))]
     return one_hot
 
+def vis_matrix(params, pred, target):
+    # :Parameter pred : Shape (seqlen*batch_size , n_question)
+    vis_pred_all = pred.reshape( (params.seqlen, params.batch_size, params.n_question) )
+    vis_pred_all = vis_pred_all[:,0,:] # Shape ( seqlen, n_question ) when vis using .T
+    target = target[:,0]
+    #print target
+    #print "target.shape", target.shape
+    vis_target_one_hot = np.zeros((params.seqlen, params.n_question))
+    vis_pred_one_hot = np.zeros((params.seqlen, params.n_question))
+    target = target.astype(np.int)
+    zero_index = np.flatnonzero(target == 0)
+    #print "zero_index", zero_index
+    non_zero_index = np.flatnonzero(target)
+    #print "non_zero_index", non_zero_index
+    next_label = (target - 1) % params.n_question  # Shape (batch_size*seqlen*N, )
+    #print "next_label", next_label
+    truth = (target - 1) / params.n_question  # Shape (batch_size*seqlen*N, )
+    #print "truth",truth
+    next_label[zero_index] = 0
+    #print "next_label", next_label
+    ### correct 1 , wrong 0, no answer -1
+    #truth[zero_index] = -1
+    ### correct 1 , wrong -1, no answer 0
+    truth_wrong = np.flatnonzero(truth == 0)
+    truth[truth_wrong] = -1
+    truth[zero_index] = 0
+    #print "truth", truth
+    next_label = next_label.tolist()
+    vis_target_one_hot[np.arange(len(next_label)), next_label] = truth[np.arange(len(next_label))]
+    vis_pred_one_hot[np.arange(len(next_label)), next_label] = vis_pred_all[np.arange(len(next_label)), next_label]
+    vis_pred_one_hot[zero_index,0] = 0.0
+    #print "vis_target_one_hot", vis_target_one_hot
+    #print "vis_pred_one_hot", vis_pred_one_hot
+    #result_pred = vis_pred_one_hot[np.arange(len(next_label)),next_label]
+    #result_target = vis_target_one_hot[np.arange(len(next_label)),next_label]
+    #print "result_pred", result_pred
+    #print "result_target", result_target
+    return vis_pred_all, vis_pred_one_hot, vis_target_one_hot
 
 def train(net, params, data, label):
 
@@ -142,7 +180,7 @@ def train(net, params, data, label):
     init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
     pred_list = []
     target_list = []
-    print params.show
+
     if params.show:
         from utils import ProgressBar
         bar = ProgressBar(label, max=N)
@@ -168,22 +206,32 @@ def train(net, params, data, label):
         norm_key = outputs[2].asnumpy()
         norm_memory = outputs[3].asnumpy()
         similarity_score = outputs[4].asnumpy()
-        target = target.reshape((-1,))
+
+        read_content = outputs[5].asnumpy()
+        print "read_content.shape", read_content.shape
+        read_focus = outputs[6].asnumpy()
+        print "read_focus.shape", read_focus.shape
+        print read_focus[:, 0, :]
+        print read_focus[:, 0, :].max(axis=1), read_focus[:, 0, :].max(axis=1).shape
+        write_focus = outputs[7].asnumpy()
+        print "write_focus.shape", write_focus.shape
+        print write_focus[:, 0, :]
+        print write_focus[:, 0, :].max(axis=1), write_focus[:, 0, :].max(axis=1).shape
 
         if params.vis:
-            vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
+
             # print target
-            vis_target = onehot_encoding(params.n_question, params.seqlen * params.batch_size, target).reshape(
-                (params.seqlen, params.batch_size, params.n_question))
+            vis_pred_all, vis_pred_one_hot, vis_target_one_hot = vis_matrix(params, pred, target)
             # print vis_target\
-            print vis_pred[:, 0, :].T.shape
-            print vis_target[:, 0, :].T.shape
-            print vis_pred
-            CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction", delay=1)
-            CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target", delay=1)
-
-
-
+            #print vis_pred[:, 0, :].T.shape
+            #print vis_target[:, 0, :].T.shape
+            #print vis_pred
+            CV2Vis.display(data=vis_pred_all.T, win_name="prediction_all", delay=1)
+            CV2Vis.display(data=vis_pred_one_hot.T, win_name="prediction_one_hot", delay=1)
+            CV2Vis.display(data=vis_target_one_hot.T, win_name="target_one_hot", delay=1)
+            CV2Vis.display(data=read_content[:,0,:].T, win_name="read_content", delay=1)
+            CV2Vis.display(data=read_focus[:, 0, :].T, win_name="read_focus", delay=1)
+            CV2Vis.display(data=write_focus[:, 0, :].T, win_name="write_focus", delay=1)
         #print "Before Updating ......"
         #print "\n"
         #print "norm_key", norm_key.shape, '\n', norm_key[0]
@@ -232,7 +280,7 @@ def train(net, params, data, label):
         #print "pred.shape", pred.shape # (200L, 111L)
         #print "target.shape", target, target.shape
 
-
+        target = target.reshape((-1,))
         avg_loss = binaryEntropy(params, pred, target)
         cost += avg_loss
         pred_list.append(pred)
