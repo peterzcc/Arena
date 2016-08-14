@@ -170,16 +170,17 @@ def train(net, params, data, label):
         similarity_score = outputs[4].asnumpy()
         target = target.reshape((-1,))
 
-        vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
-        # print target
-        vis_target = onehot_encoding(params.n_question, params.seqlen * params.batch_size, target).reshape(
-            (params.seqlen, params.batch_size, params.n_question))
-        # print vis_target\
-        print vis_pred[:, 0, :].T.shape
-        print vis_target[:, 0, :].T.shape
-        print vis_pred
-        CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction", delay=1)
-        CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target", delay=1)
+        if params.vis:
+            vis_pred = outputs[0].reshape((params.seqlen, params.batch_size, params.n_question)).asnumpy()
+            # print target
+            vis_target = onehot_encoding(params.n_question, params.seqlen * params.batch_size, target).reshape(
+                (params.seqlen, params.batch_size, params.n_question))
+            # print vis_target\
+            print vis_pred[:, 0, :].T.shape
+            print vis_target[:, 0, :].T.shape
+            print vis_pred
+            CV2Vis.display(data=vis_pred[:, 0, :].T, win_name="prediction", delay=1)
+            CV2Vis.display(data=vis_target[:, 0, :].T, win_name="target", delay=1)
 
 
 
