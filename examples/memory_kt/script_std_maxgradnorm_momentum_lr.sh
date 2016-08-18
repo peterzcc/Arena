@@ -11,7 +11,7 @@ do
                 do
                     for lr in 0.1
                     do
-                        python main.py --gpus 0 --init_lr $lr --momentum $momentum --init_std $std --maxgradnorm $maxgradnorm --embed_dim $dim --control_state_dim $dim memory_state_dim $dim --k_smallest $k
+                        python main.py --gpus 0 --init_lr $lr --momentum $momentum --init_std $std --maxgradnorm $maxgradnorm --embed_dim $dim --control_state_dim $dim --memory_state_dim $dim --k_smallest $k
                     done
                 done
             done
