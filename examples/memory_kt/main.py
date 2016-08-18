@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser.add_argument('--vis', type=bool, default=False, help='visualize weights and results')
     #parser.add_argument('--data_dir', type=str, default='data/assistment', help='data directory')
     #parser.add_argument('--data_name', type=str, default='builder', help='data set name')
-    parser.add_argument('--data_dir', type=str, default='data/synthetic_new', help='data directory')
+    parser.add_argument('--data_dir', type=str, default='data/synthetic', help='data directory')
     parser.add_argument('--data_name', type=str, default='naive_c5_q50_s4000_v1', help='data set name')
 
     #parser.add_argument('--load', type=str, default='assistment', help='model file to load')
