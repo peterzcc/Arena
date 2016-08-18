@@ -30,7 +30,8 @@ class BinaryEntropyLoss(mx.operator.CustomOp):
         self.assign(out_data[0], req[0], mx.nd.array(y))
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        n_q = 111
+        #n_q = 111
+        n_q = 50
         l = in_data[1].asnumpy().ravel().astype(np.int)
 
         zero_index = np.flatnonzero(l == 0)

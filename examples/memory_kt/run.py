@@ -306,6 +306,7 @@ def test(net, params, data, label):
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
+
         control_state = outputs[1].asnumpy()
         #norm_key = outputs[2].asnumpy()
         #norm_memory = outputs[3].asnumpy()

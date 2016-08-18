@@ -26,33 +26,41 @@ class LRUAInitializer(mx.initializer.Normal):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test MANN.')
     parser.add_argument('--gpus', type=str, help='the gpus will be used, e.g "0,1,2,3"')
-    parser.add_argument('--batch_size', type=int, default=32, help='the batch size')
-    parser.add_argument('--embed_dim', type=int, default=100, help='embedding dimensions')
-    parser.add_argument('--control_state_dim', type=int, default=100, help='hidden states of the controller')
-    parser.add_argument('--memory_size', type=int, default=128, help='memory size')
-    parser.add_argument('--memory_state_dim', type=int, default=100, help='internal state dimension')
-    parser.add_argument('--k_smallest', type=int, default=5, help='parmeter of k smallest flags')
+    parser.add_argument('--batch_size', type=int, default=10, help='the batch size')
+    parser.add_argument('--embed_dim', type=int, default=50, help='embedding dimensions')
+    parser.add_argument('--control_state_dim', type=int, default=50, help='hidden states of the controller')
+    parser.add_argument('--memory_size', type=int, default=10, help='memory size')
+    parser.add_argument('--memory_state_dim', type=int, default=50, help='internal state dimension')
+    parser.add_argument('--k_smallest', type=int, default=1, help='parmeter of k smallest flags')
     parser.add_argument('--gamma', type=float, default=0.9, help='hyperparameter of decay W_u')
 
     parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
-    parser.add_argument('--n_question', type=int, default=111, help='the number of unique questions in the dataset')
-    parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
+    #parser.add_argument('--n_question', type=int, default=111, help='the number of unique questions in the dataset')
+    #parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
+    parser.add_argument('--n_question', type=int, default=50, help='the number of unique questions in the dataset')
+    parser.add_argument('--seqlen', type=int, default=50, help='the allowed maximum length of a sequence')
 
-    parser.add_argument('--init_std', type=float, default=0.05, help='weight initialization std')
-    parser.add_argument('--init_lr', type=float, default=0.1, help='initial learning rate')
+    parser.add_argument('--init_std', type=float, default=0.1, help='weight initialization std')
+    parser.add_argument('--init_lr', type=float, default=0.01, help='initial learning rate')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
     parser.add_argument('--maxgradnorm', type=float, default=50, help='maximum gradient norm')
 
     parser.add_argument('--test', type=bool, default=False, help='enable testing')
     parser.add_argument('--show', type=bool, default=True, help='print progress')
     parser.add_argument('--vis', type=bool, default=False, help='visualize weights and results')
-    parser.add_argument('--data_dir', type=str, default='data', help='data directory')
-    parser.add_argument('--data_name', type=str, default='builder', help='data set name')
-    #parser.add_argument('--load', type=str, default='MemNN', help='model file to load')
-    parser.add_argument('--save', type=str, default='Memory_kt', help='path to save model')
+    #parser.add_argument('--data_dir', type=str, default='data/assistment', help='data directory')
+    #parser.add_argument('--data_name', type=str, default='builder', help='data set name')
+    parser.add_argument('--data_dir', type=str, default='data/synthetic_new', help='data directory')
+    parser.add_argument('--data_name', type=str, default='naive_c5_q50_s4000_v1', help='data set name')
+
+    #parser.add_argument('--load', type=str, default='assistment', help='model file to load')
+    #parser.add_argument('--save', type=str, default='assistment', help='path to save model')
+    parser.add_argument('--load', type=str, default='synthetic', help='model file to load')
+    parser.add_argument('--save', type=str, default='synthetic', help='path to save model')
+
     params = parser.parse_args()
     print params
     params.lr = params.init_lr
@@ -116,6 +124,11 @@ if __name__ == '__main__':
     all_test_accuracy = {}
     all_test_auc = {}
 
+    file_name = 'embed' + str(params.embed_dim) + 'cdim' + str(params.control_state_dim) + \
+                'msize' + str(params.memory_size) + 'mdim' + str(params.memory_state_dim) + \
+                'k' + str(params.k_smallest) + 'gamma' + str(params.gamma) + 'r' + str(params.num_reads) + 'w' + str(params.num_writes) + \
+                'std' + str(params.init_std) + 'lr' + str(params.init_lr) + 'mmt' + str(params.momentum) + 'gn' + str(params.maxgradnorm)
+
     if not params.test:
         for idx in xrange(params.max_iter):
             train_loss, train_accuracy, train_auc = train(net, params, train_data, label='Train')
@@ -143,15 +156,8 @@ if __name__ == '__main__':
                 params.lr = params.lr / 1.5
             if params.lr < 1e-5: break
         print all_loss
-
-        file_name = 'embed'+str(params.embed_dim)+'cdim'+str(params.control_state_dim)+\
-                   'msize'+str(params.memory_size)+'mdim'+str(params.memory_state_dim)+\
-                   'k'+str(params.k_smallest)+'gamma'+str(params.gamma)+'r'+str(params.num_reads)+'w'+str(params.num_writes)+\
-                   'std'+str(params.init_std)+'lr'+str(params.init_lr)+'mmt'+str(params.momentum)+'gn'+str(params.maxgradnorm)
-
-        net.save_params(dir_path=os.path.join('model', file_name))
-
-        f_save_log = open(os.path.join('result', file_name),'w')
+        net.save_params(dir_path=os.path.join('model', params.save, file_name))
+        f_save_log = open(os.path.join('result', params.save, file_name),'w')
         f_save_log.write("test_auc:\n"+str(all_test_auc) + "\n\n")
         f_save_log.write("train_auc:\n"+str(all_train_auc) + "\n\n")
         f_save_log.write("test_loss:\n"+str(all_test_loss) + "\n\n")
@@ -162,5 +168,22 @@ if __name__ == '__main__':
         f_save_log.close()
         print all_loss
 
-    # run -test
+    # run -test "embed100cdim100msize128mdim100k10gamma0.9r1w1std0.1lr0.1mmt0.9gn100"
+    # python main.py --gpus 0 --k_smallest 5 --gamma 0.9 --init_std 0.05 --init_lr 0.1 --momentum 0.9 --maxgradnorm 50 --test True --show False --vis True
+    else:
+        net.load_params(name="LRUA_KT", dir_path=os.path.join('model', params.load, file_name))
+        train_loss, train_accuracy, train_auc = test(net, params, train_data, label='Train')
+        test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
+        output_state = {"test_auc": test_auc,
+                        "train_auc": train_auc,
+                        "test_accuracy": test_accuracy,
+                        "train_accuracy": train_accuracy,
+                        "test_loss": test_loss,
+                        "train_loss": train_loss,
+                        "learning_rate": params.lr}
+        print output_state
+
+
+
+
 
