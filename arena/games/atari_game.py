@@ -21,10 +21,10 @@ def ale_load_from_rom(rom_path, display_screen):
     try:
         from ale_python_interface import ALEInterface
     except ImportError as e:
-        raise ImportError, 'Unable to import the python package of Arcade Learning Environment. ' \
+        raise ImportError('Unable to import the python package of Arcade Learning Environment. ' \
                            'ALE may not have been installed correctly. Refer to ' \
                            '`https://github.com/mgbellemare/Arcade-Learning-Environment` for some' \
-                           'installation guidance'
+                           'installation guidance')
 
     ale = ALEInterface()
     ale.setInt('random_seed', rng.randint(1000))
@@ -91,12 +91,12 @@ class AtariGame(Game):
         self.start()
         self.replay_memory.clear()
 
-    '''
-    Call this to begin an episode of a game instance.
-    Here, we can play the game for a maximum of `max_episode_step` and after that, we are force to
-    '''
+
     def begin_episode(self, max_episode_step=DEFAULT_MAX_EPISODE_STEP):
-        # We need to restart the environment if our current counting is larger than the max episode_step
+        """
+            Begin an episode of a game instance. We can play the game for a maximum of
+            `max_episode_step` and after that, we are forced to restart
+        """
         if self.episode_step > self.max_episode_step or self.ale.game_over():
             self.start()
         else:
@@ -137,13 +137,14 @@ class AtariGame(Game):
                               interpolation=cv2.INTER_LINEAR)
 
     def play(self, a):
-        assert not self.episode_terminate, "Warning, the episode seems to have terminated. " \
-                                           "We need to call either game.begin_episode(max_episode_step) to continue a new episode" \
-                                           "or game.start() to force restart."
+        assert not self.episode_terminate,\
+            "Warning, the episode seems to have terminated. " \
+            "We need to call either game.begin_episode(max_episode_step) to continue a new " \
+            "episode or game.start() to force restart."
         self.episode_step += 1
         reward = 0.0
         action = self.action_set[a]
-        for i in xrange(self.frame_skip):
+        for i in range(self.frame_skip):
             reward += self.ale.act(action)
             self.ale.getScreenGrayscale(self.screen_buffer[i % self.screen_buffer_length, :, :])
         self.total_reward += reward
