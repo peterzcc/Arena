@@ -245,6 +245,7 @@ class VREPEnv(gym.Env):
         return done
 
     def __init__(self, frame_skip=1, obs_type='state',
+                 remote_port=20001, random_start=False,
                  vrep_path='/home/sliay/Documents/V-REP_PRO_EDU_V3_3_1_64_Linux',
                  scene_path='/home/sliay/Documents/vrep-uav/scenes/quadcopter_control.ttt',
                  headless=True):
@@ -254,11 +255,9 @@ class VREPEnv(gym.Env):
         self.scene_path = scene_path
         self.headless = headless
         self.server_process = None
+        self.random_start = random_start
 
-        # find an unoccupied port
-        self.remote_port = 20000
-        while vrep.simxStart('127.0.0.1', self.remote_port, True, True, 5000, 5) != -1:
-            self.remote_port += 1
+        self.remote_port = remote_port
         # start a remote vrep server on this port
         self._init_server()
         # wait for the server initialization
@@ -269,7 +268,6 @@ class VREPEnv(gym.Env):
         self._goal_height = 1.8
         self._height_boundary = [1.20, 1.80]
         self._w_boundary = 0.3
-
 
         self.viewer = None
 
@@ -283,7 +281,6 @@ class VREPEnv(gym.Env):
         self._hover_action = 0
         # set upper bound on linear velocity, angular velocity and target coordinates
         # state_bound = numpy.array([2, 2, 2] + [1, 1, 1] + # v, w
-        #                           [2, 2, 2] + [2, 2, 2] + # a_v, a_w
         #                           [0.5, 0.5, 0.5] # coord
         #                           )
         state_bound = numpy.array([2, 2, 2] + [1, 1, 1] + # v, w
@@ -304,21 +301,27 @@ class VREPEnv(gym.Env):
         # stop the current simulation
         vrep.simxStopSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
 
-        start_time = time.time()
+        # start_time = time.time()
         self._init_handle()
-        end_time = time.time()
-        logger.info('init handle time:%f' % (end_time - start_time))
+        # end_time = time.time()
+        # logger.info('init handle time:%f' % (end_time - start_time))
 
         # init sensor reading
-        start_time = time.time()
+        # start_time = time.time()
         self._init_sensor()
-        end_time = time.time()
-        logger.info('init read buffer time:%f' % (end_time - start_time))
+        # end_time = time.time()
+        # logger.info('init read buffer time:%f' % (end_time - start_time))
 
         # enable the synchronous mode on the client
         vrep.simxSynchronous(self.client_id, True)
         # start the simulation, in blocking mode
         vrep.simxStartSimulation(self.client_id, vrep.simx_opmode_oneshot_wait)
+
+        # random initialization
+        if self.random_start:
+            a = numpy.random.uniform(low=3, high=6)
+            b = numpy.random.uniform(low=-1, high=1)
+            vrep.simxSetObjectPosition(self.client_id, self.target_handle, self.quadcopter_handle, [a, b, -1.5], vrep.simx_opmode_oneshot_wait)
 
         # trigger several simulation steps for api initialization
         for i in range(2):
