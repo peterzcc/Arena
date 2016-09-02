@@ -1,0 +1,74 @@
+Summary of D:\Arena\examples\dkt\data\STATICS\STATICS_train.csv ==================
+bucket of len  50 : 129 samples
+bucket of len 100 : 1316 samples
+bucket of len 100 : 0 samples
+bucket of len 150 : 0 samples
+Summary of D:\Arena\examples\dkt\data\STATICS\STATICS_test.csv ==================
+bucket of len  50 : 45 samples
+bucket of len 100 : 570 samples
+bucket of len 100 : 0 samples
+bucket of len 150 : 0 samples
+
+Start training ...... 
+n_q =  1223
+batch_size =  32
+max_length =  100
+num_hidden =  200
+num_embed =  100
+num_lstm_layer =  1
+Learning Rate =  0.1
+Momentum =  0.9
+
+
+
+
+
+
+Start computing AUC ......
+pred_truth_array (53538L, 2L) [[  9.99999881e-01   1.00000000e+00]
+ [  9.99999404e-01   1.00000000e+00]
+ [  9.99999046e-01   0.00000000e+00]
+ ..., 
+ [  7.73892953e-06   0.00000000e+00]
+ [  6.98279700e-06   0.00000000e+00]
+ [  5.33681214e-06   1.00000000e+00]]
+total_positives 40642.0
+total_negatives 12896.0
+======> accuracy of testing is  0.763046807875 auc of testing is  0.766975873917
+Summary of D:\Arena\examples\dkt\data\STATICS\STATICS_train.csv ==================
+bucket of len  50 : 79 samples
+bucket of len 100 : 60 samples
+bucket of len 150 : 50 samples
+bucket of len 200 : 603 samples
+Summary of D:\Arena\examples\dkt\data\STATICS\STATICS_test.csv ==================
+bucket of len  50 : 26 samples
+bucket of len 100 : 29 samples
+bucket of len 150 : 19 samples
+bucket of len 200 : 261 samples
+
+Start training ...... 
+n_q =  1223
+batch_size =  32
+max_length =  200
+num_hidden =  100
+num_embed =  100
+num_lstm_layer =  1
+Learning Rate =  0.1
+Momentum =  0.9
+
+
+
+
+
+
+Start computing AUC ......
+pred_truth_array (50250L, 2L) [[  9.99999285e-01   1.00000000e+00]
+ [  9.99998927e-01   1.00000000e+00]
+ [  9.99998927e-01   1.00000000e+00]
+ ..., 
+ [  2.16561384e-04   1.00000000e+00]
+ [  1.79307972e-04   1.00000000e+00]
+ [  1.03460807e-04   0.00000000e+00]]
+total_positives 38118.0
+total_negatives 12132.0
+======> accuracy of testing is  0.764696517413 auc of testing is  0.773270542562

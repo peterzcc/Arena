@@ -1,0 +1,53 @@
+Summary of D:\Arena\examples\dkt\data\synthetic\naive_c2_q50_s4000_v1_train.csv ==================
+bucket of len  50 : 2000 samples
+bucket of len 100 : 0 samples
+bucket of len 150 : 0 samples
+bucket of len 200 : 0 samples
+Summary of D:\Arena\examples\dkt\data\synthetic\naive_c2_q50_s4000_v1_test.csv ==================
+bucket of len  50 : 2000 samples
+bucket of len 100 : 0 samples
+bucket of len 150 : 0 samples
+bucket of len 200 : 0 samples
+
+Start training ...... 
+n_q =  50
+batch_size =  50
+max_length =  200
+num_hidden =  400
+num_embed =  100
+num_lstm_layer =  1
+Learning Rate =  0.5
+Momentum =  0.9
+
+
+Summary of D:\Arena\examples\dkt\data\synthetic\naive_c2_q50_s4000_v1_train.csv ==================
+bucket of len  50 : 2000 samples
+Summary of D:\Arena\examples\dkt\data\synthetic\naive_c2_q50_s4000_v1_test.csv ==================
+bucket of len  50 : 2000 samples
+
+Start training ...... 
+n_q =  50
+batch_size =  50
+max_length =  50
+num_hidden =  400
+num_embed =  100
+num_lstm_layer =  1
+Learning Rate =  0.5
+Momentum =  0.9
+
+
+
+
+
+
+Start computing AUC ......
+pred_truth_array (98000L, 2L) [[ 0.99992228  1.        ]
+ [ 0.99992228  1.        ]
+ [ 0.99992025  1.        ]
+ ..., 
+ [ 0.00986452  0.        ]
+ [ 0.00884259  1.        ]
+ [ 0.00856271  0.        ]]
+total_positives 66726.0
+total_negatives 31274.0
+======> accuracy of testing is  0.796040816327 auc of testing is  0.857081148424

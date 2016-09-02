@@ -1,7 +1,6 @@
 # pylint: disable=C0111,too-many-arguments,too-many-instance-attributes,too-many-locals,redefined-outer-name,fixme
 # pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
-sys.path.insert(0, "../../python")
 import numpy as np
 import mxnet as mx
 
@@ -187,7 +186,6 @@ class BucketQuestionIter(mx.io.DataIter):
 
         # bucket_plan : array([0,0,0,1,1,2,2,2,3,3,3]) if bucket_n_batches=[3,2,3,3]
         bucket_plan = np.hstack([np.zeros(n, int)+i for i, n in enumerate(bucket_n_batches)])
-        print 'bucket_plan',bucket_plan
         np.random.shuffle(bucket_plan)
 
         # [array([1,2,0]), array([3,5,2,1,0,4])] --> shuffle the data within each bucket

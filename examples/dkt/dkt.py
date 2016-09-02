@@ -2,29 +2,16 @@
 # pylint: disable=superfluous-parens, no-member, invalid-name
 import sys
 import os
-sys.path.insert(0, "/Users/jenny/Documents/mxnet/python")
-#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "rnn")))
 import numpy as np
 import mxnet as mx
-from arena.advanced.lstm import lstm_unroll
+from lstm import lstm_unroll
 from bucket_io_csv import BucketQuestionIter
 import os
 import os.path
-data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'ASSISTment'))
 
 
 def binaryEntropy(label, pred):
-    label = label.T.reshape((-1,))
-    loss = 0.
-    for i in range(pred.shape[0]):
-        next_label = int(label[i]) - 1
-        print 'next_label:',next_label
-        loss += -np.log(max(1e-10, pred[i][next_label]))
-    return loss / label.size
-
-
-def binaryEntropy2(label, pred):
-    n_q = 111
+    n_q = 1223
     label = label.T.reshape((-1,))
     loss = 0.
     total = 0
@@ -55,37 +42,96 @@ def binaryEntropy2(label, pred):
 
 if __name__ == '__main__':
     #########################   model parameter setting         #########################
+    ### change two parts:
+    ### 1. in function binaryEntropy() ---> n_q
+    ### 2. in file lstm.py in function backward() ---> n_q
+    """
+    ### assistment2009
+    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'assistment2009'))
+    train_data = os.path.join(data_dir, "builder_train.csv")
+    test_data = os.path.join(data_dir, "builder_test.csv")
     batch_size = 32
     max_length = 200
     n_q = 111
     buckets = [50, 100, 150, max_length]
-    #buckets = [32]
     num_hidden = 100
     num_embed = 100
     num_lstm_layer = 1
     #########################   training parameter setting      #########################
-    #num_epoch = 25
-    num_epoch = 20
+    num_epoch = 30
     learning_rate = 0.1
     momentum = 0.9
-    #contexts = [mx.context.gpu(i) for i in range(1)]
-    contexts = [mx.context.cpu()]
+    contexts = [mx.context.gpu(i) for i in range(1)]
+    #contexts = [mx.context.cpu()]
+    """
+
+    """
+    ### synthetic
+    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'synthetic'))
+    train_data = os.path.join(data_dir, "naive_c2_q50_s4000_v1_train.csv")
+    test_data = os.path.join(data_dir, "naive_c2_q50_s4000_v1_test.csv")
+    batch_size = 50
+    max_length = 50
+    n_q = 50
+    buckets = [50]
+    num_hidden = 100
+    num_embed = 100
+    num_lstm_layer = 1
+    #########################   training parameter setting      #########################
+    num_epoch = 25
+    learning_rate = 0.5
+    momentum = 0.9
+    contexts = [mx.context.gpu(i) for i in range(1)]
+    # contexts = [mx.context.cpu()]
+    """
+    ### STATICS
+    data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'STATICS'))
+    train_data = os.path.join(data_dir, "STATICS_train.csv")
+    test_data = os.path.join(data_dir, "STATICS_test.csv")
+    batch_size = 32
+    max_length = 200
+    n_q = 1223
+    buckets = [50, 100, 150, max_length]
+    num_hidden = 100
+    num_embed = 100
+    num_lstm_layer = 1
+    #########################   training parameter setting      #########################
+    num_epoch = 30
+    learning_rate = 0.1
+    momentum = 0.9
+    contexts = [mx.context.gpu(i) for i in range(1)]
+    # contexts = [mx.context.cpu()]
+
+
+
+
     #########################   model initialization            #########################
     init_c = [('l%d_init_c'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_h = [('l%d_init_h'%l, (batch_size, num_hidden)) for l in range(num_lstm_layer)]
     init_states = init_c + init_h
 
-    data_train = BucketQuestionIter(path = os.path.join(data_dir, "builder_train.csv"),
+    data_train = BucketQuestionIter(path = train_data,
                                     buckets = buckets, max_n_question = max_length,
                                     batch_size = batch_size, init_states = init_states)
-    data_test  = BucketQuestionIter(path = os.path.join(data_dir, "builder_test.csv"),
+    data_test = BucketQuestionIter(path = test_data,
                                     buckets = buckets, max_n_question = max_length,
-                                    batch_size = batch_size, init_states = init_states)
+                                   batch_size = batch_size, init_states = init_states)
 
     #########################   model parameter setting         #########################
     state_names = [x[0] for x in init_states]
 
-    print "Start training ...... ", "Learning Rate = ", learning_rate,"Momentum = ",momentum
+    print "\nStart training ...... "
+    print "n_q = ", n_q
+    print "batch_size = ", batch_size
+    print "max_length = ", max_length
+    print "num_hidden = ", num_hidden
+    print "num_embed = ", num_embed
+    print "num_lstm_layer = ", num_lstm_layer
+    print "Learning Rate = ", learning_rate
+    print "Momentum = ", momentum
+    print "\n"
+
+
     def sym_gen(seq_len):
         # def lstm_unroll(num_lstm_layer, seq_len, input_size,
         #        num_hidden, num_embed, num_label, dropout=0.):
@@ -104,73 +150,82 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
-    #for nbatch, data_batch in enumerate(data_train):
-    #    print data_batch.label
+    #print "mod.get_params()", mod.get_params
+    #for params in mod.get_params.items():
+    #    print params
+
     mod.fit(train_data = data_train, eval_data = data_test, num_epoch = num_epoch,
-            eval_metric = mx.metric.np(binaryEntropy2),
+            eval_metric = mx.metric.np(binaryEntropy),
             batch_end_callback = mx.callback.Speedometer(batch_size, 50),
             #initializer = mx.init.Normal(sigma=0.01),
             optimizer = 'sgd',
             optimizer_params = {'learning_rate':learning_rate, 'momentum':momentum , 'wd': 0.00001})
 
+
+
+
+
+
     # compute AUC
-    pred_truth_array = np.zeros((1, 2))
-    for pred, i_batch, batch in mod.iter_predict(eval_data=data_test):
+    pred_truth_array = np.zeros((1,2))
+    for pred, i_batch, batch in mod.iter_predict(eval_data = data_test):
         # pred: list of only one object: [ mxnet.ndarray.NDArray object ]
         # i_batch is a integer
         # batch is the data batch from the data iterator
 
-        # print "pred[0].asnumpy().shape", pred[0].asnumpy().shape # 'list' object has no attribute 'asnumpy'
+        #print "pred[0].asnumpy().shape", pred[0].asnumpy().shape # 'list' object has no attribute 'asnumpy'
         pred = pred[0].asnumpy()
-        # print "pred.shape:", pred.shape # (batch_size * bucket_length, 111L)
-        # print "batch.label[0].asnumpy().shape:",batch.label[0].asnumpy().shape # (batch_size, bucket_length)
+        #print "pred.shape:", pred.shape # (batch_size * bucket_length, 111L)
+        #print "batch.label[0].asnumpy().shape:",batch.label[0].asnumpy().shape # (batch_size, bucket_length)
         label = batch.label[0].asnumpy().T.reshape((-1,)).astype(np.int)
-        # print "label:",label
-        # print "label.shape:",label.shape # label.shape: (1000L,) --> (batch_size*bucket_length)
+        #print "label:",label
+        #print "label.shape:",label.shape # label.shape: (1000L,) --> (batch_size*bucket_length)
 
         zero_index = np.flatnonzero(label == 0)
         non_zero_index = np.flatnonzero(label)
-        # print "zero_index",zero_index.shape,zero_index
-        # print "non_zero_index", non_zero_index.shape, non_zero_index
+        #print "zero_index",zero_index.shape,zero_index
+        #print "non_zero_index", non_zero_index.shape, non_zero_index
         all_prediction_num = label.size - zero_index.size
-        # print "all_prediction_num", all_prediction_num
+        #print "all_prediction_num", all_prediction_num
         next_label = (label - 1) % n_q
         truth = (label - 1) / n_q
         next_label[zero_index] = 0
         truth[zero_index] = 0
         next_label = next_label.tolist()
-        # print 'next_label', next_label
-        # print 'truth',truth
+        #print 'next_label', next_label
+        #print 'truth',truth
         prediction = pred[np.arange(len(next_label)), next_label]
-        # print "prediction",prediction
+        #print "prediction",prediction
         tru = truth[non_zero_index].tolist()
         pre = prediction[non_zero_index].tolist()
-        # print "tru", len(tru), tru
-        # print "pre", len(pre), pre
+        #print "tru", len(tru), tru
+        #print "pre", len(pre), pre
         one_batch_pre_truth = []
         one_batch_pre_truth.append(pre)
         one_batch_pre_truth.append(tru)
-        one_batch_pre_truth = np.asarray(one_batch_pre_truth).T
-        # print 'one_batch_pre_truth',one_batch_pre_truth.shape,one_batch_pre_truth
+        one_batch_pre_truth = np.asarray( one_batch_pre_truth ).T
+        #print 'one_batch_pre_truth',one_batch_pre_truth.shape,one_batch_pre_truth
         pred_truth_array = np.concatenate((pred_truth_array, one_batch_pre_truth), axis=0)
-        # print "\n\n"
-
-    # Get all prediction results
-    pred_truth_array = pred_truth_array[1:, :]
+        #print "\n\n"
+    pred_truth_array = pred_truth_array[1:,:]
     # print 'pre_truth',pred_truth_array.shape, pred_truth_array
+
     print "\n\n\n\nStart computing AUC ......"
     # sort the array according to the the first column
-    pred_truth_array = pred_truth_array[pred_truth_array[:, 0].argsort()[::-1]]
+    pred_truth_array = pred_truth_array[pred_truth_array[:,0].argsort()[::-1]]
     print 'pred_truth_array', pred_truth_array.shape, pred_truth_array
-    f_save = open('pred_truth_array', 'wb')
-    np.save(f_save, pred_truth_array)
-    f_save.close()
+
+    #f_save = open('pred_truth_array','wb')
+    #np.save(f_save, pred_truth_array)
+    #f_save.close()
+
     # start computing AUC
     allPredictions = pred_truth_array.shape[0]
-    total_positives = np.sum(pred_truth_array[:, 1])
+    total_positives = np.sum(pred_truth_array[:,1])
     total_negatives = allPredictions - total_positives
     print 'total_positives', total_positives
     print 'total_negatives', total_negatives
+
     true_positives = 0
     false_positives = 0
     correct = 0
@@ -179,33 +234,32 @@ if __name__ == '__main__':
     lastTpr = 0.0
     lastFpr = 0.0
     for i in range(allPredictions):
-        truth = int(pred_truth_array[i, 1])  # truth in {0,1}
+        truth = int(pred_truth_array[i,1]) # truth in {0,1}
         if truth == 1:
             true_positives += 1
         else:
-            # print "false_positives:",false_positives
+            #print "false_positives:",false_positives
             false_positives += 1
         fpr = float(false_positives) / float(total_negatives)
         tpr = float(true_positives) / float(total_positives)
         # using trapezoid method to compute auc
 
-        if i % 500 == 0:
-            # print i
+        if i % 50 == 0 :
+            #print i
             trapezoid = (tpr + lastTpr) * (fpr - lastFpr) * 0.5
-            # print "trapzoid:",trapezoid
-            # print "auc:",auc
+            #print "trapzoid:",trapezoid
+            #print "auc:",auc
             auc += trapezoid
             lastTpr = tpr
             lastFpr = fpr
         # computing accuracy
-        if pred_truth_array[i, 0] > 0.5:
+        if pred_truth_array[i,0] > 0.5 :
             guess = 1
         else:
             guess = 0
         if guess == truth:
             correct += 1
 
-    accuracy = float(correct) / float(allPredictions)
+    accuracy = float(correct) /float(allPredictions)
 
-    print "======> accuracy of testing is ", accuracy, "auc of testing is ", auc
-
+    print "======> accuracy of testing is " , accuracy , "auc of testing is " , auc

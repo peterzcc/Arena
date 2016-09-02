@@ -1,0 +1,37 @@
+Summary of D:\Arena\examples\dkt\data\assistment2009\builder_train.csv ==================
+bucket of len  50 : 1921 samples
+bucket of len 100 : 383 samples
+bucket of len 150 : 234 samples
+bucket of len 200 : 1095 samples
+Summary of D:\Arena\examples\dkt\data\assistment2009\builder_test.csv ==================
+bucket of len  50 : 783 samples
+bucket of len 100 : 182 samples
+bucket of len 150 : 97 samples
+bucket of len 200 : 504 samples
+
+Start training ...... 
+n_q =  111
+batch_size =  32
+max_length =  200
+num_hidden =  200
+num_embed =  100
+num_lstm_layer =  1
+Learning Rate =  0.1
+Momentum =  0.9
+
+
+
+
+
+
+Start computing AUC ......
+pred_truth_array (131215L, 2L) [[  1.00000000e+00   1.00000000e+00]
+ [  1.00000000e+00   1.00000000e+00]
+ [  1.00000000e+00   1.00000000e+00]
+ ..., 
+ [  3.89738481e-30   0.00000000e+00]
+ [  1.47309108e-31   0.00000000e+00]
+ [  1.38394050e-32   1.00000000e+00]]
+total_positives 91448.0
+total_negatives 39767.0
+======> accuracy of testing is  0.703418054338 auc of testing is  0.72672873552
