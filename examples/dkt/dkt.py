@@ -99,8 +99,8 @@ if __name__ == '__main__':
     num_epoch = 30
     learning_rate = 0.1
     momentum = 0.9
-    contexts = [mx.context.gpu(i) for i in range(1)]
-    # contexts = [mx.context.cpu()]
+    #contexts = [mx.context.gpu(i) for i in range(1)]
+    contexts = [mx.context.cpu()]
 
 
 
@@ -150,9 +150,7 @@ if __name__ == '__main__':
     head = '%(asctime)-15s %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=head)
 
-    #print "mod.get_params()", mod.get_params
-    #for params in mod.get_params.items():
-    #    print params
+
 
     mod.fit(train_data = data_train, eval_data = data_test, num_epoch = num_epoch,
             eval_metric = mx.metric.np(binaryEntropy),

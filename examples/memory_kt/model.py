@@ -97,9 +97,9 @@ class MODEL(object):
         self.name = name
 
     def sym_gen(self):
-        # TODO input variable 'data'
+        ### TODO input variable 'data'
         data = mx.sym.Variable('data') # (seqlen, batch_size)
-        # TODO input variable 'target'
+        ### TODO input variable 'target'
         target = mx.sym.Variable('target') #(seqlen, batch_size)
 
         ### Initialize Control Network
