@@ -159,25 +159,26 @@ def vis_matrix(params, pred, target):
     #print "result_target", result_target
     return vis_pred_all, vis_pred_one_hot, vis_target_one_hot
 
-def train(net, params, data, label):
+def train(net, params, q_data, qa_data, label):
 
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
-    np.random.shuffle(data)
-    N = int(math.floor(len(data) / params.batch_size))
-    data = data.T # Shape: (200,3633)
+    N = int(math.floor(len(q_data) / params.batch_size))
+    q_data = q_data.T # Shape: (200,3633)
+    qa_data = qa_data.T  # Shape: (200,3633)
     cost = 0
 
     ### Initialization
-    init_memory_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_state_dim)))
-    init_h_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
-    init_c_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
+    init_memory_key_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_key_state_dim)))
+    init_memory_value_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_value_state_dim)))
+    init_h_npy = np.zeros((params.batch_size, params.qa_state_dim), dtype=np.float32) + 0.0001
+    init_c_npy = np.zeros((params.batch_size, params.qa_state_dim), dtype=np.float32) + 0.0001
     #init_h_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
     #init_c_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
-    init_write_W_r_focus_npy = npy_softmax(np.broadcast_to(
+    init_key_write_W_r_focus_npy = npy_softmax(np.broadcast_to(
                                            np.arange(params.memory_size, 0, -1),
                                            (params.batch_size, params.num_writes, params.memory_size)),
-                               axis=2)
-    init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
+                                   axis=2)
+    init_key_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
     pred_list = []
     target_list = []
 
@@ -189,16 +190,20 @@ def train(net, params, data, label):
     updater = mx.optimizer.get_updater(optimizer)
     for idx in xrange(N):
         if params.show: bar.next()
-        one_seq = data[: , idx*params.batch_size:(idx+1)*params.batch_size]
-        input_x = one_seq[:-1,:] # Shape (seqlen, batch_size)
-        target = one_seq[1:,:]
+        q_one_seq = q_data[: , idx*params.batch_size:(idx+1)*params.batch_size]
+        input_q = q_one_seq[:-1,:] # Shape (seqlen, batch_size)
+        qa_one_seq = qa_data[:, idx * params.batch_size:(idx + 1) * params.batch_size]
+        input_qa = q_one_seq[:-1, :]  # Shape (seqlen, batch_size)
+        target = qa_one_seq[1:,:]
 
         outputs = net.forward(is_train=True,
-                              **{'data': input_x,
+                              **{'q_data': input_q,
+                                 'qa_data':input_qa,
                                  'target': target,
-                                 'init_memory': init_memory_npy,
-                                 'MANN->write_head:init_W_r_focus': init_write_W_r_focus_npy,
-                                 'MANN->write_head:init_W_u_focus': init_write_W_u_focus_npy,
+                                 'init_memory_key': init_memory_key_npy,
+                                 'init_memory_value': init_memory_value_npy,
+                                 'KVMN->write_key_head:init_key_write_W_r_focus': init_key_write_W_r_focus_npy,
+                                 'KVMN->write_key_head:init_key_write_W_u_focus': init_key_write_W_u_focus_npy,
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
@@ -267,24 +272,28 @@ def train(net, params, data, label):
     return one_epoch_loss, accuracy, auc
 
 
-def test(net, params, data, label):
+def test(net, params, q_data, qa_data, label):
     # dataArray: [ array([[],[],..])] Shape: (3633, 200)
-    np.random.shuffle(data)
-    N = int(math.floor(len(data) / params.batch_size))
-    data = data.T # Shape: (200,3633)
+    #np.random.shuffle(data)
+    N = int(math.floor(len(q_data) / params.batch_size))
+    q_data = q_data.T  # Shape: (200,3633)
+    qa_data = qa_data.T  # Shape: (200,3633)
     cost = 0
 
     ### Initialization
-    init_memory_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_state_dim)))
-    init_h_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
-    init_c_npy = np.zeros((params.batch_size, params.control_state_dim), dtype=np.float32) + 0.0001
-    #init_h_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
-    #init_c_npy = numpy.tanh(numpy.random.normal(size=(params.batch_size, params.control_state_dim)))
-    init_write_W_r_focus_npy = npy_softmax(np.broadcast_to(
-                                            np.arange(params.memory_size, 0, -1),
-                                            (params.batch_size, params.num_writes, params.memory_size)),
-                               axis=2)
-    init_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
+    init_memory_key_npy = np.tanh(
+        np.random.normal(size=(params.batch_size, params.memory_size, params.memory_key_state_dim)))
+    init_memory_value_npy = np.tanh(
+        np.random.normal(size=(params.batch_size, params.memory_size, params.memory_value_state_dim)))
+    init_h_npy = np.zeros((params.batch_size, params.qa_state_dim), dtype=np.float32) + 0.0001
+    init_c_npy = np.zeros((params.batch_size, params.qa_state_dim), dtype=np.float32) + 0.0001
+    # init_h_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
+    # init_c_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
+    init_key_write_W_r_focus_npy = npy_softmax(np.broadcast_to(
+        np.arange(params.memory_size, 0, -1),
+        (params.batch_size, params.num_writes, params.memory_size)),
+        axis=2)
+    init_key_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
     pred_list = []
     target_list = []
     if params.show:
@@ -293,16 +302,20 @@ def test(net, params, data, label):
 
     for idx in xrange(N):
         if params.show: bar.next()
-        one_seq = data[: , idx*params.batch_size:(idx+1)*params.batch_size]
-        input_x = one_seq[:-1,:] # Shape (seqlen, batch_size)
-        target = one_seq[1:,:]
+        q_one_seq = q_data[:, idx * params.batch_size:(idx + 1) * params.batch_size]
+        input_q = q_one_seq[:-1, :]  # Shape (seqlen, batch_size)
+        qa_one_seq = qa_data[:, idx * params.batch_size:(idx + 1) * params.batch_size]
+        input_qa = q_one_seq[:-1, :]  # Shape (seqlen, batch_size)
+        target = qa_one_seq[1:, :]
 
-        outputs = net.forward(is_train=True,
-                              **{'data': input_x,
+        outputs = net.forward(is_train=False,
+                              **{'q_data': input_q,
+                                 'qa_data': input_qa,
                                  'target': target,
-                                 'init_memory': init_memory_npy,
-                                 'MANN->write_head:init_W_r_focus': init_write_W_r_focus_npy,
-                                 'MANN->write_head:init_W_u_focus': init_write_W_u_focus_npy,
+                                 'init_memory_key': init_memory_key_npy,
+                                 'init_memory_value': init_memory_value_npy,
+                                 'KVMN->write_key_head:init_key_write_W_r_focus': init_key_write_W_r_focus_npy,
+                                 'KVMN->write_key_head:init_key_write_W_u_focus': init_key_write_W_u_focus_npy,
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()

@@ -2,11 +2,11 @@ from arena.operators import *
 from arena.utils import *
 import mxnet as mx
 
-class MANNHeadGroup(object):
-    def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest, gamma,
+class KVMNHeadGroup(object):
+    def __init__(self, memory_size, memory_state_dim, k_smallest, gamma,
                  num_heads=1,
                  init_W_r_focus=None, init_W_u_focus=None,
-                 is_write=False, name="MANNHeadGroup"):
+                 is_write=False, name="KVMNHeadGroup"):
         """
         :param control_state_dim:
         :param memory_size:
@@ -19,7 +19,6 @@ class MANNHeadGroup(object):
         :param name:
         """
         self.name = name
-        self.control_state_dim = control_state_dim
         self.memory_size = memory_size
         self.memory_state_dim = memory_state_dim
         self.k_smallest = k_smallest
@@ -140,12 +139,14 @@ class MANNHeadGroup(object):
 
 
 
-class MANN(object):
-    def __init__(self, control_state_dim, memory_size, memory_state_dim, k_smallest, gamma,
-                 num_reads, num_writes, init_memory=None,
-                 init_read_W_r_focus=None, #init_read_W_w_focus=None, init_read_W_u_focus=None,
-                 init_write_W_r_focus=None, init_write_W_w_focus=None, init_write_W_u_focus=None,
-                 name="MANN"):
+
+
+class KVMN(object):
+    def __init__(self, memory_size, memory_key_state_dim, memory_value_state_dim, k_smallest, gamma,
+                 num_reads, num_writes, init_memory_key=None, init_memory_value=None,
+                 #init_key_read_W_r_focus=None, #init_read_W_w_focus=None, init_read_W_u_focus=None,
+                 init_key_write_W_r_focus=None,init_key_write_W_u_focus=None, # init_key_write_W_w_focus=None,
+                 name="KVMN"):
         """
         :param control_state_dim:
         :param memory_size:
@@ -160,42 +161,51 @@ class MANN(object):
         :param name:
         """
         self.name = name
-        self.control_state_dim = control_state_dim
         self.memory_size = memory_size
-        self.memory_state_dim = memory_state_dim
+        self.memory_key_state_dim = memory_key_state_dim
+        self.memory_value_state_dim = memory_value_state_dim
         self.k_smallest = k_smallest
         self.gamma = gamma
+        self.num_reads = num_reads
+        self.num_writes = num_writes
 
-        self.init_memory = mx.sym.Variable(self.name + ":init_memory") if init_memory is None\
-                                                                       else init_memory
-        self.init_write_W_r_focus = mx.sym.Variable(self.name + ":init_write_W_r_focus") if init_write_W_r_focus is None\
-                                                                                       else init_write_W_r_focus
-        self.init_write_W_u_focus = mx.sym.Variable(self.name + ":init_write_W_u_focus") if init_write_W_u_focus is None\
-                                                                                       else init_write_W_u_focus
-        self.read_head = MANNHeadGroup(control_state_dim=control_state_dim,
-                                        memory_size=memory_size,
-                                        memory_state_dim=memory_state_dim,
-                                        k_smallest = k_smallest,
-                                        num_heads = num_reads,
+        self.memory_value_weight = mx.sym.Variable(name=name + ":memeory_value_weight")
+        self.memory_value_bias = mx.sym.Variable(name=name + ":memeory_value_bias")
+
+        self.init_memory_key = mx.sym.Variable(self.name + ":init_memory_key") if init_memory_key is None\
+                                                                               else init_memory_key
+        self.init_memory_value = mx.sym.Variable(self.name + ":init_memory_value") if init_memory_value is None \
+                                                                               else init_memory_value
+        self.init_key_write_W_r_focus = mx.sym.Variable(self.name + ":init_key_write_W_r_focus") if init_key_write_W_r_focus is None\
+                                                                                       else init_key_write_W_r_focus
+        self.init_key_write_W_u_focus = mx.sym.Variable(self.name + ":init_key_write_W_u_focus") if init_key_write_W_u_focus is None\
+                                                                                       else init_key_write_W_u_focus
+        self.read_key_head = KVMNHeadGroup(memory_size = self.memory_size,
+                                        memory_state_dim = self.memory_key_state_dim,
+                                        k_smallest = self.k_smallest,
+                                        num_heads = self.num_reads,
                                         gamma = self.gamma,
-                                        is_write=False,
-                                        name=self.name + "->read_head")
-        self.write_head = MANNHeadGroup(control_state_dim=control_state_dim,
-                                        memory_size=memory_size,
-                                        memory_state_dim=memory_state_dim,
-                                        k_smallest=k_smallest,
-                                        num_heads=num_writes,
-                                        gamma=self.gamma,
-                                        is_write=True,
-                                        init_W_r_focus=self.init_write_W_r_focus,
-                                        init_W_u_focus=self.init_write_W_u_focus,
-                                        name=self.name + "->write_head")
-        self.read_counter = 0
-        self.write_counter = 0
-        self.memory = self.init_memory
+                                        is_write = False,
+                                        name = self.name + "->read_key_head")
+        self.write_key_head = KVMNHeadGroup(memory_size = self.memory_size,
+                                        memory_state_dim = self.memory_key_state_dim,
+                                        k_smallest = self.k_smallest,
+                                        num_heads = self.num_writes,
+                                        gamma = self.gamma,
+                                        is_write = True,
+                                        init_W_r_focus = self.init_key_write_W_r_focus,
+                                        init_W_u_focus = self.init_key_write_W_u_focus,
+                                        name = self.name + "->write_key_head")
+        self.read_key_counter = 0
+        self.write_key_counter = 0
+        self.read_value_counter = 0
+        self.write_value_counter = 0
+
+        self.memory_key = self.init_memory_key
+        self.memory_value = self.init_memory_value
 
 
-    def read(self, control_input):
+    def key_read(self, control_input):
         """Read from the memory
         Parameters
             control_input: Shape (batch_size, control_state_dim)
@@ -206,11 +216,11 @@ class MANN(object):
             The read focus   --> Shape (batch_size, num_heads, memory_size)
         """
         assert isinstance(control_input, mx.symbol.Symbol)
-        read_content, read_focus, norm_key, norm_memory, similarity_score = self.read_head.read(control_input=control_input, memory=self.memory)
-        self.read_counter += 1
+        read_content, read_focus, norm_key, norm_memory, similarity_score = self.read_key_head.read(control_input=control_input, memory=self.memory_key)
+        self.read_key_counter += 1
         return read_content, read_focus, norm_key, norm_memory, similarity_score
 
-    def write(self, control_input):
+    def key_write(self, control_input):
         """Write into the memory
         Parameters
             control_input: Shape (batch_size, control_state_dim)
@@ -221,5 +231,25 @@ class MANN(object):
             The write focus --> Shape (batch_size, num_heads, memory_size)
         """
         assert isinstance(control_input, mx.symbol.Symbol)
-        self.memory, write_focus = self.write_head.write(control_input=control_input, memory=self.memory)
+        self.memory_key, write_focus = self.write_key_head.write(control_input=control_input, memory=self.memory_key)
         return write_focus
+
+    def value_read(self, read_focus, control_input):
+        assert isinstance(control_input, mx.symbol.Symbol)
+        value_content = mx.sym.batch_dot(read_focus, self.memory_value)
+        value_content = mx.sym.sum(value_content, axis=1)  # Shape (batch_size, memory_value_state_dim)
+        self.read_value_counter += 1
+        return value_content
+
+    def value_write(self, write_focus, control_input):
+        assert isinstance(control_input, mx.symbol.Symbol)
+
+        key = mx.sym.FullyConnected(data=control_input,
+                                    num_hidden=self.num_writes * self.memory_value_state_dim,
+                                    weight=self.memory_value_weight,
+                                    bias=self.memory_value_bias)  # Shape: (batch_size, num_writes*memory_value_state_dim)
+        key = mx.sym.Reshape(key, shape=(-1, self.num_writes, self.memory_value_state_dim))  # Shape: (batch_size, num_writes, memory_value_state_dim)
+        key = mx.sym.Activation(data=key, act_type='tanh', name=self.name + ":value_key")
+        self.memory_value = self.memory_value + mx.sym.batch_dot(mx.sym.SwapAxis(write_focus, dim1=1, dim2=2), key)
+        self.write_value_counter += 1
+        return self.memory_value

@@ -4,7 +4,7 @@ import numpy as np
 from arena import Base
 from arena.ops import LSTM
 from arena.utils import *
-from lrua import MANN
+from lrua import KVMN
 
 import matplotlib.pyplot as plt
 from arena.helpers.visualization import *
@@ -81,15 +81,21 @@ class BinaryEntropyLossProp(mx.operator.CustomOpProp):
 
 class MODEL(object):
     def __init__(self, n_question, seqlen,
-                 embed_dim, control_state_dim, memory_size, memory_state_dim, k_smallest, gamma,
+                 q_embed_dim, q_state_dim, qa_embed_dim, qa_state_dim,
+                 memory_size, memory_key_state_dim, memory_value_state_dim,
+                 k_smallest, gamma,
                  num_reads, num_writes,
                  name="KT"):
         self.n_question = n_question
         self.seqlen = seqlen
-        self.embed_dim = embed_dim
-        self.control_state_dim = control_state_dim
+        self.q_embed_dim = q_embed_dim
+        self.q_state_dim = q_state_dim
+
+        self.qa_embed_dim = qa_embed_dim
+        self.qa_state_dim = qa_state_dim
         self.memory_size = memory_size
-        self.memory_state_dim = memory_state_dim
+        self.memory_key_state_dim = memory_key_state_dim
+        self.memory_value_state_dim = memory_value_state_dim
         self.k_smallest = k_smallest
         self.gamma = gamma
         self.num_reads = num_reads
@@ -97,89 +103,124 @@ class MODEL(object):
         self.name = name
 
     def sym_gen(self):
-        ### TODO input variable 'data'
-        data = mx.sym.Variable('data') # (seqlen, batch_size)
+        ### TODO input variable 'q_data'
+        q_data = mx.sym.Variable('q_data') # (seqlen, batch_size)
+        ### TODO input variable 'qa_data'
+        qa_data = mx.sym.Variable('qa_data')  # (seqlen, batch_size)
         ### TODO input variable 'target'
         target = mx.sym.Variable('target') #(seqlen, batch_size)
 
-        ### Initialize Control Network
-        controller = LSTM(num_hidden=self.control_state_dim, name="controller")
+        ### Initialize Control Networks
+        fnn_weight = mx.sym.Variable("fnn_weight")
+        fnn_bias = mx.sym.Variable("fnn_bias")
+
+        controller = LSTM(num_hidden=self.qa_state_dim, name="controller")
         ### TODO input variable 'controller_init_h'/'controller_init_c'
         controller_h = controller.init_h[0]
         controller_c = controller.init_c[0]
         ### Initialize Memory
-        ### TODO input variable 'init_memory'
-        init_memory = mx.sym.Variable('init_memory')
+        ### TODO input variable 'init_memory_key'
+        init_memory_key = mx.sym.Variable('init_memory_key')
+        ### TODO input variable 'init_memory_value'
+        init_memory_value = mx.sym.Variable('init_memory_value')
 
-        ### TODO input variable 'MANN->write_head:init_W_r_focus' / 'MANN->write_head:init_W_u_focus'
-        init_write_W_r_focus = mx.sym.Variable('MANN->write_head:init_W_r_focus' )
-        init_write_W_u_focus = mx.sym.Variable('MANN->write_head:init_W_u_focus')
+        ### TODO input variable 'KVMN->write_key_head:init_W_r_focus' / 'KVMN->write_key_head:init_W_u_focus'
+        init_key_write_W_r_focus = mx.sym.Variable('KVMN->write_key_head:init_key_write_W_r_focus')
+        init_key_write_W_u_focus = mx.sym.Variable('KVMN->write_key_head:init_key_write_W_u_focus')
 
-        mem = MANN(control_state_dim=self.control_state_dim,
-                   memory_size=self.memory_size,
-                   memory_state_dim=self.memory_state_dim,
+        mem = KVMN(memory_size=self.memory_size,
+                   memory_key_state_dim=self.memory_key_state_dim,
+                   memory_value_state_dim=self.memory_value_state_dim,
                    k_smallest=self.k_smallest,
                    gamma=self.gamma,
                    num_reads=self.num_reads,
                    num_writes=self.num_writes,
-                   init_memory=init_memory,
-                   init_write_W_r_focus=init_write_W_r_focus,
-                   init_write_W_u_focus=init_write_W_u_focus,
-                   name="MANN")
+                   init_memory_key=init_memory_key,
+                   init_memory_value=init_memory_value,
+                   init_key_write_W_r_focus=init_key_write_W_r_focus,
+                   init_key_write_W_u_focus=init_key_write_W_u_focus,
+                   name="KVMN")
+
         controller_states = []
-        all_read_focus_l = []
-        all_write_focus_l = []
-        all_read_content_l = []
+        all_read_key_focus_l = []
+        all_write_key_focus_l = []
+        all_read_value_content_l = []
+
 
         all_norm_key_l = []
         all_norm_memory_l = []
         all_similarity_score_l = []
+
         ### model start
         ### Step1:
         ###     input_data      -(embed)->          embed_data
-        ### (seqlen, batch_size) -(embed)-> (seqlen, batch_size, embed_dim)
-        embed_weight = mx.sym.Variable("embed_weight")
-        embed_data = mx.sym.Embedding(data=data, input_dim=self.n_question*2,
-                                      weight=embed_weight, output_dim=self.embed_dim, name='embed')
-        slice_embed_data = mx.sym.SliceChannel(embed_data, num_outputs=self.seqlen, axis=0, squeeze_axis=True)
+        ### (seqlen, batch_size) -(embed)-> (seqlen, batch_size, q_embed_dim)
+        q_embed_weight = mx.sym.Variable("q_embed_weight")
+        q_embed_data = mx.sym.Embedding(data=q_data, input_dim=self.n_question,
+                                        weight=q_embed_weight, output_dim=self.q_embed_dim, name='q_embed')
+        slice_q_embed_data = mx.sym.SliceChannel(q_embed_data, num_outputs=self.seqlen, axis=0, squeeze_axis=True)
+
+        qa_embed_weight = mx.sym.Variable("qa_embed_weight")
+        qa_embed_data = mx.sym.Embedding(data=qa_data, input_dim=self.n_question*2,
+                                         weight=qa_embed_weight, output_dim=self.qa_embed_dim, name='qa_embed')
+        slice_qa_embed_data = mx.sym.SliceChannel(qa_embed_data, num_outputs=self.seqlen, axis=0, squeeze_axis=True)
         ### Step2:
         ### at each time step:
         ###      one_time_input     -(LSTM)->       controller_h
         ### (batch_size, embed_dim) -(LSTM)-> (batch_size, control_state_dim)
+
+
         for i in range(self.seqlen):
-            controller_h, controller_c = controller.step(data=slice_embed_data[i],
+            ### Step2:
+            ### at each time step: FNN for q_sequence
+            ###       q_embed_data        -(FNN)->      q_hidden_state
+            ### (batch_size, q_embed_dim) -(FNN)-> (batch_size, q_state_dim)
+
+            q_hidden_state = mx.sym.FullyConnected(data=slice_q_embed_data[i], num_hidden=self.q_state_dim,
+                                                   weight=fnn_weight, bias=fnn_bias, name="q_fc")
+            q_hidden_state = mx.sym.Activation(data=q_hidden_state, act_type='tanh', name="q_tanh")
+
+            ### Step3:
+            ###         q_hidden_state            -(read)->       read_content_l          /       read_focus_l
+            ### (batch_size, q_state_dim) -(read)-> (batch_size, memory_state_dim)/(batch_size, memory_size)
+            read_key_content, read_key_focus, norm_key, norm_memory, similarity_score = mem.key_read(q_hidden_state)
+            # internal results used for checking
+
+            all_norm_key_l.append(norm_key)
+            all_norm_memory_l.append(norm_memory)
+            all_similarity_score_l.append(similarity_score)
+
+            ### Step4:
+            ###         controller_h            -(write)->        write_focus_l
+            ### (batch_size, control_state_dim) -(write)-> (batch_size, memory_size)
+            write_key_focus = mem.key_write(q_hidden_state)
+
+            ###  LSTM for qa_sequence
+            controller_h, controller_c = controller.step(data=slice_qa_embed_data[i],
                                                          prev_h=controller_h, prev_c=controller_c,
                                                          seq_length=1)
             controller_h = controller_h[0]
             controller_c = controller_c[0]
-            ### Step3:
-            ###         controller_h            -(read)->       read_content_l          /       read_focus_l
-            ### (batch_size, control_state_dim) -(read)-> (batch_size, memory_state_dim)/(batch_size, memory_size)
-            read_content, read_focus, norm_key, norm_memory, similarity_score = mem.read(controller_h)
-            # internal results used for checking
-            all_norm_key_l.append(norm_key)
-            all_norm_memory_l.append(norm_memory)
-            all_similarity_score_l.append(similarity_score)
-            ### Step4:
-            ###         controller_h            -(write)->        write_focus_l
-            ### (batch_size, control_state_dim) -(write)-> (batch_size, memory_size)
-            write_focus = mem.write(controller_h)
+
+            read_value_content  = mem.value_read(read_key_focus, controller_h)
+            memory_value = mem.value_write(write_key_focus, controller_h)
+
             ### save intermedium data
             controller_states.append(controller_h)
-            all_read_focus_l.append(read_focus)
-            all_write_focus_l.append(write_focus)
-            all_read_content_l.append(read_content)
+            all_read_key_focus_l.append(read_key_focus)
+            all_write_key_focus_l.append(write_key_focus)
+            all_read_value_content_l.append(read_value_content)
         ### Step5:
         ###       all_read_content_l         -(Concat)->          all_read_content
         ### [(batch_size, memory_state_dim)] -(Concat)-> (batch_size*seqlen, memory_state_dim)
-        all_read_content = mx.sym.Concat(*all_read_content_l, num_args=self.seqlen, dim=0)
+        all_read_value_content = mx.sym.Concat(*all_read_value_content_l, num_args=self.seqlen, dim=0)
         ### Step6:
         ###           all_read_content            -(FC)->        pred
         ### (batch_size*seqlen, memory_state_dim) -(FC)-> (batch_size*seqlen, n_question)
-        fc_weight = mx.sym.Variable("fc_weight")
-        fc_bias = mx.sym.Variable("fc_bias")
-        pred = mx.sym.FullyConnected(data=all_read_content, num_hidden = self.n_question,
-                                     weight=fc_weight, bias=fc_bias, name="final_fc")
+        pred_fc_weight = mx.sym.Variable("pred_fc_weight")
+        pred_fc_bias = mx.sym.Variable("pred_fc_bias")
+        pred = mx.sym.FullyConnected(data=all_read_value_content, num_hidden = self.n_question,
+                                     weight=pred_fc_weight, bias=pred_fc_bias, name="final_fc")
         ### Step7:
         ###       target        -(Reshape)->        target
         ### (seqlen,batch_size) -(Reshape)-> (batch_size*seqlen, )
@@ -198,11 +239,11 @@ class MODEL(object):
                              mx.sym.BlockGrad(mx.sym.Reshape(
                                  mx.sym.Concat(*controller_states, dim=0,
                                                num_args=len(controller_states)),
-                                 shape=(self.seqlen, -1, self.control_state_dim))),
+                                 shape=(self.seqlen, -1, self.qa_state_dim))),
                              mx.sym.BlockGrad(mx.sym.Reshape(
                                  mx.sym.Concat(*all_norm_key_l, dim=0,
                                                num_args=len(all_norm_key_l)),
-                                 shape=(self.seqlen, -1, self.memory_state_dim))),
+                                 shape=(self.seqlen, -1, self.memory_key_state_dim))),
                              mx.sym.BlockGrad(mx.sym.Reshape(
                                  mx.sym.Concat(*all_norm_memory_l, dim=0,
                                                num_args=len(all_norm_memory_l)),
@@ -212,16 +253,16 @@ class MODEL(object):
                                                num_args=len(all_similarity_score_l)),
                                  shape=(self.seqlen, -1, self.memory_size))),
                              mx.sym.BlockGrad(mx.sym.Reshape(
-                                 mx.sym.Concat(*all_read_content_l, dim=0,
-                                               num_args=len(all_read_content_l)),
-                                 shape=(self.seqlen, -1, self.memory_state_dim))),
+                                 mx.sym.Concat(*all_read_value_content_l, dim=0,
+                                               num_args=len(all_read_value_content_l)),
+                                 shape=(self.seqlen, -1, self.memory_value_state_dim))),
                              mx.sym.BlockGrad(mx.sym.Reshape(
-                                 mx.sym.Concat(*all_read_focus_l, dim=0,
-                                               num_args=len(all_read_focus_l)),
+                                 mx.sym.Concat(*all_read_key_focus_l, dim=0,
+                                               num_args=len(all_read_key_focus_l)),
                                  shape=(self.seqlen, -1, self.memory_size))),
                              mx.sym.BlockGrad(mx.sym.Reshape(
-                                 mx.sym.Concat(*all_write_focus_l, dim=0,
-                                               num_args=len(all_write_focus_l)),
+                                 mx.sym.Concat(*all_write_key_focus_l, dim=0,
+                                               num_args=len(all_write_key_focus_l)),
                                  shape=(self.seqlen, -1, self.memory_size)))
                              ])
 
