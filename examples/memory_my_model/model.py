@@ -146,7 +146,6 @@ class MODEL(object):
         all_write_key_focus_l = []
         all_read_value_content_l = []
 
-
         all_norm_key_l = []
         all_norm_memory_l = []
         all_similarity_score_l = []
@@ -185,15 +184,14 @@ class MODEL(object):
             ### (batch_size, q_state_dim) -(read)-> (batch_size, memory_state_dim)/(batch_size, memory_size)
             read_key_content, read_key_focus, norm_key, norm_memory, similarity_score = mem.key_read(q_hidden_state)
             # internal results used for checking
-
             all_norm_key_l.append(norm_key)
             all_norm_memory_l.append(norm_memory)
             all_similarity_score_l.append(similarity_score)
-
             ### Step4:
             ###         controller_h            -(write)->        write_focus_l
             ### (batch_size, control_state_dim) -(write)-> (batch_size, memory_size)
             write_key_focus = mem.key_write(q_hidden_state)
+
 
             ###  LSTM for qa_sequence
             controller_h, controller_c = controller.step(data=slice_qa_embed_data[i],

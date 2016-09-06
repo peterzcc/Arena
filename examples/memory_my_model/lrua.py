@@ -174,28 +174,28 @@ class KVMN(object):
 
         self.init_memory_key = mx.sym.Variable(self.name + ":init_memory_key") if init_memory_key is None\
                                                                                else init_memory_key
-        self.init_memory_value = mx.sym.Variable(self.name + ":init_memory_value") if init_memory_value is None \
+        self.init_memory_value = mx.sym.Variable(self.name + ":init_memory_value") if init_memory_value is None\
                                                                                else init_memory_value
         self.init_key_write_W_r_focus = mx.sym.Variable(self.name + ":init_key_write_W_r_focus") if init_key_write_W_r_focus is None\
                                                                                        else init_key_write_W_r_focus
         self.init_key_write_W_u_focus = mx.sym.Variable(self.name + ":init_key_write_W_u_focus") if init_key_write_W_u_focus is None\
                                                                                        else init_key_write_W_u_focus
         self.read_key_head = KVMNHeadGroup(memory_size = self.memory_size,
-                                        memory_state_dim = self.memory_key_state_dim,
-                                        k_smallest = self.k_smallest,
-                                        num_heads = self.num_reads,
-                                        gamma = self.gamma,
-                                        is_write = False,
-                                        name = self.name + "->read_key_head")
+                                           memory_state_dim = self.memory_key_state_dim,
+                                           k_smallest = self.k_smallest,
+                                           num_heads = self.num_reads,
+                                           gamma = self.gamma,
+                                           is_write = False,
+                                           name = self.name + "->read_key_head")
         self.write_key_head = KVMNHeadGroup(memory_size = self.memory_size,
-                                        memory_state_dim = self.memory_key_state_dim,
-                                        k_smallest = self.k_smallest,
-                                        num_heads = self.num_writes,
-                                        gamma = self.gamma,
-                                        is_write = True,
-                                        init_W_r_focus = self.init_key_write_W_r_focus,
-                                        init_W_u_focus = self.init_key_write_W_u_focus,
-                                        name = self.name + "->write_key_head")
+                                            memory_state_dim = self.memory_key_state_dim,
+                                            k_smallest = self.k_smallest,
+                                            num_heads = self.num_writes,
+                                            gamma = self.gamma,
+                                            is_write = True,
+                                            init_W_r_focus = self.init_key_write_W_r_focus,
+                                            init_W_u_focus = self.init_key_write_W_u_focus,
+                                            name = self.name + "->write_key_head")
         self.read_key_counter = 0
         self.write_key_counter = 0
         self.read_value_counter = 0
