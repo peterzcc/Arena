@@ -26,17 +26,16 @@ class LRUAInitializer(mx.initializer.Normal):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test KVMN.')
     parser.add_argument('--gpus', type=str, default='0', help='the gpus will be used, e.g "0,1,2,3"')
-    parser.add_argument('--batch_size', type=int, default=10, help='the batch size')
-    parser.add_argument('--q_embed_dim', type=int, default=100, help='question embedding dimensions')
+    parser.add_argument('--batch_size', type=int, default=64, help='the batch size')
+    parser.add_argument('--q_embed_dim', type=int, default=50, help='question embedding dimensions')
     parser.add_argument('--q_state_dim', type=int, default=100, help='hidden states of question')
     parser.add_argument('--qa_embed_dim', type=int, default=100, help='answer and question embedding dimensions')
-    parser.add_argument('--qa_state_dim', type=int, default=100, help='hidden states of answer and question')
+    parser.add_argument('--qa_state_dim', type=int, default=200, help='hidden states of answer and question')
 
-
-    parser.add_argument('--memory_size', type=int, default=400, help='memory size')
-    parser.add_argument('--memory_key_state_dim', type=int, default=50, help='the key part of memory state dimension')
+    parser.add_argument('--memory_size', type=int, default=200, help='memory size')
+    parser.add_argument('--memory_key_state_dim', type=int, default=100, help='the key part of memory state dimension')
     parser.add_argument('--memory_value_state_dim', type=int, default=100, help='the value part of memory state dimension')
-    parser.add_argument('--k_smallest', type=int, default=5, help='parmeter of k smallest flags')
+    parser.add_argument('--k_smallest', type=int, default=1, help='parmeter of k smallest flags')
     parser.add_argument('--gamma', type=float, default=0.9, help='hyperparameter of decay W_u')
 
     parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
@@ -44,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
     parser.add_argument('--init_std', type=float, default=0.01, help='weight initialization std')
-    parser.add_argument('--init_lr', type=float, default=0.1, help='initial learning rate')
+    parser.add_argument('--init_lr', type=float, default=1, help='initial learning rate')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
     parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
@@ -94,10 +93,10 @@ if __name__ == '__main__':
     train_q_data, train_qa_data = dat.load_data(train_data_path)
     test_q_data, test_qa_data = dat.load_data(test_data_path)
     print "\n"
-    print "\ntrain_q_data.shape",train_q_data.shape ###(3633, 200) = (#sample, seqlen)
-    print "\ntrain_qa_data.shape",train_qa_data.shape ###(3633, 200) = (#sample, seqlen)
-    print "\ntest_q_data.shape",test_q_data.shape   ###(1566, 200)
-    print "\ntest_qa_data.shape", test_qa_data.shape  ###(1566, 200)
+    print train_q_data,"\ntrain_q_data.shape",train_q_data.shape ###(3633, 200) = (#sample, seqlen)
+    print train_qa_data,"\ntrain_qa_data.shape",train_qa_data.shape ###(3633, 200) = (#sample, seqlen)
+    print test_q_data,"\ntest_q_data.shape",test_q_data.shape   ###(1566, 200)
+    print test_qa_data,"\ntest_qa_data.shape", test_qa_data.shape  ###(1566, 200)
     print "\n"
 
     ### ================================== choose ctx ==================================

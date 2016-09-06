@@ -88,7 +88,7 @@ def compute_auc(params, all_pred, label ):
         fpr = float(false_positives) / float(total_negatives)
         tpr = float(true_positives) / float(total_positives)
         # using trapezoid method to compute auc
-        if i % 500 == 0 :
+        if i % 50 == 0 :
             #print i
             trapezoid = (tpr + lastTpr) * (fpr - lastFpr) * 0.5
             #print "trapzoid:",trapezoid
@@ -172,10 +172,7 @@ def train(net, params, q_data, qa_data, label):
     init_memory_value_npy = np.tanh(np.random.normal(size=(params.batch_size, params.memory_size, params.memory_value_state_dim)))
     init_h_npy = np.zeros((params.batch_size, params.qa_state_dim), dtype=np.float32) + 0.0001
     init_c_npy = np.zeros((params.batch_size, params.qa_state_dim), dtype=np.float32) + 0.0001
-    #init_h_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
-    #init_c_npy = numpy.tanh(np.random.normal(size=(params.batch_size, params.control_state_dim)))
-    init_key_write_W_r_focus_npy = npy_softmax(np.broadcast_to(
-                                           np.arange(params.memory_size, 0, -1),
+    init_key_write_W_r_focus_npy = npy_softmax(np.broadcast_to(np.arange(params.memory_size, 0, -1),
                                            (params.batch_size, params.num_writes, params.memory_size)),
                                    axis=2)
     init_key_write_W_u_focus_npy = np.zeros((params.batch_size, params.num_writes, params.memory_size))
@@ -207,6 +204,7 @@ def train(net, params, q_data, qa_data, label):
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
+
         #control_state = outputs[1].asnumpy()
         #norm_key = outputs[2].asnumpy()
         #norm_memory = outputs[3].asnumpy()
@@ -246,13 +244,13 @@ def train(net, params, q_data, qa_data, label):
         #    print k, "\n", v.asnumpy()
         #    print "                                                                         ---->",\
         #        k, nd.norm(v).asnumpy()
-        #print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\n\n\n\n"\
-        # print "net.params.items()"
-        # for k, v in net.params.items():
+        #print "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\n\n\n\n"
+        #print "net.params.items()"
+        #for k, v in net.params.items():
         #    print k, "\n", v.asnumpy()
         #    print "                                                                         ---->", \
         #        k, nd.norm(v).asnumpy()
-        # print "===========================================================================\n\n"
+        #print "===========================================================================\n\n"
 
         ### get results and compute the loss
         #print "After Updating ......"
