@@ -26,10 +26,10 @@ class LRUAInitializer(mx.initializer.Normal):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test MANN.')
     parser.add_argument('--gpus', type=str, help='the gpus will be used, e.g "0,1,2,3"')
-    parser.add_argument('--batch_size', type=int, default=10, help='the batch size')
+    parser.add_argument('--batch_size', type=int, default=32, help='the batch size')
     parser.add_argument('--embed_dim', type=int, default=100, help='embedding dimensions')
     parser.add_argument('--control_state_dim', type=int, default=100, help='hidden states of the controller')
-    parser.add_argument('--memory_size', type=int, default=400, help='memory size')
+    parser.add_argument('--memory_size', type=int, default=200, help='memory size')
     parser.add_argument('--memory_state_dim', type=int, default=100, help='internal state dimension')
     parser.add_argument('--k_smallest', type=int, default=5, help='parmeter of k smallest flags')
     parser.add_argument('--gamma', type=float, default=0.9, help='hyperparameter of decay W_u')
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
     parser.add_argument('--init_std', type=float, default=0.01, help='weight initialization std')
-    parser.add_argument('--init_lr', type=float, default=0.001, help='initial learning rate')
+    parser.add_argument('--init_lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
     parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
@@ -48,12 +48,12 @@ if __name__ == '__main__':
     parser.add_argument('--vis', type=bool, default=False, help='visualize weights and results')
 
     ### assistment2009
-    # parser.add_argument('--n_question', type=int, default=111, help='the number of unique questions in the dataset')
-    # parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
-    #parser.add_argument('--data_dir', type=str, default='data/assistment2009', help='data directory')
-    #parser.add_argument('--data_name', type=str, default='builder', help='data set name')
-    # parser.add_argument('--load', type=str, default='assistment', help='model file to load')
-    # parser.add_argument('--save', type=str, default='assistment', help='path to save model')
+    parser.add_argument('--n_question', type=int, default=111, help='the number of unique questions in the dataset')
+    parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
+    parser.add_argument('--data_dir', type=str, default='data/assistment2009', help='data directory')
+    parser.add_argument('--data_name', type=str, default='builder', help='data set name')
+    parser.add_argument('--load', type=str, default='assistment', help='model file to load')
+    parser.add_argument('--save', type=str, default='assistment', help='path to save model')
 
     ### synthetic
     #parser.add_argument('--n_question', type=int, default=50, help='the number of unique questions in the dataset')
@@ -72,12 +72,12 @@ if __name__ == '__main__':
     #parser.add_argument('--save', type=str, default='KDDal0506', help='path to save model')
 
     ### STATICS
-    parser.add_argument('--n_question', type=int, default=1223, help='the number of unique questions in the dataset')
-    parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
-    parser.add_argument('--data_dir', type=str, default='data/STATICS', help='data directory')
-    parser.add_argument('--data_name', type=str, default='STATICS', help='data set name')
-    parser.add_argument('--load', type=str, default='STATICS', help='model file to load')
-    parser.add_argument('--save', type=str, default='STATICS', help='path to save model')
+    #parser.add_argument('--n_question', type=int, default=1223, help='the number of unique questions in the dataset')
+    #parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
+    #parser.add_argument('--data_dir', type=str, default='data/STATICS', help='data directory')
+    #parser.add_argument('--data_name', type=str, default='STATICS', help='data set name')
+    #parser.add_argument('--load', type=str, default='STATICS', help='model file to load')
+    #parser.add_argument('--save', type=str, default='STATICS', help='path to save model')
 
 
 

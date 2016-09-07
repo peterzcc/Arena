@@ -1,0 +1,1 @@
+{"data_shapes": {"q_data": [200, 64], "target": [200, 64], "qa_data": [200, 64], "init_memory": [64, 200, 100], "controller->layer0:init_c": [64, 100], "controller->layer0:init_h": [64, 100]}}
