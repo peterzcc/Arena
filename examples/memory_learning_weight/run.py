@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import mxnet.ndarray as nd
 from arena.utils import *
 import mxnet as mx
 from arena.helpers.visualization import *
@@ -189,14 +190,13 @@ def train(net, params, q_data, qa_data, label):
         target = qa_one_seq[1:,:]
 
         outputs = net.forward(is_train=True,
-                              **{'q_data': input_q,
+                              **{'q_data': input_qa,
                                  'qa_data':input_qa,
                                  'target': target,
                                  'init_memory': init_memory_npy,
                                  'controller->layer0:init_h': init_h_npy,
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
-
         control_state = outputs[1].asnumpy()
         read_content = outputs[2].asnumpy()
         #print "read_content.shape", read_content.shape
@@ -224,7 +224,9 @@ def train(net, params, q_data, qa_data, label):
         #    print "                                                                         ---->", \
         #        k, nd.norm(v).asnumpy()
         #print "===========================================================================\n\n\n\n"
+
         net.update(updater=updater)
+
         #print "After updating, net.params_grad.items()"
         #for k, v in net.params_grad.items():
         #    print k, "\n", v.asnumpy()
@@ -285,7 +287,7 @@ def test(net, params, q_data, qa_data, label):
         target = qa_one_seq[1:, :]
 
         outputs = net.forward(is_train=False,
-                              **{'q_data': input_q,
+                              **{'q_data': input_qa,
                                  'qa_data': input_qa,
                                  'target': target,
                                  'init_memory': init_memory_npy,

@@ -35,7 +35,7 @@ if __name__ == '__main__':
     
     parser.add_argument('--init_std', type=float, default=0.1, help='weight initialization std')
     parser.add_argument('--init_lr', type=float, default=0.01, help='initial learning rate')
-    parser.add_argument('--momentum', type=float, default=0.8, help='momentum rate')
+    parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
     parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
     parser.add_argument('--test', type=bool, default=False, help='enable testing')

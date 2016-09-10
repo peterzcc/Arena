@@ -117,7 +117,7 @@ class MODEL(object):
                    name="WLMN")
         ### model start
         q_embed_weight = mx.sym.Variable("q_embed_weight")
-        q_embed_data = mx.sym.Embedding(data=q_data, input_dim=self.n_question,
+        q_embed_data = mx.sym.Embedding(data=q_data, input_dim=self.n_question*2,
                                         weight=q_embed_weight, output_dim=self.q_embed_dim, name='q_embed')
         slice_q_embed_data = mx.sym.SliceChannel(q_embed_data, num_outputs=self.seqlen, axis=0, squeeze_axis=True)
 
