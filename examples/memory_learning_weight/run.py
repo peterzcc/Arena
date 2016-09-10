@@ -88,7 +88,7 @@ def compute_auc(params, all_pred, label ):
         fpr = float(false_positives) / float(total_negatives)
         tpr = float(true_positives) / float(total_positives)
         # using trapezoid method to compute auc
-        if i % 50 == 0 :
+        if i % 500 == 0 :
             #print i
             trapezoid = (tpr + lastTpr) * (fpr - lastFpr) * 0.5
             #print "trapzoid:",trapezoid
@@ -185,7 +185,7 @@ def train(net, params, q_data, qa_data, label):
         q_one_seq = q_data[: , idx*params.batch_size:(idx+1)*params.batch_size]
         input_q = q_one_seq[:-1,:] # Shape (seqlen, batch_size)
         qa_one_seq = qa_data[:, idx * params.batch_size:(idx + 1) * params.batch_size]
-        input_qa = q_one_seq[:-1, :]  # Shape (seqlen, batch_size)
+        input_qa = qa_one_seq[:-1, :]  # Shape (seqlen, batch_size)
         target = qa_one_seq[1:,:]
 
         outputs = net.forward(is_train=True,
@@ -197,22 +197,19 @@ def train(net, params, q_data, qa_data, label):
                                  'controller->layer0:init_c': init_c_npy})
         pred = outputs[0].asnumpy()
 
-        #control_state = outputs[1].asnumpy()
-        #read_content = outputs[2].asnumpy()
+        control_state = outputs[1].asnumpy()
+        read_content = outputs[2].asnumpy()
         #print "read_content.shape", read_content.shape
-        #read_focus = outputs[3].asnumpy()
+        read_focus = outputs[3].asnumpy()
         #print "read_focus.shape", read_focus.shape
         #print read_focus[:, 0, :]
         #print read_focus[:, 0, :].max(axis=1), read_focus[:, 0, :].max(axis=1).shape
-        #write_focus = outputs[4].asnumpy()
+        write_focus = outputs[4].asnumpy()
         #print "write_focus.shape", write_focus.shape
         #print write_focus[:, 0, :]
         #print write_focus[:, 0, :].max(axis=1), write_focus[:, 0, :].max(axis=1).shape
 
         #print "Before Updating ......\n"
-        #print "norm_key", norm_key.shape, '\n', norm_key[:,0,:]
-        #print "norm_memory", norm_memory.shape, '\n', norm_memory[:,0,:]
-        #print "similarity_score", similarity_score.shape, '\n', similarity_score[:,0,:]
         #print "control_state", control_state.shape, '\n', control_state[:,0,:]
         #print "read_content", read_content.shape, '\n', read_content[:,0,:]
         #print "read_focus", read_focus.shape, '\n', read_focus[:, 0, :]
@@ -284,7 +281,7 @@ def test(net, params, q_data, qa_data, label):
         q_one_seq = q_data[:, idx * params.batch_size:(idx + 1) * params.batch_size]
         input_q = q_one_seq[:-1, :]  # Shape (seqlen, batch_size)
         qa_one_seq = qa_data[:, idx * params.batch_size:(idx + 1) * params.batch_size]
-        input_qa = q_one_seq[:-1, :]  # Shape (seqlen, batch_size)
+        input_qa = qa_one_seq[:-1, :]  # Shape (seqlen, batch_size)
         target = qa_one_seq[1:, :]
 
         outputs = net.forward(is_train=False,

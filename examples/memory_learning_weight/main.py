@@ -1,6 +1,4 @@
-import logging
 import argparse
-import numpy as np
 from load_data import DATA
 from arena import Base
 from model import MODEL
@@ -8,7 +6,6 @@ from arena.utils import *
 from run import train
 from run import test
 from arena.helpers.visualization import *
-
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
@@ -29,18 +26,17 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=32, help='the batch size')
     parser.add_argument('--q_embed_dim', type=int, default=50, help='question embedding dimensions')
     parser.add_argument('--q_state_dim', type=int, default=100, help='hidden states of question')
-    parser.add_argument('--qa_embed_dim', type=int, default=100, help='answer and question embedding dimensions')
+    parser.add_argument('--qa_embed_dim', type=int, default=50, help='answer and question embedding dimensions')
     parser.add_argument('--qa_state_dim', type=int, default=100, help='hidden states of answer and question')
-
     parser.add_argument('--memory_size', type=int, default=200, help='memory size')
     parser.add_argument('--memory_state_dim', type=int, default=100, help='the memory state dimension')
 
     parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
     
-    parser.add_argument('--init_std', type=float, default=0.01, help='weight initialization std')
+    parser.add_argument('--init_std', type=float, default=0.1, help='weight initialization std')
     parser.add_argument('--init_lr', type=float, default=0.01, help='initial learning rate')
-    parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
-    parser.add_argument('--maxgradnorm', type=float, default=100.0, help='maximum gradient norm')
+    parser.add_argument('--momentum', type=float, default=0.8, help='momentum rate')
+    parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
     parser.add_argument('--test', type=bool, default=False, help='enable testing')
     parser.add_argument('--show', type=bool, default=True, help='print progress')
@@ -88,10 +84,10 @@ if __name__ == '__main__':
     train_q_data, train_qa_data = dat.load_data(train_data_path)
     test_q_data, test_qa_data = dat.load_data(test_data_path)
     print "\n"
-    print train_q_data,"\ntrain_q_data.shape",train_q_data.shape ###(3633, 200) = (#sample, seqlen)
-    print train_qa_data,"\ntrain_qa_data.shape",train_qa_data.shape ###(3633, 200) = (#sample, seqlen)
-    print test_q_data,"\ntest_q_data.shape",test_q_data.shape   ###(1566, 200)
-    print test_qa_data,"\ntest_qa_data.shape", test_qa_data.shape  ###(1566, 200)
+    print "train_q_data.shape",train_q_data.shape ###(3633, 200) = (#sample, seqlen)
+    print "train_qa_data.shape",train_qa_data.shape ###(3633, 200) = (#sample, seqlen)
+    print "test_q_data.shape",test_q_data.shape   ###(1566, 200)
+    print "test_qa_data.shape", test_qa_data.shape  ###(1566, 200)
     print "\n"
 
     ### ================================== choose ctx ==================================
@@ -122,7 +118,7 @@ if __name__ == '__main__':
                data_shapes=data_shapes,
                initializer=initializer,
                ctx=ctx,
-               name="KVMN_KT",
+               name="WLMN_KT",
                default_bucket_kwargs={'seqlen': params.seqlen}
                )
     #print "net.params.items()=====>"
@@ -144,7 +140,8 @@ if __name__ == '__main__':
     all_test_accuracy = {}
     all_test_auc = {}
 
-    file_name = 'qembed' + str(params.q_embed_dim) + 'qaembed' + str(params.qa_embed_dim) + 'qdim' + str(params.q_state_dim) + 'qadim' + str(params.qa_state_dim) + \
+    file_name = 'qembed' + str(params.q_embed_dim) + 'qaembed' + str(params.qa_embed_dim) + \
+                'qdim' + str(params.q_state_dim) + 'qadim' + str(params.qa_state_dim) + \
                 'msize' + str(params.memory_size) + 'mdim' + str(params.memory_state_dim) +\
                 'std' + str(params.init_std) + 'lr' + str(params.init_lr) + 'mmt' + str(params.momentum) + 'gn' + str(params.maxgradnorm)
 
@@ -168,7 +165,7 @@ if __name__ == '__main__':
             all_train_auc[m] = train_auc
             all_test_loss[m] = test_loss
             all_train_loss[m] = train_loss
-            all_test_accuracy = test_accuracy
+            all_test_accuracy[m] = test_accuracy
             all_train_accuracy[m] = train_accuracy
             # Learning rate annealing
             if m > 1 and all_loss[m][2] > all_loss[m - 1][2] * 0.9999:
@@ -181,8 +178,8 @@ if __name__ == '__main__':
         f_save_log.write("train_auc:\n"+str(all_train_auc) + "\n\n")
         f_save_log.write("test_loss:\n"+str(all_test_loss) + "\n\n")
         f_save_log.write("train_loss:\n"+str(all_train_loss) + "\n\n")
-        f_save_log.write("test_accuracy:\n:"+str(all_test_accuracy) + "\n\n")
-        f_save_log.write("train_accuracy:\n:"+str(all_train_accuracy) + "\n\n")
+        f_save_log.write("test_accuracy:\n"+str(all_test_accuracy) + "\n\n")
+        f_save_log.write("train_accuracy:\n"+str(all_train_accuracy) + "\n\n")
         f_save_log.write(str(all_loss)+"\n")
         f_save_log.close()
         print all_loss
@@ -191,8 +188,8 @@ if __name__ == '__main__':
     # python main.py --gpus 0 --k_smallest 5 --gamma 0.9 --init_std 0.05 --init_lr 0.1 --momentum 0.9 --maxgradnorm 50 --test True --show False --vis True
     else:
         net.load_params(name="LRUA_KT", dir_path=os.path.join('model', params.load, file_name))
-        train_loss, train_accuracy, train_auc = test(net, params, train_data, label='Train')
-        test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
+        train_loss, train_accuracy, train_auc = test(net, params, train_q_data, train_qa_data, label='Train')
+        test_loss, test_accuracy, test_auc = test(net, params, test_q_data, test_qa_data, label='Test')
         output_state = {"test_auc": test_auc,
                         "train_auc": train_auc,
                         "test_accuracy": test_accuracy,

@@ -1,0 +1,1 @@
+{"data_shapes": {"target": [200, 32], "controller->layer0:init_h": [32, 100], "init_memory": [32, 200, 100], "controller->layer0:init_c": [32, 100], "MANN->write_head:init_W_r_focus": [32, 1, 200], "data": [200, 32], "MANN->write_head:init_W_u_focus": [32, 1, 200]}}

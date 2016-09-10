@@ -2,10 +2,13 @@ from os import listdir
 from os.path import isfile, join
 import ast
 
-mypath = join("..", "result")
+mypath = join("..", "result", "assistment")
 
-thread_auc = 0.87
+thread_auc = 0.1
 allFileCount = 0
+
+one_result_max_dic = {}
+
 for fileName in listdir(mypath):
     current_file = join(mypath, fileName)
     if isfile( current_file ):
@@ -27,9 +30,17 @@ for fileName in listdir(mypath):
                     if test_auc > one_result_max:
                         one_result_max = test_auc
                         one_result_epoch = i
+                one_result_max_dic[fileName] = one_result_max
                 if one_result_max > thread_auc:
                     print fileName," \t ===> one_result_epoch",one_result_epoch, "one_result_max", one_result_max
         #print "~~~~~~"
         f_result.close()
 
+best_auc = 0.0
+for fileName in one_result_max_dic:
+    if one_result_max_dic[fileName] > best_auc:
+        best_auc = one_result_max_dic[fileName]
+        best_hyperparameter = fileName
+
+print "\nbest result is ", best_auc, best_hyperparameter, "\n"
 print allFileCount

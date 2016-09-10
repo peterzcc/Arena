@@ -181,7 +181,7 @@ if __name__ == '__main__':
             all_train_auc[m] = train_auc
             all_test_loss[m] = test_loss
             all_train_loss[m] = train_loss
-            all_test_accuracy = test_accuracy
+            all_test_accuracy[m] = test_accuracy
             all_train_accuracy[m] = train_accuracy
             # Learning rate annealing
             if m > 1 and all_loss[m][2] > all_loss[m - 1][2] * 0.9999:
@@ -194,8 +194,8 @@ if __name__ == '__main__':
         f_save_log.write("train_auc:\n"+str(all_train_auc) + "\n\n")
         f_save_log.write("test_loss:\n"+str(all_test_loss) + "\n\n")
         f_save_log.write("train_loss:\n"+str(all_train_loss) + "\n\n")
-        f_save_log.write("test_accuracy:\n:"+str(all_test_accuracy) + "\n\n")
-        f_save_log.write("train_accuracy:\n:"+str(all_train_accuracy) + "\n\n")
+        f_save_log.write("test_accuracy:\n"+str(all_test_accuracy) + "\n\n")
+        f_save_log.write("train_accuracy:\n"+str(all_train_accuracy) + "\n\n")
         f_save_log.write(str(all_loss)+"\n")
         f_save_log.close()
         print all_loss
@@ -204,8 +204,8 @@ if __name__ == '__main__':
     # python main.py --gpus 0 --k_smallest 5 --gamma 0.9 --init_std 0.05 --init_lr 0.1 --momentum 0.9 --maxgradnorm 50 --test True --show False --vis True
     else:
         net.load_params(name="LRUA_KT", dir_path=os.path.join('model', params.load, file_name))
-        train_loss, train_accuracy, train_auc = test(net, params, train_data, label='Train')
-        test_loss, test_accuracy, test_auc = test(net, params, test_data, label='Test')
+        train_loss, train_accuracy, train_auc = test(net, params, train_q_data, train_qa_data, label='Train')
+        test_loss, test_accuracy, test_auc = test(net, params, test_q_data, test_qa_data, label='Test')
         output_state = {"test_auc": test_auc,
                         "train_auc": train_auc,
                         "test_accuracy": test_accuracy,

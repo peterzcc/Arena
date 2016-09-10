@@ -27,6 +27,7 @@ class BinaryEntropyLoss(mx.operator.CustomOp):
         n_q = 111 # assist2009
         #n_q = 50 # synthetic
         #n_q = 1084 # algebra_2005_2006_train.txt
+        #n_1 = 1223 #STATICS
         l = in_data[1].asnumpy().ravel().astype(np.int)
 
         zero_index = np.flatnonzero(l == 0)

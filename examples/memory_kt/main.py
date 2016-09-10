@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--k_smallest', type=int, default=5, help='parmeter of k smallest flags')
     parser.add_argument('--gamma', type=float, default=0.9, help='hyperparameter of decay W_u')
 
-    parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
+    parser.add_argument('--max_iter', type=int, default=10, help='number of iterations')
     parser.add_argument('--num_reads', type=int, default=1, help='number of read tensors')
     parser.add_argument('--num_writes', type=int, default=1, help='number of write tensors')
 
@@ -72,13 +72,14 @@ if __name__ == '__main__':
     #parser.add_argument('--save', type=str, default='KDDal0506', help='path to save model')
 
     ### STATICS
-    #parser.add_argument('--n_question', type=int, default=1223, help='the number of unique questions in the dataset')
-    #parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
-    #parser.add_argument('--data_dir', type=str, default='data/STATICS', help='data directory')
-    #parser.add_argument('--data_name', type=str, default='STATICS', help='data set name')
-    #parser.add_argument('--load', type=str, default='STATICS', help='model file to load')
-    #parser.add_argument('--save', type=str, default='STATICS', help='path to save model')
-
+    """
+    parser.add_argument('--n_question', type=int, default=1223, help='the number of unique questions in the dataset')
+    parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
+    parser.add_argument('--data_dir', type=str, default='data/STATICS', help='data directory')
+    parser.add_argument('--data_name', type=str, default='STATICS', help='data set name')
+    parser.add_argument('--load', type=str, default='STATICS', help='model file to load')
+    parser.add_argument('--save', type=str, default='STATICS', help='path to save model')
+    """
 
 
     params = parser.parse_args()
@@ -171,7 +172,7 @@ if __name__ == '__main__':
             all_train_auc[m] = train_auc
             all_test_loss[m] = test_loss
             all_train_loss[m] = train_loss
-            all_test_accuracy = test_accuracy
+            all_test_accuracy[m] = test_accuracy
             all_train_accuracy[m] = train_accuracy
             # Learning rate annealing
             if m > 1 and all_loss[m][2] > all_loss[m - 1][2] * 0.9999:
@@ -184,8 +185,8 @@ if __name__ == '__main__':
         f_save_log.write("train_auc:\n"+str(all_train_auc) + "\n\n")
         f_save_log.write("test_loss:\n"+str(all_test_loss) + "\n\n")
         f_save_log.write("train_loss:\n"+str(all_train_loss) + "\n\n")
-        f_save_log.write("test_accuracy:\n:"+str(all_test_accuracy) + "\n\n")
-        f_save_log.write("train_accuracy:\n:"+str(all_train_accuracy) + "\n\n")
+        f_save_log.write("test_accuracy:\n"+str(all_test_accuracy) + "\n\n")
+        f_save_log.write("train_accuracy:\n"+str(all_train_accuracy) + "\n\n")
         f_save_log.write(str(all_loss)+"\n")
         f_save_log.close()
         print all_loss
