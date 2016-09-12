@@ -84,7 +84,7 @@ def numeric_grad(executor, locations, eps=1e-4):
         executor.arg_dict[k][:] = v
     approx_grads = {k:np.zeros(v.shape) for k, v in locations.items()}
 
-    executor.forward(is_train=True)
+    executor.forward(is_train=False)
     f_x = executor.outputs[0].asnumpy()[0]
     for k, v in locations.items():
         old_value = v.copyto(v.context)
@@ -94,7 +94,7 @@ def numeric_grad(executor, locations, eps=1e-4):
             # set initial states. Need to set all due to inplace operations
             for key, val in locations.items():
                 executor.arg_dict[key][:] = val
-            executor.forward(is_train=True)
+            executor.forward(is_train=False)
             f_eps = executor.outputs[0].asnumpy()[0]
             approx_grads[k].ravel()[i] = (f_eps - f_x) / eps
             v.reshape((np.prod(v.shape), 1))[i] = old_value.reshape((np.prod(v.shape), 1))[i]
@@ -112,22 +112,33 @@ def check_numeric_gradient(sym, locations, ctx=mx.cpu(), grad_nodes=None, aux_st
 
     Parameters:
     -----------
-    sym: `mxnet.symbol.Symbol`
+    sym : `mxnet.symbol.Symbol`
         Symbol containing op to test
 
-    locations: list of numpy.ndarray or dict of str to numpy.ndarray
+    locations : list or tuple or dict
         Argument values used as locations to compute gradient
 
         - If type is list of numpy.ndarray, the position is in
           the same order of `sym.list_arguments()`.
-        - If type is dict of str to numpy.ndarray, then it maps the name of arguments
+        - If type is dict of str -> numpy.ndarray, then it maps the name of arguments
           to the corresponding numpy.ndarray.
         - In either case, value of all the arguments must be provided.
 
-    numeric_eps: float, optional
+    ctx : Context, optional
+        Check the gradient computation on the specified device
+
+    grad_nodes : None or list or tuple, optional
+        Names of the nodes to check gradient on
+
+    aux_states : ist or tuple or dict, optional
+        The auxiliary states required when generating the executor for the symbol
+
+    rng : numpy.random.RandomState, optional
+
+    numeric_eps : float, optional
         Delta for the finite difference method that approximates the gradient
 
-    check_eps: float, optional
+    check_eps : float, optional
         relative error eps used when comparing numeric grad to symbolic grad
 
     References
