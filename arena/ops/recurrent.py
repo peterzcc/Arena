@@ -166,7 +166,7 @@ class RNN(object):
     To use a recurrent neural network, we can first create an RNN object and use the step function
     during the symbol construction.
 
-    Currently four types of RNN are supported and all parameters are grouped into 4 matrices.
+    Currently four types of RNN are supported and all parameters per layer are grouped into 4 matrices.
     The data layout and transition rules are similar to the RNN API in CuDNN (https://developer.nvidia.com/cudnn)
     1) ReLU RNN:
         h_t = ReLU(W_i x_t + R_i h_{t-1} + b_{W_i} + b_{R_i})
@@ -192,7 +192,7 @@ class RNN(object):
         c_t = f_t \circ c_{t-1} + i_t \circ c^\prime_t
         h_t = o_t \circ tanh(c_t)
 
-        Parameters: **(input_gate, forget_gate, new_mem, output_gate)
+        Parameters: (input_gate, forget_gate, new_mem, output_gate)
             W_{i2h} = [W_i, W_f, W_c, W_o]
             b_{i2h} = [b_{W_i}, b_{W_f}, b_{W_c}, b_{W_o}]
             W_{h2h} = [R_i, R_f, R_c, R_o]
@@ -203,7 +203,7 @@ class RNN(object):
         h^\prime_t = tanh(W_h x_t + r_t \circ (R_h h_{t-1} + b_{R_h}) + b_{W_h})
         h_t = (1 - i_t) \circ h^\prime_t + i_t \circ h_{t-1}
 
-        Parameters: **(reset_gate, update_gate, new_mem)
+        Parameters: (reset_gate, update_gate, new_mem)
             W_{i2h} = [W_r, W_i, W_h]
             b_{i2h} = [b_{W_r}, b_{W_i}, b_{W_h}]
             W_{h2h} = [R_r, R_i, R_h]
@@ -305,20 +305,21 @@ class RNN(object):
         ----------
         data : list or tuple or Symbol
             The input data. Shape: (seq_len, batch_size, data_dim)
-        prev_h : list or tuple or Symbol, optional
-            The initial hidden states. If not given, the symbol constructed during initialization
+        prev_h : list or tuple or Symbol or None, optional
+            The initial hidden states. If None, the symbol constructed during initialization
             will be used.
             Number of the initial states must be the same as the layer number,
             e.g, [h0, h1, h2] for a 3-layer RNN
-        prev_c : list or tuple or Symbol, optional
-            The initial cell states. Only applicable when the type is 'lstm'. If not given,
+        prev_c : list or tuple or Symbol or None, optional
+            The initial cell states. Only applicable when `typ` is 'lstm'. If None,
             the symbol constructed during initialization will be used.
             Number of the initial states must be the same as the layer number,
             e.g, [c0, c1, c2] for a 3-layer LSTM
         seq_len : int, optional
             Length of the data sequence
         ret_typ : str, optional
-            Determine the parts of the states to return, which can be 'last', 'all', 'top'
+            Determine the parts of the states to return, which can be 'all', 'out', 'state'
+            IMPORTANT!! When `cudnn_opt` is on, only the 'out' flag is supported.
             If 'all', symbols that represent states of all the timestamps as well as
              the state of the last timestamp will be returned,
                 e.g, For a 3-layer GRU and length-10 data sequence, the return value will be
