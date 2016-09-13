@@ -9,4 +9,4 @@ for fileName in listdir(mypath):
     current_file = join(mypath, fileName)
     if isfile( current_file ):
         if "(" not in fileName:
-            os.rename(current_file, join(mypath, fileName+"(3)"))
+            os.rename(current_file, join(mypath, fileName+"(qa1)"))
