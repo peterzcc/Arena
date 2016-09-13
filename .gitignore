@@ -108,3 +108,4 @@ Atari2600/
 panda3dgames/
 *.pyc
 examples/memory-augmented-network/Omniglot/*
+.DS_Store
