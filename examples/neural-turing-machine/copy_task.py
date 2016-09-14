@@ -4,7 +4,7 @@ from builtins import input
 
 from arena import Base
 from arena.helpers.visualization import *
-from arena.ops import LSTM, NTM
+from arena.ops import RNN, NTM
 from arena.utils import *
 
 root = logging.getLogger()
@@ -56,13 +56,14 @@ def sym_gen(seqlen):
     data_seqlen = 2*seqlen + 2
     data = mx.sym.Variable('data')
     target = mx.sym.Variable('target')
-    data = mx.sym.SliceChannel(data, num_outputs=data_seqlen, axis=0, squeeze_axis=True) # (batch_size, data_dim) * seqlen
+    data = mx.sym.SliceChannel(data, num_outputs=data_seqlen, axis=0, squeeze_axis=False) # (batch_size, data_dim) * seqlen
     # Initialize Memory
     init_memory = mx.sym.Variable('init_memory')
     init_read_focus = mx.sym.Variable('NTM->read_head:init_focus')
     init_write_focus = mx.sym.Variable('NTM->write_head:init_focus')
     # Initialize Control Network
-    controller = LSTM(num_hidden=control_state_dim, name="controller")
+    controller = RNN(num_hidden=[control_state_dim], data_dim=data_dim + num_reads * memory_state_dim,
+                     typ="lstm", name="controller")
     mem = NTM(num_reads=num_reads, num_writes=num_writes, memory_size=memory_size,
               memory_state_dim=memory_state_dim, control_state_dim=control_state_dim,
               init_memory=init_memory, init_read_focus=init_read_focus,
@@ -81,12 +82,12 @@ def sym_gen(seqlen):
     for i in range(data_seqlen):
         controller_h, controller_c =\
             controller.step(data=mx.sym.Concat(data[i],
-                                               mx.sym.Reshape(read_content,
-                                                              shape=(0, num_reads * memory_state_dim)),
-                                               num_args=2),
+                              mx.sym.Reshape(read_content, shape=(1, -1, num_reads * memory_state_dim)),
+                              num_args=2, dim=2),
                             prev_h=controller_h,
                             prev_c=controller_c,
-                            seq_length=1)
+                            seq_len=1,
+                            ret_typ="state")
         controller_h = controller_h[0]
         controller_c = controller_c[0]
         read_content, read_focus = mem.read(controller_h)
