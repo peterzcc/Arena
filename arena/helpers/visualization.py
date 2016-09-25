@@ -144,42 +144,6 @@ class CV2Vis(object):
                                      interpolation=cv2.INTER_LINEAR))
 
 
-def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking",
-                   win_typ=cv2.WINDOW_AUTOSIZE, save_path=None):
-    """Plot the ROI bounding box on the image using OpenCV
-
-    Parameters
-    ----------
-    im : numpy.ndarray
-      shape (3, height, width)
-    roi : numpy.ndarray
-    delay
-    color
-    win_name
-    win_typ
-    save_path
-
-    Returns
-    -------
-
-    """
-    im = im.transpose(1, 2, 0)
-    width = im.shape[1]
-    height = im.shape[0]
-    roi = roi * [width, height, width, height]
-    roi = numpy.uint32(roi)
-    pt1 = (roi[0] - roi[2] / 2, roi[1] - roi[3] / 2)
-    pt2 = (roi[0] + roi[2] / 2, roi[1] + roi[3] / 2)
-    im2 = numpy.zeros(im.shape)
-    im2[:] = im
-    cv2.rectangle(im2, pt1, pt2, color, 1)
-    win = cv2.namedWindow(win_name, win_typ)
-    cv2.imshow(win_name, im2[:, :, ::-1] / 255.0)
-    if save_path is not None:
-        cv2.imwrite(os.path.join(save_path, win_name + '.png'), im2[:, :, ::-1])
-    if delay is not None:
-        cv2.waitKey(delay)
-
 
 class PLTVisualizer(object):
     def __init__(self, name="PLTVis"):
