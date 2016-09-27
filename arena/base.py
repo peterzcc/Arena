@@ -31,7 +31,7 @@ class Base(object):
     """
 
     def __init__(self, data_shapes, sym_gen, params=None, aux_states=None,
-                 default_bucket_kwargs=None,
+                 default_bucket_kwargs=None, learn_init_keys=None,
                  initializer=mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2),
                  ctx=mx.gpu(), name='Net'):
         self.sym_gen = sym_gen
@@ -53,6 +53,8 @@ class Base(object):
         else:
             self.aux_states = None
         self._buckets = dict()
+        self.learn_init_keys = learn_init_keys if learn_init_keys is not None else []
+        self.learn_init_key_shapes = {k: data_shapes[k] for k in self.learn_init_keys}
         self.switch_bucket(bucket_kwargs=bucket_kwargs, data_shapes=data_shapes)
         self.acc_grad = None
 
@@ -69,6 +71,8 @@ class Base(object):
         return self._buckets[self.curr_bucket_key]['sym']
 
     def switch_bucket(self, bucket_kwargs=None, data_shapes=None):
+        for name in self.learn_init_keys:
+            data_shapes[name] = self.learn_init_key_shapes[name]
         if bucket_kwargs is not None:
             self.curr_bucket_key = get_bucket_key(bucket_kwargs=bucket_kwargs)
         # 1. Check if bucket key exists
@@ -90,7 +94,8 @@ class Base(object):
             sym = self.sym_gen(**dict(self.curr_bucket_key))
         arg_names = sym.list_arguments()
         aux_names = sym.list_auxiliary_states()
-        param_names = [n for n in arg_names if n not in data_shapes.keys()]
+        param_names = [n for n in arg_names
+                       if n in self.learn_init_keys or (n not in data_shapes.keys())]
         arg_shapes, _, aux_shapes = sym.infer_shape(**data_shapes)
         arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
         if self.params is None:
@@ -110,7 +115,8 @@ class Base(object):
         if self.aux_states is None:
             self.aux_states = OrderedDict([(k, nd.empty(s, ctx=self.ctx))
                                            for k, s in zip(aux_names, aux_shapes)])
-        data_inputs = {k: mx.nd.empty(v, ctx=self.ctx) for k, v in data_shapes.items()}
+        data_inputs = {k: mx.nd.empty(data_shapes[k], ctx=self.ctx)
+                       for k in set(data_shapes.keys()) - set(self.learn_init_keys)}
         if len(self._buckets) > 0:
             shared_exe = self._buckets.values()[0]['exe'].values()[0]
         else:
