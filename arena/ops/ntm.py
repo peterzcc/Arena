@@ -267,6 +267,17 @@ class NTM(object):
         return ret
 
     def read(self, control_input):
+        """
+
+        Parameters
+        ----------
+        control_input
+
+        Returns
+        -------
+        mxnet.sym.Symbol
+            read content --> Shape (batch_size, num_heads, memory_state_dim)
+        """
         assert isinstance(control_input, mx.symbol.Symbol)
         content, read_focus = self.read_head.read(control_input=control_input, memory=self.memory)
         self.read_counter += 1
