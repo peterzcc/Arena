@@ -8,8 +8,13 @@ import re
 import scipy.signal
 import logging
 import ast
+import inspect
 import collections
 import numbers
+try:
+    import cPickle as pickle
+except:
+    import pickle
 from collections import namedtuple, OrderedDict
 import time
 
@@ -34,6 +39,28 @@ def get_saving_path(prefix="", epoch=None):
         param_saving_path = os.path.join('%s.params' % prefix)
     misc_saving_path = os.path.join('%s-misc.json' % prefix)
     return sym_saving_path, param_saving_path, misc_saving_path
+
+
+def logging_config(name=None, level=logging.DEBUG, console_level=logging.DEBUG):
+    if name is None:
+        name = inspect.stack()[1][1].split('.')[0]
+    folder = os.path.join(os.getcwd(), name)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    logpath = os.path.join(folder, name + ".log")
+    print("All Logs will be saved to", logpath)
+    logging.root.setLevel(level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logfile = logging.FileHandler(logpath)
+    logfile.setLevel(level)
+    logfile.setFormatter(formatter)
+    logging.root.addHandler(logfile)
+    #TODO Update logging patterns in other files
+    logconsole = logging.StreamHandler()
+    logconsole.setLevel(console_level)
+    logconsole.setFormatter(formatter)
+    logging.root.addHandler(logconsole)
+    return folder
 
 
 def save_params(dir_path=os.curdir, epoch=None, name="", params=None, aux_states=None,
