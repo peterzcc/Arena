@@ -77,7 +77,7 @@ class LogisticRegressionMaskOutput(mx.operator.CustomOp):
         self.ignore_label = ignore_label
 
     def forward(self, is_train, req, in_data, out_data, aux):
-        self.assign(out_data[0], req[0], in_data[0])
+        self.assign(out_data[0], req[0], 1.0 / (1.0 + nd.exp(- in_data[0])))
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
         output = out_data[0].asnumpy()
