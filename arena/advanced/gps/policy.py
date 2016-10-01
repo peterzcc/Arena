@@ -1,10 +1,11 @@
 """ This file defines the linear Gaussian policy class. """
 import numpy as np
+import pickle
 import copy
 import scipy as sp
 
 from arena.advanced.gps.utils import check_shape, guess_dynamics
-from arena.advanced.gps.config import INIT_LG_PD, INIT_LG_LQR
+from arena.advanced.gps.config import INIT_LG_PD, INIT_LG_LQR, INIT_LG_ZEROS
 
 """
 Time-varying linear Gaussian policy.
@@ -90,6 +91,43 @@ class LinearGaussianPolicy(object):
         self.chol_pol_covar = policy.chol_pol_covar
         self.inv_pol_covar = policy.inv_pol_covar
 
+    def save_params(self, name):
+        saved_data = {
+            'K': self.K,
+            'k': self.k,
+            'pol_covar': self.pol_covar,
+            'chol_pol_covar': self.chol_pol_covar,
+            'inv_pol_covar': self.inv_pol_covar,
+        }
+        with open(name, 'wb') as outfile:
+            pickle.dump(saved_data, outfile)
+
+    def load_params(self, name):
+        with open(name, 'rb') as outfile:
+            data = pickle.load(outfile)
+        self.K = data['K']
+        self.k = data['k']
+        self.pol_covar = data['pol_covar']
+        self.chol_pol_covar = data['chol_pol_covar']
+        self.inv_pol_covar = data['inv_pol_covar']
+
+
+
+def init_zeros(hyperparams):
+    '''
+    This function initializes the linear-Gaussian controller as a constant controller with Gaussian noise.
+    '''
+    config = copy.deepcopy(INIT_LG_ZEROS)
+    config.update(hyperparams)
+    dU, dX = config['dU'], config['dX']
+    u0, T = config['u0'], config['T']
+    K = np.zeros((T, dU, dX))
+    k = np.tile(u0, [T, 1])
+    PSig = config['init_var'] * np.tile(np.eye(dU), [T, 1, 1])
+    cholPSig = np.sqrt(config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
+    invPSig = (1.0 / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
+
+    return LinearGaussianPolicy(K, k, PSig, cholPSig, invPSig)
 
 """
 This function initializes the linear-Gaussian controller as a
@@ -101,7 +139,6 @@ def init_pd(hyperparams):
     config = copy.deepcopy(INIT_LG_PD)
     config.update(hyperparams)
 
-    # TODO, how to handle the config
     dU, dQ, dX = config['dU'], config['dQ'], config['dX']
     x0, T = config['x0'], config['T']
 

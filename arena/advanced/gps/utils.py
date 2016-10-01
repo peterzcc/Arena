@@ -324,7 +324,7 @@ def traj_distr_kl(new_mu, new_sigma, new_traj_distr, prev_traj_distr):
     # Add up divergences across time to get total divergence.
     return np.sum(kl_div)
 
-def generate_noise(T, dU, smooth, var, renorm):
+def generate_noise(T, dU, std, smooth, var, renorm):
     """
     Generate a T x dU gaussian-distributed noise vector. This will
     approximately have mean 0 and variance 1, ignoring smoothing.
@@ -341,7 +341,7 @@ def generate_noise(T, dU, smooth, var, renorm):
     """
     # smooth, var = hyperparams['smooth_noise'], hyperparams['smooth_noise_var']
     # renorm = hyperparams['smooth_noise_renormalize']
-    noise = np.random.randn(T, dU)
+    noise = np.random.randn(T, dU) * std
     if smooth:
         # Smooth noise. This violates the controller assumption, but
         # might produce smoother motions.

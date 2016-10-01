@@ -19,6 +19,10 @@ DYN_PRIOR_GMM = {
 Policy related parameters.
 ------------------------------
 '''
+# Initial Linear Gaussian Trajectory Distributions, zeros initialized controller
+INIT_LG_ZEROS = {
+    'init_var': 1.0,
+}
 # Initial Linear Gaussian Trajectory Distributions, PD-based initializer.
 INIT_LG_PD = {
     'init_var': 10.0,
