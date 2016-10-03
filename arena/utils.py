@@ -48,7 +48,7 @@ def logging_config(name=None, level=logging.DEBUG, console_level=logging.DEBUG):
     if not os.path.exists(folder):
         os.makedirs(folder)
     logpath = os.path.join(folder, name + ".log")
-    print("All Logs will be saved to", logpath)
+    print("All Logs will be saved to %s"  %logpath)
     logging.root.setLevel(level)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     logfile = logging.FileHandler(logpath)

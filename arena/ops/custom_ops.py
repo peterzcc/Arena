@@ -115,6 +115,7 @@ def logistic_regression_mask_output(data, label, ignore_label, name=None):
                          data=data,
                          label=label)
 
+
 def constant(data, name="constant"):
     if isinstance(data, mx.nd.NDArray):
         data = data.asnumpy()
@@ -122,6 +123,7 @@ def constant(data, name="constant"):
     return mx.symbol.Custom(name=name,
                             op_type="constant",
                             pkl_data=pkl_data)
+
 
 def identity(data, name="identity"):
     return mx.symbol.Custom(data=data,

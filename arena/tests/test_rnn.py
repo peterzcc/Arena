@@ -2,7 +2,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import time
-from arena.helpers.unittest_tools import check_numeric_gradient, reldiff
+from mxnet.test_utils import check_numeric_gradient, reldiff
 from arena.ops.recurrent import RNN, get_rnn_param_shapes
 
 def step_vanilla_rnn(num_hidden, data, prev_h, act_f,

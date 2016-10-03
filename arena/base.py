@@ -71,8 +71,6 @@ class Base(object):
         return self._buckets[self.curr_bucket_key]['sym']
 
     def switch_bucket(self, bucket_kwargs=None, data_shapes=None):
-        for name in self.learn_init_keys:
-            data_shapes[name] = self.learn_init_key_shapes[name]
         if bucket_kwargs is not None:
             self.curr_bucket_key = get_bucket_key(bucket_kwargs=bucket_kwargs)
         # 1. Check if bucket key exists
@@ -200,6 +198,8 @@ class Base(object):
         #import time
         #start = time.time()
         data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        for name in self.learn_init_keys:
+            data_shapes[name] = self.learn_init_key_shapes[name]
         self.switch_bucket(bucket_kwargs=bucket_kwargs,
                            data_shapes=data_shapes)
         #end = time.time()
@@ -227,6 +227,8 @@ class Base(object):
 
     def forward_backward(self, bucket_kwargs=None, out_grads=None, **arg_dict):
         data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        for name in self.learn_init_keys:
+            data_shapes[name] = self.learn_init_key_shapes[name]
         self.switch_bucket(bucket_kwargs=bucket_kwargs,
                            data_shapes=data_shapes)
         for k, v in arg_dict.items():
