@@ -168,25 +168,3 @@ class PLTVisualizer(object):
             self.ax.autoscale_view()
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
-
-
-'''
-Simple test for filter visualization and roi drawing
-'''
-if __name__ == '__main__':
-    from arena.iterators import TrackingIterator
-    from arena.helpers.pretrained import vgg_m
-
-    param = vgg_m()
-    conv1 = param['arg:conv1_weight'].asnumpy()
-    CV2Vis.display(conv1, 'conv1')
-
-    track_iter = TrackingIterator('D:\\HKUST\\2-2\\learning-to-track\\datasets\\OTB100-processed\\otb100-video.lst',
-                                  output_size=(240, 320), resize=True)
-
-    data_batch, roi_batch = track_iter.sample(batch_size=32, length=10, interval_step=2)
-    print(data_batch.shape, roi_batch.shape)
-
-    for i in range(data_batch.shape[0]):
-        for j in range(data_batch.shape[1]):
-            draw_track_res(data_batch.asnumpy()[i, j], roi_batch.asnumpy()[i, j], delay=50)
