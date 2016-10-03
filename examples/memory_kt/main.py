@@ -48,13 +48,14 @@ if __name__ == '__main__':
     parser.add_argument('--vis', type=bool, default=False, help='visualize weights and results')
 
     ### assistment2009
+    """
     parser.add_argument('--n_question', type=int, default=111, help='the number of unique questions in the dataset')
     parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
     parser.add_argument('--data_dir', type=str, default='data/assistment2009', help='data directory')
     parser.add_argument('--data_name', type=str, default='builder', help='data set name')
     parser.add_argument('--load', type=str, default='assistment', help='model file to load')
     parser.add_argument('--save', type=str, default='assistment', help='path to save model')
-
+    """
     ### synthetic
     #parser.add_argument('--n_question', type=int, default=50, help='the number of unique questions in the dataset')
     #parser.add_argument('--seqlen', type=int, default=50, help='the allowed maximum length of a sequence')
@@ -72,14 +73,14 @@ if __name__ == '__main__':
     #parser.add_argument('--save', type=str, default='KDDal0506', help='path to save model')
 
     ### STATICS
-    """
+
     parser.add_argument('--n_question', type=int, default=1223, help='the number of unique questions in the dataset')
     parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
     parser.add_argument('--data_dir', type=str, default='data/STATICS', help='data directory')
     parser.add_argument('--data_name', type=str, default='STATICS', help='data set name')
     parser.add_argument('--load', type=str, default='STATICS', help='model file to load')
     parser.add_argument('--save', type=str, default='STATICS', help='path to save model')
-    """
+
 
 
     params = parser.parse_args()
