@@ -125,7 +125,6 @@ class NTMHeadGroup(object):
         # w_t^c = softmax(\beta K(k_t, M_t))
         key = ArenaSym.normalize_channel(key, axis=2)
         memory = ArenaSym.normalize_channel(memory, axis=2)
-        #similarity_score = mx.sym.sum(mx.sym.broadcast_mul(mx.sym.expand_dims(key, axis=1), memory), axis=2) #TODO Use batch_dot in the future
         similarity_score = mx.sym.batch_dot(key, mx.sym.SwapAxis(memory, dim1=1, dim2=2)) # Shape: (batch_size, num_heads, memory_size)
         wc = mx.sym.Reshape(mx.sym.SoftmaxActivation(mx.sym.Reshape(mx.sym.broadcast_mul(beta, similarity_score),
                                                             shape=(-1, self.memory_size))),
@@ -267,6 +266,17 @@ class NTM(object):
         return ret
 
     def read(self, control_input):
+        """
+
+        Parameters
+        ----------
+        control_input
+
+        Returns
+        -------
+        mxnet.sym.Symbol
+            read content --> Shape (batch_size, num_heads, memory_state_dim)
+        """
         assert isinstance(control_input, mx.symbol.Symbol)
         content, read_focus = self.read_head.read(control_input=control_input, memory=self.memory)
         self.read_counter += 1

@@ -247,9 +247,12 @@ def get_npy_list(ndarray_list):
     return ret
 
 
-def get_sym_list(syms, default_names=None):
-    if syms is None:
-        if default_names is not None:
+def get_sym_list(syms, default_names=None, default_shapes=None):
+    if syms is None and default_names is not None:
+        if default_shapes is not None:
+            return [mx.sym.Variable(name=name, shape=shape) for (name, shape)
+                    in zip(default_names, default_shapes)]
+        else:
             return [mx.sym.Variable(name=name) for name in default_names]
     assert isinstance(syms, (list, tuple, mx.symbol.Symbol))
     if isinstance(syms, (list, tuple)):
@@ -267,12 +270,17 @@ def get_sym_list(syms, default_names=None):
         return [syms]
 
 
-def get_int_list(values):
+def get_numeric_list(values, typ, expected_len=None):
     if isinstance(values, numbers.Number):
-        return [numpy.int32(values)]
+        if expected_len is not None:
+            return [typ(values)] * expected_len
+        else:
+            return [typ(values)]
     elif isinstance(values, (list, tuple)):
+        if expected_len is not None:
+            assert len(values) == expected_len
         try:
-            ret = [numpy.int32(value) for value in values]
+            ret = [typ(value) for value in values]
             return ret
         except(ValueError):
             print("Need iterable with numeric elements, received: %s" %str(values))
@@ -281,18 +289,12 @@ def get_int_list(values):
         raise ValueError("Unaccepted value type, values=%s" %str(values))
 
 
-def get_float_list(values):
-    if isinstance(values, numbers.Number):
-        return [numpy.float32(values)]
-    elif isinstance(values, (list, tuple)):
-        try:
-            ret = [numpy.float32(value) for value in values]
-            return ret
-        except(ValueError):
-            print("Need iterable with numeric elements, received: %s" %str(values))
-            sys.exit(1)
-    else:
-        raise ValueError("Unaccepted value type, values=%s" % str(values))
+def get_int_list(values, expected_len=None):
+    return get_numeric_list(values, numpy.int32, expected_len)
+
+
+def get_float_list(values, expected_len=None):
+    return get_numeric_list(values, numpy.float32, expected_len)
 
 
 def get_bucket_key(bucket_kwargs):

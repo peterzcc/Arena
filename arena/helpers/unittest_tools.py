@@ -84,7 +84,7 @@ def numeric_grad(executor, locations, eps=1e-4):
         executor.arg_dict[k][:] = v
     approx_grads = {k:np.zeros(v.shape) for k, v in locations.items()}
 
-    executor.forward(is_train=True)
+    executor.forward(is_train=False)
     f_x = executor.outputs[0].asnumpy()[0]
     for k, v in locations.items():
         old_value = v.copyto(v.context)
@@ -94,7 +94,7 @@ def numeric_grad(executor, locations, eps=1e-4):
             # set initial states. Need to set all due to inplace operations
             for key, val in locations.items():
                 executor.arg_dict[key][:] = val
-            executor.forward(is_train=True)
+            executor.forward(is_train=False)
             f_eps = executor.outputs[0].asnumpy()[0]
             approx_grads[k].ravel()[i] = (f_eps - f_x) / eps
             v.reshape((np.prod(v.shape), 1))[i] = old_value.reshape((np.prod(v.shape), 1))[i]
@@ -112,22 +112,33 @@ def check_numeric_gradient(sym, locations, ctx=mx.cpu(), grad_nodes=None, aux_st
 
     Parameters:
     -----------
-    sym: `mxnet.symbol.Symbol`
+    sym : `mxnet.symbol.Symbol`
         Symbol containing op to test
 
-    locations: list of numpy.ndarray or dict of str to numpy.ndarray
+    locations : list or tuple or dict
         Argument values used as locations to compute gradient
 
         - If type is list of numpy.ndarray, the position is in
           the same order of `sym.list_arguments()`.
-        - If type is dict of str to numpy.ndarray, then it maps the name of arguments
+        - If type is dict of str -> numpy.ndarray, then it maps the name of arguments
           to the corresponding numpy.ndarray.
         - In either case, value of all the arguments must be provided.
 
-    numeric_eps: float, optional
+    ctx : Context, optional
+        Check the gradient computation on the specified device
+
+    grad_nodes : None or list or tuple, optional
+        Names of the nodes to check gradient on
+
+    aux_states : ist or tuple or dict, optional
+        The auxiliary states required when generating the executor for the symbol
+
+    rng : numpy.random.RandomState, optional
+
+    numeric_eps : float, optional
         Delta for the finite difference method that approximates the gradient
 
-    check_eps: float, optional
+    check_eps : float, optional
         relative error eps used when comparing numeric grad to symbolic grad
 
     References
@@ -254,99 +265,101 @@ def check_prediction_speed(sym, ctx=mx.cpu(), scale=1.0, N=100, rng=_rng, **kwar
     forward_time = (toc - tic) * 1.0 / N
     return forward_time
 
-a = mx.sym.Variable('a')
-b = mx.sym.Variable('b')
-c = mx.sym.batch_cconv(a, b)
-a_npy = np.array([[1, 2, 3, 4, 5], [2,3,4,5,6]])
-b_npy = np.array([[1,2,3], [2,3,4]])
 
-exe = c.simple_bind(ctx=mx.gpu(), a=a_npy.shape, b=b_npy.shape)
-outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-outputs[0].wait_to_read()
-print(outputs[0].asnumpy())
+if __name__ == '__main__':
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = mx.sym.batch_cconv(a, b)
+    a_npy = np.array([[1, 2, 3, 4, 5], [2,3,4,5,6]])
+    b_npy = np.array([[1,2,3], [2,3,4]])
 
-check_numeric_gradient(sym=c, ctx=mx.gpu(),
-                       locations=(a_npy, b_npy),
-                       check_eps=0.01)
+    exe = c.simple_bind(ctx=mx.gpu(), a=a_npy.shape, b=b_npy.shape)
+    outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+    outputs[0].wait_to_read()
+    print(outputs[0].asnumpy())
 
-sym_in = mx.sym.Variable('sym_in')
-sym_out = mx.sym.sum(sym_in, axis=(1, 3))
-# for i in range(2):
-#     check_numeric_gradient(sym=sym_out, ctx=mx.gpu(),
-#                            locations=(_rng.normal(0, 2, (10, 10, 10)),),
-#                            check_eps=0.05)
-print(check_speed(sym=sym_out, ctx=mx.gpu(), sym_in=(20, 20, 20, 20)))
-print(check_speed(sym=sym_out, ctx=mx.cpu(), sym_in=(20, 20, 20, 20)))
-print(check_prediction_speed(sym=sym_out, ctx=mx.gpu(), sym_in=(20, 20, 20, 20)))
-print(check_prediction_speed(sym=sym_out, ctx=mx.cpu(), sym_in=(20, 20, 20, 20)))
-tic = time.time()
-a = np.empty((20, 20))
-b = np.random.normal(0, 1, (20, 20, 20, 20))
-for i in range(100):
-    a[:] = b.sum(axis=(1, 3))
-toc = time.time()
-print((toc - tic) * 1.0 / 100)
+    check_numeric_gradient(sym=c, ctx=mx.gpu(),
+                           locations=(a_npy, b_npy),
+                           check_eps=0.01)
 
-print('Begin Benchmarking batch_cconv')
-print(check_speed(sym=c, ctx=mx.gpu(), a=(2048, 100), b=(2048, 3)))
-print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 100), b=(2048, 3)))
-print(check_speed(sym=c, ctx=mx.gpu(), a=(2048, 50), b=(2048, 5)))
-print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 50), b=(2048, 5)))
-print(check_speed(sym=c, ctx=mx.gpu(), a=(2048, 20), b=(2048, 3)))
-print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 20), b=(2048, 3)))
+    sym_in = mx.sym.Variable('sym_in')
+    sym_out = mx.sym.sum(sym_in, axis=(1, 3))
+    # for i in range(2):
+    #     check_numeric_gradient(sym=sym_out, ctx=mx.gpu(),
+    #                            locations=(_rng.normal(0, 2, (10, 10, 10)),),
+    #                            check_eps=0.05)
+    print(check_speed(sym=sym_out, ctx=mx.gpu(), sym_in=(20, 20, 20, 20)))
+    print(check_speed(sym=sym_out, ctx=mx.cpu(), sym_in=(20, 20, 20, 20)))
+    print(check_prediction_speed(sym=sym_out, ctx=mx.gpu(), sym_in=(20, 20, 20, 20)))
+    print(check_prediction_speed(sym=sym_out, ctx=mx.cpu(), sym_in=(20, 20, 20, 20)))
+    tic = time.time()
+    a = np.empty((20, 20))
+    b = np.random.normal(0, 1, (20, 20, 20, 20))
+    for i in range(100):
+        a[:] = b.sum(axis=(1, 3))
+    toc = time.time()
+    print((toc - tic) * 1.0 / 100)
 
-
-a = mx.sym.Variable('a')
-b = mx.sym.Concat(a, a, num_args=2, dim=0)
-check_numeric_gradient(sym=b, ctx=mx.gpu(),
-                       locations=(_rng.normal(0, 1, (10, 10, 10)),),
-                       check_eps=0.01)
-
-# a = mx.sym.Variable('a')
-# b = mx.sym.transpose(a)
-# print('Begin Benchmarking transpose')
-# print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(100000, 128)))
-# print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(100000, 512)))
-# print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(500000, 1024)))
+    print('Begin Benchmarking batch_cconv')
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(2048, 100), b=(2048, 3)))
+    print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 100), b=(2048, 3)))
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(2048, 50), b=(2048, 5)))
+    print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 50), b=(2048, 5)))
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(2048, 20), b=(2048, 3)))
+    print(check_speed(sym=c, ctx=mx.cpu(), a=(2048, 20), b=(2048, 3)))
 
 
-data = mx.sym.Variable('data')
-embedding_weight = mx.sym.Variable('embedding_weight')
-embed = mx.sym.Embedding(data=data, weight=embedding_weight, input_dim=100000, output_dim=150)
-print('Begin Benchmarking embedding')
-print(check_speed(sym=embed, ctx=mx.gpu(), grad_req={'data': 'null', 'embedding_weight': 'add'},
-                  data=(128, 100), embedding_weight=(100000, 150)))
-print(check_speed(sym=embed, ctx=mx.cpu(), grad_req={'data': 'null', 'embedding_weight': 'add'},
-                  data=(128, 100), embedding_weight=(100000, 150)))
-print(check_prediction_speed(sym=embed, ctx=mx.gpu(), data=(128, 100), embedding_weight=(100000, 150)))
-print(check_prediction_speed(sym=embed, ctx=mx.cpu(), data=(128, 100), embedding_weight=(100000, 150)))
+    a = mx.sym.Variable('a')
+    b = mx.sym.Concat(a, a, num_args=2, dim=0)
+    check_numeric_gradient(sym=b, ctx=mx.gpu(),
+                           locations=(_rng.normal(0, 1, (10, 10, 10)),),
+                           check_eps=0.01)
+
+    # a = mx.sym.Variable('a')
+    # b = mx.sym.transpose(a)
+    # print('Begin Benchmarking transpose')
+    # print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(100000, 128)))
+    # print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(100000, 512)))
+    # print(check_prediction_speed(sym=b, ctx=mx.gpu(), a=(500000, 1024)))
+
+
+    data = mx.sym.Variable('data')
+    embedding_weight = mx.sym.Variable('embedding_weight')
+    embed = mx.sym.Embedding(data=data, weight=embedding_weight, input_dim=100000, output_dim=150)
+    print('Begin Benchmarking embedding')
+    print(check_speed(sym=embed, ctx=mx.gpu(), grad_req={'data': 'null', 'embedding_weight': 'add'},
+                      data=(128, 100), embedding_weight=(100000, 150)))
+    print(check_speed(sym=embed, ctx=mx.cpu(), grad_req={'data': 'null', 'embedding_weight': 'add'},
+                      data=(128, 100), embedding_weight=(100000, 150)))
+    print(check_prediction_speed(sym=embed, ctx=mx.gpu(), data=(128, 100), embedding_weight=(100000, 150)))
+    print(check_prediction_speed(sym=embed, ctx=mx.cpu(), data=(128, 100), embedding_weight=(100000, 150)))
 
 
 
-a = mx.sym.Variable('a')
-b = mx.sym.Variable('b')
-c = mx.sym.batch_dot(a, b)
-d = mx.sym.broadcast_mul(a, b)
-d = mx.sym.sum(d, axis=2, keepdims=True)
-print('Begin Benchmarking batch_dot')
-print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 100, 1)))
-print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 20, 100), b=(128, 100, 1)))
-print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 128, 1)))
-print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 100, 128), b=(128, 128, 1)))
-print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 500), b=(128, 500, 1)))
-print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 100, 500), b=(128, 500, 1)))
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = mx.sym.batch_dot(a, b)
+    d = mx.sym.broadcast_mul(a, b)
+    d = mx.sym.sum(d, axis=2, keepdims=True)
+    print('Begin Benchmarking batch_dot')
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 100, 1)))
+    print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 20, 100), b=(128, 100, 1)))
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 128, 1)))
+    print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 100, 128), b=(128, 128, 1)))
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 500), b=(128, 500, 1)))
+    print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 100, 500), b=(128, 500, 1)))
 
-print('Begin Comparing batch_dot Versus broadcast + mul')
-print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 100, 1)))
-print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 1, 100)))
-print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 128, 1)))
-print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 1, 128)))
-print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 500), b=(128, 500, 1)))
-print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 200, 500), b=(128, 1, 500)))
-# print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 1), b=(128, 1, 100)))
-# print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 200, 1), b=(128, 1, 100)))
-# print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 100), b=(128, 100, 100)))
-# print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 200, 100), b=(128, 100, 100)))
-# print(check_speed(sym=c, ctx=mx.gpu(), a=(16, 200, 100), b=(16, 100, 100)))
-# print(check_speed(sym=c, ctx=mx.cpu(), a=(16, 200, 100), b=(16, 100, 100)))
-#
+    print('Begin Comparing batch_dot Versus broadcast + mul')
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 100, 1)))
+    print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 20, 100), b=(128, 1, 100)))
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 128, 1)))
+    print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 100, 128), b=(128, 1, 128)))
+    print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 500), b=(128, 500, 1)))
+    print(check_speed(sym=d, ctx=mx.gpu(), a=(128, 200, 500), b=(128, 1, 500)))
+    # print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 1), b=(128, 1, 100)))
+    # print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 200, 1), b=(128, 1, 100)))
+    # print(check_speed(sym=c, ctx=mx.gpu(), a=(128, 200, 100), b=(128, 100, 100)))
+    # print(check_speed(sym=c, ctx=mx.cpu(), a=(128, 200, 100), b=(128, 100, 100)))
+    # print(check_speed(sym=c, ctx=mx.gpu(), a=(16, 200, 100), b=(16, 100, 100)))
+    # print(check_speed(sym=c, ctx=mx.cpu(), a=(16, 200, 100), b=(16, 100, 100)))
+    #

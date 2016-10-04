@@ -3,16 +3,35 @@ from __future__ import absolute_import, division, print_function
 
 import numpy
 import mxnet.ndarray as nd
-import cv2
 import logging
-
+try:
+    import cv2
+except ImportError:
+    raise ImportError('OpenCV plugin is not installed. '
+                      'Some visualization features will be disabled.')
 from ..utils import *
 
 
 class CV2Vis(object):
     _win_reg = dict()
+
     @staticmethod
     def get_window(name, typ=cv2.WINDOW_NORMAL):
+        """Switch to a window
+
+        New window names will be registered in the inner registry
+
+        Parameters
+        ----------
+        name : str
+            Name of the window
+        typ :
+            cv2.WINDOW_NORMAL
+
+        Returns
+        -------
+
+        """
         cv2.namedWindow(name, typ)
         if name not in CV2Vis._win_reg:
             cv2.resizeWindow(winname=name, width=240, height=240)
@@ -20,11 +39,32 @@ class CV2Vis(object):
 
     @staticmethod
     def destroy_window(name):
+        """Destroy window
+
+        Parameters
+        ----------
+        name : str
+            Name of the window
+
+        Returns
+        -------
+
+        """
         assert name in CV2Vis._win_reg, "Window %s not found in the registry!" %name
         cv2.destroyWindow(name)
 
     @staticmethod
     def get_display_data(data):
+        """Transform the input ndarray to the opencv format
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+
+        Returns
+        -------
+
+        """
         assert 2 <= data.ndim <= 4
         if 2 != data.ndim:
             if 4 == data.ndim:
@@ -55,14 +95,18 @@ class CV2Vis(object):
 
         Parameters
         ----------
-        data
-        win_name
-        win_typ
-        delay
+        data : numpy.ndarray
+        win_name : str
+        win_typ :
+        delay :
+            Set this variable to wait for key event after displaying the image.
+            delay <=0 means to wait the key forever
         save_image : bool
             Whether to save the visualization result
-        save_path
-        save_size
+        save_path : str or None
+            If save_path is not given, image will be saved to the current directory
+            and the name will be the window name.
+        save_size : tuple or None
 
         Returns
         -------
@@ -81,48 +125,24 @@ class CV2Vis(object):
 
     @staticmethod
     def save(data, path, size=None):
+        """
+
+        Parameters
+        ----------
+        data : numpy.ndarray
+        path : str
+        size : tuple or None
+            (width, height)
+        Returns
+        -------
+
+        """
         data = CV2Vis.get_display_data(data)
         if size is None:
             size = (480, 480)
         cv2.imwrite(path, cv2.resize(data * 256, size,
                                      interpolation=cv2.INTER_LINEAR))
 
-
-def draw_track_res(im, roi, delay=None, color=(0, 0, 255), win_name="Tracking",
-                   win_typ=cv2.WINDOW_AUTOSIZE, save_path=None):
-    """Plot the ROI bounding box on the image using OpenCV
-
-    Parameters
-    ----------
-    im : numpy.ndarray
-      shape (3, height, width)
-    roi : numpy.ndarray
-    delay
-    color
-    win_name
-    win_typ
-    save_path
-
-    Returns
-    -------
-
-    """
-    im = im.transpose(1, 2, 0)
-    width = im.shape[1]
-    height = im.shape[0]
-    roi = roi * [width, height, width, height]
-    roi = numpy.uint32(roi)
-    pt1 = (roi[0] - roi[2] / 2, roi[1] - roi[3] / 2)
-    pt2 = (roi[0] + roi[2] / 2, roi[1] + roi[3] / 2)
-    im2 = numpy.zeros(im.shape)
-    im2[:] = im
-    cv2.rectangle(im2, pt1, pt2, color, 1)
-    win = cv2.namedWindow(win_name, win_typ)
-    cv2.imshow(win_name, im2[:, :, ::-1] / 255.0)
-    if save_path is not None:
-        cv2.imwrite(os.path.join(save_path, win_name + '.png'), im2[:, :, ::-1])
-    if delay is not None:
-        cv2.waitKey(delay)
 
 
 class PLTVisualizer(object):
