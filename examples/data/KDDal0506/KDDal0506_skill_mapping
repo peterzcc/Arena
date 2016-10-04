@@ -1,0 +1,436 @@
+288	distribute-sp~~simplify-fractions-sp~~perform-mult-r-sp~~combine-like-terms-r-sp
+300	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp
+212	Find X, negative slope~~Using difficult numbers~~Using large numbers
+318	combine-like-terms-whole-sp~~perform-mult-sp
+85	Using large numbers~~Find X, negative slope~~Using difficult numbers
+192	distribute-sp~~perform-mult-sp
+75	Using simple numbers~~Using small numbers~~Write expression, initial and point
+225	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Consolidate vars, no coeff; CLT]
+348	Using small numbers~~Find Y, any form~~Using simple numbers
+6	[SkillRule: Remove positive coefficient; {ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+48	factor-sp
+314	Negative Constant, SIF~~Positive Constants, SIF
+435	factor-sp~~combine-like-terms-sp
+366	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: ax+b=c, negative; ax+b=c, negative]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+126	factor-quadratic-sp
+275	Find Y, negative slope~~Using simple numbers~~Using large numbers
+250	Write expression, initial and change~~Using small numbers~~Using difficult numbers
+146	Using small numbers~~Write expression, negative slope~~Using difficult numbers
+51	Using simple numbers~~Using small numbers~~Find X, Simple
+352	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Select Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; Distribute subex}]
+83	Using large numbers~~Using difficult numbers~~Write expression, initial and change
+378	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~factor-sp
+198	distribute-sp~~perform-mult-r-sp~~factor-sp
+223	distribute-sp~~perform-mult-sp~~combine-like-terms-whole-sp
+112	Negative Constant, SIF
+46	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+254	distribute-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-whole-sp
+321	[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]~~[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]
+414	Shading greater than~~Shading GLF equation with positive slope~~Excluding the line when shading
+224	distribute-sp~~combine-like-terms-sp~~perform-mult-sp~~combine-like-terms-whole-sp
+256	Using large numbers~~Find Y, positive slope~~Using simple numbers
+149	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Select Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; Distribute subex}]
+92	Shading SIF equation with positive slope~~Shading greater than~~Including the line when shading
+26	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]
+292	Entering a computed quadratic value~~Using simple numbers~~Using small numbers~~Find Y, any form
+60	Using simple numbers~~Using small numbers~~Find Y, negative slope
+421	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp~~factor-sp
+373	Entering a computed linear value~~Using simple numbers~~Using small numbers~~Find Y, positive slope
+403	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Eliminate Parens; {[var expr]/[const expr] = [const expr], multiply; [var expr]*[const expr] = [const expr], divide}]~~[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]
+12	[SkillRule: Calculate Eliminate Parens; [Typein Skill: Eliminate Parens]]
+370	Find Y, positive slope~~Using simple numbers~~Using large numbers
+209	Entering slope, SIF~~Positive Constants, SIF
+77	Using small numbers~~Using difficult numbers~~Write expression, initial and point
+369	Shading SIF equation with negative slope~~Shading less than~~Including the line when shading
+432	distribute-sp~~perform-mult-r-sp~~combine-like-terms-r-sp
+401	Shading GLF equation with positive slope~~Excluding the line when shading~~Shading less than
+5	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: ax+b=c, negative; ax+b=c, negative]
+58	Labelling point of intersection
+61	Using simple numbers~~Using small numbers~~Find Y, positive slope
+187	Edit Algebraic refl-v
+410	Shading less than~~Including the line when shading~~Shading SIF equation with negative slope
+279	[SkillRule: Isolate positive; x+a=b, positive]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+413	Write expression, two points~~Using simple numbers~~Using small numbers
+167	combine-like-terms-sp~~factor-sp
+389	Including the line when shading~~Shading GLF equation with positive slope~~Shading greater than
+217	Shading greater than~~Including the line when shading~~Shading GLF equation with positive slope
+320	Using large numbers~~Find Y, any form~~Using simple numbers
+70	Using large numbers~~Find Y, positive slope~~Using difficult numbers
+229	Find X, positive slope~~Using difficult numbers~~Using small numbers
+160	Using large numbers~~Write expression, negative slope~~Using difficult numbers
+142	Setting the y-intercept
+258	distribute-sp~~simplify-fractions-sp~~perform-mult-r-sp
+228	combine-like-terms-sp~~perform-mult-sp
+350	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove negative coefficient; {ax/b=c, reciprocal; ax/b=c; ax=b; x/a=b}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {add x in -x; move neg var to other side}]
+309	Using small numbers~~Find Y, Simple~~Using simple numbers
+364	Negative Constant, GLF~~Entering a point
+337	[SkillRule: Consolidate vars with coeff; CLT]~~[SkillRule: Select Multiply/Divide, nested; {MT; MT no fraction coeff}]
+176	Excluding the line when shading~~Shading SIF equation with positive slope~~Shading less than
+418	[SkillRule: Remove negative coefficient; {ax/b=c, reciprocal; ax/b=c; ax=b; x/a=b}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+283	Using small numbers~~Write expression, negative slope~~Using simple numbers
+277	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-r-sp~~combine-like-terms-r-sp
+355	[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]~~[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]
+129	qft-num2-sp
+13	simplify-fractions-sp~~combine-like-terms-sp
+130	[SkillRule: Apply Exponent; {Expand Exponents; eval radical; Expand Exponents, radical}]
+181	Identify Parent Description
+247	Find X, negative slope~~Using difficult numbers~~Using small numbers
+32	[SkillRule: invert-mult; {ivm}]
+290	Using small numbers~~Find Y, positive slope~~Using simple numbers
+273	Find X, positive slope~~Using difficult numbers~~Using large numbers
+84	Using large numbers~~Using difficult numbers~~Write expression, initial and point
+65	Using large numbers~~Write expression, negative slope~~Using simple numbers
+353	perform-mult-r-sp~~simplify-fractions-sp~~perform-mult-sp
+324	Using simple numbers~~Using large numbers~~Find Y, Simple
+42	Using small numbers~~Using difficult numbers~~Find Y, any form
+18	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+377	combine-like-terms-r-sp
+40	Using simple numbers~~Using small numbers~~Find X, positive slope
+21	[SkillRule: Variable in denominator; {a/x=[anything]; a/x=b; a/x=b, sophisticated}]
+286	[SkillRule: Select Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; Distribute subex}]~~[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]
+137	Using large numbers~~Using difficult numbers~~Write expression, two points
+116	Using small numbers~~Find X, Simple~~Using difficult numbers
+289	Write expression, negative slope~~Using simple numbers~~Using large numbers
+390	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Variable in denominator; {a/x=[anything]; a/x=b; a/x=b, sophisticated}]
+408	perform-mult-r-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp
+237	simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp
+119	Using simple numbers~~Using small numbers~~Write expression, quadratic
+426	perform-mult-r-sp~~simplify-fractions-sp~~combine-like-terms-sp
+20	[SkillRule: Consolidate vars with coeff; CLT]~~[SkillRule: Variable in denominator; {a/x=[anything]; a/x=b; a/x=b, sophisticated}]
+381	Using difficult numbers~~Write expression, initial and change~~Using small numbers
+333	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: ax+b=c, negative; ax+b=c, negative]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+246	Using small numbers~~Find X, negative slope~~Using simple numbers
+316	Excluding the line when shading~~Shading SIF equation with positive slope~~Shading greater than~~Including the line when shading~~Shading SIF equation with negative slope~~Shading less than
+39	Using simple numbers~~Using small numbers~~Write expression, positive slope
+329	Find Y, positive slope~~Using difficult numbers~~Using small numbers
+423	distribute-sp~~simplify-fractions-sp~~perform-mult-sp~~factor-sp
+25	[SkillRule: Done?; {doneleft; doneright; done no solution; Done No Solution, domain exception; Done No Solution, range exception; done infinite solutions}]
+344	Using simple numbers~~Using small numbers~~Write expression, positive slope~~Using large numbers
+7	[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]
+428	perform-mult-sp~~perform-mult-r-sp~~simplify-fractions-sp~~combine-like-terms-sp
+362	Write expression, negative slope~~Using difficult numbers~~Using large numbers
+365	Using large numbers~~Using simple numbers~~Find X, Simple
+157	Using difficult numbers~~Using small numbers~~Find X, Simple
+178	simplify-fractions-sp~~perform-mult-sp
+431	combine-like-terms-sp~~perform-mult-sp~~distribute-sp~~simplify-fractions-sp
+177	Find Y, Simple~~Using simple numbers~~Using small numbers~~Entering a computed linear value
+406	Positive Constants, SIF~~Entering y-intercept, SIF
+135	simplify-fractions-sp
+174	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp
+105	Including the line when shading~~Shading SIF equation with negative slope~~Shading less than
+419	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: invert-mult; {ivm}]
+399	perform-mult-r-sp~~factor-sp~~distribute-sp~~simplify-fractions-sp~~perform-mult-sp
+44	Using simple numbers~~Using large numbers~~Find Y, any form
+260	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+298	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]~~[SkillRule: Consolidate vars with coeff; CLT]
+383	combine-like-terms-sp~~perform-mult-whole-sp~~distribute-sp
+372	Shading GLF equation with positive slope~~Shading greater than~~Including the line when shading
+134	perform-mult-row2-sp
+151	perform-mult-sp~~combine-like-terms-whole-sp
+422	distribute-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp~~combine-like-terms-r-sp
+69	Using small numbers~~Find Y, positive slope~~Using difficult numbers
+11	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Isolate negative; x+a=b, negative]
+150	[SkillRule: Select Multiply/Divide, nested; {MT; MT no fraction coeff}]
+315	Negative Constant, SIF~~Entering a point~~Positive Constants, SIF
+91	Entering x-intercept, SIF~~Positive Constants, SIF
+41	Using small numbers~~Write expression, positive slope~~Using difficult numbers
+147	Find Y, Simple~~Using large numbers~~Using difficult numbers
+335	combine-like-terms-sp~~perform-mult-r-sp
+346	Using simple numbers~~Using small numbers~~Find X, Simple~~Using large numbers~~Find X, positive slope
+343	Using simple numbers~~Entering a given~~Using large numbers~~Find X, positive slope
+317	distribute-sp~~simplify-fractions-sp~~perform-mult-sp~~perform-mult-r-sp~~combine-like-terms-r-sp
+261	distribute-sp~~simplify-fractions-sp~~perform-mult-sp~~perform-mult-r-sp
+227	Using large numbers~~Find Y, negative slope~~Using difficult numbers
+188	Choose Graphical a
+203	[SkillRule: Isolate negative; x+a=b, negative]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+184	Choose Graphical k
+191	Choose Graphical h
+197	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Consolidate vars with coeff; CLT]
+169	simplify-fractions-sp~~factor-sp
+230	Positive Constants, SIF
+67	Using large numbers~~Find X, positive slope~~Using difficult numbers
+96	Entering a point~~Negative Constant, GLF
+284	[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove negative coefficient; {ax/b=c, reciprocal; ax/b=c; ax=b; x/a=b}]
+62	Using simple numbers~~Using small numbers~~Find X, negative slope
+257	perform-mult-sp~~distribute-sp
+93	Excluding the line when shading~~Shading SIF equation with negative slope~~Shading less than
+104	Shading greater than~~Including the line when shading~~Shading GLF equation with negative slope
+144	Entering the slope
+87	Negative Constant, SIF~~Entering y-intercept, SIF
+398	distribute-sp~~simplify-fractions-sp~~perform-mult-sp~~perform-mult-r-sp~~factor-sp
+339	[SkillRule: Consolidate vars with coeff; CLT]~~[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]
+220	Excluding the line when shading~~Shading greater than~~Shading GLF equation with negative slope
+80	Using small numbers~~Find Y, negative slope~~Using difficult numbers
+213	simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp
+173	simplify-fractions-sp~~perform-mult-sp~~perform-mult-r-sp
+68	Find Y, Simple~~Using small numbers~~Using difficult numbers
+114	[SkillRule: Remove negative coefficient; {ax/b=c, reciprocal; ax/b=c; ax=b; x/a=b}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+249	Using difficult numbers~~Using large numbers~~Find X, positive slope
+34	Identifying units
+392	Shading SIF equation with positive slope~~Shading less than~~Excluding the line when shading
+282	Find Y, positive slope~~Using simple numbers~~Using small numbers
+208	Negative Constant, SIF~~Entering slope, SIF
+155	perform-mult-r-sp
+375	Find Y, any form~~Using simple numbers~~Using large numbers
+242	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]
+123	Entering a given~~Entering a given quadratic value
+382	distribute-sp~~combine-like-terms-sp~~perform-mult-whole-sp
+411	perform-mult-r-sp~~combine-like-terms-sp
+86	Negative Constant, SIF~~Entering x-intercept, SIF
+402	[SkillRule: Consolidate vars with coeff; CLT]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+109	Excluding the line when shading~~Shading less than~~Shading GLF equation with positive slope
+196	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: ax+b=c, negative; ax+b=c, negative]
+81	Using simple numbers~~Using large numbers~~Write expression, two points
+186	Choose Graphical Refl-v
+285	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+139	Entering a given~~Convert unit, mixed
+232	Shading GLF equation with positive slope~~Excluding the line when shading~~Shading greater than
+274	perform-mult-r-sp~~distribute-sp~~simplify-fractions-sp
+367	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Consolidate vars with coeff; CLT]
+190	Edit Algebraic h
+185	Edit Algebraic k
+120	Using simple numbers~~Using small numbers~~Find Y, positive slope~~Entering a computed linear value
+189	Edit Algebraic a
+416	Find Y, positive slope~~Entering a computed linear value~~Using simple numbers~~Using small numbers
+138	Find X, Simple~~Using large numbers~~Using difficult numbers
+240	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-r-sp
+107	Entering a point~~Positive Constants, GLF
+154	[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]~~[SkillRule: Consolidate vars, no coeff; CLT]
+206	Write expression, positive slope~~Using simple numbers~~Using small numbers
+251	perform-mult-whole-sp~~combine-like-terms-sp
+331	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]
+263	simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~factor-sp
+110	Excluding the line when shading~~Shading less than
+325	[SkillRule: Do Multiply - Whole nested; [Typein Skill: Select Multiply/Divide, nested]]
+354	distribute-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp
+79	Using small numbers~~Using difficult numbers~~Write expression, two points
+210	Entering a given quadratic value~~Entering a given
+78	Using simple numbers~~Using small numbers~~Write expression, two points
+211	Using small numbers~~Find Y, any form~~Entering a computed quadratic value~~Using simple numbers
+359	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Eliminate Parens; {[var expr]/[const expr] = [const expr], multiply; [var expr]*[const expr] = [const expr], divide}]
+103	Entering y-intercept, GLF~~Positive Constants, GLF
+341	[SkillRule: Done?; {doneleft; doneright; done no solution; Done No Solution, domain exception; Done No Solution, range exception; done infinite solutions}]~~[SkillRule: done infinite solutions; done infinite solutions]
+360	Using large numbers~~Using difficult numbers~~Write expression, positive slope
+64	Using simple numbers~~Using large numbers~~Find X, negative slope
+308	[SkillRule: Consolidate vars, no coeff; CLT]~~[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]
+404	Positive Constants, GLF~~Entering y-intercept, GLF
+294	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Consolidate vars with coeff; CLT]
+391	Find Y, negative slope~~Using simple numbers~~Using small numbers
+349	[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]~~[SkillRule: Consolidate vars with coeff; CLT]~~[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]
+332	perform-mult-sp~~combine-like-terms-sp
+117	Using simple numbers~~Find X, Simple~~Using large numbers
+216	[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+234	Find X, Simple~~Using difficult numbers~~Using small numbers
+43	Using small numbers~~Find X, positive slope~~Using difficult numbers
+31	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+168	simplify-fractions-sp~~perform-mult-sp~~perform-mult-r-sp~~factor-sp
+357	Write expression, negative slope~~Using simple numbers~~Using small numbers
+106	Positive Constants, GLF
+393	Find Y, any form~~Using small numbers~~Using difficult numbers
+72	Using simple numbers~~Using small numbers~~Write expression, initial and change
+400	Entering y-intercept, GLF~~Negative Constant, GLF
+73	Using small numbers~~Using difficult numbers~~Write expression, initial and change
+63	Using simple numbers~~Using large numbers~~Write expression, negative slope
+27	distribute-sp~~factor-sp
+281	Using difficult numbers~~Using small numbers~~Find Y, positive slope
+136	Using small numbers~~Using difficult numbers~~Write expression, ratio
+74	Using simple numbers~~Using large numbers~~Write expression, initial and change
+82	Using simple numbers~~Using large numbers~~Find Y, negative slope
+159	[SkillRule: Calculate negative coefficient; [Typein Skill: Make variable positive]]
+235	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp~~combine-like-terms-r-sp
+219	Find X, negative slope~~Using simple numbers~~Using small numbers
+386	perform-mult-whole-sp~~distribute-sp~~combine-like-terms-sp
+306	Using difficult numbers~~Using small numbers~~Write expression, negative slope
+395	Using small numbers~~Write expression, initial and point~~Using simple numbers
+76	Using small numbers~~Find X, negative slope~~Using difficult numbers
+183	Identify Parent Curve
+145	Setting the slope
+295	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Consolidate vars, no coeff; CLT]
+182	Identify Parent Equation
+356	Using simple numbers~~Entering a given~~Using large numbers~~Find X, positive slope~~Convert unit, mixed
+397	simplify-fractions-sp~~perform-mult-r-sp~~factor-sp
+272	Shading SIF equation with positive slope~~Shading greater than~~Excluding the line when shading
+205	[SkillRule: Consolidate vars, no coeff; CLT]~~[SkillRule: Extract to consolidate vars; {factor; factorb; factorc; factord}]
+158	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove negative coefficient; {ax/b=c, reciprocal; ax/b=c; ax=b; x/a=b}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+89	Excluding the line when shading~~Shading SIF equation with positive slope~~Shading greater than
+22	[SkillRule: Extract to consolidate vars; {factor; factorb; factorc; factord}]
+193	distribute-sp
+231	Entering a point~~Positive Constants, SIF
+358	Entering y-intercept, SIF~~Negative Constant, SIF
+238	[SkillRule: Make variable positive; {add x in -x; move neg var to other side}]
+420	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Variable in denominator; {a/x=[anything]; a/x=b; a/x=b, sophisticated}]
+342	Find X, negative slope~~Using simple numbers~~Using large numbers
+101	Including the line when shading~~Shading less than~~Shading GLF equation with positive slope
+430	[SkillRule: Eliminate Parens; {[var expr]/[const expr] = [const expr], multiply; [var expr]*[const expr] = [const expr], divide}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+255	distribute-sp~~combine-like-terms-sp~~perform-mult-sp~~combine-like-terms-whole-sp~~perform-mult-whole-sp
+29	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Eliminate Parens; {[var expr]/[const expr] = [const expr], multiply; [var expr]*[const expr] = [const expr], divide}]
+363	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Calculate Eliminate Parens; [Typein Skill: Eliminate Parens]]~~[SkillRule: Eliminate Parens; {[var expr]/[const expr] = [const expr], multiply; [var expr]*[const expr] = [const expr], divide}]
+412	Using large numbers~~Write expression, initial and point~~Using simple numbers
+269	Using difficult numbers~~Find Y, any form~~Using small numbers
+66	Write expression, positive slope~~Using large numbers~~Using difficult numbers
+95	Negative Constant, GLF
+323	Using small numbers~~Find Y, negative slope~~Using simple numbers
+133	perform-mult-sp
+327	combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp
+291	Positive Constants, GLF~~Entering slope, GLF
+24	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Variable in denominator; {a/x=[anything]; a/x=b; a/x=b, sophisticated}]
+218	[SkillRule: Select Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; Distribute subex}]~~[SkillRule: Apply Exponent; {Expand Exponents; eval radical; Expand Exponents, radical}]
+301	perform-mult-r-sp~~distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp
+200	Find X, positive slope~~Using simple numbers~~Using small numbers
+45	Write expression, positive slope~~Using large numbers~~Using simple numbers
+296	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]
+201	distribute-sp~~simplify-fractions-sp~~factor-sp
+351	Using small numbers~~Using difficult numbers~~Find Y, Simple
+94	Negative Constant, GLF~~Entering slope, GLF
+287	combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp~~simplify-fractions-sp
+253	Using large numbers~~Find Y, negative slope~~Using simple numbers
+310	[SkillRule: Calculate negative coefficient; [Typein Skill: Make variable positive]]~~[SkillRule: invert-mult; {ivm}]
+436	perform-mult-sp~~perform-mult-r-sp~~combine-like-terms-r-sp
+214	Convert unit, standard~~Entering a given
+396	Using difficult numbers~~Using large numbers~~Write expression, negative slope
+304	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+266	Write expression, two points~~Using simple numbers~~Using large numbers
+131	[SkillRule: Select Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; Distribute subex}]
+385	Entering x-intercept, GLF~~Negative Constant, GLF
+270	Write expression, initial and point~~Using simple numbers~~Using large numbers
+15	[SkillRule: Select Combine Terms; CLT]~~[SkillRule: Consolidate vars, no coeff; CLT]
+194	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]
+52	Find Y, Simple~~Using simple numbers~~Using large numbers
+164	[SkillRule: Done?; {doneleft; doneright; done no solution; Done No Solution, domain exception; Done No Solution, range exception; done infinite solutions}]~~[SkillRule: done no solutions; {done no solution; Done No Solution, domain exception; Done No Solution, range exception}]
+118	Using large numbers~~Using simple numbers~~Write expression, positive slope
+328	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]
+297	[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]~~[SkillRule: Select Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; Distribute subex}]
+166	[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+305	Using small numbers~~Find X, Simple~~Using simple numbers
+415	Including the line when shading~~Shading SIF equation with positive slope~~Shading greater than
+59	Using simple numbers~~Using small numbers~~Write expression, negative slope
+427	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~perform-mult-r-sp~~factor-sp~~combine-like-terms-r-sp
+71	Using simple numbers~~Using large numbers~~Write expression, initial and point
+434	distribute-sp~~simplify-fractions-sp~~perform-mult-sp
+302	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-r-sp~~factor-sp
+19	distribute-sp~~combine-like-terms-sp
+100	Including the line when shading~~Shading less than~~Shading GLF equation with negative slope
+243	Shading GLF equation with negative slope~~Including the line when shading~~Shading less than
+384	[SkillRule: Extract to consolidate vars; {factor; factorb; factorc; factord}]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+241	combine-like-terms-sp~~perform-mult-sp~~distribute-sp
+248	Entering a given linear value~~Entering a given
+1	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]
+330	Write expression, negative slope~~Using difficult numbers~~Using small numbers
+102	Entering x-intercept, GLF~~Positive Constants, GLF
+111	Excluding the line when shading~~Shading less than~~Shading GLF equation with negative slope
+108	Shading greater than~~Including the line when shading
+307	Using large numbers~~Find Y, Simple~~Using simple numbers
+3	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+163	distribute-sp~~combine-like-terms-sp~~perform-mult-sp
+338	Using difficult numbers~~Write expression, ratio~~Using small numbers
+99	Excluding the line when shading~~Shading greater than~~Shading GLF equation with positive slope
+175	Shading SIF equation with positive slope~~Including the line when shading~~Shading less than
+57	Changing axis intervals
+153	[SkillRule: Select Multiply; {MT; MT no fraction coeff}]
+10	combine-like-terms-sp
+35	Using simple numbers~~Write expression, positive slope~~Using large numbers
+122	Using simple numbers~~Using small numbers~~Find Y, any form~~Entering a computed quadratic value
+293	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Consolidate vars, no coeff; CLT]
+9	[SkillRule: Consolidate vars with coeff; CLT]
+407	Using small numbers~~Write expression, two points~~Using simple numbers
+124	Entering a computed linear value
+226	Entering slope, GLF~~Positive Constants, GLF
+140	Using difficult numbers~~Using small numbers~~Find X, positive slope
+36	Entering a given
+53	Using simple numbers~~Using large numbers~~Find Y, positive slope
+239	Shading SIF equation with negative slope~~Shading less than~~Excluding the line when shading
+2	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Isolate positive; x+a=b, positive]
+97	Negative Constant, GLF~~Entering x-intercept, GLF
+8	[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]
+37	Using simple numbers~~Using large numbers~~Find X, positive slope
+207	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove positive coefficient; {ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b}]
+271	Find X, Simple~~Using large numbers~~Using simple numbers
+172	[SkillRule: ax+b=c, negative; ax+b=c, negative]~~[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]
+433	simplify-fractions-sp~~combine-like-terms-sp~~distribute-sp
+374	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Calculate Eliminate Parens; [Typein Skill: Eliminate Parens]]
+215	distribute-sp~~simplify-fractions-sp
+4	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Remove negative coefficient; {ax/b=c, reciprocal; ax/b=c; ax=b; x/a=b}]
+319	[SkillRule: Consolidate vars, no coeff; CLT]~~[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]
+262	simplify-fractions-sp~~combine-like-terms-sp~~factor-sp
+121	Entering a given~~Entering a given linear value
+244	distribute-sp~~combine-like-terms-sp~~perform-mult-r-sp
+56	Changing axis bounds
+33	Define Variable
+127	qft-num1-sp
+311	[SkillRule: Consolidate vars with coeff; CLT]~~[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]
+299	Using small numbers~~Find X, positive slope~~Using simple numbers
+28	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Eliminate Parens; {[var expr]/[const expr] = [const expr], multiply; [var expr]*[const expr] = [const expr], divide}]
+380	perform-mult-sp~~combine-like-terms-whole-sp~~distribute-sp
+245	Find X, Simple~~Using simple numbers~~Using small numbers
+280	distribute-sp~~combine-like-terms-sp~~factor-sp
+387	Shading greater than~~Excluding the line when shading~~Shading SIF equation with positive slope
+98	Negative Constant, GLF~~Entering y-intercept, GLF
+405	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]~~[SkillRule: Consolidate vars with coeff; CLT]
+259	distribute-sp~~perform-mult-r-sp
+312	perform-mult-sp~~perform-mult-r-sp~~distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp
+47	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Extract to consolidate vars; {factor; factorb; factorc; factord}]
+345	Using simple numbers~~Using small numbers~~Entering a given~~Find X, Simple
+55	Labelling the axes
+141	Write expression, positive slope~~Using difficult numbers~~Using small numbers
+170	distribute-sp~~perform-mult-r-sp~~factor-sp~~combine-like-terms-r-sp
+313	Entering a point~~Positive Constants, SIF~~Positive Constants, GLF
+336	distribute-sp~~simplify-fractions-sp~~perform-mult-r-sp~~factor-sp
+425	simplify-fractions-sp~~combine-like-terms-sp~~combine-like-terms-r-sp
+195	combine-like-terms-sp~~distribute-sp
+128	qft-den-sp
+371	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Consolidate vars, no coeff; CLT]
+252	Using small numbers~~Find Y, positive slope~~Entering a computed linear value~~Using simple numbers
+179	Using small numbers~~Write expression, positive slope~~Using simple numbers
+376	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Consolidate vars with coeff; CLT]
+202	Positive Constants, GLF~~Entering a point
+165	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]
+156	Using large numbers~~Find X, positive slope~~Using simple numbers
+379	distribute-sp~~perform-mult-sp~~perform-mult-r-sp
+54	[SkillRule: Consolidate vars, any; {Combine variables to right, sub; Combine variables to right, add; Combine variables to right, gen; Combine variables to right; Combine variables to left, add; Combine variables to left, sub; Combine variables to left, gen; ax+b=cx; ax+b=cx, move left; ax+b=cx+d, pos; ax+b=cx+d, neg; ax+b=cx+d, move right; ax+b=cx+d, move two; ax+b=cx+d, move two2; x+b=cx+d, pos; x+b=cx+d, neg; x+b=cx+d, move right; x+b=cx+d, move two; x+b=cx+d, move two2; ax+b=x+d, pos; ax+b=x+d, neg; ax+b=x+d, move right; ax+b=x+d, move two; ax+b=x+d, move two2; x+b=x+d, pos; x+b=x+d, neg; x+b=x+d, move right; x+b=x+d, move two; x+b=x+d, move two2}]
+368	Using difficult numbers~~Using small numbers~~Find X, negative slope
+125	Correctly placing points
+361	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Calculate negative coefficient; [Typein Skill: Make variable positive]]
+162	perform-mult-sp~~perform-mult-r-sp
+90	Entering y-intercept, SIF~~Positive Constants, SIF
+49	Find Y, Simple~~Using simple numbers~~Using small numbers
+417	factor-sp~~simplify-fractions-sp
+236	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Eliminate Parens; {[var expr]/[const expr] = [const expr], multiply; [var expr]*[const expr] = [const expr], divide}]
+152	combine-like-terms-sp~~perform-mult-whole-sp
+38	Entering a given~~Convert unit, standard
+340	Convert unit, mixed~~Entering a given
+132	Find Y, any form~~Entering a computed quadratic value~~Using simple numbers~~Using small numbers
+276	Write expression, ratio~~Using small numbers~~Using difficult numbers
+143	Entering the y-intercept
+161	simplify-fractions-sp~~perform-mult-r-sp
+303	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp~~factor-sp
+278	[SkillRule: Consolidate vars, no coeff; CLT]~~[SkillRule: Calculate negative coefficient; [Typein Skill: Make variable positive]]
+204	Find X, positive slope~~Using simple numbers~~Using large numbers
+171	Using difficult numbers~~Using small numbers~~Write expression, positive slope
+115	Excluding the line when shading~~Shading greater than~~Shading SIF equation with negative slope
+180	Using large numbers~~Using difficult numbers~~Write expression, ratio
+233	Write expression, quadratic~~Using simple numbers~~Using small numbers
+326	combine-like-terms-sp~~perform-mult-sp~~perform-mult-whole-sp
+17	[SkillRule: Add/Subtract; [Typein Skill: {Isolate positive; Isolate negative; Remove constant; Consolidate vars, no coeff; Consolidate vars with coeff; Consolidate vars, any}]]~~[SkillRule: Consolidate vars with coeff; CLT]
+268	Using difficult numbers~~Find Y, Simple~~Using small numbers
+267	[SkillRule: Consolidate vars, no coeff; CLT]~~[SkillRule: Select Combine Terms; CLT]
+265	simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-r-sp
+221	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Consolidate vars with coeff; CLT]
+264	[SkillRule: Consolidate vars with coeff; CLT]~~[SkillRule: Extract to consolidate vars; {factor; factorb; factorc; factord}]
+347	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]~~[SkillRule: Select Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; Distribute subex}]
+16	distribute-sp~~simplify-fractions-sp~~combine-like-terms-sp
+88	Placing coordinate point
+30	[SkillRule: Eliminate Parens; {CLT nested; CLT nested, parens; Distribute Mult right; Distribute Mult left; (+/-x +/-a)/b=c, mult; (+/-x +/-a)*b=c, div; [var expr]/[const expr] = [const expr], multiply; Distribute Division left; Distribute Division right; Distribute both mult left; Distribute both mult right; Distribute both divide left; Distribute both divide right; Distribute subex}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+148	Using simple numbers~~Using small numbers~~Find Y, Simple
+23	[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+113	Negative Constant, SIF~~Entering a point
+199	Using simple numbers~~Using small numbers~~Find Y, any form
+222	Using small numbers~~Write expression, quadratic~~Using simple numbers
+394	simplify-fractions-sp~~combine-like-terms-sp~~perform-mult-sp~~combine-like-terms-r-sp
+388	combine-like-terms-sp~~simplify-fractions-sp
+14	[SkillRule: Consolidate vars, no coeff; CLT]
+409	distribute-sp~~perform-mult-sp~~combine-like-terms-whole-sp~~perform-mult-whole-sp
+424	Shading greater than~~Including the line when shading~~Shading SIF equation with positive slope
+322	Using large numbers~~Find X, negative slope~~Using simple numbers
+429	[SkillRule: Multiply/Divide; [Typein Skill: {Remove coefficient; Variable in denominator}]]~~[SkillRule: invert-mult; {ivm}]
+334	[SkillRule: Remove constant; {ax+b=c, positive; ax+b=c, negative; x+a=b, positive; x+a=b, negative; [var expr]+[const expr]=[const expr], positive; [var expr]+[const expr]=[const expr], negative; [var expr]+[const expr]=[const expr], all; Combine constants to right; Combine constants to left; a-x=b, positive; a/x+b=c, positive; a/x+b=c, negative}]~~[SkillRule: Remove coefficient; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]~~[SkillRule: Make variable positive; {ax+b=c, divide; ax=b; [const expr]*[var fact] + [const expr] = [const expr], divide; [var expr]*[const expr] = [const expr], divide; a/b*x=c; a/b*x=c, reciprocal; ax/b=c, reciprocal; ax/b=c; x/a=b; ax=b; (+/-x +/-a)/b=c, mult; a=x*(b+c); a=x*(b-c); a=x*(b*c+d); x/a+b=c, multiply; [var expr]/[const expr] = [const expr], multiply}]
+50	Entering a given~~Convert unit, multiplier

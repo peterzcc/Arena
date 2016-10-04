@@ -1,0 +1,1983 @@
+(C:\Anaconda2) D:\Arena\examples\memory_key_value_one_prediction>python main.py
+Namespace(batch_size=32, data_dir='../data/assist2009_updated', data_name='0910_a', gpus='0', init_lr=0.1, init_std=0.1, load='0910_a', max_iter=200, maxgradnorm=50.0, memory_key_state_dim=10, memory_size=10, memory_value_state_dim=20, momentum=0.9, n_question=125, num_heads=1, q_embed_dim=20, q_state_dim=10, qa_embed_dim=50, qa_state_dim=20, save='0910_a', seqlen=200, show=True, test=False, vis=False)
+Training with gpu(0) ...
+
+
+train_q_data.shape (4265L, 201L)
+train_qa_data.shape (4265L, 201L)
+test_q_data.shape (1014L, 201L)
+test_qa_data.shape (1014L, 201L)
+
+
+[KTrain |================================| 100.0% | Elapsed: 73s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 1
+test_auc        0.755698013583  train_auc       0.667639202891
+test_accuracy   0.718334363812  train_accuracy  0.682713320866
+test_loss       0.559580183235  train_loss      0.605869205635
+learning_rate 0.1
+2016-10-03 23:50:42,671 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\1_0.755698013583\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\1_0.755698013583\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 2
+test_auc        0.760909216479  train_auc       0.7512010023
+test_accuracy   0.719038923318  train_accuracy  0.727383406
+test_loss       0.553106714177  train_loss      0.546609535503
+learning_rate 0.1
+2016-10-03 23:52:07,842 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\2_0.760909216479\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\2_0.760909216479\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 3
+test_auc        0.765101396513  train_auc       0.750035016338
+test_accuracy   0.722231009246  train_accuracy  0.725799578828
+test_loss       0.543468050836  train_loss      0.546038595041
+learning_rate 0.1
+2016-10-03 23:53:31,904 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\3_0.765101396513\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\3_0.765101396513\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 4
+test_auc        0.765879608071  train_auc       0.758678294538
+test_accuracy   0.711173738623  train_accuracy  0.732615479685
+test_loss       0.554030631652  train_loss      0.537523876803
+learning_rate 0.1
+2016-10-03 23:54:56,121 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\4_0.765879608071\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\4_0.765879608071\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 5
+test_auc        0.7683632429    train_auc       0.76290156973
+test_accuracy   0.725509367766  train_accuracy  0.735228339841
+test_loss       0.566562169036  train_loss      0.532353211253
+learning_rate 0.1
+2016-10-03 23:56:20,476 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\5_0.7683632429\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\5_0.7683632429\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 6
+test_auc        0.770188047486  train_auc       0.759286343882
+test_accuracy   0.725911973198  train_accuracy  0.732785594045
+test_loss       0.540132722418  train_loss      0.535842020756
+learning_rate 0.1
+2016-10-03 23:57:45,618 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\6_0.770188047486\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\6_0.770188047486\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 73s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 7
+test_auc        0.772955591332  train_auc       0.765141852924
+test_accuracy   0.725581261593  train_accuracy  0.737163814181
+test_loss       0.540197078066  train_loss      0.52829175557
+learning_rate 0.1
+2016-10-03 23:59:08,588 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\7_0.772955591332\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\7_0.772955591332\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 8
+test_auc        0.773056627191  train_auc       0.767479367888
+test_accuracy   0.729506664558  train_accuracy  0.738145439031
+test_loss       0.534366120381  train_loss      0.527313171331
+learning_rate 0.1
+2016-10-04 00:00:33,009 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\8_0.773056627191\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\8_0.773056627191\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 9
+test_auc        0.775060046402  train_auc       0.76495548153
+test_accuracy   0.72877334752   train_accuracy  0.737871514972
+test_loss       0.532678896676  train_loss      0.529765465589
+learning_rate 0.1
+2016-10-04 00:01:57,946 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\9_0.775060046402\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\9_0.775060046402\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 10
+test_auc        0.774202399167  train_auc       0.762172546706
+test_accuracy   0.725178656161  train_accuracy  0.736453209576
+test_loss       0.547757719745  train_loss      0.532219446608
+learning_rate 0.1
+2016-10-04 00:03:22,733 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\10_0.774202399167\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\10_0.774202399167\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 11
+test_auc        0.776132083604  train_auc       0.771463008049
+test_accuracy   0.71499849023   train_accuracy  0.740932386234
+test_loss       0.552952830805  train_loss      0.522314549843
+learning_rate 0.1
+2016-10-04 00:04:46,894 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\11_0.776132083604\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\11_0.776132083604\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 12
+test_auc        0.776506479777  train_auc       0.765225071607
+test_accuracy   0.729262225545  train_accuracy  0.737799054892
+test_loss       0.548540137572  train_loss      0.52912926655
+learning_rate 0.1
+2016-10-04 00:06:11,441 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\12_0.776506479777\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\12_0.776506479777\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 13
+test_auc        0.77285901101   train_auc       0.771143007398
+test_accuracy   0.72874458999   train_accuracy  0.740661900554
+test_loss       0.561631317642  train_loss      0.522572498236
+learning_rate 0.1
+2016-10-04 00:07:36,770 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\13_0.77285901101\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\13_0.77285901101\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 14
+test_auc        0.778216182984  train_auc       0.77122568107
+test_accuracy   0.732080463571  train_accuracy  0.740885392565
+test_loss       0.528271154176  train_loss      0.522682973524
+learning_rate 0.1
+2016-10-04 00:09:02,197 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\14_0.778216182984\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\14_0.778216182984\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 15
+test_auc        0.778168351482  train_auc       0.772352474035
+test_accuracy   0.729377255669  train_accuracy  0.74104122736
+test_loss       0.531383315422  train_loss      0.521015670502
+learning_rate 0.1
+2016-10-04 00:10:27,053 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\15_0.778168351482\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\15_0.778168351482\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 16
+test_auc        0.780107951674  train_auc       0.776075473271
+test_accuracy   0.729434770731  train_accuracy  0.742797857602
+test_loss       0.527989134548  train_loss      0.517510061197
+learning_rate 0.1
+2016-10-04 00:11:52,714 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\16_0.780107951674\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\16_0.780107951674\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 17
+test_auc        0.780981586425  train_auc       0.776187841416
+test_accuracy   0.73236803888   train_accuracy  0.741986020728
+test_loss       0.526298074944  train_loss      0.5189432839
+learning_rate 0.1
+2016-10-04 00:13:18,561 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\17_0.780981586425\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\17_0.780981586425\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 18
+test_auc        0.781410672133  train_auc       0.778046354596
+test_accuracy   0.732655614189  train_accuracy  0.742739653233
+test_loss       0.550515541976  train_loss      0.515476204077
+learning_rate 0.1
+2016-10-04 00:14:43,872 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\18_0.781410672133\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\18_0.781410672133\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 19
+test_auc        0.78052266609   train_auc       0.77174567432
+test_accuracy   0.731462176658  train_accuracy  0.740550778462
+test_loss       0.527079825368  train_loss      0.522405463457
+learning_rate 0.1
+2016-10-04 00:16:08,825 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\19_0.78052266609\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\19_0.78052266609\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 20
+test_auc        0.782004175901  train_auc       0.772535604865
+test_accuracy   0.729822997397  train_accuracy  0.741695627327
+test_loss       0.53821573063   train_loss      0.521548086075
+learning_rate 0.1
+2016-10-04 00:17:32,990 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\20_0.782004175901\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\20_0.782004175901\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 21
+test_auc        0.78417196949   train_auc       0.779127483901
+test_accuracy   0.735718291228  train_accuracy  0.744138766329
+test_loss       0.52110550062   train_loss      0.51537995821
+learning_rate 0.1
+2016-10-04 00:18:57,740 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\21_0.78417196949\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\21_0.78417196949\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 22
+test_auc        0.783925517127  train_auc       0.778094730149
+test_accuracy   0.732669992954  train_accuracy  0.743865669661
+test_loss       0.524712143936  train_loss      0.515140241458
+learning_rate 0.1
+2016-10-04 00:20:21,739 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\22_0.783925517127\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\22_0.783925517127\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 23
+test_auc        0.781661448988  train_auc       0.780514593461
+test_accuracy   0.723740779617  train_accuracy  0.744434170282
+test_loss       0.537681625464  train_loss      0.51382821194
+learning_rate 0.1
+2016-10-04 00:21:46,325 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\23_0.781661448988\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\23_0.781661448988\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 24
+test_auc        0.784521554435  train_auc       0.780004096801
+test_accuracy   0.73498497419   train_accuracy  0.745520742621
+test_loss       0.527610714633  train_loss      0.51346060475
+learning_rate 0.1
+2016-10-04 00:23:10,480 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\24_0.784521554435\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\24_0.784521554435\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 25
+test_auc        0.784345779124  train_auc       0.78134141474
+test_accuracy   0.732166736164  train_accuracy  0.746209112962
+test_loss       0.527048277233  train_loss      0.512142171793
+learning_rate 0.1
+2016-10-04 00:24:35,319 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\25_0.784345779124\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\25_0.784345779124\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 26
+test_auc        0.786061423047  train_auc       0.785883751558
+test_accuracy   0.7344817174    train_accuracy  0.747711380708
+test_loss       0.523905225135  train_loss      0.506495024583
+learning_rate 0.05
+2016-10-04 00:25:59,779 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\26_0.786061423047\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\26_0.786061423047\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 27
+test_auc        0.786096848936  train_auc       0.783958522574
+test_accuracy   0.735632018635  train_accuracy  0.747493345917
+test_loss       0.519824292139  train_loss      0.507781899754
+learning_rate 0.05
+2016-10-04 00:27:24,842 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\27_0.786096848936\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\27_0.786096848936\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 28
+test_auc        0.78699870209   train_auc       0.786709600546
+test_accuracy   0.738133923821  train_accuracy  0.748182771813
+test_loss       0.517573285585  train_loss      0.505866335021
+learning_rate 0.05
+2016-10-04 00:28:49,197 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\28_0.78699870209\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\28_0.78699870209\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 29
+test_auc        0.784017816638  train_auc       0.785365764754
+test_accuracy   0.73514314061   train_accuracy  0.747630445189
+test_loss       0.521278064559  train_loss      0.507039833436
+learning_rate 0.05
+2016-10-04 00:30:12,644 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\29_0.784017816638\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\29_0.784017816638\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 73s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 30
+test_auc        0.786905616307  train_auc       0.787471076152
+test_accuracy   0.73807640876   train_accuracy  0.74827835389
+test_loss       0.519736038175  train_loss      0.504402648549
+learning_rate 0.05
+2016-10-04 00:31:36,437 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\30_0.786905616307\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\30_0.786905616307\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 31
+test_auc        0.787656723784  train_auc       0.78711003434
+test_accuracy   0.733518340115  train_accuracy  0.747935736566
+test_loss       0.518369258337  train_loss      0.504750848988
+learning_rate 0.05
+2016-10-04 00:32:59,698 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\31_0.787656723784\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\31_0.787656723784\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 32
+test_auc        0.787723076343  train_auc       0.788936605223
+test_accuracy   0.735330064561  train_accuracy  0.748293370335
+test_loss       0.519562084385  train_loss      0.502912305936
+learning_rate 0.05
+2016-10-04 00:34:23,454 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\32_0.787723076343\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\32_0.787723076343\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 72s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 33
+test_auc        0.78817474551   train_auc       0.787275865179
+test_accuracy   0.736451608265  train_accuracy  0.748191635639
+test_loss       0.515291826936  train_loss      0.50425833877
+learning_rate 0.05
+2016-10-04 00:35:45,926 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\33_0.78817474551\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\33_0.78817474551\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 74s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 34
+test_auc        0.787325921986  train_auc       0.788350729746
+test_accuracy   0.736523502092  train_accuracy  0.748446505138
+test_loss       0.517861414405  train_loss      0.503185137938
+learning_rate 0.05
+2016-10-04 00:37:10,256 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\34_0.787325921986\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\34_0.787325921986\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 35
+test_auc        0.788529091765  train_auc       0.785887561817
+test_accuracy   0.73744374308   train_accuracy  0.74643971561
+test_loss       0.514080050554  train_loss      0.505006451343
+learning_rate 0.05
+2016-10-04 00:38:34,982 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\35_0.788529091765\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\35_0.788529091765\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 36
+test_auc        0.788261279032  train_auc       0.789236089212
+test_accuracy   0.734093490733  train_accuracy  0.748440009885
+test_loss       0.520595009765  train_loss      0.501783311549
+learning_rate 0.05
+2016-10-04 00:39:59,387 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\36_0.788261279032\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\36_0.788261279032\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 73s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 37
+test_auc        0.787267563184  train_auc       0.788240833749
+test_accuracy   0.726443987519  train_accuracy  0.748616864522
+test_loss       0.526948382762  train_loss      0.502878216085
+learning_rate 0.05
+2016-10-04 00:41:22,463 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\37_0.787267563184\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\37_0.787267563184\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 38
+test_auc        0.785786446509  train_auc       0.789677630067
+test_accuracy   0.736005866536  train_accuracy  0.749057681325
+test_loss       0.520103319172  train_loss      0.501309689323
+learning_rate 0.05
+2016-10-04 00:42:48,809 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\38_0.785786446509\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\38_0.785786446509\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 39
+test_auc        0.79002305087   train_auc       0.789144018495
+test_accuracy   0.737990136167  train_accuracy  0.748740973894
+test_loss       0.516738313287  train_loss      0.501878231478
+learning_rate 0.05
+2016-10-04 00:44:15,040 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\39_0.79002305087\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\39_0.79002305087\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 40
+test_auc        0.788062789216  train_auc       0.790204894226
+test_accuracy   0.734524853696  train_accuracy  0.749972182729
+test_loss       0.520760555682  train_loss      0.500060218623
+learning_rate 0.05
+2016-10-04 00:45:41,295 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\40_0.788062789216\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\40_0.788062789216\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 41
+test_auc        0.789689846576  train_auc       0.789193285467
+test_accuracy   0.73463988382   train_accuracy  0.749670366997
+test_loss       0.518843001798  train_loss      0.500801685051
+learning_rate 0.05
+2016-10-04 00:47:08,230 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\41_0.789689846576\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\41_0.789689846576\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 42
+test_auc        0.78964494175   train_auc       0.790924379456
+test_accuracy   0.736408471969  train_accuracy  0.749660195974
+test_loss       0.513862725848  train_loss      0.500092769926
+learning_rate 0.05
+2016-10-04 00:48:34,710 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\42_0.78964494175\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\42_0.78964494175\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 43
+test_auc        0.788459113621  train_auc       0.791988255368
+test_accuracy   0.738119545056  train_accuracy  0.749955944413
+test_loss       0.515323311396  train_loss      0.498841036601
+learning_rate 0.05
+2016-10-04 00:49:59,964 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\43_0.788459113621\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\43_0.788459113621\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 44
+test_auc        0.790050133548  train_auc       0.790317975298
+test_accuracy   0.732008569744  train_accuracy  0.749301405853
+test_loss       0.521628436348  train_loss      0.500229916883
+learning_rate 0.05
+2016-10-04 00:51:26,078 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\44_0.790050133548\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\44_0.790050133548\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 45
+test_auc        0.790251899493  train_auc       0.790908991014
+test_accuracy   0.737673803327  train_accuracy  0.750041718944
+test_loss       0.513153500544  train_loss      0.500244475602
+learning_rate 0.05
+2016-10-04 00:52:52,433 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\45_0.790251899493\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\45_0.790251899493\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 46
+test_auc        0.790118451785  train_auc       0.790046029501
+test_accuracy   0.737515636907  train_accuracy  0.748419784362
+test_loss       0.516955467762  train_loss      0.500208650576
+learning_rate 0.05
+2016-10-04 00:54:18,926 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\46_0.790118451785\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\46_0.790118451785\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 47
+test_auc        0.790915206678  train_auc       0.79140823686
+test_accuracy   0.731605964312  train_accuracy  0.750250969127
+test_loss       0.52420366576   train_loss      0.498312136015
+learning_rate 0.05
+2016-10-04 00:55:45,154 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\47_0.790915206678\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\47_0.790915206678\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 48
+test_auc        0.780524588087  train_auc       0.789950154676
+test_accuracy   0.728385120854  train_accuracy  0.749850809032
+test_loss       0.52479814566   train_loss      0.499757200474
+learning_rate 0.05
+2016-10-04 00:57:11,825 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\48_0.780524588087\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\48_0.780524588087\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 49
+test_auc        0.790085297346  train_auc       0.79041772387
+test_accuracy   0.737242440364  train_accuracy  0.74984171302
+test_loss       0.517777979683  train_loss      0.499930434002
+learning_rate 0.05
+2016-10-04 00:58:38,703 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\49_0.790085297346\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\49_0.790085297346\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 50
+test_auc        0.790784641964  train_auc       0.791981874084
+test_accuracy   0.738637180612  train_accuracy  0.750251436117
+test_loss       0.512846004434  train_loss      0.498611602123
+learning_rate 0.05
+2016-10-04 01:00:05,040 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\50_0.790784641964\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\50_0.790784641964\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 51
+test_auc        0.792007381162  train_auc       0.794139475752
+test_accuracy   0.737817590982  train_accuracy  0.751752843639
+test_loss       0.511088869994  train_loss      0.49619656946
+learning_rate 0.025
+2016-10-04 01:01:31,546 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\51_0.792007381162\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\51_0.792007381162\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 52
+test_auc        0.791772067642  train_auc       0.795189324712
+test_accuracy   0.738881619624  train_accuracy  0.752294965583
+test_loss       0.511038469576  train_loss      0.494739245038
+learning_rate 0.025
+2016-10-04 01:02:58,071 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\52_0.791772067642\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\52_0.791772067642\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 53
+test_auc        0.792651381018  train_auc       0.795838784898
+test_accuracy   0.740146950983  train_accuracy  0.752358038359
+test_loss       0.511710425722  train_loss      0.494404302278
+learning_rate 0.025
+2016-10-04 01:04:23,966 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\53_0.792651381018\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\53_0.792651381018\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 75s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 54
+test_auc        0.792310707147  train_auc       0.795771052001
+test_accuracy   0.735516988511  train_accuracy  0.75255866798
+test_loss       0.518469097867  train_loss      0.493223747396
+learning_rate 0.025
+2016-10-04 01:05:48,874 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\54_0.792310707147\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\54_0.792310707147\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 55
+test_auc        0.792527324884  train_auc       0.794968636788
+test_accuracy   0.736379714438  train_accuracy  0.752217690267
+test_loss       0.517933072296  train_loss      0.493917779929
+learning_rate 0.025
+2016-10-04 01:07:15,142 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\55_0.792527324884\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\55_0.792527324884\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 56
+test_auc        0.792947936335  train_auc       0.795730767835
+test_accuracy   0.739773103081  train_accuracy  0.751942265802
+test_loss       0.51279069391   train_loss      0.494237452329
+learning_rate 0.025
+2016-10-04 01:08:41,940 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\56_0.792947936335\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\56_0.792947936335\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 57
+test_auc        0.79288748081   train_auc       0.796617199075
+test_accuracy   0.740132572217  train_accuracy  0.753031472959
+test_loss       0.509281841892  train_loss      0.493240974089
+learning_rate 0.025
+2016-10-04 01:10:08,270 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\57_0.79288748081\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\57_0.79288748081\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 58
+test_auc        0.793095493244  train_auc       0.795305819066
+test_accuracy   0.740391389995  train_accuracy  0.751960451105
+test_loss       0.509369100503  train_loss      0.494127573641
+learning_rate 0.025
+2016-10-04 01:11:34,423 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\58_0.793095493244\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\58_0.793095493244\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 59
+test_auc        0.792784086137  train_auc       0.796988159248
+test_accuracy   0.739097301106  train_accuracy  0.753295744188
+test_loss       0.510094501546  train_loss      0.493509365601
+learning_rate 0.025
+2016-10-04 01:13:01,260 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\59_0.792784086137\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\59_0.792784086137\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 60
+test_auc        0.792153540256  train_auc       0.796414207251
+test_accuracy   0.735761427524  train_accuracy  0.75258665447
+test_loss       0.515708315856  train_loss      0.492988984206
+learning_rate 0.025
+2016-10-04 01:14:27,207 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\60_0.792153540256\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\60_0.792153540256\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 61
+test_auc        0.79381916859   train_auc       0.79622128757
+test_accuracy   0.739931269501  train_accuracy  0.753010448572
+test_loss       0.510780881604  train_loss      0.492520369358
+learning_rate 0.025
+2016-10-04 01:15:53,645 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\61_0.79381916859\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\61_0.79381916859\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 62
+test_auc        0.793461720932  train_auc       0.797524738135
+test_accuracy   0.739528664069  train_accuracy  0.753530317381
+test_loss       0.509889649321  train_loss      0.49216391947
+learning_rate 0.025
+2016-10-04 01:17:23,805 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\62_0.793461720932\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\62_0.793461720932\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 63
+test_auc        0.791856023941  train_auc       0.797261655224
+test_accuracy   0.73939925518   train_accuracy  0.753615539877
+test_loss       0.514794463804  train_loss      0.491732879349
+learning_rate 0.025
+2016-10-04 01:18:53,273 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\63_0.791856023941\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\63_0.791856023941\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 64
+test_auc        0.793483692846  train_auc       0.797225237072
+test_accuracy   0.740089435921  train_accuracy  0.753072239307
+test_loss       0.509686663617  train_loss      0.49232214216
+learning_rate 0.025
+2016-10-04 01:20:20,655 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\64_0.793483692846\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\64_0.793483692846\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 65
+test_auc        0.793492778647  train_auc       0.797608149801
+test_accuracy   0.739169194933  train_accuracy  0.753218943711
+test_loss       0.511514577777  train_loss      0.492612750656
+learning_rate 0.025
+2016-10-04 01:21:49,750 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\65_0.793492778647\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\65_0.793492778647\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 66
+test_auc        0.793906968882  train_auc       0.798290122302
+test_accuracy   0.739974405798  train_accuracy  0.753404825406
+test_loss       0.508416399369  train_loss      0.491663924095
+learning_rate 0.025
+2016-10-04 01:23:19,697 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\66_0.793906968882\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\66_0.793906968882\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 78s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 67
+test_auc        0.794272497662  train_auc       0.797780583013
+test_accuracy   0.740995298144  train_accuracy  0.753939435144
+test_loss       0.508177294546  train_loss      0.49154060694
+learning_rate 0.025
+2016-10-04 01:24:48,584 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\67_0.794272497662\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\67_0.794272497662\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 68
+test_auc        0.793052510414  train_auc       0.798221045393
+test_accuracy   0.739226709995  train_accuracy  0.753984002176
+test_loss       0.509203588789  train_loss      0.490295065152
+learning_rate 0.025
+2016-10-04 01:26:18,572 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\68_0.793052510414\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\68_0.793052510414\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 69
+test_auc        0.793889714596  train_auc       0.797702111044
+test_accuracy   0.740736480366  train_accuracy  0.75331796181
+test_loss       0.508742908201  train_loss      0.491637871392
+learning_rate 0.025
+2016-10-04 01:27:48,371 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\69_0.793889714596\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\69_0.793889714596\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 70
+test_auc        0.794545115386  train_auc       0.797988047473
+test_accuracy   0.740333874933  train_accuracy  0.754211521586
+test_loss       0.508474190494  train_loss      0.49121432014
+learning_rate 0.025
+2016-10-04 01:29:18,262 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\70_0.794545115386\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\70_0.794545115386\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 71
+test_auc        0.794118432174  train_auc       0.797541209918
+test_accuracy   0.740333874933  train_accuracy  0.753744957079
+test_loss       0.50875843742   train_loss      0.492189877689
+learning_rate 0.025
+2016-10-04 01:30:47,790 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\71_0.794118432174\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\71_0.794118432174\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 72
+test_auc        0.794554026461  train_auc       0.798449422076
+test_accuracy   0.739960027032  train_accuracy  0.753971416305
+test_loss       0.508934753497  train_loss      0.490965169149
+learning_rate 0.025
+2016-10-04 01:32:17,486 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\72_0.794554026461\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\72_0.794554026461\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 73
+test_auc        0.793402706904  train_auc       0.798534190528
+test_accuracy   0.740664586539  train_accuracy  0.754223192313
+test_loss       0.511348092811  train_loss      0.490908911016
+learning_rate 0.025
+2016-10-04 01:33:46,809 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\73_0.793402706904\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\73_0.793402706904\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 74
+test_auc        0.794387293268  train_auc       0.797857243804
+test_accuracy   0.740822752958  train_accuracy  0.754082574329
+test_loss       0.513763289961  train_loss      0.490884629228
+learning_rate 0.025
+2016-10-04 01:35:13,911 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\74_0.794387293268\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\74_0.794387293268\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 75
+test_auc        0.793321720963  train_auc       0.799174667217
+test_accuracy   0.740305117403  train_accuracy  0.753900213863
+test_loss       0.509055534281  train_loss      0.489867085969
+learning_rate 0.025
+2016-10-04 01:36:43,729 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\75_0.793321720963\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\75_0.793321720963\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 76
+test_auc        0.795382756385  train_auc       0.800298731526
+test_accuracy   0.742203114441  train_accuracy  0.755205824595
+test_loss       0.506421553487  train_loss      0.488688972749
+learning_rate 0.0125
+2016-10-04 01:38:13,490 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\76_0.795382756385\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\76_0.795382756385\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 77
+test_auc        0.794864953068  train_auc       0.801394385573
+test_accuracy   0.742490689749  train_accuracy  0.755589646203
+test_loss       0.507075093106  train_loss      0.487416703323
+learning_rate 0.0125
+2016-10-04 01:39:42,869 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\77_0.794864953068\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\77_0.794864953068\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 78
+test_auc        0.795359648746  train_auc       0.801318636065
+test_accuracy   0.741728615181  train_accuracy  0.755622049873
+test_loss       0.50614628548   train_loss      0.488185953543
+learning_rate 0.0125
+2016-10-04 01:41:12,042 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\78_0.795359648746\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\78_0.795359648746\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 79
+test_auc        0.794667948432  train_auc       0.801239588963
+test_accuracy   0.740822752958  train_accuracy  0.755962430591
+test_loss       0.507131903763  train_loss      0.487582478013
+learning_rate 0.0125
+2016-10-04 01:42:41,954 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\79_0.794667948432\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\79_0.794667948432\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 80
+test_auc        0.795513015327  train_auc       0.801161883466
+test_accuracy   0.741556069996  train_accuracy  0.755354137393
+test_loss       0.507347339349  train_loss      0.487904583274
+learning_rate 0.0125
+2016-10-04 01:44:11,209 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\80_0.795513015327\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\80_0.795513015327\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 81
+test_auc        0.79544749272   train_auc       0.801643502292
+test_accuracy   0.741210979625  train_accuracy  0.755818763274
+test_loss       0.506450087593  train_loss      0.487741860971
+learning_rate 0.0125
+2016-10-04 01:45:40,842 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\81_0.79544749272\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\81_0.79544749272\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 82
+test_auc        0.795670662717  train_auc       0.801245833159
+test_accuracy   0.741455418638  train_accuracy  0.755895836871
+test_loss       0.505981651621  train_loss      0.487416289647
+learning_rate 0.0125
+2016-10-04 01:47:10,540 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\82_0.795670662717\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\82_0.795670662717\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 83
+test_auc        0.795612784415  train_auc       0.801360492403
+test_accuracy   0.740793995428  train_accuracy  0.755802818468
+test_loss       0.507161633035  train_loss      0.48790442612
+learning_rate 0.0125
+2016-10-04 01:48:40,053 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\83_0.795612784415\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\83_0.795612784415\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 84
+test_auc        0.795773445846  train_auc       0.801292125483
+test_accuracy   0.741326009749  train_accuracy  0.75568629511
+test_loss       0.506423814436  train_loss      0.487988259245
+learning_rate 0.0125
+2016-10-04 01:50:07,664 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\84_0.795773445846\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\84_0.795773445846\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 85
+test_auc        0.795565346048  train_auc       0.802146248487
+test_accuracy   0.74119660086   train_accuracy  0.755893249452
+test_loss       0.507251698311  train_loss      0.486809193611
+learning_rate 0.0125
+2016-10-04 01:51:37,312 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\85_0.795565346048\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\85_0.795565346048\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 86
+test_auc        0.796202968371  train_auc       0.801794048401
+test_accuracy   0.74201619049   train_accuracy  0.756023295641
+test_loss       0.506854250267  train_loss      0.487181890158
+learning_rate 0.0125
+2016-10-04 01:53:06,931 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\86_0.796202968371\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\86_0.796202968371\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 87
+test_auc        0.796116653258  train_auc       0.802335341314
+test_accuracy   0.741225358391  train_accuracy  0.755689037416
+test_loss       0.506709995075  train_loss      0.485990323565
+learning_rate 0.0125
+2016-10-04 01:54:37,035 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\87_0.796116653258\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\87_0.796116653258\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 88
+test_auc        0.795926506654  train_auc       0.8023977946
+test_accuracy   0.741383524811  train_accuracy  0.7562957925
+test_loss       0.506424811537  train_loss      0.487047650184
+learning_rate 0.0125
+2016-10-04 01:56:07,131 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\88_0.795926506654\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\88_0.795926506654\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 89
+test_auc        0.795932491052  train_auc       0.802426784243
+test_accuracy   0.740937783082  train_accuracy  0.755801524831
+test_loss       0.507994068873  train_loss      0.487176086561
+learning_rate 0.0125
+2016-10-04 01:57:36,993 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\89_0.795932491052\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\89_0.795932491052\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 90
+test_auc        0.795961539408  train_auc       0.802224400913
+test_accuracy   0.741742993947  train_accuracy  0.756072226808
+test_loss       0.508096647945  train_loss      0.486510710763
+learning_rate 0.0125
+2016-10-04 01:59:07,197 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\90_0.795961539408\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\90_0.795961539408\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 91
+test_auc        0.796006444234  train_auc       0.802271110881
+test_accuracy   0.742030569255  train_accuracy  0.756309119011
+test_loss       0.505830254938  train_loss      0.486905230148
+learning_rate 0.0125
+2016-10-04 02:00:37,180 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\91_0.796006444234\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\91_0.796006444234\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 92
+test_auc        0.796669445646  train_auc       0.802123977763
+test_accuracy   0.741901160366  train_accuracy  0.755915952672
+test_loss       0.508051192277  train_loss      0.486784177236
+learning_rate 0.0125
+2016-10-04 02:02:06,914 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\92_0.796669445646\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\92_0.796669445646\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 93
+test_auc        0.79657426314   train_auc       0.80249958992
+test_accuracy   0.742548204811  train_accuracy  0.75638847881
+test_loss       0.504802529903  train_loss      0.486010612423
+learning_rate 0.0125
+2016-10-04 02:03:36,559 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\93_0.79657426314\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\93_0.79657426314\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 94
+test_auc        0.796598506505  train_auc       0.802473006242
+test_accuracy   0.741685478885  train_accuracy  0.756082792709
+test_loss       0.506065545858  train_loss      0.487035983299
+learning_rate 0.0125
+2016-10-04 02:05:04,371 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\94_0.796598506505\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\94_0.796598506505\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 95
+test_auc        0.795834512915  train_auc       0.802232802821
+test_accuracy   0.740837131724  train_accuracy  0.756310475389
+test_loss       0.506303595301  train_loss      0.486601426923
+learning_rate 0.0125
+2016-10-04 02:06:33,766 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\95_0.795834512915\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\95_0.795834512915\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 96
+test_auc        0.795781308559  train_auc       0.802917130553
+test_accuracy   0.740391389995  train_accuracy  0.756602911578
+test_loss       0.506465556221  train_loss      0.485509200515
+learning_rate 0.0125
+2016-10-04 02:08:03,005 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\96_0.795781308559\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\96_0.795781308559\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 78s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 97
+test_auc        0.796062837357  train_auc       0.803002122518
+test_accuracy   0.740305117403  train_accuracy  0.756294161082
+test_loss       0.505943757841  train_loss      0.486084422743
+learning_rate 0.0125
+2016-10-04 02:09:31,934 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\97_0.796062837357\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\97_0.796062837357\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 98
+test_auc        0.796889951058  train_auc       0.802733585466
+test_accuracy   0.741182222094  train_accuracy  0.756385681258
+test_loss       0.505133680526  train_loss      0.486303414114
+learning_rate 0.0125
+2016-10-04 02:11:01,269 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\98_0.796889951058\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\98_0.796889951058\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 99
+test_auc        0.795840890449  train_auc       0.803141002323
+test_accuracy   0.739945648267  train_accuracy  0.756260434057
+test_loss       0.507609094924  train_loss      0.485813804764
+learning_rate 0.0125
+2016-10-04 02:12:31,115 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\99_0.795840890449\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\99_0.795840890449\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 100
+test_auc        0.79639752683   train_auc       0.803043154919
+test_accuracy   0.740937783082  train_accuracy  0.756463250127
+test_loss       0.507547153733  train_loss      0.486546698917
+learning_rate 0.0125
+2016-10-04 02:14:00,828 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\100_0.79639752683\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\100_0.79639752683\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 101
+test_auc        0.796995966635  train_auc       0.8037439817
+test_accuracy   0.742591341107  train_accuracy  0.756746241281
+test_loss       0.505068350102  train_loss      0.484872726341
+learning_rate 0.00625
+2016-10-04 02:15:30,473 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\101_0.796995966635\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\101_0.796995966635\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 102
+test_auc        0.797091498595  train_auc       0.804527061545
+test_accuracy   0.742289387033  train_accuracy  0.757349032697
+test_loss       0.504746515536  train_loss      0.484486121765
+learning_rate 0.00625
+2016-10-04 02:16:59,986 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\102_0.797091498595\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\102_0.797091498595\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 103
+test_auc        0.796585052529  train_auc       0.804776049382
+test_accuracy   0.742044948021  train_accuracy  0.757306371496
+test_loss       0.505679369415  train_loss      0.484187824028
+learning_rate 0.00625
+2016-10-04 02:18:29,473 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\103_0.796585052529\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\103_0.796585052529\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 104
+test_auc        0.795972328797  train_auc       0.804455971727
+test_accuracy   0.741484176169  train_accuracy  0.757120294733
+test_loss       0.505699242483  train_loss      0.484327987827
+learning_rate 0.00625
+2016-10-04 02:19:56,377 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\104_0.795972328797\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\104_0.795972328797\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 105
+test_auc        0.796867149191  train_auc       0.804729189734
+test_accuracy   0.74233252333   train_accuracy  0.757448687506
+test_loss       0.504935429088  train_loss      0.484136225809
+learning_rate 0.00625
+2016-10-04 02:21:26,502 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\105_0.796867149191\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\105_0.796867149191\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 106
+test_auc        0.797016453369  train_auc       0.804649411753
+test_accuracy   0.74154169123   train_accuracy  0.75710780375
+test_loss       0.504905282447  train_loss      0.484373423506
+learning_rate 0.00625
+2016-10-04 02:22:55,921 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\106_0.797016453369\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\106_0.797016453369\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 107
+test_auc        0.796448634463  train_auc       0.804821526118
+test_accuracy   0.740233223575  train_accuracy  0.756904184186
+test_loss       0.506788384245  train_loss      0.483946301204
+learning_rate 0.00625
+2016-10-04 02:24:25,661 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\107_0.796448634463\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\107_0.796448634463\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 108
+test_auc        0.796982905795  train_auc       0.804536860393
+test_accuracy   0.741556069996  train_accuracy  0.7570767602
+test_loss       0.505014244989  train_loss      0.484181336592
+learning_rate 0.00625
+2016-10-04 02:25:55,286 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\108_0.796982905795\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\108_0.796982905795\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 109
+test_auc        0.796983648385  train_auc       0.804867441133
+test_accuracy   0.74185802407   train_accuracy  0.757229773783
+test_loss       0.505123420766  train_loss      0.484124510379
+learning_rate 0.00625
+2016-10-04 02:27:24,375 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\109_0.796983648385\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\109_0.796983648385\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 110
+test_auc        0.796818968234  train_auc       0.805185940869
+test_accuracy   0.741901160366  train_accuracy  0.757354668777
+test_loss       0.505883205604  train_loss      0.484069908227
+learning_rate 0.00625
+2016-10-04 02:28:53,551 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\110_0.796818968234\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\110_0.796818968234\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 111
+test_auc        0.797251548481  train_auc       0.805434232896
+test_accuracy   0.742476310984  train_accuracy  0.757507328932
+test_loss       0.504425070244  train_loss      0.483319365253
+learning_rate 0.00625
+2016-10-04 02:30:23,262 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\111_0.797251548481\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\111_0.797251548481\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 112
+test_auc        0.796831854347  train_auc       0.804997323144
+test_accuracy   0.741829266539  train_accuracy  0.757472414773
+test_loss       0.504695661771  train_loss      0.483369417018
+learning_rate 0.00625
+2016-10-04 02:31:52,674 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\112_0.796831854347\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\112_0.796831854347\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 113
+test_auc        0.796810493977  train_auc       0.804782436658
+test_accuracy   0.742447553453  train_accuracy  0.757405781148
+test_loss       0.504727511737  train_loss      0.48402528327
+learning_rate 0.00625
+2016-10-04 02:33:22,414 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\113_0.796810493977\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\113_0.796810493977\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 78s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 114
+test_auc        0.797213720096  train_auc       0.805242464709
+test_accuracy   0.742447553453  train_accuracy  0.757772552994
+test_loss       0.504861075741  train_loss      0.483930204544
+learning_rate 0.00625
+2016-10-04 02:34:49,948 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\114_0.797213720096\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\114_0.797213720096\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 115
+test_auc        0.797175192804  train_auc       0.805080670782
+test_accuracy   0.74185802407   train_accuracy  0.757435392841
+test_loss       0.505595950684  train_loss      0.484772570859
+learning_rate 0.00625
+2016-10-04 02:36:19,628 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\115_0.797175192804\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\115_0.797175192804\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 116
+test_auc        0.797487910363  train_auc       0.805331576082
+test_accuracy   0.742246250737  train_accuracy  0.75749630165
+test_loss       0.504547516548  train_loss      0.483903652421
+learning_rate 0.00625
+2016-10-04 02:37:49,367 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\116_0.797487910363\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\116_0.797487910363\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 117
+test_auc        0.797183186562  train_auc       0.805403669307
+test_accuracy   0.742116841848  train_accuracy  0.757228973422
+test_loss       0.505390353839  train_loss      0.484063043652
+learning_rate 0.00625
+2016-10-04 02:39:19,058 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\117_0.797183186562\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\117_0.797183186562\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 118
+test_auc        0.797371149078  train_auc       0.805701655233
+test_accuracy   0.742289387033  train_accuracy  0.757892199432
+test_loss       0.504841355727  train_loss      0.482910015178
+learning_rate 0.00625
+2016-10-04 02:40:48,431 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\118_0.797371149078\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\118_0.797371149078\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 119
+test_auc        0.797174013397  train_auc       0.805690702137
+test_accuracy   0.742289387033  train_accuracy  0.757507141579
+test_loss       0.504723328934  train_loss      0.484103678325
+learning_rate 0.00625
+2016-10-04 02:42:18,486 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\119_0.797174013397\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\119_0.797174013397\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 120
+test_auc        0.79720249389   train_auc       0.805191881157
+test_accuracy   0.741714236416  train_accuracy  0.757244013933
+test_loss       0.505483145091  train_loss      0.483938339263
+learning_rate 0.00625
+2016-10-04 02:43:48,223 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\120_0.79720249389\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\120_0.79720249389\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 121
+test_auc        0.79756225668   train_auc       0.805468343473
+test_accuracy   0.742965189009  train_accuracy  0.757387026047
+test_loss       0.504953031538  train_loss      0.483344782425
+learning_rate 0.00625
+2016-10-04 02:45:17,137 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\121_0.79756225668\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\121_0.79756225668\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 122
+test_auc        0.797611704407  train_auc       0.805731461483
+test_accuracy   0.742648856169  train_accuracy  0.75767194785
+test_loss       0.504674476917  train_loss      0.483597440945
+learning_rate 0.00625
+2016-10-04 02:46:47,023 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\122_0.797611704407\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\122_0.797611704407\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 123
+test_auc        0.797727897829  train_auc       0.805440975134
+test_accuracy   0.742231871971  train_accuracy  0.757650626782
+test_loss       0.50403724311   train_loss      0.484025541364
+learning_rate 0.00625
+2016-10-04 02:48:16,160 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\123_0.797727897829\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\123_0.797727897829\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 124
+test_auc        0.796634631302  train_auc       0.805754081334
+test_accuracy   0.742562583577  train_accuracy  0.757763476456
+test_loss       0.505625571027  train_loss      0.483875712208
+learning_rate 0.00625
+2016-10-04 02:49:44,579 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\124_0.796634631302\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\124_0.796634631302\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 78s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 125
+test_auc        0.797398144392  train_auc       0.805882962804
+test_accuracy   0.742562583577  train_accuracy  0.757430850308
+test_loss       0.505119191364  train_loss      0.482690679485
+learning_rate 0.00625
+2016-10-04 02:51:13,017 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\125_0.797398144392\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\125_0.797398144392\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 126
+test_auc        0.797809582678  train_auc       0.806306535622
+test_accuracy   0.74236128086   train_accuracy  0.757951440875
+test_loss       0.505396716144  train_loss      0.482980169588
+learning_rate 0.003125
+2016-10-04 02:52:42,721 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\126_0.797809582678\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\126_0.797809582678\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 127
+test_auc        0.797649008611  train_auc       0.806492559423
+test_accuracy   0.742059326786  train_accuracy  0.758026895855
+test_loss       0.504683485963  train_loss      0.481429791292
+learning_rate 0.003125
+2016-10-04 02:54:13,657 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\127_0.797649008611\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\127_0.797649008611\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 128
+test_auc        0.797696796432  train_auc       0.806691708542
+test_accuracy   0.742591341107  train_accuracy  0.758087314229
+test_loss       0.504556266418  train_loss      0.482327403733
+learning_rate 0.003125
+2016-10-04 02:55:42,855 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\128_0.797696796432\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\128_0.797696796432\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 129
+test_auc        0.797801152103  train_auc       0.806401364931
+test_accuracy   0.742375659626  train_accuracy  0.757912370497
+test_loss       0.50420414742   train_loss      0.48252010604
+learning_rate 0.003125
+2016-10-04 02:57:13,298 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\129_0.797801152103\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\129_0.797801152103\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 130
+test_auc        0.797260852691  train_auc       0.806541344246
+test_accuracy   0.741498554934  train_accuracy  0.758153868958
+test_loss       0.505786953141  train_loss      0.482364645004
+learning_rate 0.003125
+2016-10-04 02:58:42,869 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\130_0.797260852691\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\130_0.797260852691\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 131
+test_auc        0.797577720015  train_auc       0.806528249487
+test_accuracy   0.742605719873  train_accuracy  0.758089239689
+test_loss       0.504962776591  train_loss      0.482983411504
+learning_rate 0.003125
+2016-10-04 03:00:12,665 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\131_0.797577720015\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\131_0.797577720015\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 132
+test_auc        0.797647261341  train_auc       0.806788031467
+test_accuracy   0.742634477404  train_accuracy  0.758469209335
+test_loss       0.504194929536  train_loss      0.482793592901
+learning_rate 0.003125
+2016-10-04 03:01:42,457 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\132_0.797647261341\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\132_0.797647261341\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 133
+test_auc        0.79759418803   train_auc       0.806845421734
+test_accuracy   0.742576962342  train_accuracy  0.758032215396
+test_loss       0.504166602748  train_loss      0.482018304424
+learning_rate 0.003125
+2016-10-04 03:03:12,059 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\133_0.79759418803\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\133_0.79759418803\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 134
+test_auc        0.797975573281  train_auc       0.806963149991
+test_accuracy   0.742878916416  train_accuracy  0.758121773304
+test_loss       0.503810402449  train_loss      0.481463142009
+learning_rate 0.003125
+2016-10-04 03:04:41,849 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\134_0.797975573281\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\134_0.797975573281\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 78s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 135
+test_auc        0.79767137366   train_auc       0.806772324823
+test_accuracy   0.742850158885  train_accuracy  0.758120122829
+test_loss       0.504296826089  train_loss      0.482549998098
+learning_rate 0.003125
+2016-10-04 03:06:09,990 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\135_0.79767137366\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\135_0.79767137366\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 136
+test_auc        0.797263910413  train_auc       0.806944715159
+test_accuracy   0.741901160366  train_accuracy  0.758104414293
+test_loss       0.50484044265   train_loss      0.482785983619
+learning_rate 0.003125
+2016-10-04 03:07:39,793 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\136_0.797263910413\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\136_0.797263910413\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 137
+test_auc        0.797837364263  train_auc       0.806812297144
+test_accuracy   0.742231871971  train_accuracy  0.758195822301
+test_loss       0.504494435808  train_loss      0.482214306591
+learning_rate 0.003125
+2016-10-04 03:09:09,516 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\137_0.797837364263\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\137_0.797837364263\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 138
+test_auc        0.797854356459  train_auc       0.806901764005
+test_accuracy   0.742318144564  train_accuracy  0.758166118294
+test_loss       0.505833226575  train_loss      0.480816466207
+learning_rate 0.003125
+2016-10-04 03:10:38,724 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\138_0.797854356459\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\138_0.797854356459\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 139
+test_auc        0.79792402883   train_auc       0.806946280465
+test_accuracy   0.742404417157  train_accuracy  0.758428337881
+test_loss       0.5041763921    train_loss      0.482018871577
+learning_rate 0.003125
+2016-10-04 03:12:08,138 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\139_0.79792402883\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\139_0.79792402883\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 140
+test_auc        0.797943947703  train_auc       0.806763511415
+test_accuracy   0.742404417157  train_accuracy  0.758231973138
+test_loss       0.504702041606  train_loss      0.482216810289
+learning_rate 0.003125
+2016-10-04 03:13:38,493 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\140_0.797943947703\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\140_0.797943947703\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 141
+test_auc        0.797916602935  train_auc       0.807117043067
+test_accuracy   0.742706371231  train_accuracy  0.75809504986
+test_loss       0.504641564059  train_loss      0.48165491624
+learning_rate 0.003125
+2016-10-04 03:15:07,618 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\141_0.797916602935\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\141_0.797916602935\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 142
+test_auc        0.797823910288  train_auc       0.806789259614
+test_accuracy   0.7426776137    train_accuracy  0.757835585613
+test_loss       0.504570221542  train_loss      0.482769726278
+learning_rate 0.003125
+2016-10-04 03:16:36,782 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\142_0.797823910288\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\142_0.797823910288\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 143
+test_auc        0.797960022582  train_auc       0.80719688066
+test_accuracy   0.742778265058  train_accuracy  0.758179657721
+test_loss       0.504266763057  train_loss      0.481296013926
+learning_rate 0.003125
+2016-10-04 03:18:06,420 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\143_0.797960022582\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\143_0.797960022582\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 144
+test_auc        0.797830113095  train_auc       0.807348721409
+test_accuracy   0.742188735675  train_accuracy  0.758456538797
+test_loss       0.504532569624  train_loss      0.481594008334
+learning_rate 0.003125
+2016-10-04 03:19:36,341 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\144_0.797830113095\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\144_0.797830113095\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 145
+test_auc        0.797719860389  train_auc       0.807020271218
+test_accuracy   0.742505068515  train_accuracy  0.758131912897
+test_loss       0.504711728113  train_loss      0.482544793778
+learning_rate 0.003125
+2016-10-04 03:21:03,341 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\145_0.797719860389\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\145_0.797719860389\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 146
+test_auc        0.797844440705  train_auc       0.807180023766
+test_accuracy   0.742231871971  train_accuracy  0.758090652345
+test_loss       0.504502099525  train_loss      0.482004640289
+learning_rate 0.003125
+2016-10-04 03:22:33,035 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\146_0.797844440705\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\146_0.797844440705\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 147
+test_auc        0.798033102129  train_auc       0.807285051448
+test_accuracy   0.742648856169  train_accuracy  0.758099205221
+test_loss       0.504576138484  train_loss      0.481506228034
+learning_rate 0.003125
+2016-10-04 03:24:02,526 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\147_0.798033102129\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\147_0.798033102129\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 148
+test_auc        0.797119848042  train_auc       0.806941182617
+test_accuracy   0.74169985765   train_accuracy  0.758404685125
+test_loss       0.505077296709  train_loss      0.481845391225
+learning_rate 0.003125
+2016-10-04 03:25:32,723 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\148_0.797119848042\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\148_0.797119848042\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 149
+test_auc        0.797894762066  train_auc       0.807081841151
+test_accuracy   0.742447553453  train_accuracy  0.757937894421
+test_loss       0.504669721244  train_loss      0.482860724607
+learning_rate 0.003125
+2016-10-04 03:27:02,532 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\149_0.797894762066\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\149_0.797894762066\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 150
+test_auc        0.798005407907  train_auc       0.807371076175
+test_accuracy   0.742735128762  train_accuracy  0.758125407081
+test_loss       0.504124337538  train_loss      0.48110024357
+learning_rate 0.003125
+2016-10-04 03:28:32,463 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\150_0.798005407907\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\150_0.798005407907\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 151
+test_auc        0.797740871305  train_auc       0.807727512791
+test_accuracy   0.742433174688  train_accuracy  0.758517662544
+test_loss       0.504290842784  train_loss      0.481747690908
+learning_rate 0.0015625
+2016-10-04 03:30:02,941 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\151_0.797740871305\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\151_0.797740871305\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 152
+test_auc        0.797980290908  train_auc       0.807917989255
+test_accuracy   0.741656721354  train_accuracy  0.758542380527
+test_loss       0.504570662065  train_loss      0.480632316847
+learning_rate 0.0015625
+2016-10-04 03:31:33,638 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\152_0.797980290908\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\152_0.797980290908\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 153
+test_auc        0.798200927365  train_auc       0.807917927084
+test_accuracy   0.742749507527  train_accuracy  0.758443268099
+test_loss       0.504315268764  train_loss      0.481869371691
+learning_rate 0.0015625
+2016-10-04 03:33:02,957 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\153_0.798200927365\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\153_0.798200927365\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 154
+test_auc        0.79819376356   train_auc       0.807843278639
+test_accuracy   0.742447553453  train_accuracy  0.758519955038
+test_loss       0.50433120395   train_loss      0.481508205332
+learning_rate 0.0015625
+2016-10-04 03:34:31,987 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\154_0.79819376356\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\154_0.79819376356\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 155
+test_auc        0.798061888394  train_auc       0.807876612644
+test_accuracy   0.741786130243  train_accuracy  0.758384953226
+test_loss       0.504521064911  train_loss      0.480874257328
+learning_rate 0.0015625
+2016-10-04 03:35:59,381 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\155_0.798061888394\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\155_0.798061888394\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 156
+test_auc        0.797794119343  train_auc       0.807981659978
+test_accuracy   0.74169985765   train_accuracy  0.758809296461
+test_loss       0.504351232269  train_loss      0.48025967267
+learning_rate 0.0015625
+2016-10-04 03:37:29,289 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\156_0.797794119343\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\156_0.797794119343\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 157
+test_auc        0.797975485917  train_auc       0.807996724315
+test_accuracy   0.742030569255  train_accuracy  0.75859671888
+test_loss       0.504385644016  train_loss      0.481222472972
+learning_rate 0.0015625
+2016-10-04 03:38:58,841 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\157_0.797975485917\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\157_0.797975485917\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 158
+test_auc        0.797594755893  train_auc       0.807758088949
+test_accuracy   0.741958675428  train_accuracy  0.758628574254
+test_loss       0.504619962704  train_loss      0.481663412304
+learning_rate 0.0015625
+2016-10-04 03:40:28,477 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\158_0.797594755893\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\158_0.797594755893\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 159
+test_auc        0.798103036591  train_auc       0.807555001832
+test_accuracy   0.742116841848  train_accuracy  0.75885981522
+test_loss       0.504666661361  train_loss      0.481775417446
+learning_rate 0.0015625
+2016-10-04 03:41:58,056 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\159_0.798103036591\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\159_0.798103036591\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 160
+test_auc        0.797972122423  train_auc       0.807861297593
+test_accuracy   0.742231871971  train_accuracy  0.75874598379
+test_loss       0.504401395175  train_loss      0.480848081244
+learning_rate 0.0015625
+2016-10-04 03:43:27,578 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\160_0.797972122423\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\160_0.797972122423\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 161
+test_auc        0.798029694954  train_auc       0.807799280669
+test_accuracy   0.742145599379  train_accuracy  0.758899911333
+test_loss       0.504609280458  train_loss      0.481312282158
+learning_rate 0.0015625
+2016-10-04 03:44:57,109 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\161_0.798029694954\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\161_0.798029694954\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 162
+test_auc        0.79786846566   train_auc       0.807857033472
+test_accuracy   0.742562583577  train_accuracy  0.758354216302
+test_loss       0.504510374113  train_loss      0.481719326942
+learning_rate 0.0015625
+2016-10-04 03:46:26,686 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\162_0.79786846566\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\162_0.79786846566\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 163
+test_auc        0.798160347031  train_auc       0.807667915304
+test_accuracy   0.742260629502  train_accuracy  0.758869147073
+test_loss       0.504422937633  train_loss      0.481728000775
+learning_rate 0.0015625
+2016-10-04 03:47:56,971 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\163_0.798160347031\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\163_0.798160347031\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 164
+test_auc        0.797812989854  train_auc       0.80789975485
+test_accuracy   0.742102463083  train_accuracy  0.758638145507
+test_loss       0.504886480976  train_loss      0.481689499281
+learning_rate 0.0015625
+2016-10-04 03:49:27,302 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\164_0.797812989854\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\164_0.797812989854\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 76s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 165
+test_auc        0.798125620049  train_auc       0.808097402862
+test_accuracy   0.742145599379  train_accuracy  0.758687652049
+test_loss       0.504515567442  train_loss      0.481063989542
+learning_rate 0.0015625
+2016-10-04 03:50:54,224 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\165_0.798125620049\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\165_0.798125620049\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 166
+test_auc        0.797944253475  train_auc       0.808068916594
+test_accuracy   0.742044948021  train_accuracy  0.758923552992
+test_loss       0.504652192598  train_loss      0.480845295361
+learning_rate 0.0015625
+2016-10-04 03:52:23,926 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\166_0.797944253475\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\166_0.797944253475\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 167
+test_auc        0.797529539059  train_auc       0.808117835296
+test_accuracy   0.741599206292  train_accuracy  0.758843486967
+test_loss       0.50449834301   train_loss      0.481046339071
+learning_rate 0.0015625
+2016-10-04 03:53:53,479 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\167_0.797529539059\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\167_0.797529539059\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 168
+test_auc        0.797570250438  train_auc       0.808202891331
+test_accuracy   0.742030569255  train_accuracy  0.758834088753
+test_loss       0.504800326691  train_loss      0.480510184234
+learning_rate 0.0015625
+2016-10-04 03:55:23,267 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\168_0.797570250438\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\168_0.797570250438\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 169
+test_auc        0.798104478088  train_auc       0.80810665393
+test_accuracy   0.742505068515  train_accuracy  0.758485313317
+test_loss       0.504216383851  train_loss      0.480983239513
+learning_rate 0.0015625
+2016-10-04 03:56:53,135 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\169_0.798104478088\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\169_0.798104478088\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 170
+test_auc        0.797934599811  train_auc       0.807865562467
+test_accuracy   0.742203114441  train_accuracy  0.75859950291
+test_loss       0.504371605488  train_loss      0.481433137026
+learning_rate 0.0015625
+2016-10-04 03:58:22,365 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\170_0.797934599811\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\170_0.797934599811\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 78s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 171
+test_auc        0.798019735517  train_auc       0.807726662348
+test_accuracy   0.742490689749  train_accuracy  0.758695376782
+test_loss       0.504142010739  train_loss      0.481426713973
+learning_rate 0.0015625
+2016-10-04 03:59:51,220 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\171_0.798019735517\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\171_0.798019735517\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 172
+test_auc        0.798080059997  train_auc       0.808166277949
+test_accuracy   0.741872402835  train_accuracy  0.758629429856
+test_loss       0.504467226201  train_loss      0.481311573841
+learning_rate 0.0015625
+2016-10-04 04:01:21,249 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\172_0.798080059997\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\172_0.798080059997\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 173
+test_auc        0.797892709025  train_auc       0.807900010314
+test_accuracy   0.742476310984  train_accuracy  0.758852709824
+test_loss       0.504659460557  train_loss      0.481291942411
+learning_rate 0.0015625
+2016-10-04 04:02:50,233 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\173_0.797892709025\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\173_0.797892709025\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 174
+test_auc        0.798347348549  train_auc       0.807847071391
+test_accuracy   0.742691992466  train_accuracy  0.758957372648
+test_loss       0.504359935771  train_loss      0.480840320591
+learning_rate 0.0015625
+2016-10-04 04:04:20,023 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\174_0.798347348549\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\174_0.798347348549\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 175
+test_auc        0.797358219284  train_auc       0.808108382014
+test_accuracy   0.741814887774  train_accuracy  0.758750556573
+test_loss       0.504779502879  train_loss      0.481213600251
+learning_rate 0.0015625
+2016-10-04 04:05:47,210 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\175_0.797358219284\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\175_0.797358219284\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 176
+test_auc        0.798080496814  train_auc       0.808190839282
+test_accuracy   0.742073705552  train_accuracy  0.758777565013
+test_loss       0.504528918172  train_loss      0.481424917588
+learning_rate 0.00078125
+2016-10-04 04:07:16,973 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\176_0.798080496814\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\176_0.798080496814\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 177
+test_auc        0.797871392337  train_auc       0.808288950961
+test_accuracy   0.742030569255  train_accuracy  0.758505291495
+test_loss       0.504379467543  train_loss      0.481186871256
+learning_rate 0.00078125
+2016-10-04 04:08:46,805 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\177_0.797871392337\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\177_0.797871392337\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 178
+test_auc        0.798131866538  train_auc       0.808504153955
+test_accuracy   0.742102463083  train_accuracy  0.758865423611
+test_loss       0.504893099002  train_loss      0.480603469272
+learning_rate 0.00078125
+2016-10-04 04:10:16,539 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\178_0.798131866538\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\178_0.798131866538\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 179
+test_auc        0.798153139544  train_auc       0.808559316864
+test_accuracy   0.742476310984  train_accuracy  0.758850998293
+test_loss       0.504238977167  train_loss      0.479982337363
+learning_rate 0.00078125
+2016-10-04 04:11:46,700 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\179_0.798153139544\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\179_0.798153139544\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 180
+test_auc        0.798041314296  train_auc       0.808337916556
+test_accuracy   0.741929917897  train_accuracy  0.759058810446
+test_loss       0.504254323792  train_loss      0.481057642896
+learning_rate 0.00078125
+2016-10-04 04:13:16,588 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\180_0.798041314296\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\180_0.798041314296\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 181
+test_auc        0.798069052199  train_auc       0.808518925414
+test_accuracy   0.742289387033  train_accuracy  0.758955269986
+test_loss       0.50437868431   train_loss      0.480794355389
+learning_rate 0.00078125
+2016-10-04 04:14:46,161 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\181_0.798069052199\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\181_0.798069052199\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 182
+test_auc        0.797919835384  train_auc       0.80838998203
+test_accuracy   0.742073705552  train_accuracy  0.759115295164
+test_loss       0.504309015525  train_loss      0.481097706271
+learning_rate 0.00078125
+2016-10-04 04:16:15,522 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\182_0.797919835384\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\182_0.797919835384\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 183
+test_auc        0.798056690267  train_auc       0.808328610289
+test_accuracy   0.742318144564  train_accuracy  0.758725327373
+test_loss       0.505091469794  train_loss      0.481118576154
+learning_rate 0.00078125
+2016-10-04 04:17:45,915 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\183_0.798056690267\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\183_0.798056690267\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 184
+test_auc        0.797762668492  train_auc       0.808577821678
+test_accuracy   0.742159978144  train_accuracy  0.758866059368
+test_loss       0.504720100557  train_loss      0.480317534577
+learning_rate 0.00078125
+2016-10-04 04:19:15,329 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\184_0.797762668492\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\184_0.797762668492\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 77s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 185
+test_auc        0.797886943035  train_auc       0.808241260102
+test_accuracy   0.742217493206  train_accuracy  0.758775532894
+test_loss       0.504737876994  train_loss      0.480740476099
+learning_rate 0.00078125
+2016-10-04 04:20:42,101 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\185_0.797886943035\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\185_0.797886943035\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 186
+test_auc        0.797953251913  train_auc       0.808106233402
+test_accuracy   0.741786130243  train_accuracy  0.758756065693
+test_loss       0.504437309618  train_loss      0.480904138278
+learning_rate 0.00078125
+2016-10-04 04:22:12,178 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\186_0.797953251913\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\186_0.797953251913\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 187
+test_auc        0.798083772945  train_auc       0.808393315824
+test_accuracy   0.742116841848  train_accuracy  0.758890743752
+test_loss       0.504317412652  train_loss      0.48131612765
+learning_rate 0.00078125
+2016-10-04 04:23:41,766 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\187_0.798083772945\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\187_0.798083772945\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 188
+test_auc        0.798097707419  train_auc       0.808234795721
+test_accuracy   0.742088084317  train_accuracy  0.758894490068
+test_loss       0.504317063527  train_loss      0.480858460156
+learning_rate 0.00078125
+2016-10-04 04:25:11,086 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\188_0.798097707419\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\188_0.798097707419\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 189
+test_auc        0.798180527993  train_auc       0.808505322561
+test_accuracy   0.742303765799  train_accuracy  0.758915394068
+test_loss       0.504935437129  train_loss      0.480124073096
+learning_rate 0.00078125
+2016-10-04 04:26:41,032 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\189_0.798180527993\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\189_0.798180527993\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 80s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 190
+test_auc        0.797998375148  train_auc       0.808176968559
+test_accuracy   0.741929917897  train_accuracy  0.758834789589
+test_loss       0.50426070059   train_loss      0.481069453247
+learning_rate 0.00078125
+2016-10-04 04:28:11,036 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\190_0.797998375148\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\190_0.797998375148\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 79s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 191
+test_auc        0.797939972665  train_auc       0.808533737829
+test_accuracy   0.742059326786  train_accuracy  0.759062545394
+test_loss       0.504357363476  train_loss      0.480309873781
+learning_rate 0.00078125
+2016-10-04 04:29:40,654 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\191_0.797939972665\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\191_0.797939972665\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 71s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 192
+test_auc        0.797943336158  train_auc       0.80852368913
+test_accuracy   0.742231871971  train_accuracy  0.759123005814
+test_loss       0.504334511034  train_loss      0.480673126552
+learning_rate 0.00078125
+2016-10-04 04:31:00,984 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\192_0.797943336158\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\192_0.797943336158\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 67s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 193
+test_auc        0.797969501519  train_auc       0.80847568769
+test_accuracy   0.742102463083  train_accuracy  0.759069974331
+test_loss       0.504294647454  train_loss      0.480811433689
+learning_rate 0.00078125
+2016-10-04 04:32:16,670 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\193_0.797969501519\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\193_0.797969501519\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 65s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 194
+test_auc        0.797877464098  train_auc       0.808551074009
+test_accuracy   0.742275008268  train_accuracy  0.758778276625
+test_loss       0.50448704767   train_loss      0.480949493448
+learning_rate 0.00078125
+2016-10-04 04:33:31,099 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\194_0.797877464098\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\194_0.797877464098\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 66s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 195
+test_auc        0.797923286241  train_auc       0.808346209363
+test_accuracy   0.742203114441  train_accuracy  0.759129111611
+test_loss       0.504750309747  train_loss      0.480957669058
+learning_rate 0.00078125
+2016-10-04 04:34:46,154 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\195_0.797923286241\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\195_0.797923286241\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 67s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 196
+test_auc        0.798223379778  train_auc       0.808550997118
+test_accuracy   0.742116841848  train_accuracy  0.759008264463
+test_loss       0.504155203663  train_loss      0.481002052897
+learning_rate 0.00078125
+2016-10-04 04:36:02,826 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\196_0.798223379778\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\196_0.798223379778\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 67s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 197
+test_auc        0.798029258136  train_auc       0.808581303214
+test_accuracy   0.742030569255  train_accuracy  0.758635161532
+test_loss       0.504458050459  train_loss      0.480306333779
+learning_rate 0.00078125
+2016-10-04 04:37:19,530 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\197_0.798029258136\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\197_0.798029258136\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 68s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 198
+test_auc        0.797846493746  train_auc       0.808366507196
+test_accuracy   0.741886781601  train_accuracy  0.758837430866
+test_loss       0.5050985556    train_loss      0.481039928973
+learning_rate 0.00078125
+2016-10-04 04:38:36,742 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\198_0.797846493746\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\198_0.797846493746\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 67s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 7s | ETA: 0s
+[?25hepoch 199
+test_auc        0.79804293052   train_auc       0.80839476447
+test_accuracy   0.741958675428  train_accuracy  0.758627079749
+test_loss       0.504903872505  train_loss      0.480231358734
+learning_rate 0.00078125
+2016-10-04 04:39:52,789 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\199_0.79804293052\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\199_0.79804293052\KVMN_KT-misc.json"
+[KTrain |================================| 100.0% | Elapsed: 78s | ETA: 0s
+[KTest |================================| 100.0% | Elapsed: 8s | ETA: 0s
+[?25hepoch 200
+test_auc        0.798018992928  train_auc       0.808660191511
+test_accuracy   0.741714236416  train_accuracy  0.758854148947
+test_loss       0.504393386098  train_loss      0.480840493859
+learning_rate 0.00078125
+2016-10-04 04:41:20,819 - root - INFO - Saving KVMN_KT, params: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\200_0.798018992928\KVMN_KT.params", misc: "model\0910_a\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0\200_0.798018992928\KVMN_KT-misc.json"
+Traceback (most recent call last):
+  File "main.py", line 265, in <module>
+    f_save_log = open(os.path.join('result', params.save, file_name),'w')
+IOError: [Errno 2] No such file or directory: 'result\\0910_a\\key_value_one_batch32qembed20qaembed50qdim10qadim20msize10mkdim10mvdim20h1std0.1lr0.1mmt0.9gn50.0'
+
+(C:\Anaconda2) D:\Arena\examples\memory_key_value_one_prediction>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
