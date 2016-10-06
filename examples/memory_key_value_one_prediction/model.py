@@ -4,7 +4,7 @@ import numpy as np
 from arena import Base
 from arena.ops import *
 from arena.utils import *
-from lrua import KVMN
+from kvmn import KVMN
 
 import matplotlib.pyplot as plt
 from arena.helpers.visualization import *
@@ -51,9 +51,9 @@ class MODEL(object):
         init_key_write_W_r_focus = mx.sym.Variable('KVMN->write_key_head:init_key_write_W_r_focus')
         init_key_write_W_u_focus = mx.sym.Variable('KVMN->write_key_head:init_key_write_W_u_focus')
 
-        init_memory_key = mx.sym.broadcast_to(mx.sym.expand_dims(mx.sym.Activation(init_memory_key, act_type="tanh"),
-                                                                 axis=0),
-                                              shape=(self.batch_size, self.memory_size, self.memory_key_state_dim))
+        # init_memory_key = mx.sym.broadcast_to(mx.sym.expand_dims(mx.sym.Activation(init_memory_key, act_type="tanh"),
+        #                                                          axis=0),
+        #                                       shape=(self.batch_size, self.memory_size, self.memory_key_state_dim))
         init_memory_value = mx.sym.broadcast_to(mx.sym.expand_dims(mx.sym.Activation(init_memory_value, act_type="tanh"),
                                                                  axis=0),
                                               shape=(self.batch_size, self.memory_size, self.memory_value_state_dim))
@@ -71,7 +71,7 @@ class MODEL(object):
         key_read_focus_l = []
         value_read_focus_l = []
         value_read_content_l = []
-
+        input_embed_l = []
         ### embedding
         q_embed_weight = mx.sym.Variable("q_embed_weight")
         q_embed_data = mx.sym.Embedding(data=q_data, input_dim=self.n_question,
@@ -88,13 +88,19 @@ class MODEL(object):
             #                                        weight=fnn_key_weight, bias=fnn_key_bias, name="key_read_fc")
             # key_read_hidden_state = mx.sym.Activation(data=key_read_hidden_state, act_type='tanh', name="key_read_tanh")
             # END OLD CODE
-            key_read_hidden_state = mx.sym.Activation(data=slice_q_embed_data[i], act_type='tanh', name="key_read_tanh")
+
+            #key_read_hidden_state = mx.sym.Activation(data=slice_q_embed_data[i], act_type='tanh', name="key_read_tanh")
+            key_read_hidden_state = slice_q_embed_data[i]
+
             key_read_focus = mem.key_read(key_read_hidden_state)
             ### TODO here only compute a write weight but not write to the key
 
-            value_write_hidden_state = mx.sym.FullyConnected(data=slice_qa_embed_data[i], num_hidden=self.qa_state_dim,
-                                                   weight=fnn_value_weight, bias=fnn_value_bias, name="value_write_fc")
-            value_write_hidden_state = mx.sym.Activation(data=value_write_hidden_state, act_type='tanh', name="value_write_tanh")
+            # Old Code
+            # value_write_hidden_state = mx.sym.FullyConnected(data=slice_qa_embed_data[i], num_hidden=self.qa_state_dim,
+            #                                        weight=fnn_value_weight, bias=fnn_value_bias, name="value_write_fc")
+            # value_write_hidden_state = mx.sym.Activation(data=value_write_hidden_state, act_type='tanh', name="value_write_tanh")
+            # Old Code
+            value_write_hidden_state = slice_qa_embed_data[i]
             value_write_focus = key_read_focus
             new_memory_value, erase_signal, add_signal, _ = mem.value_write(value_write_focus, value_write_hidden_state)
 
@@ -102,7 +108,10 @@ class MODEL(object):
             # value_read_hidden_state = mx.sym.FullyConnected(data=slice_q_embed_data[i+1], num_hidden=self.q_state_dim,
             #                                               weight=fnn_key_weight, bias=fnn_key_bias, name="value_read_fc")
             # value_read_hidden_state = mx.sym.Activation(data=value_read_hidden_state, act_type='tanh', name="value_read_tanh")
-            value_read_hidden_state = mx.sym.Activation(data=slice_q_embed_data[i+1], act_type='tanh', name="value_read_tanh")
+
+            #value_read_hidden_state = mx.sym.Activation(data=slice_q_embed_data[i+1], act_type='tanh', name="value_read_tanh")
+            value_read_hidden_state = slice_q_embed_data[i+1]
+
             value_read_focus = mem.key_read(value_read_hidden_state)
             read_value_content = mem.value_read(value_read_focus)
 
@@ -111,11 +120,15 @@ class MODEL(object):
             key_read_focus_l.append(key_read_focus)
             value_read_focus_l.append(value_read_focus)
             value_read_content_l.append(read_value_content)
+            input_embed_l.append(slice_q_embed_data[i+1])
 
         all_read_value_content = mx.sym.Concat(*value_read_content_l, num_args=self.seqlen, dim=0)
-
-        read_content_embed = mx.sym.FullyConnected(data=all_read_value_content, num_hidden=50, name="read_content_embed")
+        input_embed_content = mx.sym.Concat(*input_embed_l, num_args=self.seqlen, dim=0)
+        #all_read_value_content = mx.sym.Dropout(all_read_value_content, p=0.5)
+        read_content_embed = mx.sym.FullyConnected(data=mx.sym.Concat(all_read_value_content, input_embed_content, num_args=2, dim=1),
+                                                   num_hidden=50, name="read_content_embed")
         read_content_embed = mx.sym.Activation(data=read_content_embed, act_type='tanh', name="read_content_embed_tanh")
+        #read_content_embed = mx.sym.Dropout(read_content_embed, p=0.5)
         pred_fc_weight = mx.sym.Variable("pred_fc_weight")
         pred_fc_bias = mx.sym.Variable("pred_fc_bias")
         # pred = mx.sym.FullyConnected(data=all_read_value_content, num_hidden = 1,
@@ -124,12 +137,24 @@ class MODEL(object):
                                      weight=pred_fc_weight, bias=pred_fc_bias, name="final_fc")
 
         target = mx.sym.Reshape(data=target, shape=(-1,))
-
+        # pred_prob
         pred_prob = logistic_regression_mask_output(data=mx.sym.Reshape(pred, shape=(-1, )), label=target,
                                                     ignore_label=-1,
                                                     name='final_pred')
-        # pred_prob
+        # Add regularizers
+        lambda1 = 0
+        lambda2 = 0
+        S = mx.sym.dot(q_embed_weight, mx.sym.SwapAxis(init_memory_key, dim1=0, dim2=1))  # Shape: (question_num, memory_size)
+        S = mx.sym.SoftmaxActivation(S)
+        entropy_reg = lambda1 * entropy_multinomial(data=S)
+        frobenius_reg = lambda2 * mx.sym.sum(mx.sym.square(S))
+        entropy_reg = mx.sym.MakeLoss(entropy_reg, name='entropy_reg')
+        frobenius_reg = mx.sym.MakeLoss(frobenius_reg, name='frobenius_reg')
+
         return mx.sym.Group([pred_prob,
+                             entropy_reg,
+                             frobenius_reg,
+                             mx.sym.BlockGrad(S),
                              mx.sym.BlockGrad(mx.sym.Reshape(
                                  mx.sym.Concat(*controller_states, dim=0,
                                                num_args=len(controller_states)),

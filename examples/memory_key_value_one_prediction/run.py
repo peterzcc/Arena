@@ -161,11 +161,17 @@ def train(net, updater, params, q_data, qa_data, label):
                                  'qa_data':input_qa,
                                  'target': target})
         pred = outputs[0].asnumpy() #(seqlen * batch_size, 1)
-
+        '''
         control_state = outputs[1].asnumpy()
         read_content = outputs[2].asnumpy()
         key_read_focus = outputs[3].asnumpy()
         value_read_focus = outputs[4].asnumpy()
+        '''
+
+        control_state = outputs[4].asnumpy()
+        read_content = outputs[5].asnumpy()
+        key_read_focus = outputs[6].asnumpy()
+        value_read_focus = outputs[7].asnumpy()
 
         #print "Before Updating ......\n"
         #print "norm_key", norm_key.shape, '\n', norm_key[:,0,:]
@@ -213,6 +219,9 @@ def train(net, updater, params, q_data, qa_data, label):
         pred_list.append(pred_nopadding)
         target_list.append(target_nopadding)
         #print avg_loss
+    entropy_reg = outputs[1].asnumpy()
+    frobenius_reg = outputs[2].asnumpy()
+    S = outputs[3].asnumpy()
     if params.show: bar.finish()
 
     one_epoch_loss = cost / N
@@ -220,7 +229,7 @@ def train(net, updater, params, q_data, qa_data, label):
     all_pred = np.concatenate(pred_list,axis=0)
     all_target = np.concatenate(target_list, axis=0)
     accuracy, auc = compute_auc(params, all_pred, all_target)
-    return one_epoch_loss, accuracy, auc
+    return one_epoch_loss, accuracy, auc, entropy_reg, frobenius_reg, S
 
 
 def test(net, params, q_data, qa_data, label):
@@ -255,6 +264,7 @@ def test(net, params, q_data, qa_data, label):
                                  'qa_data': input_qa,
                                  'target': target})
         pred = outputs[0].asnumpy()
+        '''
         #print "pred.shape",pred.shape, pred # pred.shape (12800L,)#(200L, 64L)
         control_state = outputs[1].asnumpy()
         #print "control_state.shape", control_state.shape, control_state #(200L, 64L, 100L) = seq_len, batch_size, qa_state_dim
@@ -264,7 +274,11 @@ def test(net, params, q_data, qa_data, label):
         #print "key_read_focus.shape", key_read_focus.shape, key_read_focus #(200L, 64L, 100L)= seq_len, batch_size, memory_size
         value_read_focus = outputs[4].asnumpy()
         #print "value_read_focus.shape", value_read_focus.shape, value_read_focus #e (200L, 64L, 100L)
-
+        '''
+        control_state = outputs[4].asnumpy()
+        read_content = outputs[5].asnumpy()
+        key_read_focus = outputs[6].asnumpy()
+        value_read_focus = outputs[7].asnumpy()
         if params.vis:
             # read_focus -- Shape ( sequence length, batch size, memory size )
             # write_focus -- Shape ( sequence length, batch size, memory size )

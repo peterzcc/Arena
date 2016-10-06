@@ -27,29 +27,30 @@ class KVMNInitializer(mx.initializer.Normal):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to test KVMN.')
     parser.add_argument('--gpus', type=str, default='0', help='the gpus will be used, e.g "0,1,2,3"')
-    parser.add_argument('--max_iter', type=int, default=100, help='number of iterations')
+    parser.add_argument('--max_iter', type=int, default=200, help='number of iterations')
     parser.add_argument('--num_heads', type=int, default=1, help='number of tensors')
 
     parser.add_argument('--test', type=bool, default=False, help='enable testing')
     parser.add_argument('--show', type=bool, default=True, help='print progress')
     parser.add_argument('--vis', type=bool, default=False, help='visualize weights and results')
 
-    dataset = "KDDal0506" #  assist2009_old / assist2009_updated / assist2015 / KDDal0506 / STATICS
+    dataset = "assist2009_updated" #  assist2009_old / assist2009_updated / assist2015 / KDDal0506 / STATICS
 
     if dataset == "assist2009_old":
         ### assistment2009_old
         parser.add_argument('--batch_size', type=int, default=32, help='the batch size')
-        parser.add_argument('--q_embed_dim', type=int, default=50, help='question embedding dimensions')
+        parser.add_argument('--q_embed_dim', type=int, default=20, help='question embedding dimensions')
         parser.add_argument('--q_state_dim', type=int, default=20, help='hidden states of question')
         parser.add_argument('--qa_embed_dim', type=int, default=100, help='answer and question embedding dimensions')
-        parser.add_argument('--qa_state_dim', type=int, default=50, help='hidden states of answer and question')
+        parser.add_argument('--qa_state_dim', type=int, default=100, help='hidden states of answer and question')
 
-        parser.add_argument('--memory_size', type=int, default=50, help='memory size')
+        parser.add_argument('--memory_size', type=int, default=10, help='memory size')
         parser.add_argument('--memory_key_state_dim', type=int, default=20, help='the key part of memory state dimension')
-        parser.add_argument('--memory_value_state_dim', type=int, default=50, help='the value part of memory state dimension')
+        parser.add_argument('--memory_value_state_dim', type=int, default=100, help='the value part of memory state dimension')
 
-        parser.add_argument('--init_std', type=float, default=0.05, help='weight initialization std')
-        parser.add_argument('--init_lr', type=float, default=0.1, help='initial learning rate')
+        parser.add_argument('--init_std', type=float, default=0.1, help='weight initialization std')
+        parser.add_argument('--init_lr', type=float, default=0.05, help='initial learning rate')
+        parser.add_argument('--final_lr', type=float, default=1E-5, help='learning rate will not decrease after hitting this threshold')
         parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
         parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
@@ -64,19 +65,20 @@ if __name__ == '__main__':
         parser.add_argument('--batch_size', type=int, default=32, help='the batch size')
         parser.add_argument('--q_embed_dim', type=int, default=20, help='question embedding dimensions')
         parser.add_argument('--q_state_dim', type=int, default=20, help='hidden states of question')
-        parser.add_argument('--qa_embed_dim', type=int, default=50, help='answer and question embedding dimensions')
-        parser.add_argument('--qa_state_dim', type=int, default=50, help='hidden states of answer and question')
+        parser.add_argument('--qa_embed_dim', type=int, default=100, help='answer and question embedding dimensions')
+        parser.add_argument('--qa_state_dim', type=int, default=100, help='hidden states of answer and question')
 
-        parser.add_argument('--memory_size', type=int, default=20, help='memory size')
+        parser.add_argument('--memory_size', type=int, default=10, help='memory size')
         parser.add_argument('--memory_key_state_dim', type=int, default=20, help='the key part of memory state dimension')
-        parser.add_argument('--memory_value_state_dim', type=int, default=50, help='the value part of memory state dimension')
+        parser.add_argument('--memory_value_state_dim', type=int, default=100, help='the value part of memory state dimension')
 
-        parser.add_argument('--init_std', type=float, default=0.01, help='weight initialization std')
-        parser.add_argument('--init_lr', type=float, default=0.01, help='initial learning rate')
+        parser.add_argument('--init_std', type=float, default=0.1, help='weight initialization std')
+        parser.add_argument('--init_lr', type=float, default=0.05, help='initial learning rate')
+        parser.add_argument('--final_lr', type=float, default=1E-5, help='learning rate will not decrease after hitting this threshold')
         parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
-        parser.add_argument('--maxgradnorm', type=float, default=20.0, help='maximum gradient norm')
+        parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
-        parser.add_argument('--n_question', type=int, default=125, help='the number of unique questions in the dataset')
+        parser.add_argument('--n_question', type=int, default=124, help='the number of unique questions in the dataset')
         parser.add_argument('--seqlen', type=int, default=200, help='the allowed maximum length of a sequence')
         parser.add_argument('--data_dir', type=str, default='../data/assist2009_updated', help='data directory')
         parser.add_argument('--data_name', type=str, default='assist2009_updated', help='data set name')
@@ -96,6 +98,7 @@ if __name__ == '__main__':
 
         parser.add_argument('--init_std', type=float, default=0.05, help='weight initialization std')
         parser.add_argument('--init_lr', type=float, default=0.1, help='initial learning rate')
+        parser.add_argument('--final_lr', type=float, default=1E-5, help='learning rate will not decrease after hitting this threshold')
         parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
         parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
@@ -108,17 +111,18 @@ if __name__ == '__main__':
     elif dataset == "KDDal0506":
         ### KDDal0506
         parser.add_argument('--batch_size', type=int, default=64, help='the batch size')
-        parser.add_argument('--q_embed_dim', type=int, default=100, help='question embedding dimensions')
-        parser.add_argument('--q_state_dim', type=int, default=50, help='hidden states of question')
+        parser.add_argument('--q_embed_dim', type=int, default=25, help='question embedding dimensions')
+        parser.add_argument('--q_state_dim', type=int, default=25, help='hidden states of question')
         parser.add_argument('--qa_embed_dim', type=int, default=200, help='answer and question embedding dimensions')
-        parser.add_argument('--qa_state_dim', type=int, default=100, help='hidden states of answer and question')
+        parser.add_argument('--qa_state_dim', type=int, default=200, help='hidden states of answer and question')
 
-        parser.add_argument('--memory_size', type=int, default=50, help='memory size')
-        parser.add_argument('--memory_key_state_dim', type=int, default=50, help='the key part of memory state dimension')
-        parser.add_argument('--memory_value_state_dim', type=int, default=100, help='the value part of memory state dimension')
+        parser.add_argument('--memory_size', type=int, default=10, help='memory size')
+        parser.add_argument('--memory_key_state_dim', type=int, default=25, help='the key part of memory state dimension')
+        parser.add_argument('--memory_value_state_dim', type=int, default=200, help='the value part of memory state dimension')
 
-        parser.add_argument('--init_std', type=float, default=0.5, help='weight initialization std')
-        parser.add_argument('--init_lr', type=float, default=0.5, help='initial learning rate')
+        parser.add_argument('--init_std', type=float, default=0.1, help='weight initialization std')
+        parser.add_argument('--init_lr', type=float, default=0.1, help='initial learning rate')
+        parser.add_argument('--final_lr', type=float, default=1E-5, help='learning rate will not decrease after hitting this threshold')
         parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
         parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
@@ -131,17 +135,18 @@ if __name__ == '__main__':
     elif dataset == "STATICS":
         ### STATICS
         parser.add_argument('--batch_size', type=int, default=10, help='the batch size')
-        parser.add_argument('--q_embed_dim', type=int, default=50, help='question embedding dimensions')
+        parser.add_argument('--q_embed_dim', type=int, default=25, help='question embedding dimensions')
         parser.add_argument('--q_state_dim', type=int, default=25, help='hidden states of question')
         parser.add_argument('--qa_embed_dim', type=int, default=100, help='answer and question embedding dimensions')
         parser.add_argument('--qa_state_dim', type=int, default=50, help='hidden states of answer and question')
 
-        parser.add_argument('--memory_size', type=int, default=50, help='memory size')
+        parser.add_argument('--memory_size', type=int, default=20, help='memory size')
         parser.add_argument('--memory_key_state_dim', type=int, default=25, help='the key part of memory state dimension')
         parser.add_argument('--memory_value_state_dim', type=int, default=50, help='the value part of memory state dimension')
 
         parser.add_argument('--init_std', type=float, default=0.1, help='weight initialization std')
         parser.add_argument('--init_lr', type=float, default=0.01, help='initial learning rate')
+        parser.add_argument('--final_lr', type=float, default=1E-5, help='learning rate will not decrease after hitting this threshold')
         parser.add_argument('--momentum', type=float, default=0.9, help='momentum rate')
         parser.add_argument('--maxgradnorm', type=float, default=50.0, help='maximum gradient norm')
 
@@ -192,6 +197,7 @@ if __name__ == '__main__':
                name="KVMN_KT"#,
                #default_bucket_kwargs={'seqlen': params.seqlen}
                )
+    net.print_stat()
     #print "net.params.items()=====>"
     #for k, v in net.params.items():
     #    print k, "\t\t", LA.norm(v.asnumpy())
@@ -244,12 +250,13 @@ if __name__ == '__main__':
         updater = mx.optimizer.get_updater(optimizer)
 
         for idx in xrange(params.max_iter):
-            train_loss, train_accuracy, train_auc = train(net, updater, params, train_q_data, train_qa_data, label='Train')
+            train_loss, train_accuracy, train_auc, entropy_reg, frobenius_reg, similarity_matrix = train(net, updater, params, train_q_data, train_qa_data, label='Train')
             test_loss, test_accuracy, test_auc = test(net, params, test_q_data, test_qa_data, label='Test')
             print 'epoch', idx + 1
             print "test_auc\t", test_auc, "\ttrain_auc\t", train_auc
             print "test_accuracy\t", test_accuracy, "\ttrain_accuracy\t", train_accuracy
             print "test_loss\t", test_loss, "\ttrain_loss\t", train_loss
+            print "entropy_reg\t", entropy_reg.mean(), "\tfrobenius_reg\t", frobenius_reg
             print "learning_rate", optimizer.lr
 
             m = len(all_loss) + 1
@@ -262,9 +269,12 @@ if __name__ == '__main__':
             all_train_accuracy[m] = train_accuracy
 
             net.save_params(dir_path=os.path.join('model', params.save, file_name, str(idx+1)+"_"+str(test_auc)))
+            numpy.savetxt(fname=os.path.join('model', params.save, file_name, str(idx+1) + "_similarity_matrix.npy"),
+                          X=similarity_matrix)
             # Learning rate annealing
-            if 0 == (idx + 1) % 25:
-                optimizer.lr = optimizer.lr / 2
+            if 0 == (idx + 1) % 20:
+                if optimizer.lr > params.final_lr:
+                    optimizer.lr = optimizer.lr / 1.5
             # if m > 1 and all_loss[m][2] > all_loss[m - 1][2] * 0.9999:
             #     optimizer.lr = optimizer.lr / 1.5
             # if optimizer.lr < 1e-5: break

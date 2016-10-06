@@ -27,6 +27,8 @@ class KVMNHeadGroup(object):
             self.erase_signal_bias = mx.sym.Variable(name=name + ":erase_signal_bias")
             self.add_signal_weight = mx.sym.Variable(name=name + ":add_signal_weight")
             self.add_signal_bias = mx.sym.Variable(name=name + ":add_signal_bias")
+            self.reset_signal_weight = mx.sym.Variable(name=name + ":reset_signal_weight")
+            self.reset_signal_bias = mx.sym.Variable(name=name + ":reset_signal_bias")
         else:
             self.key_weight = mx.sym.Variable(name=name + ":key_weight")
             self.key_bias = mx.sym.Variable(name=name + ":key_bias")
@@ -44,23 +46,28 @@ class KVMNHeadGroup(object):
             :return W_w:           Shape (batch_size, num_heads, memory_size)
         """
         # key
+        '''
         key = mx.sym.FullyConnected(data=control_input,
                                     num_hidden=self.num_heads * self.memory_state_dim,
                                     weight=self.key_weight,
                                     bias=self.key_bias)  # Shape: (batch_size, num_reads*memory_state_dim)
         key = mx.sym.Reshape(key, shape=(-1, self.num_heads, self.memory_state_dim))  # Shape: (batch_size, num_heads, memory_state_dim)
         key = mx.sym.Activation(data=key, act_type='tanh', name=self.name + ":key")
+        '''
         # beta
+        '''
         beta = mx.sym.FullyConnected(data=control_input,
                                      num_hidden=self.num_heads,
                                      weight=self.beta_weight,
                                      bias=self.beta_bias)
         beta = mx.sym.expand_dims(beta, axis=2)  # Shape: (batch_size, num_heads, 1)
         beta = mx.sym.Activation(data=beta, act_type='softrelu', name=self.name + ":beta")
-
+        '''
         # compute cosine similarity
+        '''
         norm_key = ArenaSym.normalize_channel(key, axis=2)
         norm_memory = ArenaSym.normalize_channel(memory, axis=2)
+
         ### key            (batch_size, num_heads, memory_state_dim)
         ### swapped_memory (batch_size, memory_state_dim, memory_size)
         similarity_score = mx.sym.batch_dot(norm_key, mx.sym.SwapAxis(norm_memory, dim1=1, dim2=2)) # Shape: (batch_size, num_heads, memory_size)
@@ -68,6 +75,11 @@ class KVMNHeadGroup(object):
         W_r = mx.sym.Reshape(mx.sym.SoftmaxActivation(mx.sym.Reshape(mx.sym.broadcast_mul(beta, similarity_score),
                                                                     shape=(-1, self.memory_size))),
                             shape=(-1, self.num_heads, self.memory_size))  # Shape: (batch_size, num_heads, memory_size)
+        '''
+        similarity_score = mx.sym.dot(control_input, mx.sym.SwapAxis(memory, dim1=0, dim2=1))  # Shape: (batch_size, num_heads, memory_size)
+        # compute read weight
+        W_r = mx.sym.Reshape(mx.sym.SoftmaxActivation(similarity_score),
+                             shape=(-1, self.num_heads, self.memory_size))  # Shape: (batch_size, num_heads, memory_size)
         return  W_r
 
     def read(self, memory, control_input=None, read_focus=None ):
@@ -125,7 +137,33 @@ class KVMNHeadGroup(object):
         ### new_memory = memory + mx.sym.batch_dot( mx.sym.SwapAxis(write_focus, dim1=1, dim2=2),key)
         ### return new_memory, write_focus
         return new_memory, erase_signal, add_signal, write_focus
-
+'''
+current_mem_content, _ = self.read(memory=memory, read_focus=write_focus)
+concat_control_input = mx.sym.Concat(current_mem_content, control_input, num_args=2, dim=1)
+erase_signal = mx.sym.FullyConnected(data=concat_control_input,
+                                     num_hidden=self.memory_state_dim,
+                                     weight=self.erase_signal_weight,
+                                     bias=self.erase_signal_bias)
+erase_signal = mx.sym.Activation(data=erase_signal, act_type='sigmoid', name=self.name + "_erase_signal")
+reset_signal = mx.sym.FullyConnected(data=concat_control_input,
+                                     num_hidden=self.memory_state_dim,
+                                     weight=self.reset_signal_weight,
+                                     bias=self.reset_signal_bias)
+reset_signal = mx.sym.Activation(data=reset_signal, act_type='sigmoid', name=self.name + "_reset_signal")
+add_signal = mx.sym.FullyConnected(data=mx.sym.Concat(reset_signal*current_mem_content,
+                                                      control_input,
+                                                      num_args=2, dim=1),
+                                   num_hidden=self.memory_state_dim,
+                                   weight=self.add_signal_weight,
+                                   bias=self.add_signal_bias)
+add_signal = mx.sym.Activation(data=add_signal, act_type='tanh', name=self.name + "_add_signal")
+erase_mult = 1 - mx.sym.batch_dot(mx.sym.Reshape(write_focus, shape=(-1, self.memory_size, 1)),
+                                  mx.sym.Reshape(erase_signal, shape=(-1, 1, self.memory_state_dim)))
+aggre_add_signal = mx.sym.batch_dot(mx.sym.SwapAxis(write_focus, dim1=1, dim2=2),
+                                    mx.sym.Reshape(add_signal, shape=(-1, 1, self.memory_state_dim)))
+new_memory = erase_mult * memory + aggre_add_signal
+return new_memory, erase_signal, add_signal, write_focus
+'''
 
 class KVMN(object):
     def __init__(self, memory_size, memory_key_state_dim, memory_value_state_dim,

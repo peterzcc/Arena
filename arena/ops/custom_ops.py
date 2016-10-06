@@ -1,5 +1,6 @@
 import mxnet as mx
 import numpy
+import scipy.stats
 from ..utils import *
 
 class IdentityOp(mx.operator.CustomOp):
@@ -106,6 +107,40 @@ class LogisticRegressionMaskOutputProp(mx.operator.CustomOpProp):
     def create_operator(self, ctx, shapes, dtypes):
         return LogisticRegressionMaskOutput(ignore_label=self.ignore_label)
 
+class EntropyMultinomialDist(mx.operator.CustomOp):
+    def __init__(self):
+        super(EntropyMultinomialDist, self).__init__()
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        self.assign(out_data[0], req[0], scipy.stats.entropy(in_data[0].asnumpy().T))
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        p = in_data[0]
+        p_sum = nd.sum(p, axis=1, keepdims=True)
+        logit = nd.log(p / p_sum)
+        grad = - logit / p_sum + nd.sum(p * logit, axis=1, keepdims=True) / nd.square(p_sum)
+        grad[:] = nd.expand_dims(out_grad[0], axis=1) * grad
+        self.assign(in_grad[0], req[0], grad)
+
+@mx.operator.register("entropy_multinomial")
+class EntropyMultinomialDistProp(mx.operator.CustomOpProp):
+    def __init__(self):
+        super(EntropyMultinomialDistProp, self).__init__(need_top_grad=True)
+
+    def list_arguments(self):
+        return ['data']
+
+    def list_outputs(self):
+        return ['output']
+
+    def infer_shape(self, in_shape):
+        data_shape = in_shape[0]
+        output_shape = (in_shape[0][0],)
+        return [data_shape], [output_shape], []
+
+    def create_operator(self, ctx, shapes, dtypes):
+        return EntropyMultinomialDist()
+
 
 def logistic_regression_mask_output(data, label, ignore_label, name=None):
     return mx.sym.Custom(name=name,
@@ -113,6 +148,7 @@ def logistic_regression_mask_output(data, label, ignore_label, name=None):
                          ignore_label=ignore_label,
                          data=data,
                          label=label)
+
 
 def constant(data, name="constant"):
     if isinstance(data, mx.nd.NDArray):
@@ -122,7 +158,14 @@ def constant(data, name="constant"):
                             op_type="constant",
                             pkl_data=pkl_data)
 
+
 def identity(data, name="identity"):
     return mx.symbol.Custom(data=data,
                             name=name,
                             op_type="identity")
+
+
+def entropy_multinomial(data, name="entropy"):
+    return mx.symbol.Custom(name=name,
+                            op_type="entropy_multinomial",
+                            data=data)
