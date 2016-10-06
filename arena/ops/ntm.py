@@ -1,6 +1,8 @@
-from arena.operators import *
-from arena.utils import *
+from __future__ import absolute_import, division, print_function
+
 import mxnet as mx
+from ..operators import *
+from ..utils import *
 
 
 class NTMHeadGroup(object):

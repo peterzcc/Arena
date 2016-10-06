@@ -1,5 +1,5 @@
-import mxnet as mx
-import mxnet.ndarray as nd
+from __future__ import absolute_import, division, print_function
+
 import os
 import numpy
 import json
@@ -17,6 +17,8 @@ except:
     import pickle
 from collections import namedtuple, OrderedDict
 import time
+import mxnet as mx
+import mxnet.ndarray as nd
 
 
 _ctx = mx.cpu()

@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 import mxnet as mx
 import numpy
 import scipy.stats

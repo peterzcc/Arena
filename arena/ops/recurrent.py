@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from arena.utils import *
 import mxnet as mx
+from ..utils import *
 
 
 def step_vanilla_rnn(num_hidden, data, prev_h, act_f,
