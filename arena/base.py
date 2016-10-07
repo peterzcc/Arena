@@ -94,6 +94,9 @@ class Base(object):
         aux_names = sym.list_auxiliary_states()
         param_names = [n for n in arg_names
                        if n in self.learn_init_keys or (n not in data_shapes.keys())]
+        for k, v in data_shapes.items():
+            assert isinstance(v, tuple), "Data_shapes must be tuple! Find k=%s, v=%s, " \
+                                         "data_shapes=%s" % (k, str(v), str(data_shapes))
         arg_shapes, _, aux_shapes = sym.infer_shape(**data_shapes)
         arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
         if self.params is None:
