@@ -12,7 +12,7 @@ from .utils import *
 logger = logging.getLogger(__name__)
 
 
-# TODO Test RNN, Also we need to find a way to support DPG
+# TODO We need to find a way to support DPG
 class Base(object):
     """Basic wrapper for the symbols
 
