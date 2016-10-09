@@ -238,6 +238,12 @@ def load_misc(dir_path="", epoch=None, name=""):
     return misc
 
 
+def load_npz(path):
+    with numpy.load(path) as data:
+        ret = {k: data[k] for k in data.keys()}
+        return ret
+
+
 def discount_cumsum(x, discount):
     # See https://docs.scipy.org/doc/scipy/reference/tutorial/signal.html#difference-equation-filtering
     # Here, we have y[t] - discount*y[t+1] = x[t]

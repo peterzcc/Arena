@@ -20,9 +20,10 @@ class Base(object):
     ----------
     data_shapes : dict
         The shapes of tensor variables
-    sym: symbol of the network
-    params:
-    params_grad:
+    sym_gen : mx.sym.Symbol
+        Symbol of the network
+    params : None or dict, optional
+    params_grad : None or dict, optional
     aux_states:
     initializer:
     ctx:
@@ -60,6 +61,12 @@ class Base(object):
 
     @property
     def exe(self):
+        """Get the current executor
+
+        Returns
+        -------
+        exe : mxnet.executor.Executor
+        """
         return self._buckets[self.curr_bucket_key]['exe'][tuple(self.data_shapes.items())]
 
     @property
