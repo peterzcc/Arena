@@ -9,7 +9,7 @@ try:
 except ImportError:
     raise ImportError('OpenCV plugin is not installed. '
                       'Some visualization features will be disabled.')
-from ..utils import *
+from arena.utils import *
 
 
 class CV2Vis(object):
@@ -54,7 +54,7 @@ class CV2Vis(object):
         cv2.destroyWindow(name)
 
     @staticmethod
-    def get_display_data(data):
+    def get_display_data(data, colormap=None):
         """Transform the input ndarray to the opencv format
 
         Parameters
@@ -66,30 +66,46 @@ class CV2Vis(object):
 
         """
         assert 2 <= data.ndim <= 4
-        if 2 != data.ndim:
+        if 4 == data.ndim or 3 == data.ndim:
             if 4 == data.ndim:
+                assert data.shape[1] == 1 or data.shape[1] == 3
                 data = data.transpose(0, 2, 3, 1)
+            else:
+                assert data.shape[0] == 1 or data.shape[0] == 3
             data = (data - data.min()) / (data.max() - data.min())
             n = int(numpy.ceil(numpy.sqrt(data.shape[0])))
             padding = (((0, n ** 2 - data.shape[0]),
                         (0, 0), (0, 0))
                        + ((0, 0),) * (data.ndim - 3))
             data = numpy.pad(data, padding, mode='constant', constant_values=1)
-
             # tile the filters into an image
-            data = data.reshape((n, n) + data.shape[1:]).transpose(
-                (0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
-            data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
-        if 3 == data.ndim:
-            data = data[:, :, ::-1]  # Opencv uses BGR
+            data = data.reshape((n, n) + data.shape[1:]).transpose((0, 2, 1, 3, 4))
+            data = data.reshape((n * data.shape[1], n * data.shape[3], data.shape[4]))
+            if 3 == data.ndim:
+                data = data[:, :, ::-1]  # Opencv uses BGR
+            if data.shape[2] == 1 and colormap is not None:
+                data = cv2.applyColorMap((data * 255).astype(numpy.uint8), colormap)
+                data = data.astype(numpy.float32) / 255.0
+        elif 2 == data.ndim:
+            if colormap is not None:
+                new_data = numpy.empty((data.shape) + (3,), data.dtype)
+                new_data[:, :, 0] = data
+                new_data[:, :, 1] = data
+                new_data[:, :, 2] = data
+                data = numpy.empty((data.shape) + (3,), dtype=numpy.uint8)
+                if new_data.dtype != numpy.uint8:
+                    new_data = (new_data*255).astype(numpy.uint8)
+                cv2.applyColorMap(src=new_data,
+                                  dst=data,
+                                  colormap=colormap)
         return data
 
     @staticmethod
-    def display(data, win_name, win_typ=cv2.WINDOW_NORMAL, delay=None,
+    def display(data, win_name, colormap=None, win_typ=cv2.WINDOW_NORMAL, delay=None,
                 save_image=False, save_path=None, save_size=None):
         """Visualize the input data using OpenCV
 
-        Take a numpy array of shape (height, width), (n, height, width) or (n, 3, height, width)
+        Take a numpy array of shape (height, width), (3, height, width), (n, 1, height, width) or (n, 3, height, width)
         If the data dimension = 2, the data is directly displayed.
         Otherwise visualize each (height, width) patch in a grid of size approx. sqrt(n) by sqrt(n)
 
@@ -97,6 +113,8 @@ class CV2Vis(object):
         ----------
         data : numpy.ndarray
         win_name : str
+        colormap : int
+            e.g cv2.COLORMAP_JET
         win_typ :
         delay :
             Set this variable to wait for key event after displaying the image.
@@ -114,7 +132,7 @@ class CV2Vis(object):
         """
         assert 2 <= data.ndim <= 4
         CV2Vis.get_window(win_name, win_typ)
-        data = CV2Vis.get_display_data(data)
+        data = CV2Vis.get_display_data(data, colormap=colormap)
         cv2.imshow(win_name, data)
         if save_image:
             if save_path is None:

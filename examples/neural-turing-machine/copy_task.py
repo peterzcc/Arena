@@ -1,11 +1,11 @@
 # coding: utf-8
 from __future__ import absolute_import, division, print_function
-from builtins import input
 
 from arena import Base
-from arena.helpers.visualization import *
 from arena.ops import *
 from arena.utils import *
+from arena.visualization import *
+from builtins import input
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
