@@ -4,7 +4,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import copy
-from utils import *
+from arena.utils import *
 
 
 #TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
