@@ -1,5 +1,5 @@
-import mxnet as mx
-import mxnet.ndarray as nd
+from __future__ import absolute_import, division, print_function
+
 import os
 import numpy
 import json
@@ -8,10 +8,17 @@ import re
 import scipy.signal
 import logging
 import ast
+import inspect
 import collections
 import numbers
+try:
+    import cPickle as pickle
+except:
+    import pickle
 from collections import namedtuple, OrderedDict
 import time
+import mxnet as mx
+import mxnet.ndarray as nd
 
 
 _ctx = mx.cpu()
@@ -34,6 +41,28 @@ def get_saving_path(prefix="", epoch=None):
         param_saving_path = os.path.join('%s.params' % prefix)
     misc_saving_path = os.path.join('%s-misc.json' % prefix)
     return sym_saving_path, param_saving_path, misc_saving_path
+
+
+def logging_config(name=None, level=logging.DEBUG, console_level=logging.DEBUG):
+    if name is None:
+        name = inspect.stack()[1][1].split('.')[0]
+    folder = os.path.join(os.getcwd(), name)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    logpath = os.path.join(folder, name + ".log")
+    print("All Logs will be saved to %s"  %logpath)
+    logging.root.setLevel(level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logfile = logging.FileHandler(logpath)
+    logfile.setLevel(level)
+    logfile.setFormatter(formatter)
+    logging.root.addHandler(logfile)
+    #TODO Update logging patterns in other files
+    logconsole = logging.StreamHandler()
+    logconsole.setLevel(console_level)
+    logconsole.setFormatter(formatter)
+    logging.root.addHandler(logconsole)
+    return folder
 
 
 def save_params(dir_path=os.curdir, epoch=None, name="", params=None, aux_states=None,
@@ -209,6 +238,12 @@ def load_misc(dir_path="", epoch=None, name=""):
     return misc
 
 
+def load_npz(path):
+    with numpy.load(path) as data:
+        ret = {k: data[k] for k in data.keys()}
+        return ret
+
+
 def discount_cumsum(x, discount):
     # See https://docs.scipy.org/doc/scipy/reference/tutorial/signal.html#difference-equation-filtering
     # Here, we have y[t] - discount*y[t+1] = x[t]
@@ -247,9 +282,12 @@ def get_npy_list(ndarray_list):
     return ret
 
 
-def get_sym_list(syms, default_names=None):
-    if syms is None:
-        if default_names is not None:
+def get_sym_list(syms, default_names=None, default_shapes=None):
+    if syms is None and default_names is not None:
+        if default_shapes is not None:
+            return [mx.sym.Variable(name=name, shape=shape) for (name, shape)
+                    in zip(default_names, default_shapes)]
+        else:
             return [mx.sym.Variable(name=name) for name in default_names]
     assert isinstance(syms, (list, tuple, mx.symbol.Symbol))
     if isinstance(syms, (list, tuple)):
@@ -267,12 +305,17 @@ def get_sym_list(syms, default_names=None):
         return [syms]
 
 
-def get_int_list(values):
+def get_numeric_list(values, typ, expected_len=None):
     if isinstance(values, numbers.Number):
-        return [numpy.int32(values)]
+        if expected_len is not None:
+            return [typ(values)] * expected_len
+        else:
+            return [typ(values)]
     elif isinstance(values, (list, tuple)):
+        if expected_len is not None:
+            assert len(values) == expected_len
         try:
-            ret = [numpy.int32(value) for value in values]
+            ret = [typ(value) for value in values]
             return ret
         except(ValueError):
             print("Need iterable with numeric elements, received: %s" %str(values))
@@ -281,18 +324,12 @@ def get_int_list(values):
         raise ValueError("Unaccepted value type, values=%s" %str(values))
 
 
-def get_float_list(values):
-    if isinstance(values, numbers.Number):
-        return [numpy.float32(values)]
-    elif isinstance(values, (list, tuple)):
-        try:
-            ret = [numpy.float32(value) for value in values]
-            return ret
-        except(ValueError):
-            print("Need iterable with numeric elements, received: %s" %str(values))
-            sys.exit(1)
-    else:
-        raise ValueError("Unaccepted value type, values=%s" % str(values))
+def get_int_list(values, expected_len=None):
+    return get_numeric_list(values, numpy.int32, expected_len)
+
+
+def get_float_list(values, expected_len=None):
+    return get_numeric_list(values, numpy.float32, expected_len)
 
 
 def get_bucket_key(bucket_kwargs):

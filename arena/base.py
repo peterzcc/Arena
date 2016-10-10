@@ -12,7 +12,7 @@ from .utils import *
 logger = logging.getLogger(__name__)
 
 
-# TODO Test RNN, Also we need to find a way to support DPG
+# TODO We need to find a way to support DPG
 class Base(object):
     """Basic wrapper for the symbols
 
@@ -20,9 +20,10 @@ class Base(object):
     ----------
     data_shapes : dict
         The shapes of tensor variables
-    sym: symbol of the network
-    params:
-    params_grad:
+    sym_gen : mx.sym.Symbol
+        Symbol of the network
+    params : None or dict, optional
+    params_grad : None or dict, optional
     aux_states:
     initializer:
     ctx:
@@ -31,7 +32,7 @@ class Base(object):
     """
 
     def __init__(self, data_shapes, sym_gen, params=None, aux_states=None,
-                 default_bucket_kwargs=None,
+                 default_bucket_kwargs=None, learn_init_keys=None,
                  initializer=mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2),
                  ctx=mx.gpu(), name='Net'):
         self.sym_gen = sym_gen
@@ -53,11 +54,19 @@ class Base(object):
         else:
             self.aux_states = None
         self._buckets = dict()
+        self.learn_init_keys = learn_init_keys if learn_init_keys is not None else []
+        self.learn_init_key_shapes = {k: data_shapes[k] for k in self.learn_init_keys}
         self.switch_bucket(bucket_kwargs=bucket_kwargs, data_shapes=data_shapes)
         self.acc_grad = None
 
     @property
     def exe(self):
+        """Get the current executor
+
+        Returns
+        -------
+        exe : mxnet.executor.Executor
+        """
         return self._buckets[self.curr_bucket_key]['exe'][tuple(self.data_shapes.items())]
 
     @property
@@ -90,7 +99,11 @@ class Base(object):
             sym = self.sym_gen(**dict(self.curr_bucket_key))
         arg_names = sym.list_arguments()
         aux_names = sym.list_auxiliary_states()
-        param_names = [n for n in arg_names if n not in data_shapes.keys()]
+        param_names = [n for n in arg_names
+                       if n in self.learn_init_keys or (n not in data_shapes.keys())]
+        for k, v in data_shapes.items():
+            assert isinstance(v, tuple), "Data_shapes must be tuple! Find k=%s, v=%s, " \
+                                         "data_shapes=%s" % (k, str(v), str(data_shapes))
         arg_shapes, _, aux_shapes = sym.infer_shape(**data_shapes)
         arg_name_shape = OrderedDict([(k, s) for k, s in zip(arg_names, arg_shapes)])
         if self.params is None:
@@ -110,7 +123,8 @@ class Base(object):
         if self.aux_states is None:
             self.aux_states = OrderedDict([(k, nd.empty(s, ctx=self.ctx))
                                            for k, s in zip(aux_names, aux_shapes)])
-        data_inputs = {k: mx.nd.empty(v, ctx=self.ctx) for k, v in data_shapes.items()}
+        data_inputs = {k: mx.nd.empty(data_shapes[k], ctx=self.ctx)
+                       for k in set(data_shapes.keys()) - set(self.learn_init_keys)}
         if len(self._buckets) > 0:
             shared_exe = self._buckets.values()[0]['exe'].values()[0]
         else:
@@ -194,6 +208,8 @@ class Base(object):
         #import time
         #start = time.time()
         data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        for name in self.learn_init_keys:
+            data_shapes[name] = self.learn_init_key_shapes[name]
         self.switch_bucket(bucket_kwargs=bucket_kwargs,
                            data_shapes=data_shapes)
         #end = time.time()
@@ -221,6 +237,8 @@ class Base(object):
 
     def forward_backward(self, bucket_kwargs=None, out_grads=None, **arg_dict):
         data_shapes = {k: v.shape for k, v in arg_dict.items()}
+        for name in self.learn_init_keys:
+            data_shapes[name] = self.learn_init_key_shapes[name]
         self.switch_bucket(bucket_kwargs=bucket_kwargs,
                            data_shapes=data_shapes)
         for k, v in arg_dict.items():

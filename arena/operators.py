@@ -1,10 +1,12 @@
+from __future__ import absolute_import, division, print_function
+
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import cv2
 from scipy.stats import entropy
 
-from utils import *
+from .utils import *
 
 
 class DQNOutput(mx.operator.CustomOp):

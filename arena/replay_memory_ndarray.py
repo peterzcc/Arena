@@ -1,10 +1,10 @@
-__author__ = 'sxjscience'
+from __future__ import absolute_import, division, print_function
 
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import copy
-from utils import *
+from .utils import *
 
 
 #TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
