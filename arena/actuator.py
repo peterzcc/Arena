@@ -7,7 +7,7 @@ import logging
 
 
 class Actuator(object):
-    def __init__(self, func_get_env, stats_tx: mp.Queue, acts_rx: mp.Queue,
+    def __init__(self, func_get_env, stats_tx, acts_rx,
                  cmd_signal: mp.Queue, episode_data_q: mp.Queue,
                  global_t, act_id=0):
         self.env = func_get_env()
@@ -64,12 +64,11 @@ class Actuator(object):
     def run_loop(self):
         while not self.is_terminated:
             self.receive_cmd()
-            self.stats_tx.put({"observation": self.current_obs}, block=True)
-            current_action = self.acts_rx.get(block=True)
+            self.stats_tx.send({"observation": self.current_obs})
+            current_action = self.acts_rx.recv()
             self.current_obs, self.reward, self.episode_ends, info_env = \
                 self.env.step(current_action)
-            self.stats_tx.put({"reward": self.reward, "done": self.episode_ends},
-                              block=True)
+            self.stats_tx.send({"reward": self.reward, "done": self.episode_ends})
             self.episode_reward += self.reward
             self.episode_count += 1
 

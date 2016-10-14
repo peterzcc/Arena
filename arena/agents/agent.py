@@ -4,9 +4,10 @@ import queue
 from arena.utils import  ProcessState
 import logging
 
+
 class Agent(object):
     def __init__(self, observation_space, action_space,
-                 shared_params, stats_rx: mp.Queue, acts_tx: mp.Queue,
+                 shared_params, stats_rx, acts_tx,
                  is_learning, global_t, pid=0, **kwargs):
         """
 
@@ -31,7 +32,6 @@ class Agent(object):
         self.id = pid
         logging.debug("Agent {} initialized".format(self.id))
 
-
     def reset(self):
         self.current_obs = None
         self.current_action = None
@@ -41,15 +41,15 @@ class Agent(object):
     def run_loop(self):
         while not self.terminated:
             # logging.debug("Agent: {} waiting for observation".format(self.id))
-            rx_msg = self.stats_rx.get(block=True)
+            rx_msg = self.stats_rx.recv()
             try:
                 self.current_obs = rx_msg["observation"]
             except KeyError:
                 raise ValueError("Failed to receive observation")
 
             self.current_action = self.act(self.current_obs)
-            self.acts_tx.put(self.current_action, block=True)
-            rx_msg = self.stats_rx.get(block=True)
+            self.acts_tx.send(self.current_action)
+            rx_msg = self.stats_rx.recv()
             try:
                 self.reward = rx_msg["reward"]
                 self.episode_ends = rx_msg["done"]
@@ -58,18 +58,12 @@ class Agent(object):
             self.receive_feedback(self.reward, self.episode_ends)
             self.lc_t += 1
 
-
-
     def act(self, observation):
         """
 
         Parameters
         ----------
         observation : gym.Space
-        reward : float
-        done : bool
-        is_learning : bool
-
         Returns
         -------
 
@@ -103,15 +97,12 @@ class RandomAgent(Agent):
             is_learning, global_t, pid, **kwargs
         )
 
-    def act(self, observation, ):
+    def act(self, observation):
         """
 
         Parameters
         ----------
         observation : gym.Space
-        reward : float
-        done : bool
-        is_learning : bool
 
         Returns
         -------
