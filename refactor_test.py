@@ -23,7 +23,7 @@ def main():
                            is_learning, global_t, pid)
 
     def f_create_shared_params():
-        return mx.nd.zeros((1024*1024*2),ctx=mx.cpu())
+        return mx.nd.zeros((1024*1024*2), ctx=mx.cpu())
 
 
     experiment = Experiment(f_create_env,f_create_agent,
