@@ -20,6 +20,8 @@ class ProcessState(Enum):
     start = 1
     stop = 2
 
+def force_map(func,x):
+    return list(map(func,x))
 
 
 try:

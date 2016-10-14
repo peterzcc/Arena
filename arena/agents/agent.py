@@ -2,11 +2,12 @@ import gym
 import multiprocessing as mp
 import queue
 from arena.utils import  ProcessState
+import logging
 
 class Agent(object):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx: mp.Queue, acts_tx: mp.Queue,
-                 is_learning, global_t):
+                 is_learning, global_t, pid=0, **kwargs):
         """
 
         Parameters
@@ -27,6 +28,8 @@ class Agent(object):
         self.episode_ends = None
         self.gb_t = global_t
         self.lc_t = 0
+        self.id = pid
+        logging.debug("Agent {} initialized".format(self.id))
 
 
     def reset(self):
@@ -37,6 +40,7 @@ class Agent(object):
 
     def run_loop(self):
         while not self.terminated:
+            # logging.debug("Agent: {} waiting for observation".format(self.id))
             rx_msg = self.stats_rx.get(block=True)
             try:
                 self.current_obs = rx_msg["observation"]
@@ -85,7 +89,7 @@ class Agent(object):
 class RandomAgent(Agent):
     def __init__(self,  observation_space, action_space,
                  shared_params, stats_rx: mp.Queue,acts_tx: mp.Queue,
-                 is_learning, global_t,global_reward):
+                 is_learning, global_t, pid=0, **kwargs):
         """
 
         Parameters
@@ -96,10 +100,10 @@ class RandomAgent(Agent):
         super(RandomAgent, self).__init__(
             observation_space, action_space,
             shared_params, stats_rx, acts_tx,
-            is_learning, global_t
+            is_learning, global_t, pid, **kwargs
         )
 
-    def act(self, observation, is_learning=False):
+    def act(self, observation, ):
         """
 
         Parameters

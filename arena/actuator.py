@@ -3,6 +3,8 @@ import numpy as np
 import multiprocessing as mp
 import queue
 from arena.utils import ProcessState
+import logging
+
 
 class Actuator(object):
     def __init__(self, func_get_env, stats_tx: mp.Queue, acts_rx: mp.Queue,
@@ -25,6 +27,8 @@ class Actuator(object):
         self.id = act_id
         self.gb_t = global_t
 
+        logging.debug("Actuator: {} initialized".format(self.id))
+
     def reset(self):
         self.current_obs = self.env.reset()
         self.action = None
@@ -35,6 +39,7 @@ class Actuator(object):
 
     def receive_cmd(self):
         if self.is_idle:
+            logging.debug("Actuator: {} waiting for start".format(self.id))
             cmd = self.signal.get(block=True)
         else:
             try:
@@ -46,9 +51,13 @@ class Actuator(object):
                 self.is_terminated = True
             elif cmd == ProcessState.stop:
                 self.is_idle = True
+                self.episode_q.put(
+                    {"id": self.id, "status": ProcessState.stop}
+                )
             elif cmd == ProcessState.start:
                 self.is_idle = False
                 self.reset()
+                logging.debug("Actuator: {} started".format(self.id))
             else:
                 raise ValueError("Unknown command from self.signal")
 
@@ -63,7 +72,6 @@ class Actuator(object):
                               block=True)
             self.episode_reward += self.reward
             self.episode_count += 1
-            self.gb_t += 1
 
             if self.episode_ends:
                 self.episode_q.put(
