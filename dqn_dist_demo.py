@@ -3,7 +3,7 @@ import mxnet.ndarray as nd
 from mxnet import kvstore
 import numpy
 from arena import Base
-from arena.games import AtariGame
+from arena.games.atari_game import AtariGame
 from arena.utils import *
 import logging
 import argparse

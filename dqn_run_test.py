@@ -8,7 +8,7 @@ import re
 import logging
 import sys
 from arena import Base
-from arena.games import AtariGame
+from arena.games.atari_game import AtariGame
 from arena.utils import *
 from arena.operators import *
 

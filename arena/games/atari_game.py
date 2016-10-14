@@ -9,6 +9,7 @@ from arena.utils import *
 from arena import ReplayMemory
 from .game import Game
 from .game import DEFAULT_MAX_EPISODE_STEP
+import six
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +28,18 @@ def ale_load_from_rom(rom_path, display_screen):
                            'installation guidance')
 
     ale = ALEInterface()
-    ale.setInt('random_seed', rng.randint(1000))
+    ale.setInt(six.b('random_seed'), rng.randint(1000))
     if display_screen:
         import sys
         if sys.platform == 'darwin':
             import pygame
             pygame.init()
             ale.setBool('sound', False) # Sound doesn't work on OSX
-        ale.setBool('display_screen', True)
+        ale.setBool(six.b('display_screen'), True)
     else:
-        ale.setBool('display_screen', False)
-    ale.setFloat('repeat_action_probability', 0)
-    ale.loadROM(rom_path)
+        ale.setBool(six.b('display_screen'), False)
+    ale.setFloat(six.b('repeat_action_probability'), 0)
+    ale.loadROM(six.b(rom_path))
     return ale
 
 

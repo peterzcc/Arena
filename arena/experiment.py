@@ -88,7 +88,7 @@ class Experiment(object):
                 fps = episode_num_step / (time() - epso_start_time)
                 train_log = ",".join(
                         map(str,
-                            [epoch_num, episode_num,episode_num_step, episode_reward, fps] + self.agent.stats_values()
+                            [epoch_num, episode_num, episode_num_step, episode_reward, round(fps)] + self.agent.stats_values()
                             ))+"\n"
                 log_train_file.write(train_log)
 
@@ -137,7 +137,6 @@ class Experiment(object):
             log_test_file.write(",".join(map(str, [agent_id, epoch_reward/episode_num, episode_num]))+"\n")
 
     def demo(self):
-        reward = 0
         episode_ends = True
         while True:
             self.env.render()

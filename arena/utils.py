@@ -11,6 +11,17 @@ import ast
 import inspect
 import collections
 import numbers
+import multiprocessing as mp
+import logging
+from enum import Enum
+
+class ProcessState(Enum):
+    terminate = 0
+    start = 1
+    stop = 2
+
+
+
 try:
     import cPickle as pickle
 except:
@@ -24,6 +35,10 @@ import mxnet.ndarray as nd
 _ctx = mx.cpu()
 _numpy_rng = numpy.random.RandomState(123456)
 
+try:
+    xrange
+except NameError:
+    xrange = range
 
 def get_default_ctx():
     return _ctx

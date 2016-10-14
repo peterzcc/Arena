@@ -298,7 +298,7 @@ class RNN(object):
     def params(self):
         return self.i2h_weight + self.i2h_bias + self.h2h_weight + self.h2h_bias
 
-    def step(self, data, prev_h=None, prev_c=None, seq_len=1, ret_typ="all"):
+    def step(self, data: object, prev_h: object = None, prev_c: object = None, seq_len: object = 1, ret_typ: object = "all") -> object:
         """Feed the data sequence into the RNN and get the state symbols.
 
         Parameters
