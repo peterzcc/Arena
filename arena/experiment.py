@@ -16,7 +16,8 @@ class Experiment(object):
                  f_create_env,
                  f_create_agent,
                  f_create_shared_params,
-                 stats_file_dir=None):
+                 stats_file_dir=None,
+                 single_process_mode=False):
         """
 
         Parameters
@@ -49,6 +50,11 @@ class Experiment(object):
         self.log_train_path = os.path.join(self.stats_file_dir, "train_log.csv")
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
         self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
+        self.single_process_mode = single_process_mode
+        if self.single_process_mode:
+            self.process_type = thd.Thread
+        else:
+            self.process_type = mp.Process
 
     def terminate_all_actuators(self):
         force_map(lambda x: x.put(ProcessState.stop), self.actuator_channels)
@@ -89,7 +95,7 @@ class Experiment(object):
             tx_stats, rx_stats = mp.Pipe()
             tx_acts, rx_acts = mp.Pipe()
             this_actuator_process = \
-                mp.Process(
+                self.process_type(
                     target=actuator_thread,
                     args=(self.f_create_env,
                           tx_stats,
