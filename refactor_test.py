@@ -29,7 +29,7 @@ def main():
     experiment = Experiment(f_create_env,f_create_agent,
                             f_create_shared_params)
 
-    experiment.run_parallel_training(4,2,10000,with_testing_length=1000)
+    experiment.run_parallel_training(4, 2, 10000, with_testing_length=1000)
 
 if __name__ == '__main__':
     main()

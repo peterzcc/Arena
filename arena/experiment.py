@@ -66,7 +66,7 @@ class Experiment(object):
         if not np.all(is_stopped):
             raise ValueError("Not all processes have stopped")
 
-    def create_actor_learner_processes(self,num_actor):
+    def create_actor_learner_processes(self, num_actor):
         def actuator_thread(func_get_env, stats_tx, acts_rx,
                             cmd_signal: mp.Queue, episode_data_q: mp.Queue,
                             global_t, act_id=0):
@@ -172,7 +172,7 @@ class Experiment(object):
 
                 epoch_num += 1
 
-    def run_testing_on_sub_process(self, test_length, process_id = 0):
+    def run_testing_on_sub_process(self, test_length, process_id=0):
         if not os.path.exists(self.log_test_path):
             with open(self.log_test_path, 'w') as log_test_file:
                 log_test_file.write("id,mean reward, episode_num, fps\n")

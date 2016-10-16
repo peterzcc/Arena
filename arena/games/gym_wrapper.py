@@ -1,9 +1,10 @@
 import gym
 import numpy as np
-#TODO: Complete this class later
+import cv2
+#TODO: test this class
 class GymWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=True, new_img_size=None,
-                 max_null_op=30):
+                 max_null_op=7):
         self.env = env
         self.action_space = env.action_space
 
@@ -19,17 +20,27 @@ class GymWrapper(object):
             image_size = self.env.observation_space.low.shape[0:2]
         else:
             image_size = new_img_size
-        self.observation_space = new_img_size + (num_channel,)
+        self.observation_space = image_size + (num_channel,)
         self.rgb_to_gray = rgb_to_gray
         self.new_img_size = new_img_size
-        self.max_null_op=30
+        self.max_null_op = max_null_op
 
     def render(self):
         self.env.render()
 
-    def preprocess_observation(self,obs):
-        #TODO: preprocess
-        return obs
+    def preprocess_observation(self, obs):
+
+        if self.new_img_size is not None:
+            resized = cv2.resize(obs, self.new_img_size,
+                                 interpolation=cv2.INTER_LINEAR)
+        else:
+            resized = obs
+        if self.rgb_to_gray:
+            final = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
+        else:
+            final = resized
+
+        return final
 
     def step(self, a):
         observation, reward, done, info = self.env.step(a)
@@ -38,8 +49,10 @@ class GymWrapper(object):
 
     def reset(self):
         observation = self.env.reset()
-
-        #TODO: null op
-        raise NotImplementedError
+        null_op_num = np.random.randint(
+            0,
+            max(self.max_null_op + 1, 0 + 1))
+        for i in range(null_op_num):
+            observation, _, _, _ = self.env.step(0) #TODO: define null action
         return observation
 
