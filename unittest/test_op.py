@@ -5,7 +5,7 @@ from mxnet.test_utils import *
 from arena.ops import *
 from arena.utils import *
 
-np.random.seed(215)
+np.random.seed(123)
 def test_entropy_multinomial():
     dat = np.random.normal(size=(20, 10))
     data = mx.sym.Variable('data')
@@ -79,17 +79,24 @@ def test_roi_wrapping():
                                  spatial_scale=spatial_scale, explicit_batch=explicit_batch,
                                  interp_type=sampler_typ)
         data_npy = np.random.rand(*data_shape)
-        #data_npy = np.array([[1.0, 2.0, 1.0], [2.0, 1.0, 2.0], [1.0, 2.0, 1.0]]).reshape((1, 1, 3, 3))
+        #data_npy = np.array([[2, 1, 2], [1, 2, 1], [2, 1, 2]]).reshape((1, 1, 3, 3))
+        rois_npy = None
         if explicit_batch:
             rois_num = 5 * data_shape[0]
             rois_npy = np.zeros((rois_num, 5), dtype=np.float32)
-            rois_npy[:, 0] = np.random.randint(0, data_shape[0], size=rois_num)
+            rois_npy[:, 0] = np.random.randint(0, data_shape[0], size=rois_num).astype(np.float32)
             rois_npy[:, 1] = (np.random.rand(rois_num)-0.1) * (data_shape[3] - 1.0) / spatial_scale
             rois_npy[:, 2] = (np.random.rand(rois_num)-0.1) * (data_shape[2] - 1.0) / spatial_scale
             rois_npy[:, 3] = (np.random.rand(rois_num)) * ((data_shape[3] - 1.0) / spatial_scale
                                                          - rois_npy[:, 1]) + rois_npy[:, 1]
             rois_npy[:, 4] = (np.random.rand(rois_num)) * ((data_shape[2] - 1.0) / spatial_scale
                                                          - rois_npy[:, 2]) + rois_npy[:, 2]
+            # rois_npy[:, 1] = 0.1
+            # rois_npy[:, 2] = 0.1
+            # rois_npy[:, 3] = 1.2
+            # rois_npy[:, 4] = 1.2
+            # assert rois_npy.shape[1] == 5
+            # print rois_npy
         else:
             rois_num = data_shape[0]
             rois_npy = np.zeros((rois_num, 4), dtype=np.float32)
@@ -99,13 +106,19 @@ def test_roi_wrapping():
                                                          - rois_npy[:, 0]) + rois_npy[:, 0]
             rois_npy[:, 3] = np.random.rand(rois_num) * ((data_shape[2] - 1.0) / spatial_scale
                                                          - rois_npy[:, 1]) + rois_npy[:, 1]
+        #     rois_npy[:, 0] = 0.1
+        #     rois_npy[:, 1] = 0.1
+        #     rois_npy[:, 2] = 1.2
+        #     rois_npy[:, 3] = 1.2
+        # print data_npy
+        # print rois_npy
         check_numeric_gradient(sym, location={'data': data_npy, 'rois': rois_npy},
                                grad_nodes={'data': 'write', 'rois':'null'}, numeric_eps=1E-2,
-                               check_eps=0.07,
+                               check_eps=0.01,
                                ctx=ctx)
         check_numeric_gradient(sym, location={'data': data_npy, 'rois': rois_npy},
                                grad_nodes={'data': 'add', 'rois': 'null'}, numeric_eps=1E-2,
-                               check_eps=0.07,
+                               check_eps=0.01,
                                ctx=ctx)
         check_numeric_gradient(sym, location={'data': data_npy, 'rois': rois_npy},
                                grad_nodes={'rois': 'write', 'data': 'null'}, numeric_eps=1E-2,
@@ -137,8 +150,8 @@ def test_roi_wrapping():
                                              interp_type=sampler_typ)
                 else:
                     sym = mx.sym.ROIPooling(data=data, rois=rois, pooled_size=out_shape, spatial_scale=spatial_scale)
-                forward_time = check_speed(sym, location={'data': data_npy, 'rois': rois_npy}, N=3, typ="forward", ctx=ctx)
-                forward_backward_time = check_speed(sym, location={'data': data_npy, 'rois': rois_npy}, N=3, typ="whole", ctx=ctx)
+                forward_time = check_speed(sym, location={'data': data_npy, 'rois': rois_npy}, N=10, typ="forward", ctx=ctx)
+                forward_backward_time = check_speed(sym, location={'data': data_npy, 'rois': rois_npy}, N=10, typ="whole", ctx=ctx)
                 if sampler_typ != "max":
                     print("ctx:%s, data_shape:%s, out_shape:%s, anti_aliasing:%s, sampler:%s, f:%f, fb:%f"
                           %(str(ctx), str(data_shape), str(out_shape), str(anti_aliasing), sampler_typ, forward_time, forward_backward_time))
@@ -148,7 +161,7 @@ def test_roi_wrapping():
                              forward_time, forward_backward_time))
 
     for ctx in [mx.cpu(), mx.gpu()]:
-        for spatial_scale in [1.0]:
+        for spatial_scale in [0.01, 0.5, 1.0]:
             ele_test_forward_roiwrapping(data_shape=(1, 1, 2, 2), out_shape=(3, 3), explicit_batch=True,
                                          spatial_scale=spatial_scale, anti_aliasing=False, ctx=ctx)
             ele_test_forward_roiwrapping(data_shape=(1, 1, 2, 4), out_shape=(3, 2), explicit_batch=False,
@@ -160,9 +173,9 @@ def test_roi_wrapping():
             ele_test_forward_roiwrapping(data_shape=(1, 1, 43, 22), out_shape=(23, 43), explicit_batch=False,
                                          spatial_scale=spatial_scale, anti_aliasing=False, ctx=ctx)
     for ctx in [mx.gpu()]:
-        for spatial_scale in [0.01, 0.5, 1.0]:
-            for sampler_typ in ["bilinear", "bicubic"]:
-                for anti_aliasing in [False, True]:
+        for spatial_scale in [0.5, 1.0]:
+            for sampler_typ in ["bilinear","bicubic"]:
+                for anti_aliasing in [True, False]:
                     for explicit_batch in [False, True]:
                         print("ctx:", ctx, "spatial_scale:", spatial_scale, "sampler_typ:", sampler_typ, "explicit_batch:", explicit_batch, "anti_aliasing:", anti_aliasing)
                         ele_test_backward_roiwrapping(data_shape=(2, 3, 7, 7), out_shape=(3, 3),
