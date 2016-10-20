@@ -86,7 +86,7 @@ class Base(object):
                 if tuple(data_shapes.items()) not in self._buckets[self.curr_bucket_key]['exe']:
                     #TODO Optimize the reshaping functionality!
                     self._buckets[self.curr_bucket_key]['exe'][tuple(data_shapes.items())] = \
-                        self.exe.reshape(partial_shaping=True, allow_up_sizing=True,**data_shapes)
+                        self.exe.reshape(partial_shaping=True, allow_up_sizing=True, **data_shapes)
                     self._buckets[self.curr_bucket_key]['data_shapes'] = data_shapes
                 else:
                     self._buckets[self.curr_bucket_key]['data_shapes'] = data_shapes

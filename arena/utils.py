@@ -43,12 +43,14 @@ def get_saving_path(prefix="", epoch=None):
     return sym_saving_path, param_saving_path, misc_saving_path
 
 
-def logging_config(name=None, level=logging.DEBUG, console_level=logging.DEBUG):
+def logging_config(folder=None, name=None, level=logging.DEBUG, console_level=logging.DEBUG):
     if name is None:
         name = inspect.stack()[1][1].split('.')[0]
-    folder = os.path.join(os.getcwd(), name)
+    if folder is None:
+        folder = os.path.join(os.getcwd(), name)
     if not os.path.exists(folder):
         os.makedirs(folder)
+    # Initialze the file logging
     logpath = os.path.join(folder, name + ".log")
     print("All Logs will be saved to %s"  %logpath)
     logging.root.setLevel(level)
@@ -57,7 +59,7 @@ def logging_config(name=None, level=logging.DEBUG, console_level=logging.DEBUG):
     logfile.setLevel(level)
     logfile.setFormatter(formatter)
     logging.root.addHandler(logfile)
-    #TODO Update logging patterns in other files
+    # Initialze the console logging
     logconsole = logging.StreamHandler()
     logconsole.setLevel(console_level)
     logconsole.setFormatter(formatter)
