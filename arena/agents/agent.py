@@ -25,18 +25,17 @@ class Agent(object):
         self.terminated = False
         self.current_obs = None
         self.current_action = None
-        self.reward = None
-        self.episode_ends = None
+        self.current_reward = None
+        self.current_episode_ends = None
         self.gb_t = global_t
-        self.lc_t = 0
         self.id = pid
         logging.debug("Agent {} initialized".format(self.id))
 
     def reset(self):
         self.current_obs = None
         self.current_action = None
-        self.reward = None
-        self.episode_ends = None
+        self.current_reward = None
+        self.current_episode_ends = None
 
     def run_loop(self):
         while not self.terminated:
@@ -51,12 +50,11 @@ class Agent(object):
             self.acts_tx.send(self.current_action)
             rx_msg = self.stats_rx.recv()
             try:
-                self.reward = rx_msg["reward"]
-                self.episode_ends = rx_msg["done"]
+                self.current_reward = rx_msg["reward"]
+                self.current_episode_ends = rx_msg["done"]
             except KeyError:
                 raise ValueError("Failed to receive feedback in self.stats_rx")
-            self.receive_feedback(self.reward, self.episode_ends)
-            self.lc_t += 1
+            self.receive_feedback(self.current_reward, self.current_episode_ends)
 
     def act(self, observation):
         """
@@ -68,10 +66,10 @@ class Agent(object):
         -------
 
         """
-        raise NotImplementedError
+        return self.action_space.sample()
 
     def receive_feedback(self, reward, done):
-        raise NotImplementedError
+        pass
 
     def stats_keys(self):
         return []
@@ -80,37 +78,6 @@ class Agent(object):
         return []
 
 
-class RandomAgent(Agent):
-    def __init__(self,  observation_space, action_space,
-                 shared_params, stats_rx: mp.Queue,acts_tx: mp.Queue,
-                 is_learning, global_t, pid=0, **kwargs):
-        """
 
-        Parameters
-        ----------
-        observation_space : gym.Space
-        action_space : gym.Space
-        """
-        super(RandomAgent, self).__init__(
-            observation_space, action_space,
-            shared_params, stats_rx, acts_tx,
-            is_learning, global_t, pid, **kwargs
-        )
-
-    def act(self, observation):
-        """
-
-        Parameters
-        ----------
-        observation : gym.Space
-
-        Returns
-        -------
-        """
-
-        return self.action_space.sample()
-
-    def receive_feedback(self, reward, done):
-        pass
 
 
