@@ -95,8 +95,6 @@ class DqnAgent(Agent):
     def receive_feedback(self, reward, done):
         self.memory.add_feedback(self.current_action, reward,
                                  done)
-
-
         if self.is_learning.value:
 
             self.local_steps += 1
