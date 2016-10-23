@@ -25,7 +25,7 @@ class Base(object):
     params : None or dict, optional
     params_grad : None or dict, optional
     aux_states:
-    initializer:
+    initializer: mx.initializer.Initializer
     ctx:
     name:
 
@@ -33,20 +33,34 @@ class Base(object):
 
     def __init__(self, data_shapes, sym_gen, params=None, aux_states=None,
                  default_bucket_kwargs=None, learn_init_keys=None,
-                 initializer=mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2),
+                 initializer=None,
                  ctx=mx.gpu(), name='Net'):
+        """
+
+        Parameters
+        ----------
+        data_shapes
+        sym_gen
+        params
+        aux_states
+        default_bucket_kwargs
+        learn_init_keys
+        initializer: mx.init.Initializer
+        ctx
+        name
+        """
         self.sym_gen = sym_gen
         bucket_kwargs = default_bucket_kwargs.copy() if \
             default_bucket_kwargs is not None else dict()
         self.curr_bucket_key = None
         self.ctx = ctx
         self.name = name
-        self.initializer = initializer
+        self.initializer = initializer#mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2),
         if params is None:
             self.params = None
             self.params_grad = None
         else:
-            self.params = OrderedDict([(k, v.copyto(ctx)) for k, v in params.items()])
+            self.params = params
             self.params_grad = OrderedDict([(n, nd.empty(v.shape, ctx=ctx))
                                             for n, v in self.params.items()])
         if aux_states is not None:
@@ -112,11 +126,9 @@ class Base(object):
             self.params_grad = OrderedDict([(n, nd.empty(arg_name_shape[n], ctx=self.ctx))
                                             for n in param_names])
             if len(self.params) > 0:
-                assert self.initializer is not None, \
-                    'We must set the initializer if we donnot initialize' \
-                    'manually the free parameters of the network!!'
-            for k, v in self.params.items():
-                self.initializer(k, v)
+                if self.initializer is not None:
+                    for k, v in self.params.items():
+                        self.initializer(k, v)
         else:
             assert set(arg_name_shape.items()) == \
                    set(list(data_shapes.items()) + [(k, v.shape) for k, v in self.params.items()])
@@ -289,7 +301,7 @@ class Base(object):
         return Base(data_shapes=self.data_shapes,
                     sym_gen=self.sym_gen,
                     default_bucket_kwargs=dict(self.curr_bucket_key),
-                    params=self.params,
+                    params=OrderedDict([(k, v.copyto(ctx)) for k, v in self.params.items()]),
                     aux_states=self.aux_states, ctx=ctx, name=name)
 
     def copy_params_to(self, dst):

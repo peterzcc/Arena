@@ -1,1 +1,1 @@
-from .agent import Agent, RandomAgent
+from .agent import Agent

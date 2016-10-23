@@ -30,7 +30,9 @@ class Experiment(object):
         self.f_create_agent = f_create_agent
         self.shared_params = f_create_shared_params()
         self.is_learning = mp.Value(ctypes.c_bool, lock=False)
+        self.is_learning.value = True
         self.global_t = mp.Value(ctypes.c_int, lock=True)
+        self.global_t.value = 0
         self.actuator_processes = []
         self.actuator_channels = []
         self.agent_threads = []
@@ -127,6 +129,7 @@ class Experiment(object):
         self.num_actor = num_actor
         self.create_actor_learner_processes(num_actor)
 
+
         force_map(lambda x: x.start(), self.actuator_processes)
         force_map(lambda x: x.start(), self.agent_threads)
 
@@ -173,6 +176,7 @@ class Experiment(object):
                     self.terminate_all_actuators()
                     self.is_learning.value = False
                     self.run_testing_on_sub_process(with_testing_length)
+                    self.is_learning.value = True
                     force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
                     start_times = np.repeat(time(), num_actor)
 

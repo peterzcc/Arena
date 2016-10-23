@@ -8,6 +8,9 @@ from scipy.stats import entropy
 
 from .utils import *
 
+class DQNInitializer(mx.initializer.Xavier):
+    def _init_bias(self, _, arr):
+        arr[:] = .1
 
 class DQNOutput(mx.operator.CustomOp):
     def __init__(self):

@@ -26,9 +26,7 @@ mx.random.seed(100)
 npy_rng = get_numpy_rng()
 
 
-class DQNInitializer(mx.initializer.Xavier):
-    def _init_bias(self, _, arr):
-        arr[:] = .1
+
 
 
 def main():

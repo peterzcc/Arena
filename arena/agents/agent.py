@@ -16,7 +16,7 @@ class Agent(object):
         observation_space : gym.Space
         action_space : gym.Space
         """
-        self.obs_space = observation_space
+        self.observation_space = observation_space
         self.action_space = action_space
         self.params = shared_params
         self.stats_rx = stats_rx

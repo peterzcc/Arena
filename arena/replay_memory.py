@@ -5,14 +5,38 @@ import mxnet.ndarray as nd
 import numpy
 import copy
 from .utils import *
+from gym.spaces import Box,Discrete
 
+
+def create_memory(observation_space,action_space,size,state_history_length,
+                  state_dtype="uint8",action_dtype="uint8"):
+    if isinstance(action_space, Box):
+        action_dim = action_space.low.ndim
+        action_dtype = action_space.low.dtype
+    elif isinstance(action_space, Discrete):
+        action_dim = ()
+        action_dtype = action_dtype
+    else:
+        raise ValueError("Unknown action space")
+    if isinstance(observation_space, Box):
+        state_dtype = state_dtype
+    else:
+        raise ValueError("Unknown observation space")
+    return ReplayMemory(state_dim=observation_space.shape,
+                        state_dtype=state_dtype,
+                        history_length=state_history_length,
+                        memory_size=size,
+                        replay_start_size=state_history_length,
+                        action_dim=action_dim,
+                        action_dtype=action_dtype)
 
 #TODO Add Buffer between GPU and CPU to reduce the overhead of copying data
 #TODO We can use C API to accelerate more (http://blog.debao.me/2013/04/my-first-c-extension-to-numpy/)
 class ReplayMemory(object):
     def __init__(self, history_length, memory_size=1000000, replay_start_size=100,
                  state_dim=(), action_dim=(), state_dtype='uint8', action_dtype='uint8',
-                 ctx=mx.gpu()):
+                 ctx=mx.gpu(),observation_space=None,action_space=None):
+
         self.rng = get_numpy_rng()
         self.ctx = ctx
         assert type(action_dim) is tuple and type(state_dim) is tuple, \
@@ -31,6 +55,7 @@ class ReplayMemory(object):
         self.history_length = history_length
         self.top = 0
         self.size = 0
+        self.is_waiting_for_feedback = False
 
     def latest_slice(self):
         if self.size >= self.history_length:
@@ -80,6 +105,20 @@ class ReplayMemory(object):
         replay_memory.terminate_flags[numpy.arange(self.top-self.size, self.top)] = \
             self.terminate_flags[numpy.arange(self.top-self.size, self.top)]
         return replay_memory
+
+    def append_obs(self, obs):
+        self.states[self.top] = obs
+        self.top = (self.top + 1) % self.memory_size
+        if self.size < self.memory_size:
+            self.size += 1
+        self.is_waiting_for_feedback = True
+
+    def add_feedback(self, action, reward, terminate_flag):
+        last_idx=(self.top-1)%self.memory_size
+        self.actions[last_idx] = action
+        self.rewards[last_idx] = reward
+        self.terminate_flags[last_idx] = terminate_flag
+        self.is_waiting_for_feedback = False
 
     def append(self, obs, action, reward, terminate_flag):
         self.states[self.top] = obs
