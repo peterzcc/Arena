@@ -148,7 +148,9 @@ class Base(object):
         logging.info('Saving %s, params: \"%s\", misc: \"%s\"',
                      self.name, param_saving_path, misc_saving_path)
 
-    def load_params(self, name="", dir_path="", epoch=None):
+    def load_params(self, name=None, dir_path="", epoch=None):
+        if name is None:
+            name = self.name
         params, aux_states, param_loading_path = load_params(dir_path=dir_path, epoch=epoch, name=name)
         logging.info('Loading params from \"%s\" to %s' % (param_loading_path, self.name))
         for k, v in params.items():
