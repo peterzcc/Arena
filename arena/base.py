@@ -46,11 +46,11 @@ class Base(object):
             self.params = None
             self.params_grad = None
         else:
-            self.params = OrderedDict([(k, v.copyto(ctx)) for k, v in params.items()])
+            self.params = params
             self.params_grad = OrderedDict([(n, nd.empty(v.shape, ctx=ctx))
                                             for n, v in self.params.items()])
         if aux_states is not None:
-            self.aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in aux_states.items()])
+            self.aux_states = aux_states
         else:
             self.aux_states = None
         self._buckets = dict()
@@ -111,12 +111,10 @@ class Base(object):
                                        for n in param_names])
             self.params_grad = OrderedDict([(n, nd.empty(arg_name_shape[n], ctx=self.ctx))
                                             for n in param_names])
-            if len(self.params) > 0:
-                assert self.initializer is not None, \
-                    'We must set the initializer if we donnot initialize' \
-                    'manually the free parameters of the network!!'
-            for k, v in self.params.items():
-                self.initializer(k, v)
+            if self.initializer is not None:
+                logging.info("Initialize using %s" %str(self.initializer))
+                for k, v in self.params.items():
+                    self.initializer(k, v)
         else:
             assert set(arg_name_shape.items()) == \
                    set(data_shapes.items() + [(k, v.shape) for k, v in self.params.items()])
@@ -267,10 +265,6 @@ class Base(object):
         for v in self.acc_grad.values():
             v[:] = 0
 
-    """
-    Can be used to calculate the gradient of Q(s,a) over a
-    """
-
     # TODO Finish this part!
     def get_grads(self, keys, bucket_kwargs=None, **arg_dict):
         data_shapes = {k: v.shape for k, v in arg_dict.items()}
@@ -286,17 +280,19 @@ class Base(object):
             ctx = self.ctx
         if name is None:
             name = self.name + '-copy-' + str(ctx)
+        if self.aux_states is not None:
+            aux_states = OrderedDict([(k, v.copyto(ctx)) for k, v in self.aux_states.items()])
+        else:
+            aux_states = None
         return Base(data_shapes=self.data_shapes,
                     sym_gen=self.sym_gen,
                     default_bucket_kwargs=dict(self.curr_bucket_key),
-                    params=self.params,
-                    aux_states=self.aux_states, ctx=ctx, name=name)
+                    params=OrderedDict([(k, v.copyto(ctx)) for k, v in self.params.items()]),
+                    aux_states=aux_states, ctx=ctx, name=name)
 
     def copy_params_to(self, dst):
         for k, v in self.params.items():
             dst.params[k][:] = v
-            # TODO `wait_to_read()` here seems unnecessary, remove it in the future!
-            dst.params[k].wait_to_read()
 
     @property
     def total_param_num(self):

@@ -260,7 +260,7 @@ for i in range(max_iter):
                       win_name="erase_signal%d" %write_id)
         CV2Vis.display(data=(add_signal_over_time[:, 0, write_id, :].T + 1) / 2,
                       win_name="add_signal%d" %write_id)
-    avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
+    avg_loss = npy_binary_cross_entropy(pred, data_out).sum()/seqlen/batch_size
     print(avg_loss)
     vis.update(i, avg_loss)
 
@@ -313,7 +313,7 @@ for j in range(2):
                           win_name="add_signal%d" % write_id,
                           save_image=True,
                           save_path="./add_signal_seqlen%d_%d.jpg" %(seqlen, i))
-        avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
+        avg_loss = npy_binary_cross_entropy(pred, data_out).sum()/seqlen/batch_size
         print(avg_loss)
         ch = input()
 
@@ -366,6 +366,6 @@ for j in range(2):
                            win_name="add_signal%d" % write_id,
                            save_image=True,
                            save_path="./same_add_signal_seqlen%d_%d.jpg" %(seqlen, i))
-        avg_loss = npy_binary_entropy(pred, data_out)/seqlen/batch_size
+        avg_loss = npy_binary_cross_entropy(pred, data_out).sum()/seqlen/batch_size
         print(avg_loss)
         ch = input()

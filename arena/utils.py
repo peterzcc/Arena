@@ -204,10 +204,11 @@ def npy_onehot(x, num):
     ret = ret.reshape(x.shape + (num,))
     return ret
 
-def npy_binary_entropy(prediction, target):
-    assert prediction.shape == target.shape
+def npy_binary_cross_entropy(prediction, target):
+    assert prediction.shape == target.shape, "prediction.shape=%s, target.shape=%s"\
+                                             %(str(prediction.shape), str(target.shape))
     return - (numpy.log(prediction + 1E-9) * target +
-              numpy.log(1 - prediction + 1E-9) * (1 - target)).sum()
+              numpy.log(1 - prediction + 1E-9) * (1 - target))
 
 
 def block_all(sym_list):
@@ -337,3 +338,9 @@ def get_float_list(values, expected_len=None):
 def get_bucket_key(bucket_kwargs):
     assert isinstance(bucket_kwargs, dict)
     return tuple(bucket_kwargs.items())
+
+
+def unique_rows(a):
+    a = numpy.ascontiguousarray(a)
+    unique_a = numpy.unique(a.view([('', a.dtype)]*a.shape[1]))
+    return unique_a.view(a.dtype).reshape((unique_a.shape[0], a.shape[1]))
