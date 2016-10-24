@@ -10,6 +10,7 @@ from arena.experiment import Experiment
 import logging
 import mxnet as mx
 import sys
+import argparse
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 # ch = logging.StreamHandler(sys.stdout)
@@ -18,6 +19,10 @@ root.setLevel(logging.DEBUG)
 DEBUG=False
 
 def main():
+    parser = argparse.ArgumentParser(description='Script to test the refactored dqn.')
+    parser.add_argument('--gpu', required=False, type=int, default=1,
+                        help='Running Context.')
+    args = parser.parse_args()
     exploration_period = 1000000
     f_get_sym = dqn_sym_nature
     is_double_q = False
@@ -31,7 +36,10 @@ def main():
                        p_assign=np.array([1.0]))
     discount = 0.99
     freeze_interval = 10000
-    ctx = mx.gpu()
+    if args.gpu < 0:
+        ctx = mx.cpu()
+    else:
+        ctx = mx.gpu(args.gpu)
 
     def f_create_env():
         env = gym.make("BreakoutDeterministic-v0")
