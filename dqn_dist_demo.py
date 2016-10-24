@@ -17,11 +17,11 @@ from arena.operators import *
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-root.addHandler(ch)
+# ch = logging.StreamHandler(sys.stdout)
+# ch.setLevel(logging.DEBUG)
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# ch.setFormatter(formatter)
+# root.addHandler(ch)
 mx.random.seed(100)
 npy_rng = get_numpy_rng()
 
@@ -78,7 +78,8 @@ def main():
     game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                      resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,
                      replay_memory_size=replay_memory_size, display_screen=args.visualization,
-                     history_length=history_length)
+                     history_length=history_length,
+                     death_end_episode=False)
 
     ##RUN NATURE
     freeze_interval = 10000
@@ -255,8 +256,8 @@ def main():
                 info_str="Node[%d]: " % kv.rank
             else:
                 info_str =""
-            info_str += "Epoch:%d, Episode:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
-                        % (epoch, episode, steps_left, steps_per_epoch, game.episode_reward,
+            info_str += "Epoch:%d, EpsdL:%d, Steps Left:%d/%d, Reward:%f, fps:%f, Exploration:%f" \
+                        % (epoch, game.episode_step, steps_left, steps_per_epoch, game.episode_reward,
                            game.episode_step / (time_episode_end - time_episode_start), eps_curr)
             if episode_update_step > 0:
                 info_str += ", Avg Loss:%f/%d" % (episode_loss / episode_update_step,

@@ -98,7 +98,9 @@ class AtariGame(Game):
             Begin an episode of a game instance. We can play the game for a maximum of
             `max_episode_step` and after that, we are forced to restart
         """
-        if self.episode_step > self.max_episode_step or self.ale.game_over():
+        if not self.death_end_episode \
+                or self.episode_step > self.max_episode_step \
+                or self.ale.game_over():
             self.start()
         else:
             for i in range(self.screen_buffer_length):

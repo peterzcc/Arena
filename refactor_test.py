@@ -31,7 +31,6 @@ def main():
     history_length = 4
     training_interval = 4
     minibatch_size = 32
-    optimizer = mx.optimizer.create(name='adagrad', learning_rate=0.01, eps=0.01)
     policy = EpsGreedy(eps_0= np.array([1.0]),eps_t=np.array([0.1]) ,t_max=exploration_period,
                        p_assign=np.array([1.0]))
     discount = 0.99
@@ -60,8 +59,9 @@ def main():
             history_length=history_length,
             training_interval=training_interval,
             minibatch_size=minibatch_size,
-            optimizer=optimizer,
-            policy=policy,
+            optimizer=mx.optimizer.create(name='adagrad', learning_rate=0.01, eps=0.01),
+            policy=EpsGreedy(eps_0=np.array([1.0]), eps_t=np.array([0.1]), t_max=exploration_period,
+                             p_assign=np.array([1.0])),
             initializer=None,
             discount=discount,
             freeze_interval=freeze_interval,
@@ -70,7 +70,7 @@ def main():
 
     def f_create_shared_params():
         sample_env = f_create_env()
-        sample_agent =DqnAgent(
+        sample_agent = DqnAgent(
             sample_env.observation_space,
             sample_env.action_space,
             None, None, None,
@@ -82,7 +82,6 @@ def main():
             history_length=history_length,
             training_interval=training_interval,
             minibatch_size=minibatch_size,
-            optimizer=optimizer,
             policy=policy,
             initializer=DQNInitializer(factor_type="in"),
             discount=discount,

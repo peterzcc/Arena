@@ -67,6 +67,8 @@ class DqnAgent(Agent):
         self.episode_loss = 0
         self.episode_length = 0
         self.episode_train_steps = 0
+        self.episode_q_count = 0
+        self.episode_q_value = 0
 
         #Optimizer
         self.updater = mx.optimizer.get_updater(optimizer)
@@ -95,6 +97,8 @@ class DqnAgent(Agent):
                                      ctx=self.ctx) / float(255.0)
             qval_npy = self.qnet.forward(is_train=False, data=norm_state)[0].asnumpy()
             action = np.argmax(qval_npy)
+            self.episode_q_value += qval_npy[0, action]
+            self.episode_q_count += 1
             return action
 
     def receive_feedback(self, reward, done):
@@ -127,14 +131,21 @@ class DqnAgent(Agent):
                 mean_loss = 0
                 if self.episode_loss > 0:
                     mean_loss = self.episode_loss / self.episode_train_steps
-                logging.debug("t={},l={:.4f}/{},e={}".format(
+                mean_q = 0
+                if self.episode_q_count > 0:
+                    mean_q = self.episode_q_value / self.episode_q_count
+                logging.debug("t={},l={:.4f}/{},q={:.4f}/{}".format(
                     self.local_steps,
                     mean_loss,
                     self.episode_train_steps,
-                    self.policy.all_eps_current))
+                    mean_q,
+                    self.episode_q_count
+                ))
                 self.episode_loss = 0
                 self.episode_length = 0
                 self.episode_train_steps = 0
+                self.episode_q_value = 0
+                self.episode_q_count = 0
     def compute_q_target(self, rewards, next_states, terminate_flags):
         target_qval = self.target_qnet.forward(is_train=False, data=next_states)[0]
         target_rewards = rewards + \
