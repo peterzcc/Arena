@@ -83,6 +83,11 @@ class Experiment(object):
                                      global_t, act_id)
             this_actuator.run_loop()
 
+        agents = []
+
+        def agent_run_thread(agent, pid):
+            agent.run_loop()
+
         def agent_thread(observation_space, action_space,
                          shared_params, stats_rx, acts_tx,
                          is_learning, global_t, pid):
@@ -108,17 +113,35 @@ class Experiment(object):
                           process_id))
             this_actuator_process.daemon = True
             self.actuator_processes.append(this_actuator_process)
+            agent = self.f_create_agent(self.env.observation_space,
+                                        self.env.action_space,
+                                        self.shared_params,
+                                        rx_stats,
+                                        tx_acts,
+                                        self.is_learning,
+                                        self.global_t,
+                                        process_id)
+            agents.append(agent)
+
+            # this_agent_thread = \
+            #     thd.Thread(
+            #         target=agent_thread,
+            #         args=(self.env.observation_space,
+            #               self.env.action_space,
+            #               self.shared_params,
+            #               rx_stats,
+            #               tx_acts,
+            #               self.is_learning,
+            #               self.global_t,
+            #               process_id)
+            #     )
+            # this_agent_thread.daemon = True
+            # self.agent_threads.append(this_agent_thread)
+        for process_id in range(num_actor):
             this_agent_thread = \
                 thd.Thread(
-                    target=agent_thread,
-                    args=(self.env.observation_space,
-                          self.env.action_space,
-                          self.shared_params,
-                          rx_stats,
-                          tx_acts,
-                          self.is_learning,
-                          self.global_t,
-                          process_id)
+                    target=agent_run_thread,
+                    args=(agents[process_id], process_id)
                 )
             this_agent_thread.daemon = True
             self.agent_threads.append(this_agent_thread)
