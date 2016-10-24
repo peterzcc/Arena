@@ -66,6 +66,7 @@ class DqnAgent(Agent):
         #Episodic information
         self.episode_loss = 0
         self.episode_length = 0
+        self.episode_train_steps = 0
 
         #Optimizer
         self.updater = mx.optimizer.get_updater(optimizer)
@@ -99,6 +100,7 @@ class DqnAgent(Agent):
     def receive_feedback(self, reward, done):
         self.memory.add_feedback(self.current_action, reward,
                                  done)
+        self.episode_length += 1
         if self.is_learning.value:
 
             self.local_steps += 1
@@ -107,7 +109,10 @@ class DqnAgent(Agent):
                 cv2.waitKey(1)
             if self.local_steps > self.train_start \
                     and self.local_steps % self.training_interval == 0:
-                self.train_once()
+                loss = self.train_once()
+                # Episode recording
+                self.episode_train_steps += 1
+                self.episode_loss += loss
 
             if self.local_steps % self.freeze_interval == 0:
                 self.qnet.copy_params_to(self.target_qnet)
@@ -115,12 +120,17 @@ class DqnAgent(Agent):
 
 
             if done:
-                logging.debug("l={:.4f},e={}".format(
-                    self.episode_loss/self.episode_length,
+                mean_loss = 0
+                if self.episode_loss > 0:
+                    mean_loss = self.episode_loss / self.episode_train_steps
+                logging.debug("l={:.4f}/{},e={}".format(
+                    mean_loss,
+                    self.episode_train_steps,
                     self.policy.all_eps_current))
                 self.policy.update_t(self.local_steps)
                 self.episode_loss = 0
                 self.episode_length = 0
+                self.episode_train_steps = 0
     def compute_q_target(self, rewards, next_states, terminate_flags):
         target_qval = self.target_qnet.forward(is_train=False, data=next_states)[0]
         target_rewards = rewards + \
@@ -167,8 +177,4 @@ class DqnAgent(Agent):
         quadratic_part = nd.clip(diff, -1, 1)
         loss = 0.5 * nd.sum(nd.square(quadratic_part)).asnumpy()[0] + \
                nd.sum(diff - quadratic_part).asnumpy()[0]
-
-        # Episode recording
-        self.episode_loss += loss
-        self.episode_length += 1
-
+        return loss
