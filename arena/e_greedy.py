@@ -16,9 +16,9 @@ class EpsGreedy(object):
         self.ps = p_assign
         self.all_eps_current = eps_0
 
-    def update_t(self, t):
+    def update_t(self):
         self.all_eps_current = \
-            np.maximum(self.eps_0 - t * self.eps_decay, self.eps_t)
+            np.maximum(self.all_eps_current - self.eps_decay, self.eps_t)
 
     def update_id(self):
         self.eps_id = np.random.choice(self.ps.shape[0], p=self.ps)

@@ -107,6 +107,10 @@ class DqnAgent(Agent):
             if self.debug_observation and self.local_steps % 1000 == 0:
                 cv2.imshow("observation", self.current_obs)
                 cv2.waitKey(1)
+
+            if self.local_steps > self.train_start:
+                self.policy.update_t()
+                
             if self.local_steps > self.train_start \
                     and self.local_steps % self.training_interval == 0:
                 loss = self.train_once()
@@ -128,7 +132,6 @@ class DqnAgent(Agent):
                     mean_loss,
                     self.episode_train_steps,
                     self.policy.all_eps_current))
-                self.policy.update_t(self.local_steps)
                 self.episode_loss = 0
                 self.episode_length = 0
                 self.episode_train_steps = 0
