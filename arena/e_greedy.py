@@ -9,6 +9,7 @@ class EpsGreedy(object):
         if not isinstance(eps_0,float):
             if eps_0.shape != eps_t.shape or eps_0.shape != p_assign:
                 raise ValueError("incompatible parameter size")
+        self.eps_0 = eps_0
         self.eps_t = eps_t
         self.eps_decay = (eps_0-eps_t)/t_max
         self.eps_id = 0
@@ -17,7 +18,7 @@ class EpsGreedy(object):
 
     def update_t(self, t):
         self.all_eps_current = \
-            np.maximum(self.all_eps_current-t*self.eps_decay, self.eps_t)
+            np.maximum(self.eps_0 - t * self.eps_decay, self.eps_t)
 
     def update_id(self):
         self.eps_id = np.random.choice(self.ps.shape[0], p=self.ps)

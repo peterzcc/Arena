@@ -10,6 +10,8 @@ import gym.spaces
 import cv2
 import logging
 
+
+# TODO: debug the poor perforamence
 class DqnAgent(Agent):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx, acts_tx,
@@ -45,6 +47,8 @@ class DqnAgent(Agent):
             shared_qnet_params=None
         elif "qnet" in self.params:
             shared_qnet_params = self.params["qnet"]
+        else:
+            raise ValueError("qnet parameter not found in shared_params")
         self.qnet = Base(data_shapes=self.data_shapes, sym_gen=dqn_sym, name="QNet",
                     initializer=initializer, params=shared_qnet_params, ctx=ctx)
         self.target_qnet = self.qnet.copy(name="TargetQNet", ctx=ctx)
@@ -107,6 +111,7 @@ class DqnAgent(Agent):
 
             if self.local_steps % self.freeze_interval == 0:
                 self.qnet.copy_params_to(self.target_qnet)
+                logging.debug("Updated target q")
 
 
             if done:

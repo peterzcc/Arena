@@ -22,7 +22,7 @@ def main():
     f_get_sym = dqn_sym_nature
     is_double_q = False
     replay_memory_size = 1000000
-    train_start = 100
+    train_start = 50000
     history_length = 4
     training_interval = 4
     minibatch_size = 32
