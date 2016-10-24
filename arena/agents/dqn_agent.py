@@ -123,7 +123,8 @@ class DqnAgent(Agent):
                 mean_loss = 0
                 if self.episode_loss > 0:
                     mean_loss = self.episode_loss / self.episode_train_steps
-                logging.debug("l={:.4f}/{},e={}".format(
+                logging.debug("t={},l={:.4f}/{},e={}".format(
+                    self.local_steps,
                     mean_loss,
                     self.episode_train_steps,
                     self.policy.all_eps_current))

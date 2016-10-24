@@ -185,7 +185,7 @@ class Experiment(object):
     def run_testing_on_sub_process(self, test_length, process_id=0):
         if not os.path.exists(self.log_test_path):
             with open(self.log_test_path, 'w') as log_test_file:
-                log_test_file.write("id,mean reward, episode_num, fps\n")
+                log_test_file.write("t,mean reward, episode_num, fps\n")
         self.actuator_channels[process_id].put(ProcessState.start)
         test_t = 0
         test_reward = 0
@@ -212,7 +212,7 @@ class Experiment(object):
                 if rx_msg["status"] == ProcessState.stop:
                     process_stopped = True
         with open(self.log_test_path, 'a') as log_test_file:
-            log_test_file.write(",".join(map(str, [process_id,
-                                                   test_reward/test_episode_num,
+            log_test_file.write(",".join(map(str, [self.global_t.value,
+                                                   test_reward / test_episode_num,
                                                    test_episode_num,
-                                                   round(test_t/(end_time-start_time))]))+"\n")
+                                                   round(test_t/(end_time-start_time))])) +"\n")
