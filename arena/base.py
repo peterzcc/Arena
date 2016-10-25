@@ -162,6 +162,20 @@ class Base(object):
         for k, v in aux_states.items():
             self.aux_states[k][:] = v
 
+    def load_prev_checkpoint(self, dir_path=""):
+        epoch = None
+        for fname in os.listdir(dir_path):
+            res = re.search('%s-(\d{5}).params' %self.name, fname)
+            if res is not None:
+                if epoch is None:
+                    epoch = int(res.group(1))
+                else:
+                    if(int(res.group(1)) > epoch):
+                        epoch = int(res.group((1)))
+        assert epoch is not None, "No previous checkpoint is found!"
+        self.load_params(name=self.name, dir_path=dir_path, epoch=epoch)
+        return epoch
+
     @property
     def internal_sym_names(self):
         return self.sym.get_internals().list_outputs()
