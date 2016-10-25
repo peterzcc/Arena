@@ -101,7 +101,7 @@ class DqnAgent(Agent):
             self.episode_q_value += qval_npy[0, action]
             self.episode_q_count += 1
             final_action = action
-            logging.debug("opt a:{}".format(final_action))
+            # logging.debug("opt a:{}".format(final_action))
             # for i in range(4):
             #     cv2.imshow("s".format(i), norm_state[0][i].asnumpy())
             #     cv2.waitKey(500)

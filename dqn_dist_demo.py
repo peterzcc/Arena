@@ -179,6 +179,7 @@ def main():
                                          ctx=q_ctx) / float(255.0)
                         qval_npy = qnet.forward(is_train=False, data=state)[0].asnumpy()
                         action = numpy.argmax(qval_npy)
+                        logging.debug("opt a:{}".format(action))
                         episode_q_value += qval_npy[0, action]
                         episode_action_step += 1
                 else:

@@ -42,8 +42,9 @@ def main():
 
     def f_create_env():
         env = gym.make("BreakoutDeterministic-v0")
+        logging.debug("meanings:{}".format(env.get_action_meanings()))
         return GymWrapper(env, rgb_to_gray=True, new_img_size=(84, 84),
-                          max_null_op=7)
+                          max_null_op=7, action_mapping=[0, 1, 2, 3])
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,

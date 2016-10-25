@@ -1,5 +1,5 @@
 import gym
-from gym.spaces import Box
+from gym.spaces import Box, Discrete
 import numpy as np
 import cv2
 import logging
@@ -7,9 +7,13 @@ import logging
 #TODO: test this class
 class GymWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=True, new_img_size=None,
-                 max_null_op=7):
+                 max_null_op=7, action_mapping=None):
         self.env = env
-        self.action_space = env.action_space
+        if action_mapping is None:
+            self.action_space = env.action_space
+        else:
+            self.action_space = Discrete(len(action_mapping))
+            self.action_map = action_mapping
         assert len(self.env.observation_space.shape) == 3
         assert self.env.observation_space.shape[2] == 3
         obs_min =np.ravel(self.env.observation_space.low)[0]
@@ -55,7 +59,7 @@ class GymWrapper(object):
 
     def step(self, a):
         # logging.debug("rx a:{}".format(a))
-        observation, reward, done, info = self.env.step(a)
+        observation, reward, done, info = self.env.step(self.action_map[a])
         # logging.debug("tx r:{},d:{}".format(reward, done))
         final_observation = self.preprocess_observation(observation)
         # if done:
