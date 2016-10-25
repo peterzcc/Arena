@@ -75,7 +75,7 @@ def main():
     cols = 84
 
     ctx = parse_ctx(args.ctx)
-    q_ctx = mx.Context(*ctx[0])
+    q_ctx = ctx[0]
 
     game = AtariGame(rom_path=args.rom, resize_mode='scale', replay_start_size=replay_start_size,
                      resized_rows=rows, resized_cols=cols, max_null_op=max_start_nullops,

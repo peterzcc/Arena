@@ -117,7 +117,7 @@ def main():
     cols = 84
     ctx = re.findall('([a-z]+)(\d*)', args.ctx)
     ctx = [(device, int(num)) if len(num) >0 else (device, 0) for device, num in ctx]
-    q_ctx = mx.Context(*ctx[0])
+    q_ctx = ctx[0]
     minibatch_size = 32
     epoch_range = [int(n) for n in args.epoch_range.split(',')]
     epochs = range(*epoch_range)

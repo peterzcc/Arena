@@ -268,6 +268,7 @@ def update_on_kvstore(kv, params, params_grad):
 def parse_ctx(ctx_args):
     ctx = re.findall('([a-z]+)(\d*)', ctx_args)
     ctx = [(device, int(num)) if len(num) > 0 else (device, 0) for device, num in ctx]
+    ctx = [mx.Context(*ele) for ele in ctx]
     return ctx
 
 

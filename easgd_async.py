@@ -175,7 +175,7 @@ def main():
     history_length = 4
     rows = 84
     cols = 84
-    q_ctx = mx.Context(*ctx[0])
+    q_ctx = ctx[0]
     games = []
     for g in range(nactor):
         games.append(AtariGame(rom_path=args.rom, resize_mode=args.resize_mode, replay_start_size=replay_start_size,
