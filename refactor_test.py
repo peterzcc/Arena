@@ -20,7 +20,7 @@ DEBUG=False
 
 def main():
     parser = argparse.ArgumentParser(description='Script to test the refactored dqn.')
-    parser.add_argument('--gpu', required=False, type=int, default=1,
+    parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
     args = parser.parse_args()
     exploration_period = 1000000

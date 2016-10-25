@@ -2,6 +2,8 @@ import gym
 from gym.spaces import Box
 import numpy as np
 import cv2
+import logging
+
 #TODO: test this class
 class GymWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=True, new_img_size=None,
@@ -52,8 +54,15 @@ class GymWrapper(object):
         return final
 
     def step(self, a):
+        # logging.debug("rx a:{}".format(a))
         observation, reward, done, info = self.env.step(a)
+        # logging.debug("tx r:{},d:{}".format(reward, done))
         final_observation = self.preprocess_observation(observation)
+        # if done:
+        #     logging.debug("a:{},r:{},d:{}".format(a, reward, done))
+        # else:
+        #     logging.debug("a:{},r:{}".format(a, reward))
+
         return final_observation, reward, done, info
 
     def reset(self):
@@ -61,6 +70,7 @@ class GymWrapper(object):
         null_op_num = np.random.randint(
             0,
             max(self.max_null_op + 1, 0 + 1))
+        # logging.debug("null_op:{}".format(null_op_num))
         for i in range(null_op_num):
             observation, _, _, _ = self.env.step(0)
         return self.preprocess_observation(observation)

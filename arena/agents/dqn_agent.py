@@ -81,7 +81,7 @@ class DqnAgent(Agent):
             self.params = self.qnet.params
 
         #DEBUG option
-        self.debug_observation = False
+        self.debug_observation = True
 
     def act(self, observation):
         self.memory.append_obs(observation)
@@ -89,8 +89,9 @@ class DqnAgent(Agent):
             self.force_explore = True
         else:
             self.force_explore = False
+
         if self.force_explore or self.policy.decide_exploration():
-            return self.action_space.sample()
+            final_action = self.action_space.sample()
         else:
             full_state = self.memory.latest_slice()
             norm_state = mx.nd.array(full_state.reshape((1,) + full_state.shape),
@@ -99,18 +100,29 @@ class DqnAgent(Agent):
             action = np.argmax(qval_npy)
             self.episode_q_value += qval_npy[0, action]
             self.episode_q_count += 1
-            return action
+            final_action = action
+            logging.debug("opt a:{}".format(final_action))
+            # for i in range(4):
+            #     cv2.imshow("s".format(i), norm_state[0][i].asnumpy())
+            #     cv2.waitKey(500)
+            # cv2.waitKey()
+
+        # logging.debug("tx a:{}".format(final_action))
+        return final_action
 
     def receive_feedback(self, reward, done):
         self.memory.add_feedback(self.current_action, reward,
                                  done)
+        # if reward > 0:
+        #     logging.debug("r:{}".format(reward))
+        # logging.debug("rx r:{},d:{}".format(reward, done))
         self.episode_length += 1
+        # if self.debug_observation: #and self.local_steps % 1000 == 0:
+        #     cv2.imshow("observation", self.current_obs)
+        #     cv2.waitKey(30)
         if self.is_learning.value:
 
             self.local_steps += 1
-            if self.debug_observation and self.local_steps % 1000 == 0:
-                cv2.imshow("observation", self.current_obs)
-                cv2.waitKey(1)
 
             if self.local_steps > self.train_start:
                 self.policy.update_t()
