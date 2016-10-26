@@ -9,7 +9,7 @@ import multiprocessing as mp
 import threading as thd
 import numpy as np
 import ctypes
-
+import datetime
 
 class Experiment(object):
     def __init__(self,
@@ -163,7 +163,7 @@ class Experiment(object):
         if not os.path.exists(self.log_train_path):
             log_train_file = open(self.log_train_path, 'w')
             log_train_file.write(
-                "pid,Epoch,t,Episode duration,Reward,fps\n")
+                "date,pid,Epoch,t,Episode duration,Reward,fps\n")
             log_train_file.close()
 
         start_times = np.repeat(time(), num_actor)
@@ -190,7 +190,8 @@ class Experiment(object):
             with open(self.log_train_path, 'a') as log_train_file:
                 train_log = ",".join(
                     map(str,
-                        [pid, epoch_num, self.global_t.value, episode_count, episode_reward, round(fps)]
+                        [datetime.datetime.now(),
+                         pid, epoch_num, self.global_t.value, episode_count, episode_reward, round(fps)]
                         )) + "\n"
                 log_train_file.write(train_log)
 
