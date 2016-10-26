@@ -55,7 +55,7 @@ class ReplayMemory(object):
         self.history_length = history_length
         self.top = 0
         self.size = 0
-        self.is_waiting_for_feedback = False
+        self.is_waiting_for_next_s = False
 
     def latest_slice(self):
         if self.size >= self.history_length:
@@ -107,18 +107,19 @@ class ReplayMemory(object):
         return replay_memory
 
     def append_obs(self, obs):
-        self.states[self.top] = obs
+        last_idx = (self.top - 1) % self.memory_size
+        self.states[last_idx] = obs
+
+        self.is_waiting_for_next_s = False
+
+    def add_feedback(self, action, reward, terminate_flag):
+        self.actions[self.top] = action
+        self.rewards[self.top] = reward
+        self.terminate_flags[self.top] = terminate_flag
         self.top = (self.top + 1) % self.memory_size
         if self.size < self.memory_size:
             self.size += 1
-        self.is_waiting_for_feedback = True
-
-    def add_feedback(self, action, reward, terminate_flag):
-        last_idx=(self.top-1)%self.memory_size
-        self.actions[last_idx] = action
-        self.rewards[last_idx] = reward
-        self.terminate_flags[last_idx] = terminate_flag
-        self.is_waiting_for_feedback = False
+        self.is_waiting_for_next_s = True
 
     def append(self, obs, action, reward, terminate_flag):
         self.states[self.top] = obs
