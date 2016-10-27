@@ -10,6 +10,7 @@ import threading as thd
 import numpy as np
 import ctypes
 import datetime
+import queue
 
 class Experiment(object):
     def __init__(self,
@@ -36,7 +37,7 @@ class Experiment(object):
         self.actuator_processes = []
         self.actuator_channels = []
         self.agent_threads = []
-        self.episode_q = mp.Queue()
+        self.episode_q = mp.Queue(maxsize=1000)
         self.num_actor = 0
         if stats_file_dir is None:
             experiment_id = 1
@@ -170,7 +171,18 @@ class Experiment(object):
         force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
 
         while epoch_num < num_epoch:
-            rx_msg = self.episode_q.get(block=True)
+            try:
+                rx_msg = self.episode_q.get(block=True, timeout=10 * 60)
+            except queue.Empty:
+                logging.warning("Not received message for too long. Maybe there is something wrong")
+                for (pid, p_actuator) in enumerate(self.actuator_processes):
+                    logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
+                    if not p_actuator.is_alive():
+                        return
+                for (pid, agent_thread) in self.agent_threads:
+                    logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
+                    if not agent_thread.is_alive():
+                        return
             try:
                 pid = rx_msg["id"]
                 episode_count = rx_msg["episode_count"]
@@ -190,8 +202,8 @@ class Experiment(object):
             with open(self.log_train_path, 'a') as log_train_file:
                 train_log = ",".join(
                     map(str,
-                        [datetime.datetime.now(),
-                         pid, epoch_num, self.global_t.value, episode_count, episode_reward, round(fps)]
+                        [datetime.datetime.now(), pid, epoch_num, self.global_t.value, episode_count, episode_reward,
+                         round(fps)]
                         )) + "\n"
                 log_train_file.write(train_log)
 
