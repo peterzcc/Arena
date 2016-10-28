@@ -179,7 +179,7 @@ class Experiment(object):
                     logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
                     if not p_actuator.is_alive():
                         return
-                for (pid, agent_thread) in self.agent_threads:
+                for (pid, agent_thread) in enumerate(self.agent_threads):
                     logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
                     if not agent_thread.is_alive():
                         return
