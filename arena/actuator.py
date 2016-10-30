@@ -54,6 +54,7 @@ class Actuator(object):
                 self.episode_q.put(
                     {"id": self.id, "status": ProcessState.stop}
                 )
+                self.receive_cmd()
             elif cmd == ProcessState.start:
                 self.is_idle = False
                 self.reset()
@@ -64,7 +65,12 @@ class Actuator(object):
     def run_loop(self):
         while not self.is_terminated:
             self.receive_cmd()
+            if self.is_terminated:
+                break
             self.stats_tx.send({"observation": self.current_obs})
+            if not self.acts_rx.poll(timeout=10 * 60):
+                logging.warning("Not received action for too long, potential error")
+                break
             current_action = self.acts_rx.recv()
             self.current_obs, self.reward, self.episode_ends, info_env = \
                 self.env.step(current_action)

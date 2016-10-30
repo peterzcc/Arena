@@ -46,15 +46,12 @@ class GymWrapper(object):
     def preprocess_observation(self, obs):
 
         if self.new_img_size is not None:
-            resized = cv2.resize(obs, self.new_img_size,
-                                 interpolation=cv2.INTER_LINEAR)
+            final = cv2.resize(obs, self.new_img_size,
+                               interpolation=cv2.INTER_LINEAR)
         else:
-            resized = obs
+            final = obs
         if self.rgb_to_gray:
-            final = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
-        else:
-            final = resized
-
+            final = cv2.cvtColor(final, cv2.COLOR_RGB2GRAY)
         return final
 
     def step(self, a):
