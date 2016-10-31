@@ -172,7 +172,7 @@ class Experiment(object):
 
         while epoch_num < num_epoch:
             try:
-                rx_msg = self.episode_q.get(block=True, timeout=10 * 60)
+                rx_msg = self.episode_q.get(block=True, timeout=15 * 60)
             except queue.Empty:
                 logging.warning("Not received message for too long. Maybe there is something wrong")
                 for (pid, p_actuator) in enumerate(self.actuator_processes):

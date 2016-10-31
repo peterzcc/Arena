@@ -41,10 +41,11 @@ def main():
         ctx = mx.gpu(args.gpu)
 
     def f_create_env():
-        env = gym.make("BreakoutDeterministic-v0")
+        env = gym.make("BreakoutNoFrameskip-v0")
         logging.debug("meanings:{}".format(env.get_action_meanings()))
         return GymWrapper(env, rgb_to_gray=True, new_img_size=(84, 84),
-                          max_null_op=7, action_mapping=[0, 1, 2, 3])
+                          max_null_op=7, action_mapping=[0, 1, 2, 3],
+                          frame_skip=4, max_recent_two_frames=True)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
@@ -91,9 +92,8 @@ def main():
         )
         return {"qnet":sample_agent.params}
 
-
-    experiment = Experiment(f_create_env,f_create_agent,
-                            f_create_shared_params,single_process_mode=DEBUG)
+    experiment = Experiment(f_create_env, f_create_agent,
+                            f_create_shared_params, single_process_mode=DEBUG)
     num_actors = 1
     num_epoch = 200
     steps_per_epoch = 250000

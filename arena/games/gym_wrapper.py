@@ -7,7 +7,9 @@ import logging
 #TODO: test this class
 class GymWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=True, new_img_size=None,
-                 max_null_op=7, action_mapping=None):
+                 max_null_op=7, action_mapping=None, frame_skip=1,
+                 max_recent_two_frames=True,
+                 max_episode_length=100000):
         self.env = env
         if action_mapping is None:
             self.action_space = env.action_space
@@ -27,18 +29,25 @@ class GymWrapper(object):
         else:
             image_size = new_img_size
         if rgb_to_gray:
-            self.observation_space = Box(low=0,
-                                         high=255,
+            self.observation_space = Box(low=obs_min,
+                                         high=obs_max,
                                          shape=image_size
                                          )
         else:
-            self.observation_space = Box(low=0,
-                                         high=255,
+            self.observation_space = Box(low=obs_min,
+                                         high=obs_max,
                                          shape=image_size + (num_channel,)
                                          )
         self.rgb_to_gray = rgb_to_gray
         self.new_img_size = new_img_size
         self.max_null_op = max_null_op
+        self.screen_buffer_length = 2
+        self.frame_skip = frame_skip
+        self.max_recent_two_frames = max_recent_two_frames
+        self.max_episode_length = max_episode_length
+
+        # Episode information
+        self.episode_steps = 0
 
     def render(self):
         self.env.render()
@@ -56,15 +65,37 @@ class GymWrapper(object):
 
     def step(self, a):
         # logging.debug("rx a:{}".format(a))
-        observation, reward, done, info = self.env.step(self.action_map[a])
+        final_done = False
+        final_reward = 0
+        observations = []
+
+        for t_skip in range(self.frame_skip):
+            observation, reward, done, info = self.env.step(self.action_map[a])
+            observations.append(observation)
+            final_done = final_done or done
+            final_reward += reward
+            if done:
+                break
+        if self.max_recent_two_frames and len(observations) >= 2:
+            final_observation = np.maximum(
+                self.preprocess_observation(observations[-1]),
+                self.preprocess_observation(observations[-2])
+            )
+        else:
+            final_observation = self.preprocess_observation(observations[-1])
+
+        self.episode_steps += 1
+        if self.episode_steps >= self.max_episode_length:
+            final_done = True
+
         # logging.debug("tx r:{},d:{}".format(reward, done))
-        final_observation = self.preprocess_observation(observation)
+
         # if done:
         #     logging.debug("a:{},r:{},d:{}".format(a, reward, done))
         # else:
         #     logging.debug("a:{},r:{}".format(a, reward))
 
-        return final_observation, reward, done, info
+        return final_observation, final_reward, final_done, {}
 
     def reset(self):
         observation = self.env.reset()
