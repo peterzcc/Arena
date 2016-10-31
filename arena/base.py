@@ -32,7 +32,7 @@ class Base(object):
     """
 
     def __init__(self, data_shapes, sym_gen, params=None, aux_states=None,
-                 default_bucket_kwargs=None, learn_init_keys=None,
+                 default_bucket_kwargs=None, learn_init_keys=None, grad_req='write',
                  initializer=mx.init.Xavier(factor_type="in", rnd_type="gaussian", magnitude=2),
                  ctx=mx.gpu(), name='Net'):
         self.sym_gen = sym_gen
@@ -41,6 +41,7 @@ class Base(object):
         self.curr_bucket_key = None
         self.ctx = ctx
         self.name = name
+        self.grad_req = grad_req
         self.initializer = initializer
         if params is None:
             self.params = None
@@ -109,7 +110,7 @@ class Base(object):
         if self.params is None:
             self.params = OrderedDict([(n, nd.empty(arg_name_shape[n], ctx=self.ctx))
                                        for n in param_names])
-            self.params_grad = OrderedDict([(n, nd.empty(arg_name_shape[n], ctx=self.ctx))
+            self.params_grad = OrderedDict([(n, nd.zeros(arg_name_shape[n], ctx=self.ctx))
                                             for n in param_names])
             if self.initializer is not None:
                 logging.info("Initialize using %s" %str(self.initializer))
@@ -123,6 +124,8 @@ class Base(object):
                                            for k, s in zip(aux_names, aux_shapes)])
         data_inputs = {k: mx.nd.empty(data_shapes[k], ctx=self.ctx)
                        for k in set(data_shapes.keys()) - set(self.learn_init_keys)}
+        data_inputs_grad = {k: mx.nd.zeros(data_shapes[k], ctx=self.ctx)
+                            for k in set(data_shapes.keys()) - set(self.learn_init_keys)}
         if len(self._buckets) > 0:
             shared_exe = self._buckets.values()[0]['exe'].values()[0]
         else:
@@ -131,7 +134,8 @@ class Base(object):
             'exe': {tuple(data_shapes.items()):
                     sym.bind(ctx=self.ctx,
                              args=dict(self.params, **data_inputs),
-                             args_grad=dict(self.params_grad.items()),
+                             args_grad=dict(self.params_grad.items(), **data_inputs_grad),
+                             grad_req=self.grad_req,
                              aux_states=self.aux_states,
                              shared_exec=shared_exe)
                     },
