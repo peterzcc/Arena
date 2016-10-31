@@ -105,5 +105,6 @@ class GymWrapper(object):
         # logging.debug("null_op:{}".format(null_op_num))
         for i in range(null_op_num):
             observation, _, _, _ = self.env.step(0)
+        self.episode_steps = 0
         return self.preprocess_observation(observation)
 
