@@ -2,7 +2,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import time
-from mxnet.test_utils import check_numeric_gradient, reldiff
+from mxnet.test_utils import check_numeric_gradient, reldiff, assert_almost_equal
 from arena.ops.recurrent import RNN, get_rnn_param_shapes
 
 def step_vanilla_rnn(num_hidden, data, prev_h, act_f,
@@ -473,7 +473,7 @@ def test_RNN_class(typ="lstm", ret_typ="out"):
     param_shapes = get_rnn_param_shapes(num_hidden=num_hidden, data_dim=data_dim, typ=typ)
     i2h_weight_npy = [numpy.random.standard_normal(s) for s in param_shapes["i2h_weight"]]
     i2h_bias_npy = [numpy.random.standard_normal(s)/100 for s in param_shapes["i2h_bias"]]
-    h2h_weight_npy = [numpy.random.standard_normal(s) for s in param_shapes["h2h_weight"]]
+    h2h_weight_npy = [numpy.random.standard_normal(s)/20 for s in param_shapes["h2h_weight"]]
     h2h_bias_npy = [numpy.random.standard_normal(s)/100 for s in param_shapes["h2h_bias"]]
     if ret_typ == "out":
         out_grad_npy = numpy.random.standard_normal((seq_len, minibatch_size, num_hidden[2]))
@@ -600,15 +600,21 @@ def test_RNN_class(typ="lstm", ret_typ="out"):
             nd.waitall()
         end = time.time()
         print("CuDNN %s Time: %g ms" % (typ.upper(), (end - start) / N * 1000))
-    print(numpy.square(rnn_outputs[0].asnumpy() - rnn_cudnn_outputs[0].asnumpy()).mean())
+    #print(reldiff(rnn_outputs[0].asnumpy(), rnn_cudnn_outputs[0].asnumpy()))
+    assert_almost_equal(rnn_outputs[0].asnumpy(), rnn_cudnn_outputs[0].asnumpy(), threshold=1E-4)
     for k, v in rnn_exe.grad_dict.items():
         if k == 'data':
             #numpy.testing.assert_allclose(v.asnumpy(), rnn_cudnn_exe.grad_dict[k].asnumpy())
-            print(k, reldiff(v.asnumpy(), rnn_cudnn_exe.grad_dict[k].asnumpy()))
+            #print(k, reldiff(v.asnumpy(), rnn_cudnn_exe.grad_dict[k].asnumpy()))
+            assert_almost_equal(v.asnumpy(), rnn_cudnn_exe.grad_dict[k].asnumpy(), threshold=1E-4)
         else:
             postfix = k[k.find("->"):]
             #numpy.testing.assert_allclose(v.asnumpy(), rnn_cudnn_exe.grad_dict[rnn_cudnn.name + postfix].asnumpy())
-            print(k, reldiff(v.asnumpy(), rnn_cudnn_exe.grad_dict[rnn_cudnn.name + postfix].asnumpy()))
+            #print(k, reldiff(v.asnumpy(), rnn_cudnn_exe.grad_dict[rnn_cudnn.name + postfix].asnumpy()))
+            assert_almost_equal(v.asnumpy(),
+                                rnn_cudnn_exe.grad_dict[rnn_cudnn.name + postfix].asnumpy(),
+                                threshold=1E-4)
+
 #compare_tanh_rnn()
 print("Testing LSTM")
 test_RNN_class(typ="lstm", ret_typ="out")

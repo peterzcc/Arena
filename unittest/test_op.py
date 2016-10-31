@@ -25,7 +25,14 @@ def test_caffe_compatible_pooling():
                                grad_nodes={'data': 'write'}, numeric_eps=1E-3, check_eps=0.02)
 
 
-def test_roi_wrapping():
+def test_l2normalize():
+    dat = np.random.normal(size=(2, 1024))
+    data = mx.sym.Variable('data')
+    out = mx.sym.L2Normalization(data)
+    check_numeric_gradient(sym=out, location=[dat], numeric_eps=1E-3, check_eps=0.01)
+
+
+def test_roi_warpping():
     def calc_gt(data, rois, out_shape, explicit_batch, antialiasing, sampler_typ="bilinear"):
         import cv2
         resize_typ = cv2.INTER_CUBIC if sampler_typ == "bicubic" else cv2.INTER_LINEAR
@@ -39,7 +46,7 @@ def test_roi_wrapping():
                     ret[i, j, :, :] = cv2.resize(data[i, j].T, dsize=(out_shape[0], out_shape[1]),
                                                  interpolation=resize_typ).T
         return ret
-    def ele_test_forward_roiwrapping(data_shape, out_shape, explicit_batch, anti_aliasing,
+    def ele_test_forward_roiwarpping(data_shape, out_shape, explicit_batch, anti_aliasing,
                                      spatial_scale=1.0, sampler_typ="bilinear", ctx=mx.gpu()):
         data_npy = np.random.rand(*data_shape)
         #data_npy = np.array([[[[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15]]]], dtype=np.float32)
@@ -60,7 +67,7 @@ def test_roi_wrapping():
                      explicit_batch=explicit_batch, antialiasing=False, sampler_typ=sampler_typ)
         data = mx.sym.Variable('data')
         rois = mx.sym.Variable('rois')
-        sym = mx.sym.ROIWrapping(data=data, rois=rois, pooled_size=out_shape, interp_type=sampler_typ,
+        sym = mx.sym.ROIWarpping(data=data, rois=rois, pooled_size=out_shape, interp_type=sampler_typ,
                                  spatial_scale=spatial_scale, explicit_batch=explicit_batch)
         exe = sym.simple_bind(ctx=ctx, data=data_npy.shape, rois=rois_npy.shape)
         outputs = exe.forward(is_train=False, data=data_npy, rois=rois_npy)
@@ -71,11 +78,11 @@ def test_roi_wrapping():
                                                          %(str(outputs[0].asnumpy() - gt),
                                                            str(outputs[0].asnumpy()),
                                                            str(gt))
-    def ele_test_backward_roiwrapping(data_shape, out_shape, explicit_batch, anti_aliasing,
+    def ele_test_backward_roiwarpping(data_shape, out_shape, explicit_batch, anti_aliasing,
                                       spatial_scale=1.0, sampler_typ="bilinear", ctx=mx.gpu()):
         data = mx.sym.Variable('data')
         rois = mx.sym.Variable('rois')
-        sym = mx.sym.ROIWrapping(data=data, rois=rois, pooled_size=out_shape, anti_aliasing=anti_aliasing,
+        sym = mx.sym.ROIWarpping(data=data, rois=rois, pooled_size=out_shape, anti_aliasing=anti_aliasing,
                                  spatial_scale=spatial_scale, explicit_batch=explicit_batch,
                                  interp_type=sampler_typ)
         data_npy = np.random.rand(*data_shape)
@@ -145,7 +152,7 @@ def test_roi_wrapping():
         for sampler_typ in ["max", "bilinear", "bicubic"]:
             for anti_aliasing in [False, True]:
                 if sampler_typ != "max":
-                    sym = mx.sym.ROIWrapping(data=data, rois=rois, pooled_size=out_shape, anti_aliasing=anti_aliasing,
+                    sym = mx.sym.ROIWarpping(data=data, rois=rois, pooled_size=out_shape, anti_aliasing=anti_aliasing,
                                              spatial_scale=spatial_scale, explicit_batch=True,
                                              interp_type=sampler_typ)
                 else:
@@ -162,15 +169,15 @@ def test_roi_wrapping():
 
     for ctx in [mx.cpu(), mx.gpu()]:
         for spatial_scale in [0.01, 0.5, 1.0]:
-            ele_test_forward_roiwrapping(data_shape=(1, 1, 2, 2), out_shape=(3, 3), explicit_batch=True,
+            ele_test_forward_roiwarpping(data_shape=(1, 1, 2, 2), out_shape=(3, 3), explicit_batch=True,
                                          spatial_scale=spatial_scale, anti_aliasing=False, ctx=ctx)
-            ele_test_forward_roiwrapping(data_shape=(1, 1, 2, 4), out_shape=(3, 2), explicit_batch=False,
+            ele_test_forward_roiwarpping(data_shape=(1, 1, 2, 4), out_shape=(3, 2), explicit_batch=False,
                                          spatial_scale=spatial_scale, anti_aliasing=False, ctx=ctx)
-            ele_test_forward_roiwrapping(data_shape=(1, 1, 2, 4), out_shape=(3, 5), explicit_batch=True,
+            ele_test_forward_roiwarpping(data_shape=(1, 1, 2, 4), out_shape=(3, 5), explicit_batch=True,
                                          spatial_scale=spatial_scale, anti_aliasing=False, ctx=ctx)
-            ele_test_forward_roiwrapping(data_shape=(1, 1, 23, 2), out_shape=(2, 23), explicit_batch=False,
+            ele_test_forward_roiwarpping(data_shape=(1, 1, 23, 2), out_shape=(2, 23), explicit_batch=False,
                                          spatial_scale=spatial_scale, anti_aliasing=False, ctx=ctx)
-            ele_test_forward_roiwrapping(data_shape=(1, 1, 43, 22), out_shape=(23, 43), explicit_batch=False,
+            ele_test_forward_roiwarpping(data_shape=(1, 1, 43, 22), out_shape=(23, 43), explicit_batch=False,
                                          spatial_scale=spatial_scale, anti_aliasing=False, ctx=ctx)
     for ctx in [mx.gpu()]:
         for spatial_scale in [0.5, 1.0]:
@@ -178,19 +185,19 @@ def test_roi_wrapping():
                 for anti_aliasing in [True, False]:
                     for explicit_batch in [False, True]:
                         print("ctx:", ctx, "spatial_scale:", spatial_scale, "sampler_typ:", sampler_typ, "explicit_batch:", explicit_batch, "anti_aliasing:", anti_aliasing)
-                        ele_test_backward_roiwrapping(data_shape=(2, 3, 7, 7), out_shape=(3, 3),
+                        ele_test_backward_roiwarpping(data_shape=(2, 3, 7, 7), out_shape=(3, 3),
                                                       explicit_batch=False,
                                                       spatial_scale=spatial_scale, anti_aliasing=anti_aliasing,
                                                       sampler_typ=sampler_typ, ctx=ctx)
-                        ele_test_backward_roiwrapping(data_shape=(3, 3, 3, 3), out_shape=(5, 4),
+                        ele_test_backward_roiwarpping(data_shape=(3, 3, 3, 3), out_shape=(5, 4),
                                                       explicit_batch=True,
                                                       spatial_scale=spatial_scale, anti_aliasing=anti_aliasing,
                                                       sampler_typ=sampler_typ,ctx=ctx)
-                        ele_test_backward_roiwrapping(data_shape=(5, 3, 11, 11), out_shape=(3, 3),
+                        ele_test_backward_roiwarpping(data_shape=(5, 3, 11, 11), out_shape=(3, 3),
                                                       explicit_batch=False,
                                                       spatial_scale=spatial_scale, anti_aliasing=anti_aliasing,
                                                       sampler_typ=sampler_typ, ctx=ctx)
-                        ele_test_backward_roiwrapping(data_shape=(1, 2, 23, 23), out_shape=(9, 5),
+                        ele_test_backward_roiwarpping(data_shape=(1, 2, 23, 23), out_shape=(9, 5),
                                                       explicit_batch=True,
                                                       spatial_scale=spatial_scale, anti_aliasing=anti_aliasing,
                                                       sampler_typ=sampler_typ, ctx=ctx)
@@ -198,6 +205,7 @@ def test_roi_wrapping():
     ele_check_speed(data_shape=(2, 512, 128, 128), out_shape=(7, 7), roi_num=128, spatial_scale=0.0625, ctx=mx.gpu())
 
 if __name__ == '__main__':
+    test_l2normalize()
     test_entropy_multinomial()
     test_caffe_compatible_pooling()
-    test_roi_wrapping()
+    test_roi_warpping()
