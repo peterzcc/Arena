@@ -304,7 +304,7 @@ class Box2DEnv(object):
                 elif state.typ == "yvel":
                     new_obs = com_quant[3]
                 else:
-                    print state.typ
+                    print(state.typ)
                     # orientation and angular velocity of the whole body is not
                     # supported
                     raise NotImplementedError

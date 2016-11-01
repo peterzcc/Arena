@@ -6,38 +6,43 @@ import logging
 
 #TODO: test this class
 class GymWrapper(object):
-    def __init__(self, env: gym.Env, rgb_to_gray=True, new_img_size=None,
+    def __init__(self, env: gym.Env, rgb_to_gray=False, new_img_size=None,
                  max_null_op=7, action_mapping=None, frame_skip=1,
-                 max_recent_two_frames=True,
+                 max_recent_two_frames=False,
                  max_episode_length=100000):
         self.env = env
         if action_mapping is None:
             self.action_space = env.action_space
+            self.action_map = None
         else:
+            assert isinstance(env.action_space, Discrete)
             self.action_space = Discrete(len(action_mapping))
             self.action_map = action_mapping
-        assert len(self.env.observation_space.shape) == 3
-        assert self.env.observation_space.shape[2] == 3
+
         obs_min =np.ravel(self.env.observation_space.low)[0]
         obs_max = np.ravel(self.env.observation_space.high)[0]
-        if rgb_to_gray:
-            num_channel = 1
-        else:
-            num_channel = 3
-        if new_img_size is None:
-            image_size = self.env.observation_space.low.shape[0:2]
-        else:
-            image_size = new_img_size
-        if rgb_to_gray:
-            self.observation_space = Box(low=obs_min,
-                                         high=obs_max,
-                                         shape=image_size
-                                         )
-        else:
-            self.observation_space = Box(low=obs_min,
-                                         high=obs_max,
-                                         shape=image_size + (num_channel,)
-                                         )
+        if rgb_to_gray or new_img_size is not None:
+            assert len(self.env.observation_space.shape) == 3
+            assert self.env.observation_space.shape[2] == 3
+            if rgb_to_gray:
+                num_channel = 1
+            else:
+                num_channel = 3
+            if new_img_size is None:
+                image_size = self.env.observation_space.low.shape[0:2]
+            else:
+                image_size = new_img_size
+            if rgb_to_gray:
+                self.observation_space = Box(low=obs_min,
+                                             high=obs_max,
+                                             shape=image_size
+                                             )
+            else:
+                self.observation_space = Box(low=obs_min,
+                                             high=obs_max,
+                                             shape=image_size + (num_channel,)
+                                             )
+        self.observation_space = env.observation_space
         self.rgb_to_gray = rgb_to_gray
         self.new_img_size = new_img_size
         self.max_null_op = max_null_op
@@ -53,12 +58,10 @@ class GymWrapper(object):
         self.env.render()
 
     def preprocess_observation(self, obs):
-
+        final = obs
         if self.new_img_size is not None:
             final = cv2.resize(obs, self.new_img_size,
                                interpolation=cv2.INTER_LINEAR)
-        else:
-            final = obs
         if self.rgb_to_gray:
             final = cv2.cvtColor(final, cv2.COLOR_RGB2GRAY)
         return final
@@ -70,7 +73,10 @@ class GymWrapper(object):
         observations = []
 
         for t_skip in range(self.frame_skip):
-            observation, reward, done, info = self.env.step(self.action_map[a])
+            if self.action_map is not None:
+                observation, reward, done, info = self.env.step(self.action_map[a])
+            else:
+                observation, reward, done, info = self.env.step(a)
             observations.append(observation)
             final_done = final_done or done
             final_reward += reward
@@ -95,7 +101,7 @@ class GymWrapper(object):
         # else:
         #     logging.debug("a:{},r:{}".format(a, reward))
 
-        return final_observation, final_reward, final_done, {}
+        return final_observation, final_reward, final_done, info
 
     def reset(self):
         observation = self.env.reset()

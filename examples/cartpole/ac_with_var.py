@@ -8,16 +8,20 @@ from arena import Base
 import gym
 import argparse
 
+
 def actor_critic_policy_sym(action_num):
     # define the network structure of Gaussian policy
     data = mx.symbol.Variable('data')
-    policy_mean = mx.symbol.FullyConnected(data=data, name='fc_mean_1', num_hidden=128)
-    policy_mean = mx.symbol.Activation(data=policy_mean, name='fc_mean_tanh_1', act_type='tanh')
-    policy_mean = mx.symbol.FullyConnected(data=policy_mean, name='fc_mean_2', num_hidden=128)
-    policy_mean = mx.symbol.Activation(data=policy_mean, name='fc_mean_tanh_2', act_type='tanh')
-    policy_mean = mx.symbol.FullyConnected(data=policy_mean, name='fc_output', num_hidden=action_dimension)
+    policy_layers = mx.symbol.FullyConnected(data=data, name='fc_mean_1', num_hidden=128)
+    policy_layers = mx.symbol.Activation(data=policy_layers, name='fc_mean_tanh_1', act_type='tanh')
+    policy_layers = mx.symbol.FullyConnected(data=policy_layers, name='fc_mean_2', num_hidden=128)
+    policy_layers = mx.symbol.Activation(data=policy_layers, name='fc_mean_tanh_2', act_type='tanh')
+    policy_mean = mx.symbol.FullyConnected(data=policy_layers, name='fc_output', num_hidden=action_dimension)
 
-    policy_var = mx.symbol.Variable('var')
+    policy_var = mx.symbol.FullyConnected(data=policy_layers, name='fc_ovar', num_hidden=action_dimension)
+    policy_var = mx.symbol.Activation(data=policy_var, name='fc_var', act_type='softrelu')
+
+    # policy_var = mx.symbol.Variable('var')
 
     policy_net = mx.symbol.Custom(mean=policy_mean, var=policy_var,
                                   name='policy', op_type='LogNormalPolicy', implicit_backward=False)
@@ -61,10 +65,9 @@ action_dimension = env.action_space.low.shape[0]
 state_dimension = env.observation_space.low.shape[0]
 
 data_shapes = {'data': (batch_size, state_dimension),
-               'policy_score': (batch_size, ),
+               'policy_score': (batch_size,),
                'policy_backward_action': (batch_size, action_dimension),
-               'critic_label': (batch_size,),
-               'var': (batch_size, action_dimension),
+               'critic_label': (batch_size,)
                }
 sym = actor_critic_policy_sym(action_dimension)
 net = Base(data_shapes=data_shapes, sym_gen=sym, name='ACNet',
@@ -81,7 +84,6 @@ else:
     raise ValueError('optimizer must be chosen between adam and sgd')
 updater = mx.optimizer.get_updater(optimizer)
 
-
 for itr in xrange(n_itr):
     paths = []
     counter = batch_size
@@ -95,9 +97,7 @@ for itr in xrange(n_itr):
         observation = env.reset()
         for step in xrange(T):
             action = net.forward(is_train=False,
-                                 data=observation.reshape(1, observation.size),
-                                 var=1.*np.ones((1, 1)),
-                                 )[0].asnumpy()
+                                 data=observation.reshape(1, observation.size))[0].asnumpy()
             action = np.clip(action, env.action_space.low, env.action_space.high)
             # env.render()
             action = action.flatten()
@@ -114,7 +114,6 @@ for itr in xrange(n_itr):
         rewards = np.array(rewards)
         outputs = net.forward(is_train=False,
                               data=observations,
-                              var=1.*np.ones((observations.shape[0], 1)),
                               )
         critics = outputs[3].asnumpy().reshape(rewards.shape)
         q_estimations = discount_cumsum(rewards, discount)
@@ -134,7 +133,6 @@ for itr in xrange(n_itr):
     advantages = np.concatenate([p['advantages'] for p in paths])
     cur_batch_size = observations.shape[0]
     outputs = net.forward(is_train=True, data=observations,
-                          var=1.*np.ones((cur_batch_size, 1)),
                           )
     policy_actions = outputs[0].asnumpy()
     critics = outputs[3].asnumpy()
@@ -142,7 +140,7 @@ for itr in xrange(n_itr):
     action_mean = outputs[1].asnumpy()
     net.backward(policy_score=advantages,
                  policy_backward_action=actions,
-                 critic_label=q_estimations.reshape(q_estimations.size,),
+                 critic_label=q_estimations.reshape(q_estimations.size, ),
                  )
     for grad in net.params_grad.values():
         grad[:] = grad[:] / cur_batch_size
@@ -152,11 +150,10 @@ for itr in xrange(n_itr):
     print(
         'Epoch:%d, Average Return:%f, Max Return:%f, Min Return:%f, Num Traj:%d\n, Mean:%f, Var:%f, Average Baseline:%f' \
         % (itr, np.mean([sum(p["rewards"]) for p in paths]),
-            np.max([sum(p["rewards"]) for p in paths]),
-            np.min([sum(p["rewards"]) for p in paths]),
-            N, action_mean.mean(), variance.mean(), critics.mean()
+           np.max([sum(p["rewards"]) for p in paths]),
+           np.min([sum(p["rewards"]) for p in paths]),
+           N, action_mean.mean(), variance.mean(), critics.mean()
            ))
 
 if args.save_model:
     net.save_params(dir_path='./', epoch=itr)
-

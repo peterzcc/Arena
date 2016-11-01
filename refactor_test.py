@@ -7,10 +7,10 @@ from arena.games.gym_wrapper import GymWrapper
 from arena.agents.test_mp_agent import TestMpAgent
 from arena.agents.dqn_agent import DqnAgent
 from arena.experiment import Experiment
-import logging
 import mxnet as mx
 import sys
 import argparse
+import logging
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 # ch = logging.StreamHandler(sys.stdout)
