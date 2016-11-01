@@ -170,7 +170,7 @@ class Base(object):
                 logging.debug('   Loading %s %s' %(k, str(v.shape)))
                 self.params[k][:] = v
             else:
-                logging.warn("Found unused param in the saved model file: %s" % k)
+                logging.warning("Found unused param in the saved model file: %s" % k)
         for k, v in aux_states.items():
             self.aux_states[k][:] = v
 

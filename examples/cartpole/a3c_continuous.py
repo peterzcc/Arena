@@ -27,7 +27,9 @@ def main():
     parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
-    parser.add_argument('--nactor', required=False, type=int, default=1,
+    parser.add_argument('--nactor', required=False, type=int, default=-1,
+                        help='Number of parallel actor-learners')
+    parser.add_argument('--batch-size', required=False, type=int, default=4000,
                         help='Number of parallel actor-learners')
     args = parser.parse_args()
 
@@ -55,7 +57,7 @@ def main():
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid,
             ctx=ctx,
-            batch_size=int(4000 / num_actors),
+            batch_size=args.batch_size,
             lr=args.lr,
             optimizer_name=args.optimizer,
         )
@@ -76,7 +78,7 @@ def main():
                             f_create_shared_params)
 
     num_epoch = 500
-    steps_per_epoch = 4000 
+    steps_per_epoch = 4000
     test_length = 0
 
     experiment.run_parallel_training(num_actors, num_epoch, steps_per_epoch,
