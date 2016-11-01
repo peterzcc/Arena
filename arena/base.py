@@ -228,22 +228,22 @@ class Base(object):
         #print 'Swith Bucket:', end - start
         #start = time.time()
         for k, v in arg_dict.items():
-            assert self.exe.arg_dict[k].shape == v.shape,\
-                "Shape not match: key %s, need %s, received %s" \
-                %(k, str(self.exe.arg_dict[k].shape), str(v.shape))
+            # assert self.exe.arg_dict[k].shape == v.shape,\
+            #     "Shape not match: key %s, need %s, received %s" \
+            #     %(k, str(self.exe.arg_dict[k].shape), str(v.shape))
             self.exe.arg_dict[k][:] = v
         self.exe.forward(is_train=is_train)
-        for output in self.exe.outputs:
-            output.wait_to_read()
+        # for output in self.exe.outputs:
+        #     output.wait_to_read()
         #end = time.time()
         #print 'Forward:', end - start
         return self.exe.outputs
 
     def backward(self, out_grads=None, **arg_dict):
         for k, v in arg_dict.items():
-            assert self.exe.arg_dict[k].shape == v.shape, \
-                "Shape not match: key %s, need %s, received %s" \
-                % (k, str(self.exe.arg_dict[k].shape), str(v.shape))
+            # assert self.exe.arg_dict[k].shape == v.shape, \
+            #     "Shape not match: key %s, need %s, received %s" \
+            #     % (k, str(self.exe.arg_dict[k].shape), str(v.shape))
             self.exe.arg_dict[k][:] = v
         self.exe.backward(out_grads=out_grads)
 
