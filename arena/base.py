@@ -307,8 +307,6 @@ class Base(object):
     def copy_params_to(self, dst):
         for k, v in self.params.items():
             dst.params[k][:] = v
-            # TODO `wait_to_read()` here seems unnecessary, remove it in the future!
-            dst.params[k].wait_to_read()
 
     @property
     def total_param_num(self):

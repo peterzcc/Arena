@@ -65,13 +65,12 @@ def main():
 
     def f_create_shared_params():
         sample_env = f_create_env()
-        sample_agent = ContA3CAgent(
-            sample_env.observation_space,
-            sample_env.action_space,
-            None, None, None,
-            None, None, None)
+        sample_agent = f_create_agent(sample_env.observation_space,
+                                      sample_env.action_space,
+                                      None, None, None,
+                                      None, None, -1)
         param_lock = mp.Lock()
-        return {"acnet": sample_agent.params,
+        return {"global_net": sample_agent.net,
                 "lock": param_lock,
                 "updater": sample_agent.updater}
 
