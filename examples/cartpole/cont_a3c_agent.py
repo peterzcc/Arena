@@ -41,9 +41,9 @@ class ContA3CAgent(Agent):
         else:
             self.param_lock = shared_params["lock"]
             self.global_network = shared_params["global_net"]
-            net_paraam = self.global_network.params
+            net_param = self.global_network.params
         self.net = Base(data_shapes=data_shapes, sym_gen=sym, name='ACNet',
-                        params=net_paraam,
+                        params=net_param,
                         initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0),
                         ctx=ctx)
         if shared_params is not None and "updater" in shared_params:
