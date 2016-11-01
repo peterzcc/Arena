@@ -73,10 +73,15 @@ class ContA3CAgent(Agent):
         # State information
         self.counter = batch_size
         self.episode_step = 0
-        self.observations = []
-        self.actions = []
-        self.rewards = []
-        self.paths = []
+        max_l = 500
+        self.observation_buffer = np.empty(shape=(batch_size + max_l, self.state_dimension), dtype=np.float32)
+        self.action_buffer = np.empty(shape=(batch_size + max_l, self.action_dimension), dtype=np.float32)
+        self.reward_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
+        self.value_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
+        self.td_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
+        self.buffer_size = 0
+        self.buffer_episode_start = 0
+        self.num_episodes = 0
 
     def act(self, observation):
 
@@ -87,70 +92,65 @@ class ContA3CAgent(Agent):
         return action
 
     def receive_feedback(self, reward, done):
-        self.observations.append(self.current_obs)
-        self.actions.append(self.current_action)
-        self.rewards.append(reward)
+        self.buffer_size += 1
+        last_idx = self.buffer_size - 1
+        self.observation_buffer[last_idx, :] = self.current_obs
+        self.action_buffer[last_idx] = self.current_action
+        self.reward_buffer[last_idx] = reward
         self.episode_step += 1
         if done:
             self.counter -= self.episode_step
             self.add_path()
+            self.num_episodes += 1
             self.episode_step = 0
+            self.buffer_episode_start = self.buffer_size
             if self.counter <= 0:
                 self.train_once()
                 self.counter = self.batch_size
+                self.buffer_size = 0
+                self.buffer_episode_start = 0
+                self.num_episodes = 0
 
     def add_path(self):
-        observations = np.array(self.observations)
-        rewards = np.array(self.rewards)
-        outputs = self.net.forward(is_train=False,
-                                   data=observations,
-                                   )
-        critics = outputs[3].asnumpy().reshape(rewards.shape)
-        q_estimations = discount_cumsum(rewards, self.discount)
-        advantages = q_estimations - critics
-        path = dict(
-            actions=np.array(self.actions),
-            rewards=rewards,
-            observations=observations,
-            q_estimations=q_estimations,
-            advantages=advantages,
+        outputs = self.net.forward(
+            is_train=False,
+            data=self.observation_buffer[self.buffer_episode_start:self.buffer_size],
         )
-        self.paths.append(path)
+        rewards = self.reward_buffer[self.buffer_episode_start:self.buffer_size]
+        critics = outputs[3].asnumpy().reshape(rewards.shape)
+        self.value_buffer[self.buffer_episode_start:self.buffer_size] = \
+            discount_cumsum(rewards, self.discount)
+        self.td_buffer[self.buffer_episode_start:self.buffer_size] = \
+            self.value_buffer[self.buffer_episode_start:self.buffer_size] - critics
 
-        self.observations = []
-        self.actions = []
-        self.rewards = []
 
     def train_once(self):
-        observations = np.concatenate([p["observations"] for p in self.paths])
-        actions = np.concatenate([p["actions"] for p in self.paths])
-        q_estimations = np.concatenate([p["q_estimations"] for p in self.paths])
-        advantages = np.concatenate([p['advantages'] for p in self.paths])
-        cur_batch_size = observations.shape[0]
-        outputs = self.net.forward(is_train=True, data=observations,
-                                   )
-        policy_actions = outputs[0].asnumpy()
-        critics = outputs[3].asnumpy()
-        variance = outputs[2].asnumpy()
-        action_mean = outputs[1].asnumpy()
-        self.net.backward(policy_score=advantages,
-                          policy_backward_action=actions,
-                          critic_label=q_estimations.reshape(q_estimations.size, ),
+
+        outputs = self.net.forward(
+            is_train=True,
+            data=self.observation_buffer[0:self.buffer_size],
+        )
+        scores = self.td_buffer[0:self.buffer_size]
+        actions = self.action_buffer[0:self.buffer_size]
+        values = self.value_buffer[0:self.buffer_size].flatten()
+        self.net.backward(
+            policy_score=scores,
+            policy_backward_action=actions,
+            critic_label=values,
                           )
         for grad in self.net.params_grad.values():
-            grad[:] = grad[:] / cur_batch_size
+            grad[:] = grad[:] / self.buffer_size
         if self.clip_gradient:
             norm_clipping(self.net.params_grad, 10)
         with self.param_lock:
             self.net.update(self.updater)
         logging.info(
-            'Thd[%d]Average Return:%f,  Num Traj:%d\n, Mean:%f, Var:%f, Average Baseline:%f' \
+            'Thd[%d] Average Return:%f,  Num Traj:%d ' \
             % (self.id,
-               np.mean([sum(p["rewards"]) for p in self.paths]),
-               len(self.paths), action_mean.mean(), variance.mean(), critics.mean()
+               np.sum(self.reward_buffer[0:self.buffer_size]) / self.num_episodes,
+               self.num_episodes,
                ))
 
-        self.paths = []
 
     def actor_critic_policy_sym(self, action_num):
         # define the network structure of Gaussian policy
