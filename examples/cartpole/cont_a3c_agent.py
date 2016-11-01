@@ -55,6 +55,10 @@ class ContA3CAgent(Agent):
             elif optimizer_name == 'adam':
                 optimizer = mx.optimizer.create(name='adam', learning_rate=lr,
                                                 lr_scheduler=lr_scheduler)
+            elif optimizer_name == 'adagrad':
+                optimizer = mx.optimizer.create(name='adagrad', learning_rate=lr,
+                                                eps=0.01,
+                                                lr_scheduler=lr_scheduler)
             else:
                 optimizer = mx.optimizer.create(name='sgd', learning_rate=lr,
                                                 lr_scheduler=lr_scheduler, momentum=0.9,
