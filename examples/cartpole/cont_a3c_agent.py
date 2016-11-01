@@ -41,7 +41,7 @@ class ContA3CAgent(Agent):
         else:
             self.param_lock = shared_params["lock"]
             self.global_network = shared_params["global_net"]
-            net_param = self.global_network.params
+            net_param = None
         self.net = Base(data_shapes=data_shapes, sym_gen=sym, name='ACNet',
                         params=net_param,
                         initializer=mx.initializer.Xavier(rnd_type='gaussian', factor_type='avg', magnitude=1.0),
@@ -85,8 +85,8 @@ class ContA3CAgent(Agent):
         self.num_episodes = 0
 
     def act(self, observation):
-        # if self.buffer_size == 0:
-        #     self.global_network.copy_params_to(self.net)
+        if self.buffer_size == 0:
+            self.global_network.copy_params_to(self.net)
 
         action = self.net.forward(is_train=False,
                                   data=observation.reshape(1, observation.size))[0].asnumpy()
@@ -145,9 +145,9 @@ class ContA3CAgent(Agent):
             grad[:] = grad[:] / self.buffer_size
         if self.clip_gradient:
             norm_clipping(self.net.params_grad, 10)
-        with self.param_lock:
-            # self.global_network.update(self.updater, params_grad=self.net.params_grad)
-            self.net.update(self.updater, params_grad=self.net.params_grad)
+        # with self.param_lock:
+        self.global_network.update(self.updater, params_grad=self.net.params_grad)
+        # self.net.update(self.updater, params_grad=self.net.params_grad)
         logging.info(
             'Thd[%d] Average Return:%f,  Num Traj:%d ' \
             % (self.id,
