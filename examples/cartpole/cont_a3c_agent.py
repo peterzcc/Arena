@@ -144,10 +144,9 @@ class ContA3CAgent(Agent):
         with self.param_lock:
             self.net.update(self.updater)
         logging.info(
-            'Average Return:%f, Max Return:%f, Min Return:%f, Num Traj:%d\n, Mean:%f, Var:%f, Average Baseline:%f' \
-            % (np.mean([sum(p["rewards"]) for p in self.paths]),
-               np.max([sum(p["rewards"]) for p in self.paths]),
-               np.min([sum(p["rewards"]) for p in self.paths]),
+            'Thd[%d]Average Return:%f,  Num Traj:%d\n, Mean:%f, Var:%f, Average Baseline:%f' \
+            % (self.id,
+               np.mean([sum(p["rewards"]) for p in self.paths]),
                len(self.paths), action_mean.mean(), variance.mean(), critics.mean()
                ))
 

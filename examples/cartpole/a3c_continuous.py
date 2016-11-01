@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
-    parser.add_argument('--nactor', required=False, type=int, default=-1,
+    parser.add_argument('--nactor', required=False, type=int, default=1,
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=4000,
                         help='Number of parallel actor-learners')
