@@ -35,6 +35,8 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=4000,
                         help='Number of parallel actor-learners')
+    parser.add_argument('--num-steps', required=False, type=int, default=4000 * 500,
+                        help='Number of parallel actor-learners')
     args = parser.parse_args()
 
     # Each trajectory will have at most 500 time steps
@@ -77,8 +79,8 @@ def main():
     experiment = Experiment(f_create_env, f_create_agent,
                             f_create_shared_params)
 
-    num_epoch = 500
     steps_per_epoch = 4000
+    num_epoch = int(args.num_steps / steps_per_epoch)
     test_length = 0
 
     experiment.run_parallel_training(num_actors, num_epoch, steps_per_epoch,
