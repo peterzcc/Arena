@@ -76,7 +76,7 @@ def main():
                             f_create_shared_params)
 
     num_epoch = 500
-    steps_per_epoch = 4000 / num_actors
+    steps_per_epoch = 4000 
     test_length = 0
 
     experiment.run_parallel_training(num_actors, num_epoch, steps_per_epoch,
