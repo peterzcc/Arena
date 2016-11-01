@@ -1,7 +1,7 @@
 import os
 
 os.environ["MXNET_GPU_WORKER_NTHREADS"] = "20"
-os.environ["MXNET_CPU_WORKER_NTHREADS"] = "20"
+os.environ["MXNET_CPU_WORKER_NTHREADS"] = "48"
 import numpy as np
 from arena.operators import *
 from mxnet.lr_scheduler import FactorScheduler
