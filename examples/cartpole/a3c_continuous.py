@@ -20,7 +20,8 @@ import multiprocessing as mp
 
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
-    parser.add_argument('--lr', required=False, type=float, help='learning rate of the choosen optimizer')
+    parser.add_argument('--lr', required=False, default=0.0001, type=float,
+                        help='learning rate of the choosen optimizer')
     parser.add_argument('--optimizer', required=False, type=str, default='sgd',
                         help='choice of the optimizer, adam or sgd')
     parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
@@ -32,9 +33,6 @@ def main():
     parser.add_argument('--batch-size', required=False, type=int, default=4000,
                         help='Number of parallel actor-learners')
     args = parser.parse_args()
-
-    if args.lr is None:
-        args.lr = 0.01
 
     # Each trajectory will have at most 500 time steps
     T = 500
