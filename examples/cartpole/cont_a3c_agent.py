@@ -145,8 +145,8 @@ class ContA3CAgent(Agent):
             grad[:] = grad[:] / self.buffer_size
         if self.clip_gradient:
             norm_clipping(self.net.params_grad, 10)
-        with self.param_lock:
-            self.global_network.update(self.updater, params_grad=self.net.params_grad)
+        # with self.param_lock:
+        self.global_network.update(self.updater, params_grad=self.net.params_grad)
         # self.net.update(self.updater, params_grad=self.net.params_grad)
         logging.info(
             'Thd[%d] Average Return:%f,  Num Traj:%d ' \
