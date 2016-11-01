@@ -27,6 +27,8 @@ def main():
     parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
+    parser.add_argument('--nactor', required=False, type=int, default=1,
+                        help='Number of parallel actor-learners')
     args = parser.parse_args()
 
     if args.lr is None:
@@ -34,7 +36,7 @@ def main():
 
     # Each trajectory will have at most 500 time steps
     T = 500
-    num_actors = 8
+    num_actors = args.nactor
 
     if args.gpu < 0:
         ctx = mx.cpu()
