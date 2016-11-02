@@ -1,7 +1,7 @@
 import mxnet as mx
 from arena import Base
 from arena.agents import Agent
-from arena.utils import discount_cumsum, norm_clipping
+from arena.utils import discount_cumsum, norm_clipping, force_map
 from mxnet.lr_scheduler import FactorScheduler
 import numpy as np
 import logging
@@ -129,20 +129,26 @@ class ContA3CAgent(Agent):
 
     def train_once(self):
 
-        outputs = self.net.forward(
-            is_train=True,
-            data=self.observation_buffer[0:self.buffer_size],
-        )
+        # outputs = self.net.forward(
+        #     is_train=True,
+        #     data=self.observation_buffer[0:self.buffer_size],
+        # )
         scores = self.td_buffer[0:self.buffer_size]
         actions = self.action_buffer[0:self.buffer_size]
         values = self.value_buffer[0:self.buffer_size].flatten()
-        self.net.backward(
+        self.net.forward_backward(
+            data=self.observation_buffer[0:self.buffer_size],
             policy_score=scores,
             policy_backward_action=actions,
             critic_label=values,
-                          )
-        for grad in self.net.params_grad.values():
-            grad[:] = grad[:] / self.buffer_size
+        )
+
+        def scale_gradient(grad):
+            grad[:] /= self.buffer_size
+
+        force_map(scale_gradient, self.net.params_grad.values())
+        # for grad in self.net.params_grad.values():
+        #     grad[:] = grad[:] / self.buffer_size
         if self.clip_gradient:
             norm_clipping(self.net.params_grad, 10)
         with self.param_lock:

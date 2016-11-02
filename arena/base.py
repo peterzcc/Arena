@@ -219,6 +219,7 @@ class Base(object):
     def forward(self, is_train=False, bucket_kwargs=None, **arg_dict):
         #import time
         #start = time.time()
+
         data_shapes = {k: v.shape for k, v in arg_dict.items()}
         for name in self.learn_init_keys:
             data_shapes[name] = self.learn_init_key_shapes[name]
@@ -233,8 +234,6 @@ class Base(object):
             #     %(k, str(self.exe.arg_dict[k].shape), str(v.shape))
             self.exe.arg_dict[k][:] = v
         self.exe.forward(is_train=is_train)
-        # for output in self.exe.outputs:
-        #     output.wait_to_read()
         #end = time.time()
         #print 'Forward:', end - start
         return self.exe.outputs
@@ -257,8 +256,6 @@ class Base(object):
             self.exe.arg_dict[k][:] = v
         self.exe.forward(is_train=True)
         self.exe.backward(out_grads=out_grads)
-        for output in self.exe.outputs:
-            output.wait_to_read()
         return self.exe.outputs
 
     def update(self, updater, params_grad=None):

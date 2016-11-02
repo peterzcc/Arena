@@ -63,6 +63,7 @@ def main():
             batch_size=args.batch_size,
             lr=args.lr,
             optimizer_name=args.optimizer,
+            lr_scheduler=None
         )
 
     def f_create_shared_params():
