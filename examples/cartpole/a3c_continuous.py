@@ -39,7 +39,7 @@ def main():
                         help='Number of parallel actor-learners')
     args = parser.parse_args()
 
-    should_profile = True
+    should_profile = False
     if should_profile:
         import yappi
 
