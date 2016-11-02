@@ -39,6 +39,11 @@ def main():
                         help='Number of parallel actor-learners')
     args = parser.parse_args()
 
+    should_profile = True
+    if should_profile:
+        import yappi
+
+
     # Each trajectory will have at most 500 time steps
     T = 500
     num_actors = args.nactor
@@ -83,9 +88,14 @@ def main():
     steps_per_epoch = 4000
     num_epoch = int(args.num_steps / steps_per_epoch)
     test_length = 0
-
+    if should_profile:
+        yappi.start(builtins=True, profile_threads=True)
     experiment.run_parallel_training(num_actors, num_epoch, steps_per_epoch,
                                      with_testing_length=test_length)
+    if should_profile:
+        yappi.stop()
+        pstat = yappi.convert2pstats(yappi.get_func_stats())
+        pstat.dump_stats("profile.out")
 
 
 if __name__ == '__main__':

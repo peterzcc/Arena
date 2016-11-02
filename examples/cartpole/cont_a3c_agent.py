@@ -3,6 +3,7 @@ from arena import Base
 from arena.agents import Agent
 from arena.utils import discount_cumsum, norm_clipping, force_map
 from mxnet.lr_scheduler import FactorScheduler
+from mxnet import nd
 import numpy as np
 import logging
 
@@ -75,11 +76,18 @@ class ContA3CAgent(Agent):
         self.counter = batch_size
         self.episode_step = 0
         max_l = 500
-        self.observation_buffer = np.empty(shape=(batch_size + max_l, self.state_dimension), dtype=np.float32)
+        use_nd = False
+        if use_nd:
+            self.observation_buffer = nd.empty(shape=(batch_size + max_l, self.state_dimension),
+                                               dtype=np.float32, ctx=ctx)
+        else:
+            self.observation_buffer = np.empty(shape=(batch_size + max_l, self.state_dimension),
+                                               dtype=np.float32)
         self.action_buffer = np.empty(shape=(batch_size + max_l, self.action_dimension), dtype=np.float32)
         self.reward_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
         self.value_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
         self.td_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
+        self.critic_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
         self.buffer_size = 0
         self.buffer_episode_start = 0
         self.num_episodes = 0
@@ -88,17 +96,25 @@ class ContA3CAgent(Agent):
         if self.buffer_size == 0:
             self.global_network.copy_params_to(self.net)
 
-        action = self.net.forward(is_train=False,
-                                  data=observation.reshape(1, observation.size))[0].asnumpy()
-        action = np.clip(action, self.action_space.low, self.action_space.high)
-        action = action.flatten()
+        self.buffer_size += 1
+        last_idx = self.buffer_size - 1
+        self.observation_buffer[last_idx] = observation
+
+        outputs = self.net.forward(is_train=False,
+                                   data=self.observation_buffer[last_idx:(self.buffer_size)])
+        action = \
+            np.clip(outputs[0].asnumpy(), self.action_space.low, self.action_space.high).flatten()
+
+        self.action_buffer[last_idx] = action
+        self.critic_buffer[last_idx] = outputs[3].asnumpy()
+
+
         return action
 
     def receive_feedback(self, reward, done):
-        self.buffer_size += 1
+
         last_idx = self.buffer_size - 1
-        self.observation_buffer[last_idx, :] = self.current_obs
-        self.action_buffer[last_idx] = self.current_action
+
         self.reward_buffer[last_idx] = reward
         self.episode_step += 1
         if done:
@@ -115,24 +131,14 @@ class ContA3CAgent(Agent):
                 self.num_episodes = 0
 
     def add_path(self):
-        outputs = self.net.forward(
-            is_train=False,
-            data=self.observation_buffer[self.buffer_episode_start:self.buffer_size],
-        )
         rewards = self.reward_buffer[self.buffer_episode_start:self.buffer_size]
-        critics = outputs[3].asnumpy().reshape(rewards.shape)
         self.value_buffer[self.buffer_episode_start:self.buffer_size] = \
             discount_cumsum(rewards, self.discount)
         self.td_buffer[self.buffer_episode_start:self.buffer_size] = \
-            self.value_buffer[self.buffer_episode_start:self.buffer_size] - critics
-
+            self.value_buffer[self.buffer_episode_start:self.buffer_size] - \
+            self.critic_buffer[self.buffer_episode_start:self.buffer_size]
 
     def train_once(self):
-
-        # outputs = self.net.forward(
-        #     is_train=True,
-        #     data=self.observation_buffer[0:self.buffer_size],
-        # )
         scores = self.td_buffer[0:self.buffer_size]
         actions = self.action_buffer[0:self.buffer_size]
         values = self.value_buffer[0:self.buffer_size].flatten()
@@ -153,7 +159,6 @@ class ContA3CAgent(Agent):
             norm_clipping(self.net.params_grad, 10)
         with self.param_lock:
             self.global_network.update(self.updater, params_grad=self.net.params_grad)
-        # self.net.update(self.updater, params_grad=self.net.params_grad)
         logging.info(
             'Thd[%d] Average Return:%f,  Num Traj:%d ' \
             % (self.id,
