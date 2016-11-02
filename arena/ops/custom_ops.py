@@ -1,29 +1,37 @@
 from __future__ import absolute_import, division, print_function
-
+import logging
 import mxnet as mx
-import numpy
+import numpy as np
 import scipy.stats
 from ..utils import *
 
 class IdentityOp(mx.operator.CustomOp):
-    def __init__(self):
+    def __init__(self, logging_prefix="identity", input_debug=False, grad_debug=False):
         super(IdentityOp, self).__init__()
+        self.logging_prefix=logging_prefix
+        self.input_debug = input_debug
+        self.grad_debug = grad_debug
 
     def forward(self, is_train, req, in_data, out_data, aux):
-        # print(in_data[0].shape)
-        # print("in_data", in_data[0].asnumpy())
+        if(self.input_debug):
+            logging.debug("%s: in_norm=%f, in_shape=%s"
+                          %(self.logging_prefix, np.linalg.norm(in_data[0].asnumpy()), str(in_data[0].shape)))
         self.assign(out_data[0], req[0], in_data[0])
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
-        # print("out_grad shape:", out_grad[0].shape)
-        # print("in_grad shape:", in_grad[0].shape)
+        if (self.grad_debug):
+            logging.debug("%s: grad_norm=%f, grad_shape=%s"
+                          % (self.logging_prefix, np.linalg.norm(out_grad[0].asnumpy()), str(out_grad[0].shape)))
         self.assign(in_grad[0], req[0], out_grad[0])
 
 
 @mx.operator.register("identity")
 class IdentityOpProp(mx.operator.CustomOpProp):
-    def __init__(self):
+    def __init__(self, logging_prefix="identity", input_debug=False, grad_debug=False):
         super(IdentityOpProp, self).__init__(need_top_grad=True)
+        self.input_debug = safe_eval(input_debug)
+        self.grad_debug = safe_eval(grad_debug)
+        self.logging_prefix = str(logging_prefix)
 
     def list_arguments(self):
         return ['data']
@@ -37,7 +45,9 @@ class IdentityOpProp(mx.operator.CustomOpProp):
         return [data_shape], [output_shape], []
 
     def create_operator(self, ctx, shapes, dtypes):
-        return IdentityOp()
+        return IdentityOp(input_debug=self.input_debug,
+                          grad_debug=self.grad_debug,
+                          logging_prefix=self.logging_prefix)
 
 class ConstantOp(mx.operator.CustomOp):
     """Implementation of mask on minibatch layer.
@@ -161,9 +171,13 @@ def constant(data, name="constant"):
                             pkl_data=pkl_data)
 
 
-def identity(data, name="identity"):
+def identity(data, name="identity", logging_prefix=None,
+             input_debug=False, grad_debug=False):
     return mx.symbol.Custom(data=data,
                             name=name,
+                            logging_prefix=name,
+                            input_debug=input_debug,
+                            grad_debug=grad_debug,
                             op_type="identity")
 
 
