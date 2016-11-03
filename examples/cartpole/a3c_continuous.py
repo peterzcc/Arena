@@ -48,6 +48,10 @@ def main():
     num_actors = args.nactor
     steps_per_epoch = 4000
     num_epoch = int(args.num_steps / steps_per_epoch)
+    lr_schedule_interval = 100
+    num_updates = int(args.num_steps / (args.batch_size * 100))
+    final_factor = 0.01
+    lr_factor = final_factor ** (1 / num_updates)
 
     if args.gpu < 0:
         ctx = mx.cpu()
@@ -63,7 +67,7 @@ def main():
                        is_learning, global_t, pid):
         from mxnet.lr_scheduler import FactorScheduler
         if args.lr_decrease:
-            lr_scheduler = FactorScheduler(num_epoch, 0.1)
+            lr_scheduler = FactorScheduler(lr_schedule_interval, lr_factor)
         else:
             lr_scheduler = None
         return ContA3CAgent(
