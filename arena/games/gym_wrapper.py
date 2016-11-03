@@ -42,7 +42,8 @@ class GymWrapper(object):
                                              high=obs_max,
                                              shape=image_size + (num_channel,)
                                              )
-        self.observation_space = env.observation_space
+        else:
+            self.observation_space = env.observation_space
         self.rgb_to_gray = rgb_to_gray
         self.new_img_size = new_img_size
         self.max_null_op = max_null_op
@@ -74,7 +75,8 @@ class GymWrapper(object):
 
         for t_skip in range(self.frame_skip):
             if self.action_map is not None:
-                observation, reward, done, info = self.env.step(self.action_map[a])
+                real_action = self.action_map[np.asscalar(a)]
+                observation, reward, done, info = self.env.step(real_action)
             else:
                 observation, reward, done, info = self.env.step(a)
             observations.append(observation)

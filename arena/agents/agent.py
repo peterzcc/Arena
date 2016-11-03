@@ -1,7 +1,6 @@
 import gym
 import multiprocessing as mp
 import queue
-from arena.utils import  ProcessState
 import logging
 
 
@@ -40,15 +39,15 @@ class Agent(object):
     def run_loop(self):
         while not self.terminated:
             # logging.debug("Agent: {} waiting for observation".format(self.id))
-            rx_msg = self.stats_rx.recv()
+            rx_msg = self.stats_rx[0].recv()
             try:
                 self.current_obs = rx_msg["observation"]
             except KeyError:
                 raise ValueError("Failed to receive observation")
 
             self.current_action = self.act(self.current_obs)
-            self.acts_tx.send(self.current_action)
-            rx_msg = self.stats_rx.recv()
+            self.acts_tx.send({"action": self.current_action})
+            rx_msg = self.stats_rx[1].recv()
             try:
                 self.current_reward = rx_msg["reward"]
                 self.current_episode_ends = rx_msg["done"]

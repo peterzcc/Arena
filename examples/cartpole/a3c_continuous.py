@@ -10,7 +10,6 @@ from arena import Base
 from arena.agents import Agent
 from arena.games.gym_wrapper import GymWrapper
 from arena.experiment import Experiment
-# from arena.games.cartpole_box2d import CartpoleSwingupEnv
 import gym
 import argparse
 from cont_a3c_agent import ContA3CAgent
@@ -39,7 +38,7 @@ def main():
                         help='Number of parallel actor-learners')
     args = parser.parse_args()
 
-    should_profile = False
+    should_profile = True
     if should_profile:
         import yappi
 

@@ -11,17 +11,9 @@ import ast
 import inspect
 import collections
 import numbers
-import multiprocessing as mp
 import logging
-from enum import Enum
 
-class ProcessState(Enum):
-    terminate = 0
-    start = 1
-    stop = 2
 
-def force_map(func,x):
-    return list(map(func,x))
 
 
 try:

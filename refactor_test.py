@@ -42,7 +42,7 @@ def main():
 
     def f_create_env():
         env = gym.make("BreakoutNoFrameskip-v0")
-        logging.debug("meanings:{}".format(env.get_action_meanings()))
+        # logging.debug("meanings:{}".format(env.get_action_meanings()))
         return GymWrapper(env, rgb_to_gray=True, new_img_size=(84, 84),
                           max_null_op=30, action_mapping=[0, 1, 2, 3],
                           frame_skip=4, max_recent_two_frames=True)

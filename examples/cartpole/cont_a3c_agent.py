@@ -1,7 +1,8 @@
 import mxnet as mx
 from arena import Base
 from arena.agents import Agent
-from arena.utils import discount_cumsum, norm_clipping, force_map
+from arena.utils import discount_cumsum, norm_clipping
+from arena.mp_utils import force_map
 from mxnet.lr_scheduler import FactorScheduler
 from mxnet import nd
 import numpy as np

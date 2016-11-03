@@ -1,7 +1,7 @@
 import gym
 from arena.agents.test_mp_agent import Agent
 from arena.actuator import Actuator
-from arena.utils import ProcessState, force_map
+from arena.mp_utils import ProcessState, force_map, FastPipe
 from time import time
 import logging
 import os
@@ -12,6 +12,16 @@ import ctypes
 import datetime
 import queue
 
+from gym.spaces import Discrete, Box
+
+
+def space_to_np(space):
+    if isinstance(space, Discrete):
+        return 0
+    elif isinstance(space, Box):
+        return space.low
+    else:
+        raise ValueError("Unsupported arg")
 class Experiment(object):
     def __init__(self,
                  f_create_env,
@@ -26,7 +36,9 @@ class Experiment(object):
         env : gym.Env
         agent : Agent
         """
-        self.env = f_create_env()
+        env = f_create_env()
+        self.observation_space = env.observation_space
+        self.action_space = env.action_space
         self.f_create_env = f_create_env
         self.f_create_agent = f_create_agent
         self.shared_params = f_create_shared_params()
@@ -53,8 +65,7 @@ class Experiment(object):
         self.log_train_path = os.path.join(self.stats_file_dir, "train_log.csv")
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
         self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
-        self.single_process_mode = single_process_mode
-        if self.single_process_mode:
+        if single_process_mode:
             self.process_type = thd.Thread
         else:
             self.process_type = mp.Process
@@ -98,27 +109,34 @@ class Experiment(object):
                                              is_learning, global_t, pid)
             this_agent.run_loop()
 
+        observation_sample = space_to_np(self.observation_space)
+        action_sample = space_to_np(self.action_space)
         for process_id in range(num_actor):
             self.actuator_channels.append(mp.Queue())
-            tx_stats, rx_stats = mp.Pipe()
-            tx_acts, rx_acts = mp.Pipe()
+            # tx_stats, rx_stats = mp.Pipe()
+            # tx_acts, rx_acts = mp.Pipe()
+            obs_pipe = FastPipe({"observation": observation_sample})
+            action_pipe = FastPipe({"action": action_sample})
+            feedback_pipe = FastPipe({"reward": 0.0, "done": False})
+            stats_pipe = [obs_pipe, feedback_pipe]
+
             this_actuator_process = \
                 self.process_type(
                     target=actuator_thread,
                     args=(self.f_create_env,
-                          tx_stats,
-                          rx_acts,
+                          stats_pipe,
+                          action_pipe,
                           self.actuator_channels[process_id],
                           self.episode_q,
                           self.global_t,
                           process_id))
             this_actuator_process.daemon = True
             self.actuator_processes.append(this_actuator_process)
-            agent = self.f_create_agent(self.env.observation_space,
-                                        self.env.action_space,
+            agent = self.f_create_agent(self.observation_space,
+                                        self.action_space,
                                         self.shared_params,
-                                        rx_stats,
-                                        tx_acts,
+                                        stats_pipe,
+                                        action_pipe,
                                         self.is_learning,
                                         self.global_t,
                                         process_id)
@@ -127,8 +145,8 @@ class Experiment(object):
             # this_agent_thread = \
             #     thd.Thread(
             #         target=agent_thread,
-            #         args=(self.env.observation_space,
-            #               self.env.action_space,
+            #         args=(self.observation_space,
+            #               self.action_space,
             #               self.shared_params,
             #               rx_stats,
             #               tx_acts,
@@ -152,10 +170,14 @@ class Experiment(object):
 
         self.num_actor = num_actor
         self.create_actor_learner_processes(num_actor)
+        for actuator in self.actuator_processes:
+            actuator.start()
 
+        for agent in self.agent_threads:
+            agent.start()
 
-        force_map(lambda x: x.start(), self.actuator_processes)
-        force_map(lambda x: x.start(), self.agent_threads)
+        # force_map(lambda x: x.start(), self.actuator_processes)
+        # force_map(lambda x: x.start(), self.agent_threads)
 
         epoch_num = 0
         epoch_reward = 0
