@@ -68,14 +68,18 @@ class Actuator(object):
             if self.is_terminated:
                 break
             self.stats_tx[0].send({"observation": self.current_obs})
+            # logging.debug("tx obs: {}".format(self.current_obs))
             # if not self.acts_rx.poll(timeout=10 * 60):
             #     logging.warning("Not received action for too long, potential error")
             #     break
             received_dict = self.acts_rx.recv()
             current_action = received_dict["action"]
+            # logging.debug("rx a: {}".format(current_action))
             self.current_obs, self.reward, self.episode_ends, info_env = \
                 self.env.step(current_action)
+
             self.stats_tx[1].send({"reward": self.reward, "done": self.episode_ends})
+            # logging.debug("tx r: {} \td:{}".format(self.reward, self.episode_ends))
             self.episode_reward += self.reward
             self.episode_count += 1
 

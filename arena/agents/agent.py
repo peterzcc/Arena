@@ -2,7 +2,7 @@ import gym
 import multiprocessing as mp
 import queue
 import logging
-
+import numpy as np
 
 class Agent(object):
     def __init__(self, observation_space, action_space,
@@ -49,8 +49,8 @@ class Agent(object):
             self.acts_tx.send({"action": self.current_action})
             rx_msg = self.stats_rx[1].recv()
             try:
-                self.current_reward = rx_msg["reward"]
-                self.current_episode_ends = rx_msg["done"]
+                self.current_reward = np.asscalar(rx_msg["reward"])
+                self.current_episode_ends = np.asscalar(rx_msg["done"])
             except KeyError:
                 raise ValueError("Failed to receive feedback in self.stats_rx")
             self.receive_feedback(self.current_reward, self.current_episode_ends)

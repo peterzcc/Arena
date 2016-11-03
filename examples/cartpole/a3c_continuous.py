@@ -4,7 +4,6 @@ os.environ["MXNET_GPU_WORKER_NTHREADS"] = "20"
 os.environ["MXNET_CPU_WORKER_NTHREADS"] = "32"
 import numpy as np
 from arena.operators import *
-from mxnet.lr_scheduler import FactorScheduler
 from arena.utils import *
 from arena import Base
 from arena.agents import Agent
@@ -36,9 +35,10 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--num-steps', required=False, type=int, default=4000 * 500,
                         help='Number of parallel actor-learners')
+    parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
 
-    should_profile = True
+    should_profile = False
     if should_profile:
         import yappi
 
@@ -46,6 +46,8 @@ def main():
     # Each trajectory will have at most 500 time steps
     T = 500
     num_actors = args.nactor
+    steps_per_epoch = 4000
+    num_epoch = int(args.num_steps / steps_per_epoch)
 
     if args.gpu < 0:
         ctx = mx.cpu()
@@ -59,6 +61,11 @@ def main():
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
                        is_learning, global_t, pid):
+        from mxnet.lr_scheduler import FactorScheduler
+        if args.lr_decrease:
+            lr_scheduler = FactorScheduler(num_epoch, 0.1)
+        else:
+            lr_scheduler = None
         return ContA3CAgent(
             observation_space, action_space,
             shared_params, stats_rx, acts_tx,
@@ -67,7 +74,7 @@ def main():
             batch_size=args.batch_size,
             lr=args.lr,
             optimizer_name=args.optimizer,
-            lr_scheduler=None
+            lr_scheduler=lr_scheduler
         )
 
     def f_create_shared_params():
@@ -84,8 +91,6 @@ def main():
     experiment = Experiment(f_create_env, f_create_agent,
                             f_create_shared_params)
 
-    steps_per_epoch = 4000
-    num_epoch = int(args.num_steps / steps_per_epoch)
     test_length = 0
     if should_profile:
         yappi.start(builtins=True, profile_threads=True)

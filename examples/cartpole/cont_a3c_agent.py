@@ -94,12 +94,14 @@ class ContA3CAgent(Agent):
         self.num_episodes = 0
 
     def act(self, observation):
+        # logging.debug("rx obs: {}".format(observation))
         if self.buffer_size == 0:
             self.global_network.copy_params_to(self.net)
 
         self.buffer_size += 1
         last_idx = self.buffer_size - 1
         self.observation_buffer[last_idx] = observation
+
 
         outputs = self.net.forward(is_train=False,
                                    data=self.observation_buffer[last_idx:(self.buffer_size)])
@@ -108,12 +110,13 @@ class ContA3CAgent(Agent):
 
         self.action_buffer[last_idx] = action
         self.critic_buffer[last_idx] = outputs[3].asnumpy()
+        # logging.debug("tx a: {}".format(action))
 
 
         return action
 
     def receive_feedback(self, reward, done):
-
+        # logging.debug("rx r: {} \td:{}".format(reward, done))
         last_idx = self.buffer_size - 1
 
         self.reward_buffer[last_idx] = reward
@@ -153,9 +156,9 @@ class ContA3CAgent(Agent):
         def scale_gradient(grad):
             grad[:] /= self.buffer_size
 
-        force_map(scale_gradient, self.net.params_grad.values())
-        # for grad in self.net.params_grad.values():
-        #     grad[:] = grad[:] / self.buffer_size
+        # force_map(scale_gradient, self.net.params_grad.values())
+        for grad in self.net.params_grad.values():
+            grad[:] = grad[:] / self.buffer_size
         if self.clip_gradient:
             norm_clipping(self.net.params_grad, 10)
         with self.param_lock:
