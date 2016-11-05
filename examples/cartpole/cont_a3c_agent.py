@@ -1,5 +1,6 @@
 import mxnet as mx
 from arena import Base
+from arena.memory import AcMemory
 from arena.agents import Agent
 from arena.utils import discount_cumsum, norm_clipping
 from arena.mp_utils import force_map
@@ -76,40 +77,30 @@ class ContA3CAgent(Agent):
         # State information
         self.counter = batch_size
         self.episode_step = 0
+        self.epoch_reward = 0
         max_l = 500
-        use_nd = False
-        if use_nd:
-            self.observation_buffer = nd.empty(shape=(batch_size + max_l, self.state_dimension),
-                                               dtype=np.float32, ctx=ctx)
-        else:
-            self.observation_buffer = np.empty(shape=(batch_size + max_l, self.state_dimension),
-                                               dtype=np.float32)
-        self.action_buffer = np.empty(shape=(batch_size + max_l, self.action_dimension), dtype=np.float32)
-        self.reward_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
-        self.value_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
-        self.td_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
-        self.critic_buffer = np.empty(shape=(batch_size + max_l,), dtype=np.float32)
-        self.buffer_size = 0
-        self.buffer_episode_start = 0
+        self.memory = AcMemory(observation_shape=(self.state_dimension,),
+                               action_shape=(self.action_dimension,),
+                               max_size=batch_size + max_l,
+                               gamma=self.discount,
+                               use_gae=True)
+
         self.num_episodes = 0
 
     def act(self, observation):
         # logging.debug("rx obs: {}".format(observation))
-        if self.buffer_size == 0:
+        if self.memory.Tmax == 0:
             self.global_network.copy_params_to(self.net)
-
-        self.buffer_size += 1
-        last_idx = self.buffer_size - 1
-        self.observation_buffer[last_idx] = observation
 
 
         outputs = self.net.forward(is_train=False,
-                                   data=self.observation_buffer[last_idx:(self.buffer_size)])
+                                   data=np.expand_dims(observation, axis=0))
         action = \
             np.clip(outputs[0].asnumpy(), self.action_space.low, self.action_space.high).flatten()
 
-        self.action_buffer[last_idx] = action
-        self.critic_buffer[last_idx] = outputs[3].asnumpy()
+        self.memory.append_state(observation, action, critic=outputs[3].asnumpy())
+
+
         # logging.debug("tx a: {}".format(action))
 
 
@@ -117,48 +108,39 @@ class ContA3CAgent(Agent):
 
     def receive_feedback(self, reward, done):
         # logging.debug("rx r: {} \td:{}".format(reward, done))
-        last_idx = self.buffer_size - 1
 
-        self.reward_buffer[last_idx] = reward
+        self.memory.append_feedback(reward)
         self.episode_step += 1
+        self.epoch_reward += reward
         if done:
             self.counter -= self.episode_step
-            self.add_path()
+            # self.add_path()
+            self.memory.add_path(done)
             self.num_episodes += 1
             self.episode_step = 0
-            self.buffer_episode_start = self.buffer_size
             if self.counter <= 0:
                 self.train_once()
+                self.memory.reset()
                 self.counter = self.batch_size
-                self.buffer_size = 0
-                self.buffer_episode_start = 0
                 self.num_episodes = 0
 
-    def add_path(self):
-        rewards = self.reward_buffer[self.buffer_episode_start:self.buffer_size]
-        self.value_buffer[self.buffer_episode_start:self.buffer_size] = \
-            discount_cumsum(rewards, self.discount)
-        self.td_buffer[self.buffer_episode_start:self.buffer_size] = \
-            self.value_buffer[self.buffer_episode_start:self.buffer_size] - \
-            self.critic_buffer[self.buffer_episode_start:self.buffer_size]
 
     def train_once(self):
-        scores = self.td_buffer[0:self.buffer_size]
-        actions = self.action_buffer[0:self.buffer_size]
-        values = self.value_buffer[0:self.buffer_size].flatten()
+
+        train_data = self.memory.extract_all()
         self.net.forward_backward(
-            data=self.observation_buffer[0:self.buffer_size],
-            policy_score=scores,
-            policy_backward_action=actions,
-            critic_label=values,
+            data=train_data['states'],
+            policy_score=train_data['advantages'],
+            policy_backward_action=train_data['actions'],
+            critic_label=train_data['values'],
         )
 
         def scale_gradient(grad):
-            grad[:] /= self.buffer_size
+            grad[:] /= train_data['size']
 
         # force_map(scale_gradient, self.net.params_grad.values())
         for grad in self.net.params_grad.values():
-            grad[:] = grad[:] / self.buffer_size
+            grad[:] = grad[:] / train_data['size']
         if self.clip_gradient:
             norm_clipping(self.net.params_grad, 10)
         with self.param_lock:
@@ -166,9 +148,10 @@ class ContA3CAgent(Agent):
         logging.info(
             'Thd[%d] Average Return:%f,  Num Traj:%d ' \
             % (self.id,
-               np.sum(self.reward_buffer[0:self.buffer_size]) / self.num_episodes,
+               self.epoch_reward / self.num_episodes,
                self.num_episodes,
                ))
+        self.epoch_reward = 0
 
 
     def actor_critic_policy_sym(self, action_num):

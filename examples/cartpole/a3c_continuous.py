@@ -44,7 +44,7 @@ def main():
 
 
     # Each trajectory will have at most 500 time steps
-    T = 500
+    T = 100000
     num_actors = args.nactor
     steps_per_epoch = 4000
     num_epoch = int(args.num_steps / steps_per_epoch)
