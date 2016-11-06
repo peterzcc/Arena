@@ -42,7 +42,7 @@ def main():
     # Each trajectory will have at most 500 time steps
     T = 1000
     num_actors = args.nactor
-    steps_per_epoch = 4000
+    steps_per_epoch = 25000
     num_epoch = int(args.num_steps / steps_per_epoch)
     lr_schedule_interval = 100
     num_updates = int(args.num_steps / (args.batch_size * 100))
