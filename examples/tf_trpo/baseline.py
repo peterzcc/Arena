@@ -1,0 +1,60 @@
+import tensorflow as tf
+from tensorflow.contrib.opt.python.training.external_optimizer import ScipyOptimizerInterface
+import numpy as np
+import prettytensor as pt
+
+
+# TODO: l_bfgs optimizer
+class Baseline(object):
+    coeffs = None
+
+    def __init__(self, session=None, scope="value_f",
+                 shape=None, hidden_sizes=(64, 64), activation=tf.nn.tanh,
+                 max_iter=25):
+        self.session = session
+        self.max_iter = max_iter
+        self.use_lbfgs_b = True
+
+        with tf.variable_scope(scope):
+            # add  timestep
+            self.x = tf.placeholder(tf.float32, shape=(None, shape[0] + 1), name="x")
+            self.y = tf.placeholder(tf.float32, shape=[None], name="y")
+            hidden_units = pt.wrap(self.x).sequential()
+            for hidden_size in hidden_sizes:
+                hidden_units.fully_connected(hidden_size, activation_fn=activation)
+
+            self.net = tf.reshape(hidden_units.fully_connected(1).as_layer(), (-1,))  # why reshape?
+            self.mse = tf.reduce_mean(tf.square(self.net - self.y))
+            self.var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+            if self.use_lbfgs_b:
+                self.optimizer = ScipyOptimizerInterface(loss=self.mse, method="L-BFGS-B",
+                                                         options={'maxiter': self.max_iter}
+                                                         )
+            else:
+                self.train = tf.train.AdamOptimizer().minimize(self.mse)
+        self.session.run(tf.initialize_all_variables())
+
+    def _features(self, path):
+        obs = path["observations"]
+        l = (path["observations"].shape[0])
+        # al = np.arange(l).reshape(-1, 1) / 10.0
+        ret = np.concatenate((obs, path["times"][:, None],), axis=1)
+        return ret
+
+    def fit(self, paths):
+        featmat = self._features(paths)
+        returns = paths["values"]
+
+        if self.use_lbfgs_b:
+            self.optimizer.minimize(session=self.session,
+                                    feed_dict={self.x: featmat, self.y: returns})
+        else:
+            for _ in range(self.max_iter):  # TODO: verify this
+                loss, _ = self.session.run([self.mse, self.train], {self.x: featmat, self.y: returns})
+
+    def predict(self, path):
+        if self.net is None:
+            return np.zeros((path["values"].shape[0]))
+        else:
+            ret = self.session.run(self.net, {self.x: self._features(path)})
+            return np.reshape(ret, (ret.shape[0],))

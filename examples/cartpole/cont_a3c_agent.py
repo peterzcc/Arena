@@ -83,7 +83,7 @@ class ContA3CAgent(Agent):
                                action_shape=(self.action_dimension,),
                                max_size=batch_size + max_l,
                                gamma=self.discount,
-                               use_gae=True)
+                               use_gae=False)
 
         self.num_episodes = 0
 
@@ -129,18 +129,18 @@ class ContA3CAgent(Agent):
 
         train_data = self.memory.extract_all()
         self.net.forward_backward(
-            data=train_data['states'],
+            data=train_data['observations'],
             policy_score=train_data['advantages'],
             policy_backward_action=train_data['actions'],
             critic_label=train_data['values'],
         )
 
         def scale_gradient(grad):
-            grad[:] /= train_data['size']
+            grad[:] /= self.memory.Tmax
 
         # force_map(scale_gradient, self.net.params_grad.values())
         for grad in self.net.params_grad.values():
-            grad[:] = grad[:] / train_data['size']
+            grad[:] = grad[:] / self.memory.Tmax
         if self.clip_gradient:
             norm_clipping(self.net.params_grad, 10)
         with self.param_lock:

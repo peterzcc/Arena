@@ -23,9 +23,10 @@ def discount(x, gamma):
     return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
 
+# TODO: add agent info,important
 class AcMemory(object):
     def __init__(self, observation_shape, action_shape, max_size, gamma=0.995, use_gae=False,
-                 lam=0.96, get_critic_online=True):
+                 lam=0.96, get_critic_online=True, info_shape=None):
         self.observation_buffer = np.empty(shape=(max_size,) + observation_shape,
                                            dtype=np.float32)
         self.action_buffer = np.empty(shape=(max_size,) + action_shape, dtype=np.float32)
@@ -33,17 +34,23 @@ class AcMemory(object):
         self.q_buffer = np.empty(shape=(max_size,), dtype=np.float32)
         self.adv_buffer = np.empty(shape=(max_size,), dtype=np.float32)
         self.critic_buffer = np.empty(shape=(max_size,), dtype=np.float32)
+        self.t_buffer = np.empty(shape=(max_size,), dtype=np.float32)
         self.Tmax = 0
         self.t0 = 0
         self.num_episodes = 0
         self.gamma = gamma
         self.lam = lam
         self.episode_start_times = []
+        self.info_buffer = {}
+
 
         if get_critic_online:
             self.append_state = self.append_state_with_critic
         else:
             self.append_state = self.append_state_without_critic
+        if info_shape is not None:
+            for k, shape in info_shape.items():
+                self.info_buffer[k] = np.empty(shape=(max_size,) + shape, dtype=np.float32)
 
         if not use_gae:
             self.add_path = self.add_td_path
@@ -52,19 +59,24 @@ class AcMemory(object):
             self.add_path = self.add_gae_path
             self.extract_all = self.extract_all_with_normalize
 
-    def append_state_without_critic(self, observation, action, critic=None):
+    def append_state_without_critic(self, observation, action, info=dict(), critic=None):
         self.Tmax += 1
         last_idx = self.Tmax - 1
         self.observation_buffer[last_idx] = observation
         self.action_buffer[last_idx] = action
+        self.t_buffer[last_idx] = self.Tmax - self.t0
+        for k, v in info.items():
+            self.info_buffer[k][last_idx] = v
 
-    def append_state_with_critic(self, observation, action, critic=None):
-        self.append_state_without_critic(observation, action)
+    def append_state_with_critic(self, observation, action, info=dict(), critic=None):
+        self.append_state_without_critic(observation, action, info=info)
         self.critic_buffer[self.Tmax - 1] = critic
 
     def fill_episode_critic(self, f_get_critic):
         self.critic_buffer[self.t0:self.Tmax] = \
-            f_get_critic(self.observation_buffer[self.t0:self.Tmax])
+            f_get_critic({"observations": self.observation_buffer[self.t0:self.Tmax],
+                          "times": self.q_buffer[self.t0:self.Tmax]
+                          })
 
     def append_feedback(self, reward):
         self.reward_buffer[self.Tmax - 1] = reward
@@ -105,11 +117,12 @@ class AcMemory(object):
 
     def extract_all_without_normalize(self):
         result = dict(
-            states=self.observation_buffer[:self.Tmax],
+            observations=self.observation_buffer[:self.Tmax],
+            times=self.t_buffer[:self.Tmax],
             actions=self.action_buffer[:self.Tmax],
             values=self.q_buffer[:self.Tmax],
             advantages=self.adv_buffer[:self.Tmax],
-            size=self.Tmax
+            agent_infos={k: v[:self.Tmax] for k, v in self.info_buffer.items()}
         )
         return result
 
