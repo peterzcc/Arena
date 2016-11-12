@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+
 class OrderedEasyDict(OrderedDict):
     """Using OrderedDict for the `easydict` package
     See Also https://pypi.python.org/pypi/easydict/
