@@ -267,12 +267,15 @@ class Base(object):
             output.wait_to_read()
         return self.exe.outputs
 
-    def update(self, updater, params_grad=None):
+    def update(self, updater, params_grad=None, dist_update=False):
         if params_grad is None:
             params_grad = self.params_grad
         assert type(params_grad) is OrderedDict
         for ind, k in enumerate(self.params.keys()):
-            updater(index=ind, grad=params_grad[k], weight=self.params[k])
+            if dist_update:
+                updater(index=ind, grad=params_grad[k], weight=self.params[k])
+            else:
+                updater(index=k, grad=params_grad[k], weight=self.params[k])
 
     def update_acc_grad(self):
         if self.acc_grad is None:
