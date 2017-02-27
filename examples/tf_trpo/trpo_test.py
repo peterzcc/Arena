@@ -10,7 +10,8 @@ import argparse
 from trpo_model import TrpoModel
 from batch_agent import BatchUpdateAgent
 import logging
-
+from custom_ant import CustomAnt
+from gather_env import GatherEnv
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 import multiprocessing as mp
@@ -28,7 +29,7 @@ def main():
                         help='Running Context.')
     parser.add_argument('--nactor', required=False, type=int, default=1,
                         help='Number of parallel actor-learners')
-    parser.add_argument('--batch-size', required=False, type=int, default=5000,
+    parser.add_argument('--batch-size', required=False, type=int, default=50000,
                         help='batch size')
     parser.add_argument('--num-steps', required=False, type=int, default=25000 * 500,
                         help='Number of parallel actor-learners')
@@ -55,7 +56,8 @@ def main():
     #     ctx = mx.gpu(args.gpu)
 
     def f_create_env():
-        env = gym.make("InvertedPendulum-v1")
+        # env = GatherEnv()
+        env = gym.make('Ant-v1')
         return GymWrapper(env, max_null_op=0, max_episode_length=T)
 
     def f_create_agent(observation_space, action_space,

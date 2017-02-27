@@ -1,7 +1,7 @@
 import gym
 from arena.agents.test_mp_agent import Agent
 from arena.actuator import Actuator
-from arena.mp_utils import ProcessState, force_map, FastPipe
+from arena.mp_utils import ProcessState, force_map, FastPipe, RenderOption
 from time import time
 import logging
 import os
@@ -22,20 +22,27 @@ def space_to_np(space):
         return space.low
     else:
         raise ValueError("Unsupported arg")
+
+
 class Experiment(object):
+    """Class for automatically running parallel AI agents
+
+
+    """
     def __init__(self,
                  f_create_env,
                  f_create_agent,
                  f_create_shared_params,
                  stats_file_dir=None,
-                 single_process_mode=False):
+                 single_process_mode=False,
+                 render_option="once_per_epoch"):
         """
-
         Parameters
         ----------
         env : gym.Env
         agent : Agent
         """
+        # 1. Store variables
         env = f_create_env()
         self.observation_space = env.observation_space
         self.action_space = env.action_space
@@ -50,7 +57,10 @@ class Experiment(object):
         self.actuator_channels = []
         self.agent_threads = []
         self.episode_q = mp.Queue(maxsize=1000)
-        self.num_actor = 0
+        self.num_actor = None
+        self.render_option = render_option
+
+        # 2. Configure log files
         if stats_file_dir is None:
             experiment_id = 1
             self.stats_file_dir = "exp_{:d}".format(experiment_id)
@@ -65,6 +75,7 @@ class Experiment(object):
         self.log_train_path = os.path.join(self.stats_file_dir, "train_log.csv")
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
         self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
+
         if single_process_mode:
             self.process_type = thd.Thread
         else:
@@ -169,15 +180,15 @@ class Experiment(object):
                               with_testing_length=0):
 
         self.num_actor = num_actor
+        # Where should we put the creation of actor/learners?
         self.create_actor_learner_processes(num_actor)
+
         for actuator in self.actuator_processes:
             actuator.start()
 
         for agent in self.agent_threads:
             agent.start()
 
-        # force_map(lambda x: x.start(), self.actuator_processes)
-        # force_map(lambda x: x.start(), self.agent_threads)
 
         epoch_num = 0
         epoch_reward = 0
@@ -191,6 +202,8 @@ class Experiment(object):
 
         start_times = np.repeat(time(), num_actor)
         force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
+        if self.render_option == "once_per_epoch":
+            self.actuator_channels[0].put(RenderOption.one_episode)
 
         while epoch_num < num_epoch:
             try:
@@ -236,6 +249,8 @@ class Experiment(object):
                     start_times = np.repeat(time(), num_actor)
 
                 epoch_num += 1
+                if self.render_option == "once_per_epoch":
+                    self.actuator_channels[0].put(RenderOption.one_episode)
 
     def run_testing_on_sub_process(self, test_length, process_id=0):
         if not os.path.exists(self.log_test_path):

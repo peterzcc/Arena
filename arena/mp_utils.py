@@ -12,6 +12,11 @@ class ProcessState(Enum):
     stop = 2
 
 
+class RenderOption(Enum):
+    off = 0
+    on = 1
+    one_episode = 2
+
 def force_map(func, x):
     return list(map(func, x))
 

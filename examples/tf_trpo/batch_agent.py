@@ -40,10 +40,10 @@ class BatchUpdateAgent(Agent):
         self.episode_step = 0
         self.epoch_reward = 0
         max_l = 10000
-        # if model is None: TODO: recover
-        self.model = TrpoModel(self.observation_space, self.action_space)
-        # else:
-        #     self.model = model
+        if model is None:
+            self.model = TrpoModel(self.observation_space, self.action_space)
+        else:
+            self.model = model
         self.memory = AcMemory(observation_shape=self.observation_space.shape,
                                action_shape=self.action_space.shape,
                                max_size=batch_size + max_l,

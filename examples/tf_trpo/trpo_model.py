@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
 import prettytensor as pt

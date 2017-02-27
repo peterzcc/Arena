@@ -2,14 +2,14 @@ import gym
 import numpy as np
 import multiprocessing as mp
 import queue
-from arena.mp_utils import ProcessState
+from arena.mp_utils import ProcessState, RenderOption
 import logging
 
 
 class Actuator(object):
     def __init__(self, func_get_env, stats_tx, acts_rx,
                  cmd_signal: mp.Queue, episode_data_q: mp.Queue,
-                 global_t, act_id=0):
+                                                       global_t, act_id = 0, render_option = RenderOption.off):
         self.env = func_get_env()
         self.stats_tx = stats_tx
         self.acts_rx = acts_rx
@@ -20,12 +20,14 @@ class Actuator(object):
         self.action = None
         self.reward = None
         self.episode_ends = None
+    self.render_option = render_option
         self.reset()
         self.episode_q = episode_data_q
         self.episode_count = 0
         self.episode_reward = 0
         self.id = act_id
         self.gb_t = global_t
+
 
         logging.debug("Actuator: {} initialized".format(self.id))
 
@@ -36,6 +38,8 @@ class Actuator(object):
         self.episode_ends = None
         self.episode_count = 0
         self.episode_reward = 0
+        if self.render_option == RenderOption.one_episode:
+            self.render_option = RenderOption.off
 
     def receive_cmd(self):
         if self.is_idle:
@@ -59,6 +63,8 @@ class Actuator(object):
                 self.is_idle = False
                 self.reset()
                 logging.debug("Actuator: {} started".format(self.id))
+            elif isinstance(cmd, RenderOption):
+                self.render_option = cmd
             else:
                 raise ValueError("Unknown command from self.signal")
 
@@ -77,6 +83,8 @@ class Actuator(object):
             # logging.debug("rx a: {}".format(current_action))
             self.current_obs, self.reward, self.episode_ends, info_env = \
                 self.env.step(current_action)
+            if self.render_option != RenderOption.off:
+                self.env.render()
 
             self.stats_tx[1].send({"reward": self.reward, "done": self.episode_ends})
             # logging.debug("tx r: {} \td:{}".format(self.reward, self.episode_ends))
