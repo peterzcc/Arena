@@ -519,7 +519,7 @@ class GatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         notdone = np.isfinite(state).all() \
                   and state[2] >= 0.2 and state[2] <= 1.0
         done = not notdone
-        ob = self._get_obs()
+        ob = self._get_ant_obs()
         return ob, reward, done, dict(
             reward_forward=forward_reward,
             reward_ctrl=-ctrl_cost,

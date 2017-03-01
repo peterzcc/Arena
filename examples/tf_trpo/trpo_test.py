@@ -12,6 +12,7 @@ from batch_agent import BatchUpdateAgent
 import logging
 from custom_ant import CustomAnt
 from gather_env import GatherEnv
+from maze_env import MazeEnv
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 import multiprocessing as mp
@@ -41,7 +42,7 @@ def main():
         import yappi
 
     # Each trajectory will have at most 500 time steps
-    T = 1000
+    T = 10000
     num_actors = args.nactor
     steps_per_epoch = 25000
     num_epoch = int(args.num_steps / steps_per_epoch)
@@ -58,6 +59,7 @@ def main():
     def f_create_env():
         # env = GatherEnv()
         env = gym.make('Ant-v1')
+        # env = MazeEnv()
         return GymWrapper(env, max_null_op=0, max_episode_length=T)
 
     def f_create_agent(observation_space, action_space,
