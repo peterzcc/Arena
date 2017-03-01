@@ -334,7 +334,7 @@ class GatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(
             self,
             n_apples=8,
-            n_bombs=8,
+            n_bombs=0,
             activity_range=6.,
             robot_object_spacing=2.,
             catch_range=1.,

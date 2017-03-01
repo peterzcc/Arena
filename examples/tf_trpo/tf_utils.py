@@ -187,7 +187,7 @@ def cg(f_Ax, b, cg_iters=20, verbose=True, residual_tol=1e-10):
     for i in range(cg_iters):
         # if callback is not None:
         #     callback(x)
-        # if verbose: print fmtstr % (i, rdotr, np.linalg.norm(x))
+        if verbose: logging.debug(fmtstr % (i, rdotr, np.linalg.norm(x)))
         z = f_Ax(p)
         v = rdotr / (p.dot(z) + 1e-8)
         x += v * p

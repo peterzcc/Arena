@@ -99,6 +99,8 @@ class TrpoModel(ModelWithCritic):
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         action = rnd * action_dist_stds_n[0] + action_dist_means_n[0]
 
+        # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
+
         return action, dict(mean=action_dist_means_n[0], log_std=action_dist_stds_n[0])
 
     def compute_critic(self, states):
@@ -158,15 +160,25 @@ class NetworkContinous(object):
                                                    name="%s_oldaction_dist_means" % scope)
             self.old_dist_logstds_n = tf.placeholder(dtype, shape=(None,) + action_shape,
                                                      name="%s_oldaction_dist_logstds" % scope)
+            # self.action_dist_means_n = (pt.wrap(self.obs).
+            #                             fully_connected(64, activation_fn=tf.nn.tanh,
+            #                                             init=tf.random_normal_initializer(-0.05, 0.05),
+            #                                             name="%s_fc1" % scope).
+            #                             fully_connected(64, activation_fn=tf.nn.tanh,
+            #                                             init=tf.random_normal_initializer(-0.05, 0.05),
+            #                                             name="%s_fc2" % scope).
+            #                             fully_connected(np.prod(action_shape),
+            #                                             init=tf.random_normal_initializer(-0.05, 0.05),
+            #                                             name="%s_fc3" % scope))
             self.action_dist_means_n = (pt.wrap(self.obs).
                                         fully_connected(64, activation_fn=tf.nn.tanh,
-                                                        init=tf.random_normal_initializer(-0.05, 0.05),
+                                                        init=tf.random_normal_initializer(-0.005, 0.005),
                                                         name="%s_fc1" % scope).
                                         fully_connected(64, activation_fn=tf.nn.tanh,
-                                                        init=tf.random_normal_initializer(-0.05, 0.05),
+                                                        init=tf.random_normal_initializer(-0.005, 0.005),
                                                         name="%s_fc2" % scope).
                                         fully_connected(np.prod(action_shape),
-                                                        init=tf.random_normal_initializer(-0.05, 0.05),
+                                                        init=tf.random_normal_initializer(-0.005, 0.005),
                                                         name="%s_fc3" % scope))
 
             # self.N = tf.shape(obs)[0]

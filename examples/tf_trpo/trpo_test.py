@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--batch-size', required=False, type=int, default=50000,
                         help='batch size')
     parser.add_argument('--num-steps', required=False, type=int, default=25000 * 500,
-                        help='Number of parallel actor-learners')
+                        help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
 
@@ -41,8 +41,8 @@ def main():
     if should_profile:
         import yappi
 
-    # Each trajectory will have at most 500 time steps
-    T = 10000
+    # Each trajectory will have at most 1000 time steps
+    T = 1000
     num_actors = args.nactor
     steps_per_epoch = 25000
     num_epoch = int(args.num_steps / steps_per_epoch)
@@ -57,9 +57,10 @@ def main():
     #     ctx = mx.gpu(args.gpu)
 
     def f_create_env():
-        # env = GatherEnv()
-        env = gym.make('Ant-v1')
+        env = GatherEnv()
+        # env = gym.make('Ant-v1')
         # env = MazeEnv()
+        # env = gym.make('InvertedPendulum-v1')
         return GymWrapper(env, max_null_op=0, max_episode_length=T)
 
     def f_create_agent(observation_space, action_space,

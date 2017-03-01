@@ -20,7 +20,7 @@ class Actuator(object):
         self.action = None
         self.reward = None
         self.episode_ends = None
-    self.render_option = render_option
+        self.render_option = render_option
         self.reset()
         self.episode_q = episode_data_q
         self.episode_count = 0

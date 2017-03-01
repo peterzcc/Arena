@@ -79,6 +79,7 @@ class GymWrapper(object):
                 observation, reward, done, info = self.env.step(real_action)
             else:
                 observation, reward, done, info = self.env.step(a)
+                # logging.debug("a:{},d:{}".format(a, done))
             observations.append(observation)
             final_done = final_done or done
             final_reward += reward
@@ -98,7 +99,7 @@ class GymWrapper(object):
 
         # logging.debug("tx r:{},d:{}".format(reward, done))
 
-        # if done:
+        # if final_done:
         #     logging.debug("a:{},r:{},d:{}".format(a, reward, done))
         # else:
         #     logging.debug("a:{},r:{}".format(a, reward))
