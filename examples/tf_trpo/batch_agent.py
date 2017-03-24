@@ -69,6 +69,7 @@ class BatchUpdateAgent(Agent):
         self.memory.append_state(observation, action, info=agent_info)
 
         # logging.debug("tx a: {}".format(action))
+        # print("action: "+str(final_action))
         return final_action
 
     def receive_feedback(self, reward, done):

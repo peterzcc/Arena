@@ -214,7 +214,6 @@ class Experiment(object):
                     logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
                 for (pid, agent_thread) in enumerate(self.agent_threads):
                     logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
-                return
             try:
                 pid = rx_msg["id"]
                 episode_count = rx_msg["episode_count"]

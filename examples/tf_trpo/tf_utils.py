@@ -171,7 +171,7 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
     return x
 
 
-def cg(f_Ax, b, cg_iters=20, verbose=True, residual_tol=1e-10):
+def cg(f_Ax, b, cg_iters=10, verbose=True, residual_tol=1e-10):
     """
     Demmel p 312
     """
@@ -179,6 +179,7 @@ def cg(f_Ax, b, cg_iters=20, verbose=True, residual_tol=1e-10):
     r = b.copy()
     x = np.zeros_like(b)
     rdotr = r.dot(r)
+    print("x.dim: {}".format(x.shape))
 
     fmtstr = "%10i %10.3g %10.3g"
     titlestr = "%10s %10s %10s"
@@ -189,11 +190,11 @@ def cg(f_Ax, b, cg_iters=20, verbose=True, residual_tol=1e-10):
         #     callback(x)
         if verbose: logging.debug(fmtstr % (i, rdotr, np.linalg.norm(x)))
         z = f_Ax(p)
-        v = rdotr / (p.dot(z) + 1e-8)
+        v = rdotr / (p.dot(z) + 0.0 * 1e-8)  # TODO: reset to nonzero
         x += v * p
         r -= v * z
         newrdotr = r.dot(r)
-        mu = newrdotr / (rdotr + 1e-8)
+        mu = newrdotr / (rdotr + 0.0 * 1e-8)
         p = r + mu * p
 
         rdotr = newrdotr

@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
+from tensorflow.contrib.layers import initializers as tf_init
 import prettytensor as pt
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg
 from baseline import Baseline
@@ -23,7 +24,7 @@ class TrpoModel(ModelWithCritic):
                  min_std=1e-6,
                  subsample_factor=0.8,
                  cg_damping=0.1,
-                 cg_iters=20,
+                 cg_iters=10,
                  max_kl=0.01,
                  session=None):
         ModelWithCritic.__init__(self, observation_space, action_space)
@@ -39,8 +40,12 @@ class TrpoModel(ModelWithCritic):
 
         if session is None:
             gpu_options = tf.GPUOptions(allow_growth=True)
-            self.session = tf.Session(config=tf.ConfigProto(  # gpu_options=gpu_options,
-                log_device_placement=False, ))
+            cpu_config = tf.ConfigProto(
+                device_count={'GPU': 0}, log_device_placement=True
+            )
+            # self.session = tf.Session(config=tf.ConfigProto(  # gpu_options=gpu_options,
+            #     log_device_placement=False, ))
+            self.session = tf.Session(config=cpu_config)
         else:
             self.session = session
         self.critic = Baseline(session=self.session, shape=self.ob_space.shape)
@@ -54,15 +59,17 @@ class TrpoModel(ModelWithCritic):
                                     obs_shape=self.ob_space.shape,
                                     action_shape=self.act_space.shape)
         log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
+        batch_size = tf.shape(self.net.obs)[0]
+        self.batch_size_float = tf.cast(batch_size, tf.float32)
         self.action_dist_stds_n = tf.exp(log_std_var)
         self.old_dist_info_vars = dict(mean=self.net.old_dist_means_n, log_std=self.net.old_dist_logstds_n)
         self.new_dist_info_vars = dict(mean=self.net.action_dist_means_n, log_std=self.net.action_dist_logstds_n)
         self.likehood_action_dist = self.distribution.log_likelihood_sym(self.net.action_n, self.new_dist_info_vars)
-        self.ratio_n = self.distribution.likelihood_ratio_sym(self.net.action_n, self.new_dist_info_vars,
-                                                              self.old_dist_info_vars)
-        surr = -tf.reduce_mean(self.ratio_n * self.net.advant)  # Surrogate loss
-        batch_size = tf.shape(self.net.obs)[0]
-        batch_size_float = tf.cast(batch_size, tf.float32)
+        self.ratio_n = -self.distribution.likelihood_ratio_sym(self.net.action_n, self.new_dist_info_vars,
+                                                               self.old_dist_info_vars) / self.batch_size_float
+
+        surr = tf.reduce_sum(self.ratio_n * self.net.advant)  # Surrogate loss
+
         kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ent = self.distribution.entropy(self.old_dist_info_vars)
         self.losses = [surr, kl, ent]
@@ -74,7 +81,7 @@ class TrpoModel(ModelWithCritic):
         # get A
         # KL divergence where first arg is fixed
         # replace old->tf.stop_gradient from previous kl
-        kl_firstfixed = self.distribution.kl_sym_firstfixed(self.new_dist_info_vars) / batch_size_float
+        kl_firstfixed = self.distribution.kl_sym_firstfixed(self.new_dist_info_vars) / self.batch_size_float
         grads = tf.gradients(kl_firstfixed, var_list)
         self.flat_tangent = tf.placeholder(dtype, shape=[None])
         shapes = list(map(var_shape, var_list))
@@ -111,6 +118,7 @@ class TrpoModel(ModelWithCritic):
         obs_n = sample_data["observations"]
         action_n = sample_data["actions"]
         advant_n = sample_data["advantages"]
+        logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
 
         action_dist_means_n = agent_infos["mean"]
         action_dist_logstds_n = agent_infos["log_std"]
@@ -125,9 +133,11 @@ class TrpoModel(ModelWithCritic):
 
         def fisher_vector_product(p):
             feed[self.flat_tangent] = p
+            # print("ratio_n")
+            # print(self.session.run(tf.sqrt(tf.reduce_sum(self.ratio_n, feed)**2)),feed)
             return self.session.run(self.fvp, feed) + self.cg_damping * p
 
-        g = self.session.run(self.pg, feed_dict=feed)
+        ratio_n, g = self.session.run([self.ratio_n, self.pg], feed_dict=feed)
         stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters)
         shs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
         # if shs<0, then the nan error would appear
@@ -172,21 +182,37 @@ class NetworkContinous(object):
             #                                             name="%s_fc3" % scope))
             self.action_dist_means_n = (pt.wrap(self.obs).
                                         fully_connected(64, activation_fn=tf.nn.tanh,
-                                                        init=tf.random_normal_initializer(-0.005, 0.005),
+                                                        init=tf_init.variance_scaling_initializer(factor=1.0,
+                                                                                                  mode='FAN_AVG',
+                                                                                                  uniform=True),
                                                         name="%s_fc1" % scope).
                                         fully_connected(64, activation_fn=tf.nn.tanh,
-                                                        init=tf.random_normal_initializer(-0.005, 0.005),
+                                                        init=tf_init.variance_scaling_initializer(factor=1.0,
+                                                                                                  mode='FAN_AVG',
+                                                                                                  uniform=True),
                                                         name="%s_fc2" % scope).
                                         fully_connected(np.prod(action_shape),
-                                                        init=tf.random_normal_initializer(-0.005, 0.005),
+                                                        init=tf_init.variance_scaling_initializer(factor=0.01,
+                                                                                                  mode='FAN_AVG',
+                                                                                                  uniform=True),
                                                         name="%s_fc3" % scope))
+            # self.action_dist_means_n = (pt.wrap(self.obs).
+            #                             fully_connected(64, activation_fn=tf.nn.tanh,
+            #                                             init=tf.random_uniform_initializer(-0.0018, 0.0018),
+            #                                             name="%s_fc1" % scope).
+            #                             fully_connected(64, activation_fn=tf.nn.tanh,
+            #                                             init=tf.random_uniform_initializer(-0.00216, 0.00216),
+            #                                             name="%s_fc2" % scope).
+            #                             fully_connected(np.prod(action_shape),
+            #                                             init=tf.random_uniform_initializer(-0.00288, 0.00288),
+            #                                             name="%s_fc3" % scope))
 
             # self.N = tf.shape(obs)[0]
             # Nf = tf.cast(self.N, dtype)
             # TODO: STD should be trainable, learn this later
             # TODO: understand this machine code, could be potentially prone to bugs
             self.action_dist_logstd_param = tf.Variable(
-                initial_value=(.01 * np.random.randn(1, *action_shape)).astype(np.float32),
+                initial_value=(0 * np.random.randn(1, *action_shape)).astype(np.float32),
                 trainable=True, name="%spolicy_logstd" % scope)
             self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
                                                  tf.pack((tf.shape(self.action_dist_means_n)[0], 1)))

@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.contrib.opt.python.training.external_optimizer import ScipyOptimizerInterface
+from tensorflow.contrib.layers import initializers as tf_init
 import numpy as np
 import prettytensor as pt
 
@@ -14,6 +15,8 @@ class Baseline(object):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = True
+        self.l2_k = 1e-3
+        self.mix_frac = 0.1
 
         with tf.variable_scope(scope):
             # add  timestep
@@ -21,17 +24,23 @@ class Baseline(object):
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
             hidden_units = pt.wrap(self.x).sequential()
             for hidden_size in hidden_sizes:
-                hidden_units.fully_connected(hidden_size, activation_fn=activation)
+                hidden_units.fully_connected(hidden_size, activation_fn=activation,
+                                             init=tf_init.variance_scaling_initializer(factor=1.0,
+                                                                                       mode='FAN_AVG',
+                                                                                       uniform=True)
+                                             )
 
             self.net = tf.reshape(hidden_units.fully_connected(1).as_layer(), (-1,))  # why reshape?
             self.mse = tf.reduce_mean(tf.square(self.net - self.y))
             self.var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+            self.l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
+            self.final_loss = self.mse + self.l2 * self.l2_k
             if self.use_lbfgs_b:
-                self.optimizer = ScipyOptimizerInterface(loss=self.mse, method="L-BFGS-B",
+                self.optimizer = ScipyOptimizerInterface(loss=self.final_loss, method="L-BFGS-B",
                                                          options={'maxiter': self.max_iter}
                                                          )
             else:
-                self.train = tf.train.AdamOptimizer().minimize(self.mse)
+                self.train = tf.train.AdamOptimizer().minimize(self.final_loss)
         self.session.run(tf.initialize_all_variables())
 
     def _features(self, path):
@@ -46,8 +55,9 @@ class Baseline(object):
         returns = paths["values"]
 
         if self.use_lbfgs_b:
+            obj = returns * self.mix_frac + self.predict(paths)
             self.optimizer.minimize(session=self.session,
-                                    feed_dict={self.x: featmat, self.y: returns})
+                                    feed_dict={self.x: featmat, self.y: obj})
         else:
             for _ in range(self.max_iter):  # TODO: verify this
                 loss, _ = self.session.run([self.mse, self.train], {self.x: featmat, self.y: returns})

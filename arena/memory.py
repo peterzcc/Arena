@@ -107,6 +107,11 @@ class AcMemory(object):
         self.adv_buffer[self.t0:self.Tmax] = \
             discount(deltas, self.gamma * self.lam)
 
+        # mean_adv = self.adv_buffer[self.t0:self.Tmax].mean()
+        # self.adv_buffer[self.t0:self.Tmax] -= mean_adv
+        # std_adv = self.adv_buffer[self.t0:self.Tmax].std()
+        # self.adv_buffer[self.t0:self.Tmax] /= std_adv
+
         self.episode_start_times.append(self.t0)
         self.t0 = self.Tmax
 
