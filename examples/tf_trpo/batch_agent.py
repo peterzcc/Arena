@@ -20,7 +20,7 @@ class BatchUpdateAgent(Agent):
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid
         )
-        self.use_filter = True
+        self.use_filter = False
         if self.use_filter:
             self.obsfilter = ZFilter(observation_space.shape, clip=5)
             self.rewfilter = ZFilter((), demean=False, clip=10)
@@ -83,11 +83,12 @@ class BatchUpdateAgent(Agent):
 
     def receive_feedback(self, reward, done):
         # logging.debug("rx r: {} \td:{}".format(reward, done))
+        self.epoch_reward += reward
         reward = self.rewfilter(reward)
 
         self.memory.append_feedback(reward)
         self.episode_step += 1
-        self.epoch_reward += reward
+
         if done:
             self.counter -= self.episode_step
             self.memory.fill_episode_critic(self.model.compute_critic)

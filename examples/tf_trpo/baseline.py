@@ -16,7 +16,7 @@ class Baseline(object):
         self.max_iter = max_iter
         self.use_lbfgs_b = True
         self.l2_k = 1e-3
-        self.mix_frac = 0.1
+        self.mix_frac = 1
 
         with tf.variable_scope(scope):
             # add  timestep
