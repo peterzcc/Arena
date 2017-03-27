@@ -30,9 +30,9 @@ def main():
                         help='Running Context.')
     parser.add_argument('--nactor', required=False, type=int, default=1,
                         help='Number of parallel actor-learners')
-    parser.add_argument('--batch-size', required=False, type=int, default=50000,
+    parser.add_argument('--batch-size', required=False, type=int, default=5000,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=50000 * 500,
+    parser.add_argument('--num-steps', required=False, type=int, default=5000 * 500,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
@@ -57,10 +57,10 @@ def main():
     #     ctx = mx.gpu(args.gpu)
 
     def f_create_env():
-        env = GatherEnv()
-        env = gym.make('Ant-v1')
+        # env = GatherEnv()
+        # env = gym.make('Ant-v1')
         # env = MazeEnv()
-        # env = gym.make('InvertedPendulum-v1')
+        env = gym.make('InvertedPendulum-v1')
         print("Obs_space: " + str(env.observation_space))
         print("Act_space: " + str(env.action_space))
         return GymWrapper(env, max_null_op=0, max_episode_length=T)
@@ -79,7 +79,7 @@ def main():
         return None
 
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=True, render_option="false")
+                            f_create_shared_params, single_process_mode=True, render_option="once_per_epoch")
 
     test_length = 0
     if should_profile:

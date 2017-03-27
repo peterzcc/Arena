@@ -3,7 +3,7 @@ from arena.agents import Agent
 from trpo_model import TrpoModel
 import numpy as np
 import logging
-
+from tf_utils import ZFilter, IDENTITY
 
 class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,
@@ -20,6 +20,13 @@ class BatchUpdateAgent(Agent):
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid
         )
+        self.use_filter = True
+        if self.use_filter:
+            self.obsfilter = ZFilter(observation_space.shape, clip=5)
+            self.rewfilter = ZFilter((), demean=False, clip=10)
+        else:
+            self.obsfilter = IDENTITY
+            self.rewfilter = IDENTITY
 
         self.action_dimension = action_space.low.shape[0]
         self.state_dimension = observation_space.low.shape[0]
@@ -40,6 +47,7 @@ class BatchUpdateAgent(Agent):
         self.episode_step = 0
         self.epoch_reward = 0
         max_l = 10000
+
         if model is None:
             self.model = TrpoModel(self.observation_space, self.action_space)
         else:
@@ -62,6 +70,7 @@ class BatchUpdateAgent(Agent):
         #     pass
 
         # TODO: Implement this predict
+        observation = self.obsfilter(observation)
         action, agent_info = self.model.predict(observation)
         final_action = \
             np.clip(action, self.action_space.low, self.action_space.high).flatten()
@@ -74,6 +83,7 @@ class BatchUpdateAgent(Agent):
 
     def receive_feedback(self, reward, done):
         # logging.debug("rx r: {} \td:{}".format(reward, done))
+        reward = self.rewfilter(reward)
 
         self.memory.append_feedback(reward)
         self.episode_step += 1

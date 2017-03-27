@@ -58,15 +58,18 @@ class TrpoModel(ModelWithCritic):
         self.net = NetworkContinous(scope="network_continous",
                                     obs_shape=self.ob_space.shape,
                                     action_shape=self.act_space.shape)
-        log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
+        # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.obs)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
-        self.action_dist_stds_n = tf.exp(log_std_var)
+        self.action_dist_log_stds_n = self.net.action_dist_logstds_n  # log_std_var
+        self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
         self.old_dist_info_vars = dict(mean=self.net.old_dist_means_n, log_std=self.net.old_dist_logstds_n)
         self.new_dist_info_vars = dict(mean=self.net.action_dist_means_n, log_std=self.net.action_dist_logstds_n)
         self.likehood_action_dist = self.distribution.log_likelihood_sym(self.net.action_n, self.new_dist_info_vars)
-        self.ratio_n = -self.distribution.likelihood_ratio_sym(self.net.action_n, self.new_dist_info_vars,
-                                                               self.old_dist_info_vars) / self.batch_size_float
+        self.new_likelihood_sym = self.distribution.log_likelihood_sym(self.net.action_n, self.new_dist_info_vars)
+        self.old_likelihood = self.distribution.log_likelihood_sym(self.net.action_n, self.old_dist_info_vars)
+
+        self.ratio_n = -tf.exp(self.new_likelihood_sym - self.old_likelihood) / self.batch_size_float
 
         surr = tf.reduce_sum(self.ratio_n * self.net.advant)  # Surrogate loss
 
@@ -96,19 +99,20 @@ class TrpoModel(ModelWithCritic):
         self.fvp = flatgrad(tf.reduce_sum(self.gvp), var_list)  # get kl''*p
         self.summary_writer = tf.train.SummaryWriter('./summary', self.session.graph)
         self.session.run(tf.initialize_all_variables())
+        self.debug = True
 
     def predict(self, observation):
         obs = np.expand_dims(observation, 0)
-        action_dist_means_n, action_dist_stds_n = \
-            self.session.run([self.net.action_dist_means_n, self.action_dist_stds_n],
+        action_dist_means_n, action_dist_log_stds_n, action_std_n = \
+            self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
                              {self.net.obs: obs})
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
-        action = rnd * action_dist_stds_n[0] + action_dist_means_n[0]
+        action = rnd * action_std_n[0] + action_dist_means_n[0]
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
 
-        return action, dict(mean=action_dist_means_n[0], log_std=action_dist_stds_n[0])
+        return action, dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0])
 
     def compute_critic(self, states):
         return self.critic.predict(states)
@@ -137,7 +141,15 @@ class TrpoModel(ModelWithCritic):
             # print(self.session.run(tf.sqrt(tf.reduce_sum(self.ratio_n, feed)**2)),feed)
             return self.session.run(self.fvp, feed) + self.cg_damping * p
 
-        ratio_n, g = self.session.run([self.ratio_n, self.pg], feed_dict=feed)
+        g = self.session.run(
+            self.pg,
+            feed_dict=feed)
+        if self.debug:
+            logging.debug("logstd: {}".format(np.mean(np.mean(action_dist_logstds_n))))
+            logging.debug("act_mean: {}".format(np.linalg.norm(action_dist_logstds_n)))
+        # g = self.session.run(
+        #     self.pg,
+        #     feed_dict=feed)
         stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters)
         shs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
         # if shs<0, then the nan error would appear
@@ -212,7 +224,7 @@ class NetworkContinous(object):
             # TODO: STD should be trainable, learn this later
             # TODO: understand this machine code, could be potentially prone to bugs
             self.action_dist_logstd_param = tf.Variable(
-                initial_value=(0 * np.random.randn(1, *action_shape)).astype(np.float32),
+                initial_value=(-0.0 + 0.00 * np.random.randn(1, *action_shape)).astype(np.float32),
                 trainable=True, name="%spolicy_logstd" % scope)
             self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
                                                  tf.pack((tf.shape(self.action_dist_means_n)[0], 1)))

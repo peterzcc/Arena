@@ -3,7 +3,7 @@ from tensorflow.contrib.opt.python.training.external_optimizer import ScipyOptim
 from tensorflow.contrib.layers import initializers as tf_init
 import numpy as np
 import prettytensor as pt
-
+import logging
 
 # TODO: l_bfgs optimizer
 class Baseline(object):
@@ -42,10 +42,11 @@ class Baseline(object):
             else:
                 self.train = tf.train.AdamOptimizer().minimize(self.final_loss)
         self.session.run(tf.initialize_all_variables())
+        self.debug_mode = True
 
     def _features(self, path):
         obs = path["observations"]
-        l = (path["observations"].shape[0])
+        # l = (path["observations"].shape[0])
         # al = np.arange(l).reshape(-1, 1) / 10.0
         ret = np.concatenate((obs, path["times"][:, None],), axis=1)
         return ret
@@ -55,16 +56,29 @@ class Baseline(object):
         returns = paths["values"]
 
         if self.use_lbfgs_b:
-            obj = returns * self.mix_frac + self.predict(paths)
+            if self.mix_frac != 1:
+                obj = returns * self.mix_frac + self.predict(paths) * (1 - self.mix_frac)
+            else:
+                obj = returns
+            feed = {self.x: featmat, self.y: obj}
+            if self.debug_mode:
+                mse, l2 = self.session.run([self.mse, self.l2], feed_dict=feed)
+                logging.debug("vf_before: mse={}\tl2={}\n".format(mse, l2))
+
             self.optimizer.minimize(session=self.session,
-                                    feed_dict={self.x: featmat, self.y: obj})
+                                    feed_dict=feed)
+            if self.debug_mode:
+                mse, l2 = self.session.run([self.mse, self.l2], feed_dict=feed)
+                logging.debug("vf_after: mse={}\tl2={}\n".format(mse, l2))
+
         else:
             for _ in range(self.max_iter):  # TODO: verify this
                 loss, _ = self.session.run([self.mse, self.train], {self.x: featmat, self.y: returns})
 
     def predict(self, path):
         if self.net is None:
-            return np.zeros((path["values"].shape[0]))
+            raise ValueError("value net is None")
+            # return np.zeros((path["values"].shape[0]))
         else:
             ret = self.session.run(self.net, {self.x: self._features(path)})
             return np.reshape(ret, (ret.shape[0],))

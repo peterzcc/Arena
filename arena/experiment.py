@@ -209,11 +209,12 @@ class Experiment(object):
             try:
                 rx_msg = self.episode_q.get(block=True, timeout=15 * 60)
             except queue.Empty:
-                logging.warning("Not received message for too long. Maybe there is something wrong")
-                for (pid, p_actuator) in enumerate(self.actuator_processes):
-                    logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
-                for (pid, agent_thread) in enumerate(self.agent_threads):
-                    logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
+                pass
+                # logging.warning("Not received message for too long. Maybe there is something wrong")
+                # for (pid, p_actuator) in enumerate(self.actuator_processes):
+                #     logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
+                # for (pid, agent_thread) in enumerate(self.agent_threads):
+                #     logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
             try:
                 pid = rx_msg["id"]
                 episode_count = rx_msg["episode_count"]
@@ -248,6 +249,7 @@ class Experiment(object):
                     start_times = np.repeat(time(), num_actor)
 
                 epoch_num += 1
+                logging.debug("Epoch {} Finished.\n".format(epoch_num))
                 if self.render_option == "once_per_epoch":
                     self.actuator_channels[0].put(RenderOption.one_episode)
 
