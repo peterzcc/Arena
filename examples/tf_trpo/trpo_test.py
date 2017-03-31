@@ -17,7 +17,7 @@ root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 import multiprocessing as mp
 
-
+BATH_SIZE = 15000
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
@@ -30,9 +30,9 @@ def main():
                         help='Running Context.')
     parser.add_argument('--nactor', required=False, type=int, default=1,
                         help='Number of parallel actor-learners')
-    parser.add_argument('--batch-size', required=False, type=int, default=50000,
+    parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=50000 * 500,
+    parser.add_argument('--num-steps', required=False, type=int, default=BATH_SIZE * 500,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
@@ -42,15 +42,15 @@ def main():
         import yappi
 
     # Each trajectory will have at most 1000 time steps
-    T = 1000
+    T = 50
     num_actors = args.nactor
-    steps_per_epoch = 25000
+    steps_per_epoch = args.batch_size
     num_epoch = int(args.num_steps / steps_per_epoch)
     lr_schedule_interval = 100
     num_updates = int(args.num_steps / (args.batch_size * 100))
     final_factor = 0.01
     lr_factor = final_factor ** (1 / num_updates)
-
+    test_length = 0
     # if args.gpu < 0:
     #     ctx = mx.cpu()
     # else:
@@ -58,12 +58,11 @@ def main():
 
     def f_create_env():
         # env = GatherEnv()
-        env = gym.make('Ant-v1')
+        env = gym.make('Reacher-v1')
         # env = MazeEnv()
-        # env = gym.make('InvertedPendulum-v1')
-        print("Obs_space: " + str(env.observation_space))
-        print("Act_space: " + str(env.action_space))
-        return GymWrapper(env, max_null_op=0, max_episode_length=T)
+        # env = gym.make('Ant-v1')
+
+        return GymWrapper(env, max_null_op=0, max_episode_length=T, action_reduce=False)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
@@ -81,7 +80,6 @@ def main():
     experiment = Experiment(f_create_env, f_create_agent,
                             f_create_shared_params, single_process_mode=True, render_option="once_per_epoch")
 
-    test_length = 0
     if should_profile:
         yappi.start(builtins=True, profile_threads=True)
 

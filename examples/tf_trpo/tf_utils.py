@@ -66,9 +66,9 @@ class GetFlat(object):
 
 
 class EzFlat(object):
-    def __init__(self, var_list):
-        self.gf = GetFlat(var_list)
-        self.sff = SetFromFlat(var_list)
+    def __init__(self, var_list, session=None):
+        self.gf = GetFlat(var_list, session=session)
+        self.sff = SetFromFlat(var_list, session=session)
 
     def set_params_flat(self, theta):
         self.sff(theta)
@@ -78,15 +78,16 @@ class EzFlat(object):
 
 
 class LbfgsOptimizer(EzFlat):
-    def __init__(self, loss, params, symb_args, maxiter=25):
-        EzFlat.__init__(self, params)
+    def __init__(self, loss, params, maxiter=25, session=None):
+        EzFlat.__init__(self, params, session=session)
         self.grad_vector = flatgrad(loss, params)
-        self.loss_and_grad = tf.group(*[loss, self.grad_vector])
+        self.loss_and_grad = [loss, self.grad_vector]
         # self.f_lossgrad = theano.function(list(symb_args), [loss, flatgrad(loss, params)], **FNOPTS)
         # self.f_losses = theano.function(symb_args, self.all_losses.values(), **FNOPTS)
         self.maxiter = maxiter
+        self.session = session
 
-    def update(self, session=tf.get_default_session(), **feed):
+    def update(self, session=tf.get_default_session(), feed=None):
         """
 
         Parameters
@@ -113,9 +114,9 @@ class LbfgsOptimizer(EzFlat):
         self.set_params_flat(theta)
         # losses_after = self.f_losses(*args)
         info = OrderedDict()
-        for (name, lossbefore, lossafter) in zip(self.all_losses.keys(), losses_before, losses_after):
-            info[name + "_before"] = lossbefore
-            info[name + "_after"] = lossafter
+        # for (name, lossbefore, lossafter) in zip(self.all_losses.keys(), losses_before, losses_after):
+        #     info[name + "_before"] = lossbefore
+        #     info[name + "_after"] = lossafter
         return info
 
 
@@ -158,17 +159,18 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
     fval = f(x)
     logging.debug("fval before: {}".format(fval))
     for (_n_backtracks, stepfrac) in enumerate(.5 ** np.arange(max_backtracks)):  # 0.5^n
-        xnew = x + stepfrac * fullstep
+        diff = stepfrac * fullstep
+        xnew = x + diff
         newfval = f(xnew)
         actual_improve = fval - newfval
         expected_improve = expected_improve_rate * stepfrac
         ratio = actual_improve / expected_improve
-        logging.debug("a:{}\te:{}\tr:{}".format(actual_improve, expected_improve, ratio))
+        logging.debug("\nk:{}\ta:{}\te:{}\tr:{}".format(stepfrac, actual_improve, expected_improve, ratio))
         if ratio > accept_ratio and actual_improve > 0:
             logging.debug("fval after: {}".format(newfval))
-            return xnew
+            return xnew, diff
     logging.debug("Failed to find improvement")
-    return x
+    return x, 0
 
 
 class ZFilter(object):

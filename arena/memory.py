@@ -52,12 +52,12 @@ class AcMemory(object):
             for k, shape in info_shape.items():
                 self.info_buffer[k] = np.empty(shape=(max_size,) + shape, dtype=np.float32)
 
-        if not use_gae:
-            self.add_path = self.add_td_path
+        if use_gae:
+            self.add_path = self.add_gae_path
             self.extract_all = self.extract_all_without_normalize
         else:
-            self.add_path = self.add_gae_path
-            self.extract_all = self.extract_all_with_normalize
+            self.add_path = self.add_td_path
+            self.extract_all = self.extract_all_without_normalize
 
     def append_state_without_critic(self, observation, action, info=dict(), critic=None):
         self.Tmax += 1
@@ -99,11 +99,14 @@ class AcMemory(object):
         self.q_buffer[self.t0:self.Tmax] = \
             discount(rewards, self.gamma)
         critics = self.critic_buffer[self.t0:self.Tmax]
+
         end_value = 0.0 if done else critics[-1]
-        deltas = np.empty_like(rewards)
-        # print("eps d:", deltas.size,self.t0,self.Tsum)
-        deltas[:-1] = rewards[:-1] + self.gamma * critics[1:] - end_value
-        deltas[-1] = rewards[-1] + self.gamma * end_value - end_value
+        b1 = np.append(critics, end_value)
+        deltas = rewards + self.gamma * b1[1:] - b1[:-1]
+        # deltas = np.zero_like(rewards)
+        # # print("eps d:", deltas.size,self.t0,self.Tsum)
+        # deltas[:-1] = rewards[:-1] + self.gamma * critics[1:] - critics[:-1]
+        # deltas[-1] = rewards[-1] + self.gamma * end_value - critics[-1]
         self.adv_buffer[self.t0:self.Tmax] = \
             discount(deltas, self.gamma * self.lam)
 

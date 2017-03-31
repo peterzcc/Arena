@@ -57,7 +57,7 @@ class BatchUpdateAgent(Agent):
                                max_size=batch_size + max_l,
                                gamma=self.discount,
                                lam=lam,
-                               use_gae=True,
+                               use_gae=False,
                                get_critic_online=False,
                                info_shape=self.model.info_shape)
 
@@ -72,14 +72,14 @@ class BatchUpdateAgent(Agent):
         # TODO: Implement this predict
         observation = self.obsfilter(observation)
         action, agent_info = self.model.predict(observation)
-        final_action = \
-            np.clip(action, self.action_space.low, self.action_space.high).flatten()
+        # final_action = \
+        #     np.clip(action, self.action_space.low, self.action_space.high).flatten()
 
         self.memory.append_state(observation, action, info=agent_info)
 
         # logging.debug("tx a: {}".format(action))
         # print("action: "+str(final_action))
-        return final_action
+        return action
 
     def receive_feedback(self, reward, done):
         # logging.debug("rx r: {} \td:{}".format(reward, done))

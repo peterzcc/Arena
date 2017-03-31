@@ -4,7 +4,7 @@ from tensorflow.contrib.layers import initializers as tf_init
 import numpy as np
 import prettytensor as pt
 import logging
-
+from tf_utils import LbfgsOptimizer
 # TODO: l_bfgs optimizer
 class Baseline(object):
     coeffs = None
@@ -36,9 +36,11 @@ class Baseline(object):
             self.l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
             self.final_loss = self.mse + self.l2 * self.l2_k
             if self.use_lbfgs_b:
-                self.optimizer = ScipyOptimizerInterface(loss=self.final_loss, method="L-BFGS-B",
-                                                         options={'maxiter': self.max_iter}
-                                                         )
+                self.opt = LbfgsOptimizer(
+                    self.final_loss, params=self.var_list, maxiter=self.max_iter, session=self.session)
+                # self.optimizer = ScipyOptimizerInterface(loss=self.final_loss, method="L-BFGS-B",
+                #                                          options={'maxiter': self.max_iter}
+                #                                          )
             else:
                 self.train = tf.train.AdamOptimizer().minimize(self.final_loss)
         self.session.run(tf.initialize_all_variables())
@@ -65,8 +67,9 @@ class Baseline(object):
                 mse, l2 = self.session.run([self.mse, self.l2], feed_dict=feed)
                 logging.debug("vf_before: mse={}\tl2={}\n".format(mse, l2))
 
-            self.optimizer.minimize(session=self.session,
-                                    feed_dict=feed)
+            # self.optimizer.minimize(session=self.session,
+            #                         feed_dict=feed)
+            self.opt.update(session=self.session, feed=feed)
             if self.debug_mode:
                 mse, l2 = self.session.run([self.mse, self.l2], feed_dict=feed)
                 logging.debug("vf_after: mse={}\tl2={}\n".format(mse, l2))

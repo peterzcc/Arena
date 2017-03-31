@@ -9,10 +9,14 @@ class GymWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=False, new_img_size=None,
                  max_null_op=7, action_mapping=None, frame_skip=1,
                  max_recent_two_frames=False,
-                 max_episode_length=100000):
+                 max_episode_length=100000, action_reduce=False):
         self.env = env
+        self.action_reduce = action_reduce
         if action_mapping is None:
             self.action_space = env.action_space
+            if self.action_reduce:
+                self.action_space.low = np.array((self.action_space.low[0],))
+                self.action_space.high = np.array((self.action_space.high[0],))
             self.action_map = None
         else:
             assert isinstance(env.action_space, Discrete)
@@ -54,9 +58,12 @@ class GymWrapper(object):
 
         # Episode information
         self.episode_steps = 0
+        print("Obs_space: " + str(env.observation_space))
+        print("Act_space.low: " + str(env.action_space.low))
+        print("Act_space.high: " + str(env.action_space.high))
 
-    def render(self):
-        self.env.render()
+    def render(self, mode='human', close=False):
+        return self.env.render(mode=mode, close=close)
 
     def preprocess_observation(self, obs):
         final = obs
@@ -68,6 +75,7 @@ class GymWrapper(object):
         return final
 
     def step(self, a):
+        a = np.append(a, (0,))
         # logging.debug("rx a:{}".format(a))
         final_done = False
         final_reward = 0

@@ -24,7 +24,7 @@ class TrpoModel(ModelWithCritic):
                  min_std=1e-6,
                  subsample_factor=0.8,
                  cg_damping=0.1,
-                 cg_iters=10,
+                 cg_iters=20,
                  max_kl=0.01,
                  session=None):
         ModelWithCritic.__init__(self, observation_space, action_space)
@@ -41,7 +41,7 @@ class TrpoModel(ModelWithCritic):
         if session is None:
             gpu_options = tf.GPUOptions(allow_growth=True)
             cpu_config = tf.ConfigProto(
-                device_count={'GPU': 0}, log_device_placement=True
+                device_count={'GPU': 0}, log_device_placement=False
             )
             # self.session = tf.Session(config=tf.ConfigProto(  # gpu_options=gpu_options,
             #     log_device_placement=False, ))
@@ -49,11 +49,12 @@ class TrpoModel(ModelWithCritic):
         else:
             self.session = session
         self.critic = Baseline(session=self.session, shape=self.ob_space.shape)
-        self.distribution = DiagonalGaussian(dim=self.act_space.low.ndim)
+        self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
         self.info_shape = dict(mean=self.act_space.shape,
-                               log_std=self.act_space.shape)
+                               log_std=self.act_space.shape,
+                               clips=())
 
         self.net = NetworkContinous(scope="network_continous",
                                     obs_shape=self.ob_space.shape,
@@ -72,9 +73,9 @@ class TrpoModel(ModelWithCritic):
         self.ratio_n = -tf.exp(self.new_likelihood_sym - self.old_likelihood) / self.batch_size_float
 
         surr = tf.reduce_sum(self.ratio_n * self.net.advant)  # Surrogate loss
-
         kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
-        ent = self.distribution.entropy(self.old_dist_info_vars)
+        ents = self.distribution.entropy(self.old_dist_info_vars)
+        ent = tf.reduce_sum(ents) / self.batch_size_float
         self.losses = [surr, kl, ent]
         var_list = self.net.var_list
         self.get_flat_params = GetFlat(var_list, session=self.session)  # get theta from var_list
@@ -108,11 +109,18 @@ class TrpoModel(ModelWithCritic):
                              {self.net.obs: obs})
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
-        action = rnd * action_std_n[0] + action_dist_means_n[0]
+        output = rnd * action_std_n[0] + action_dist_means_n[0]
+        action = output  # np.clip(output,self.act_space.low,self.act_space.high).flatten()
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
-
-        return action, dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0])
+        if self.debug:
+            is_clipped = np.logical_or((action <= self.act_space.low), (action >= self.act_space.high))
+            num_clips = np.count_nonzero(is_clipped)
+            agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0], clips=num_clips)
+        else:
+            agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0])
+        # logging.debug("tx a:{},\n".format(action))
+        return action, agent_info
 
     def compute_critic(self, states):
         return self.critic.predict(states)
@@ -145,34 +153,45 @@ class TrpoModel(ModelWithCritic):
             self.pg,
             feed_dict=feed)
         if self.debug:
-            logging.debug("logstd: {}".format(np.mean(np.mean(action_dist_logstds_n))))
-            logging.debug("act_mean: {}".format(np.linalg.norm(action_dist_logstds_n)))
-        # g = self.session.run(
-        #     self.pg,
-        #     feed_dict=feed)
+            logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
+            logging.debug("act_mean mean: {}".format(np.mean(action_dist_means_n, axis=0)))
+            logging.debug("act_mean std: {}".format(np.std(action_dist_means_n, axis=0)))
+            logging.debug("act_clips: {}".format(np.sum(agent_infos["clips"])))
+
         stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters)
-        shs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
+        sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
         # if shs<0, then the nan error would appear
-        lm = np.sqrt(shs / self.max_kl)
+        lm = np.sqrt(sAs / self.max_kl)
         fullstep = stepdir / lm
         neggdotstepdir = -g.dot(stepdir)
-
+        logging.debug("\nlagrange multiplier:{}\tgnorm:{}\t".format(lm, np.linalg.norm(g)))
         def loss(th):
             self.set_params_with_flat_data(th)
             return self.session.run(self.losses, feed_dict=feed)[0]
 
-        theta = linesearch(loss, thprev, fullstep, neggdotstepdir / lm)
-
-        return None, theta
+        surr_o, kl_o, ent_o = self.session.run(self.losses, feed_dict=feed)
+        if self.debug:
+            logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+            # logging.debug("\nold theta: {}\n".format(np.linalg.norm(thprev)))
+        logging.debug("\nfullstep: {}\n".format(np.linalg.norm(fullstep)))
+        theta, d_theta = linesearch(loss, thprev, fullstep, neggdotstepdir / lm)
+        self.set_params_with_flat_data(theta)
+        surr_new, kl_new, ent_new = self.session.run(self.losses, feed_dict=feed)
+        if self.debug:
+            logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
+            # logging.debug("\nnew theta: {}\nd_theta: {}\n".format(np.linalg.norm(theta), np.linalg.norm(d_theta)))
+        return None, None
 
     def update(self, diff, new=None):
-        self.set_params_with_flat_data(new)
+        pass
+        #self.set_params_with_flat_data(new)
 
 
 # TODO: remove this class
 class NetworkContinous(object):
     def __init__(self, scope, obs_shape, action_shape):
         with tf.variable_scope("%s_shared" % scope):
+
             self.obs = obs = tf.placeholder(
                 dtype, shape=(None,) + obs_shape, name="%s_obs" % scope)
             self.action_n = tf.placeholder(dtype, shape=(None,) + action_shape, name="%s_action" % scope)
@@ -224,7 +243,7 @@ class NetworkContinous(object):
             # TODO: STD should be trainable, learn this later
             # TODO: understand this machine code, could be potentially prone to bugs
             self.action_dist_logstd_param = tf.Variable(
-                initial_value=(-0.0 + 0.00 * np.random.randn(1, *action_shape)).astype(np.float32),
+                initial_value=(np.log(1) + 0.01 * np.random.randn(1, *action_shape)).astype(np.float32),
                 trainable=True, name="%spolicy_logstd" % scope)
             self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
                                                  tf.pack((tf.shape(self.action_dist_means_n)[0], 1)))
