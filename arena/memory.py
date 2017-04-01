@@ -54,10 +54,10 @@ class AcMemory(object):
 
         if use_gae:
             self.add_path = self.add_gae_path
-            self.extract_all = self.extract_all_without_normalize
+            self.extract_all = self.extract_all_with_normalize
         else:
             self.add_path = self.add_td_path
-            self.extract_all = self.extract_all_without_normalize
+            self.extract_all = self.extract_all_with_normalize
 
     def append_state_without_critic(self, observation, action, info=dict(), critic=None):
         self.Tmax += 1

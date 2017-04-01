@@ -1,10 +1,40 @@
 from arena.memory import AcMemory
 from arena.agents import Agent
-from trpo_model import TrpoModel
+# from trpo_model import TrpoModel
 import numpy as np
 import logging
-from tf_utils import ZFilter, IDENTITY
+from trpo_theano_model import TrpoTheanoModel
 
+
+class ZFilter(object):
+    """
+    y = (x-mean)/std
+    using running estimates of mean,std
+    """
+
+    def __init__(self, shape, demean=True, destd=True, clip=10.0):
+        self.demean = demean
+        self.destd = destd
+        self.clip = clip
+
+        self.rs = RunningStat(shape)
+
+    def __call__(self, x, update=True):
+        if update: self.rs.push(x)
+        if self.demean:
+            x = x - self.rs.mean
+        if self.destd:
+            x = x / (self.rs.std + 1e-8)
+        if self.clip:
+            x = np.clip(x, -self.clip, self.clip)
+        return x
+
+    def output_shape(self, input_space):
+        return input_space.shape
+
+
+def IDENTITY(x):
+    return x
 class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx, acts_tx,
@@ -49,7 +79,8 @@ class BatchUpdateAgent(Agent):
         max_l = 10000
 
         if model is None:
-            self.model = TrpoModel(self.observation_space, self.action_space)
+            self.model = TrpoTheanoModel(self.observation_space, self.action_space)
+            # self.model = TrpoModel(self.observation_space, self.action_space)
         else:
             self.model = model
         self.memory = AcMemory(observation_shape=self.observation_space.shape,

@@ -39,13 +39,16 @@ class TrpoModel(ModelWithCritic):
         self.max_kl = max_kl
 
         if session is None:
-            gpu_options = tf.GPUOptions(allow_growth=True)
+
             cpu_config = tf.ConfigProto(
                 device_count={'GPU': 0}, log_device_placement=False
             )
-            # self.session = tf.Session(config=tf.ConfigProto(  # gpu_options=gpu_options,
-            #     log_device_placement=False, ))
             self.session = tf.Session(config=cpu_config)
+
+            # gpu_options = tf.GPUOptions(allow_growth=True)
+            # self.session = tf.Session(config=tf.ConfigProto( gpu_options=gpu_options,
+            #     log_device_placement=True, ))
+
         else:
             self.session = session
         self.critic = Baseline(session=self.session, shape=self.ob_space.shape)
@@ -103,7 +106,10 @@ class TrpoModel(ModelWithCritic):
         self.debug = True
 
     def predict(self, observation):
-        obs = np.expand_dims(observation, 0)
+        if len(observation.shape) == 1:
+            obs = np.expand_dims(observation, 0)
+        else:
+            obs = observation
         action_dist_means_n, action_dist_log_stds_n, action_std_n = \
             self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
                              {self.net.obs: obs})
