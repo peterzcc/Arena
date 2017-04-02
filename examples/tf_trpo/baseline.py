@@ -5,18 +5,21 @@ import numpy as np
 import prettytensor as pt
 import logging
 from tf_utils import LbfgsOptimizer
+
+concat = np.concatenate
 # TODO: l_bfgs optimizer
 class Baseline(object):
     coeffs = None
 
     def __init__(self, session=None, scope="value_f",
                  shape=None, hidden_sizes=(64, 64), activation=tf.nn.tanh,
-                 max_iter=25):
+                 max_iter=25, timestep_limit=1000):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = True
         self.l2_k = 1e-3
         self.mix_frac = 1
+        self.timestep_limit = 1000
 
         with tf.variable_scope(scope):
             # add  timestep
@@ -46,12 +49,16 @@ class Baseline(object):
         self.session.run(tf.initialize_all_variables())
         self.debug_mode = True
 
-    def _features(self, path):
-        obs = path["observations"]
-        # l = (path["observations"].shape[0])
-        # al = np.arange(l).reshape(-1, 1) / 10.0
-        ret = np.concatenate((obs, path["times"][:, None],), axis=1)
-        return ret
+    # def _features(self, path):
+    #     obs = path["observations"]
+    #     # l = (path["observations"].shape[0])
+    #     # al = np.arange(l).reshape(-1, 1) / 10.0
+    #     ret = np.concatenate((obs, path["times"][:, None],), axis=1)
+    #     return ret
+
+    def preproc(self, ob_no):
+        return concat(
+            [ob_no, np.arange(len(ob_no)).reshape(-1, 1) / float(self.timestep_limit)], axis=1)
 
     def fit(self, paths):
         featmat = self._features(paths)
@@ -83,5 +90,6 @@ class Baseline(object):
             raise ValueError("value net is None")
             # return np.zeros((path["values"].shape[0]))
         else:
-            ret = self.session.run(self.net, {self.x: self._features(path)})
+            # ret = self.session.run(self.net, {self.x: self._features(path)})
+            ret = self.session.run(self.net, {self.x: self.preproc(path["observation"])})
             return np.reshape(ret, (ret.shape[0],))

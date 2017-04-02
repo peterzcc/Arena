@@ -495,7 +495,8 @@ class NnRegression(EzPickle):
         self.opt = LbfgsOptimizer(loss, var_list, symb_args, maxiter=maxiter, extra_losses={"mse": mse, "l2": l2})
 
     def fit(self, x_nx, ytarg_ny):
-        ytarg_ny = np.expand_dims(ytarg_ny, axis=1)
+        if len(ytarg_ny.shape) == 1:
+            ytarg_ny = np.expand_dims(ytarg_ny, axis=1)
         nY = ytarg_ny.shape[1]
         ypredold_ny = self.predict(x_nx)
         final_traget = ytarg_ny * self.mixfrac + ypredold_ny * (1 - self.mixfrac)
@@ -518,13 +519,12 @@ class NnVf(object):
         self.timestep_limit = timestep_limit
 
     def predict(self, path):
-        ob_no = self.preproc(path["observations"])
+        ob_no = self.preproc(path["observation"])
         return self.reg.predict(ob_no)[:, 0]
 
     def fit(self, paths):
-        ob_no = self.preproc(
-            paths["observations"])  # concat([self.preproc(path["observation"]) for path in paths], axis=0)
-        vtarg_n1 = paths["values"]  # concat([path["return"] for path in paths]).reshape(-1,1)
+        ob_no = concat([self.preproc(path["observation"]) for path in paths], axis=0)
+        vtarg_n1 = concat([path["return"] for path in paths]).reshape(-1, 1)
         return self.reg.fit(ob_no, vtarg_n1)
 
     def preproc(self, ob_no):

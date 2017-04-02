@@ -4,37 +4,8 @@ from arena.agents import Agent
 import numpy as np
 import logging
 from trpo_theano_model import TrpoTheanoModel
+from dict_memory import DictMemory
 
-
-class ZFilter(object):
-    """
-    y = (x-mean)/std
-    using running estimates of mean,std
-    """
-
-    def __init__(self, shape, demean=True, destd=True, clip=10.0):
-        self.demean = demean
-        self.destd = destd
-        self.clip = clip
-
-        self.rs = RunningStat(shape)
-
-    def __call__(self, x, update=True):
-        if update: self.rs.push(x)
-        if self.demean:
-            x = x - self.rs.mean
-        if self.destd:
-            x = x / (self.rs.std + 1e-8)
-        if self.clip:
-            x = np.clip(x, -self.clip, self.clip)
-        return x
-
-    def output_shape(self, input_space):
-        return input_space.shape
-
-
-def IDENTITY(x):
-    return x
 class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx, acts_tx,
@@ -83,14 +54,15 @@ class BatchUpdateAgent(Agent):
             # self.model = TrpoModel(self.observation_space, self.action_space)
         else:
             self.model = model
-        self.memory = AcMemory(observation_shape=self.observation_space.shape,
-                               action_shape=self.action_space.shape,
-                               max_size=batch_size + max_l,
-                               gamma=self.discount,
-                               lam=lam,
-                               use_gae=False,
-                               get_critic_online=False,
-                               info_shape=self.model.info_shape)
+        # self.memory = AcMemory(observation_shape=self.observation_space.shape,
+        #                        action_shape=self.action_space.shape,
+        #                        max_size=batch_size + max_l,
+        #                        gamma=self.discount,
+        #                        lam=lam,
+        #                        use_gae=False,
+        #                        get_critic_online=False,
+        #                        info_shape=self.model.info_shape)
+        self.memory = DictMemory(gamma=self.discount, lam=lam, use_gae=True, normalize=True)
 
         self.num_episodes = 0
 
@@ -112,7 +84,7 @@ class BatchUpdateAgent(Agent):
         # print("action: "+str(final_action))
         return action
 
-    def receive_feedback(self, reward, done):
+    def receive_feedback(self, reward, done, info={}):
         # logging.debug("rx r: {} \td:{}".format(reward, done))
         self.epoch_reward += reward
         reward = self.rewfilter(reward)
@@ -123,7 +95,12 @@ class BatchUpdateAgent(Agent):
         if done:
             self.counter -= self.episode_step
             self.memory.fill_episode_critic(self.model.compute_critic)
-            self.memory.add_path(done)
+            try:
+                terminated = np.asscalar(info["terminated"])
+                # logging.debug("terminated {} ".format(terminated))
+            except KeyError:
+                terminated = done
+            self.memory.add_path(terminated)
             self.num_episodes += 1
             self.episode_step = 0
             if self.counter <= 0:
@@ -147,3 +124,72 @@ class BatchUpdateAgent(Agent):
         self.model.update(diff=diff, new=new)
         # with self.param_lock: TODO: async
         #     self.global_model.update(diff)
+
+
+class RunningStat(object):
+    def __init__(self, shape):
+        self._n = 0
+        self._M = np.zeros(shape)
+        self._S = np.zeros(shape)
+
+    def push(self, x):
+        x = np.asarray(x)
+        assert x.shape == self._M.shape
+        self._n += 1
+        if self._n == 1:
+            self._M[...] = x
+        else:
+            oldM = self._M.copy()
+            self._M[...] = oldM + (x - oldM) / self._n
+            self._S[...] = self._S + (x - oldM) * (x - self._M)
+
+    @property
+    def n(self):
+        return self._n
+
+    @property
+    def mean(self):
+        return self._M
+
+    @property
+    def var(self):
+        return self._S / (self._n - 1) if self._n > 1 else np.square(self._M)
+
+    @property
+    def std(self):
+        return np.sqrt(self.var)
+
+    @property
+    def shape(self):
+        return self._M.shape
+
+
+class ZFilter(object):
+    """
+    y = (x-mean)/std
+    using running estimates of mean,std
+    """
+
+    def __init__(self, shape, demean=True, destd=True, clip=10.0):
+        self.demean = demean
+        self.destd = destd
+        self.clip = clip
+
+        self.rs = RunningStat(shape)
+
+    def __call__(self, x, update=True):
+        if update: self.rs.push(x)
+        if self.demean:
+            x = x - self.rs.mean
+        if self.destd:
+            x = x / (self.rs.std + 1e-8)
+        if self.clip:
+            x = np.clip(x, -self.clip, self.clip)
+        return x
+
+    def output_shape(self, input_space):
+        return input_space.shape
+
+
+def IDENTITY(x):
+    return x

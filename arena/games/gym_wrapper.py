@@ -55,6 +55,7 @@ class GymWrapper(object):
         self.frame_skip = frame_skip
         self.max_recent_two_frames = max_recent_two_frames
         self.max_episode_length = max_episode_length
+        self.info_sample = {"terminated": False}
 
         # Episode information
         self.episode_steps = 0
@@ -80,6 +81,8 @@ class GymWrapper(object):
         final_done = False
         final_reward = 0
         observations = []
+        info_terminated = {"terminated": False}
+
 
         for t_skip in range(self.frame_skip):
             if self.action_map is not None:
@@ -92,6 +95,7 @@ class GymWrapper(object):
             final_done = final_done or done
             final_reward += reward
             if done:
+                info_terminated.update({"terminated": True})
                 break
         if self.max_recent_two_frames and len(observations) >= 2:
             final_observation = np.maximum(
@@ -102,6 +106,7 @@ class GymWrapper(object):
             final_observation = self.preprocess_observation(observations[-1])
 
         self.episode_steps += 1
+
         if self.episode_steps >= self.max_episode_length:
             final_done = True
 
@@ -112,7 +117,7 @@ class GymWrapper(object):
         # else:
         #     logging.debug("a:{},r:{}".format(a, reward))
 
-        return final_observation, final_reward, final_done, info
+        return final_observation, final_reward, final_done, info_terminated
 
     def reset(self):
         observation = self.env.reset()

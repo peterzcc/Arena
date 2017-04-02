@@ -46,10 +46,8 @@ def main():
     num_actors = args.nactor
     steps_per_epoch = args.batch_size
     num_epoch = int(args.num_steps / steps_per_epoch)
-    lr_schedule_interval = 100
     num_updates = int(args.num_steps / (args.batch_size * 100))
-    final_factor = 0.01
-    lr_factor = final_factor ** (1 / num_updates)
+    # final_factor = 0.01
     test_length = 0
     # if args.gpu < 0:
     #     ctx = mx.cpu()
@@ -58,9 +56,9 @@ def main():
 
     def f_create_env():
         # env = GatherEnv()
-        # env = gym.make('Reacher-v1')
-        # env = MazeEnv()
         env = gym.make('Ant-v1')
+        # env = MazeEnv()
+        # env = gym.make('Ant-v1')
 
         return GymWrapper(env, max_null_op=0, max_episode_length=T, action_reduce=False)
 
@@ -78,7 +76,7 @@ def main():
         return None
 
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=True, render_option="once_per_epoch")
+                            f_create_shared_params, single_process_mode=True, render_option="false")
 
     if should_profile:
         yappi.start(builtins=True, profile_threads=True)

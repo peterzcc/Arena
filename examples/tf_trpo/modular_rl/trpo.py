@@ -71,19 +71,19 @@ class TrpoUpdater(EzFlat, EzPickle):
         self.compute_losses = theano.function(args, losses, **FNOPTS)  # td loss, kl, ebtropy TODO: why kl?
         self.compute_fisher_vector_product = theano.function([flat_tangent] + args, fvp, **FNOPTS)
 
-    def __call__(self, sample_data):
+    def __call__(self, paths):
         cfg = self.cfg
-        # prob_np = concat([path["prob"] for path in paths]) #self._act_prob(ob[None])[0]
-        # ob_no = concat([path["observation"] for path in paths])
-        # action_na = concat([path["action"] for path in paths])
-        # advantage_n = concat([path["advantage"] for path in paths])
-        prob_np = sample_data["agent_infos"]["prob"]
-        ob_no = sample_data["observations"]
-        action_na = sample_data["actions"]
-        advantage_n = sample_data["advantages"]
+        prob_np = concat([path["prob"] for path in paths])  # self._act_prob(ob[None])[0]
+        ob_no = concat([path["observation"] for path in paths])
+        action_na = concat([path["action"] for path in paths])
+        advantage_n = concat([path["advantage"] for path in paths])
+        # prob_np = sample_data["agent_infos"]["prob"]
+        # ob_no = sample_data["observations"]
+        # action_na = sample_data["actions"]
+        # advantage_n = sample_data["advantages"]
 
         args = (ob_no, action_na, advantage_n, prob_np)
-        print("advantage_n: {}".format(np.linalg.norm(advantage_n)))
+        # print("advantage_n: {}".format(np.linalg.norm(advantage_n)))
 
         thprev = self.get_params_flat()
 
@@ -92,8 +92,8 @@ class TrpoUpdater(EzFlat, EzPickle):
 
         # ratio_n, N_output, dist,old_dist = self.compute_debug(*args)
         is_overflow = np.logical_or(action_na >= 1, action_na <= -1)
-        print("act overflows: {}".format(np.count_nonzero(np.ravel(is_overflow))))
-        print("act means:", np.mean(action_na, axis=0))
+        # print("act overflows: {}".format(np.count_nonzero(np.ravel(is_overflow))))
+        # print("act means:", np.mean(action_na, axis=0))
         g = self.compute_policy_gradient(*args)
         losses_before = self.compute_losses(*args)
         if np.allclose(g, 0):

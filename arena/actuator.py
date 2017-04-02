@@ -85,9 +85,9 @@ class Actuator(object):
                 self.env.step(current_action)
             if self.render_option != RenderOption.off:
                 self.env.render()
-
-            self.stats_tx[1].send({"reward": self.reward, "done": self.episode_ends})
-            # logging.debug("tx r: {} \td:{}".format(self.reward, self.episode_ends))
+            msg_tx = {"reward": self.reward, "done": self.episode_ends, **info_env}
+            self.stats_tx[1].send(msg_tx)
+            # logging.debug("tx {} ".format(msg_tx))
             self.episode_reward += self.reward
             self.episode_count += 1
 

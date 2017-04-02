@@ -46,6 +46,11 @@ class Experiment(object):
         env = f_create_env()
         self.observation_space = env.observation_space
         self.action_space = env.action_space
+        self.info_sample = {}
+        try:
+            self.info_sample = env.info_sample
+        finally:
+            pass
         self.f_create_env = f_create_env
         self.f_create_agent = f_create_agent
         self.shared_params = f_create_shared_params()
@@ -122,13 +127,16 @@ class Experiment(object):
 
         observation_sample = space_to_np(self.observation_space)
         action_sample = space_to_np(self.action_space)
+
         for process_id in range(num_actor):
             self.actuator_channels.append(mp.Queue())
             # tx_stats, rx_stats = mp.Pipe()
             # tx_acts, rx_acts = mp.Pipe()
             obs_pipe = FastPipe({"observation": observation_sample})
             action_pipe = FastPipe({"action": action_sample})
-            feedback_pipe = FastPipe({"reward": 0.0, "done": False})
+            feedback_sample = {"reward": 0.0, "done": False}
+            feedback_sample.update(self.info_sample)
+            feedback_pipe = FastPipe(feedback_sample)
             stats_pipe = [obs_pipe, feedback_pipe]
 
             this_actuator_process = \
