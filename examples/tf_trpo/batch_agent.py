@@ -1,9 +1,8 @@
 from arena.memory import AcMemory
 from arena.agents import Agent
-# from trpo_model import TrpoModel
+from trpo_model import TrpoModel
 import numpy as np
 import logging
-from trpo_theano_model import TrpoTheanoModel
 from dict_memory import DictMemory
 
 class BatchUpdateAgent(Agent):
@@ -50,8 +49,8 @@ class BatchUpdateAgent(Agent):
         max_l = 10000
 
         if model is None:
-            self.model = TrpoTheanoModel(self.observation_space, self.action_space)
-            # self.model = TrpoModel(self.observation_space, self.action_space)
+            # self.model = TrpoTheanoModel(self.observation_space, self.action_space)
+            self.model = TrpoModel(self.observation_space, self.action_space)
         else:
             self.model = model
         # self.memory = AcMemory(observation_shape=self.observation_space.shape,

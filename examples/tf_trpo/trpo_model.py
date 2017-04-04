@@ -1,16 +1,16 @@
 from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
-from tensorflow.contrib.layers import initializers as tf_init
-import prettytensor as pt
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg
 from baseline import Baseline
 from diagonal_gaussian import DiagonalGaussian
+from network_models import NetworkContinous
 import numpy as np
 import random
 import math
 import logging
 
+concat = np.concatenate
 seed = 1
 random.seed(seed)
 np.random.seed(seed)
@@ -131,22 +131,27 @@ class TrpoModel(ModelWithCritic):
     def compute_critic(self, states):
         return self.critic.predict(states)
 
-    def compute_update(self, sample_data):
-        agent_infos = sample_data["agent_infos"]
-        obs_n = sample_data["observations"]
-        action_n = sample_data["actions"]
-        advant_n = sample_data["advantages"]
+    def compute_update(self, paths):
+        # agent_infos = sample_data["agent_infos"]
+        # obs_n = sample_data["observations"]
+        # action_n = sample_data["actions"]
+        # advant_n = sample_data["advantages"]
+
+        # prob_np = concat([path["prob"] for path in paths])  # self._act_prob(ob[None])[0]
+        obs_n = concat([path["observation"] for path in paths])
+        action_n = concat([path["action"] for path in paths])
+        advant_n = concat([path["advantage"] for path in paths])
         logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
 
-        action_dist_means_n = agent_infos["mean"]
-        action_dist_logstds_n = agent_infos["log_std"]
+        action_dist_means_n = concat([path["mean"] for path in paths])
+        action_dist_logstds_n = concat([path["log_std"] for path in paths])
         feed = {self.net.obs: obs_n,
                 self.net.advant: advant_n,
                 self.net.old_dist_means_n: action_dist_means_n,
                 self.net.old_dist_logstds_n: action_dist_logstds_n,
                 self.net.action_n: action_n
                 }
-        self.critic.fit(sample_data)
+        self.critic.fit(paths)
         thprev = self.get_flat_params()  # get theta_old
 
         def fisher_vector_product(p):
@@ -162,7 +167,7 @@ class TrpoModel(ModelWithCritic):
             logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
             logging.debug("act_mean mean: {}".format(np.mean(action_dist_means_n, axis=0)))
             logging.debug("act_mean std: {}".format(np.std(action_dist_means_n, axis=0)))
-            logging.debug("act_clips: {}".format(np.sum(agent_infos["clips"])))
+            logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
 
         stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters)
         sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
@@ -193,68 +198,4 @@ class TrpoModel(ModelWithCritic):
         #self.set_params_with_flat_data(new)
 
 
-# TODO: remove this class
-class NetworkContinous(object):
-    def __init__(self, scope, obs_shape, action_shape):
-        with tf.variable_scope("%s_shared" % scope):
 
-            self.obs = obs = tf.placeholder(
-                dtype, shape=(None,) + obs_shape, name="%s_obs" % scope)
-            self.action_n = tf.placeholder(dtype, shape=(None,) + action_shape, name="%s_action" % scope)
-            self.advant = tf.placeholder(dtype, shape=[None], name="%s_advant" % scope)
-
-            self.old_dist_means_n = tf.placeholder(dtype, shape=(None,) + action_shape,
-                                                   name="%s_oldaction_dist_means" % scope)
-            self.old_dist_logstds_n = tf.placeholder(dtype, shape=(None,) + action_shape,
-                                                     name="%s_oldaction_dist_logstds" % scope)
-            # self.action_dist_means_n = (pt.wrap(self.obs).
-            #                             fully_connected(64, activation_fn=tf.nn.tanh,
-            #                                             init=tf.random_normal_initializer(-0.05, 0.05),
-            #                                             name="%s_fc1" % scope).
-            #                             fully_connected(64, activation_fn=tf.nn.tanh,
-            #                                             init=tf.random_normal_initializer(-0.05, 0.05),
-            #                                             name="%s_fc2" % scope).
-            #                             fully_connected(np.prod(action_shape),
-            #                                             init=tf.random_normal_initializer(-0.05, 0.05),
-            #                                             name="%s_fc3" % scope))
-            self.action_dist_means_n = (pt.wrap(self.obs).
-                                        fully_connected(64, activation_fn=tf.nn.tanh,
-                                                        init=tf_init.variance_scaling_initializer(factor=1.0,
-                                                                                                  mode='FAN_AVG',
-                                                                                                  uniform=True),
-                                                        name="%s_fc1" % scope).
-                                        fully_connected(64, activation_fn=tf.nn.tanh,
-                                                        init=tf_init.variance_scaling_initializer(factor=1.0,
-                                                                                                  mode='FAN_AVG',
-                                                                                                  uniform=True),
-                                                        name="%s_fc2" % scope).
-                                        fully_connected(np.prod(action_shape),
-                                                        init=tf_init.variance_scaling_initializer(factor=0.01,
-                                                                                                  mode='FAN_AVG',
-                                                                                                  uniform=True),
-                                                        name="%s_fc3" % scope))
-            # self.action_dist_means_n = (pt.wrap(self.obs).
-            #                             fully_connected(64, activation_fn=tf.nn.tanh,
-            #                                             init=tf.random_uniform_initializer(-0.0018, 0.0018),
-            #                                             name="%s_fc1" % scope).
-            #                             fully_connected(64, activation_fn=tf.nn.tanh,
-            #                                             init=tf.random_uniform_initializer(-0.00216, 0.00216),
-            #                                             name="%s_fc2" % scope).
-            #                             fully_connected(np.prod(action_shape),
-            #                                             init=tf.random_uniform_initializer(-0.00288, 0.00288),
-            #                                             name="%s_fc3" % scope))
-
-            # self.N = tf.shape(obs)[0]
-            # Nf = tf.cast(self.N, dtype)
-            # TODO: STD should be trainable, learn this later
-            # TODO: understand this machine code, could be potentially prone to bugs
-            self.action_dist_logstd_param = tf.Variable(
-                initial_value=(np.log(1) + 0.01 * np.random.randn(1, *action_shape)).astype(np.float32),
-                trainable=True, name="%spolicy_logstd" % scope)
-            self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
-                                                 tf.pack((tf.shape(self.action_dist_means_n)[0], 1)))
-            self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
-
-    def get_action_dist_means_n(self, session, obs):
-        return session.run(self.action_dist_means_n,
-                           {self.obs: obs})

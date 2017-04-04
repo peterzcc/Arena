@@ -15,7 +15,7 @@ class TestMpAgent(Agent):
     def act(self, observation):
         return self.action_space.sample()
 
-    def receive_feedback(self, reward, done):
+    def receive_feedback(self, reward, done, info={}):
         if self.is_learning.value:
             if self.lc_t % 4 == 0:
                 self.params += 1

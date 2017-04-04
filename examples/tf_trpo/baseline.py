@@ -19,7 +19,7 @@ class Baseline(object):
         self.use_lbfgs_b = True
         self.l2_k = 1e-3
         self.mix_frac = 1
-        self.timestep_limit = 1000
+        self.timestep_limit = timestep_limit
 
         with tf.variable_scope(scope):
             # add  timestep
@@ -61,9 +61,10 @@ class Baseline(object):
             [ob_no, np.arange(len(ob_no)).reshape(-1, 1) / float(self.timestep_limit)], axis=1)
 
     def fit(self, paths):
-        featmat = self._features(paths)
-        returns = paths["values"]
-
+        # featmat = self._features(paths)
+        # returns = paths["values"]
+        featmat = concat([self.preproc(path["observation"]) for path in paths], axis=0)
+        returns = concat([path["return"] for path in paths])
         if self.use_lbfgs_b:
             if self.mix_frac != 1:
                 obj = returns * self.mix_frac + self.predict(paths) * (1 - self.mix_frac)
