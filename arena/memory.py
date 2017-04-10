@@ -75,7 +75,7 @@ class AcMemory(object):
     def fill_episode_critic(self, f_get_critic):
         self.critic_buffer[self.t0:self.Tmax] = \
             f_get_critic({"observations": self.observation_buffer[self.t0:self.Tmax],
-                          "times": self.q_buffer[self.t0:self.Tmax]
+                          "times": self.t_buffer[self.t0:self.Tmax]
                           })
 
     def append_feedback(self, reward):

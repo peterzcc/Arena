@@ -26,10 +26,13 @@ class TrpoModel(ModelWithCritic):
                  cg_damping=0.1,
                  cg_iters=20,
                  max_kl=0.01,
+                 timestep_limit=1000,
+                 image_input=False,
                  session=None):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
+        self.image_input = image_input
 
         # store constants
         self.min_std = min_std
@@ -51,7 +54,8 @@ class TrpoModel(ModelWithCritic):
 
         else:
             self.session = session
-        self.critic = Baseline(session=self.session, shape=self.ob_space.shape)
+        self.critic = Baseline(session=self.session, shape=self.ob_space.shape,
+                               timestep_limit=timestep_limit, image_input=image_input)
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
@@ -61,7 +65,8 @@ class TrpoModel(ModelWithCritic):
 
         self.net = NetworkContinous(scope="network_continous",
                                     obs_shape=self.ob_space.shape,
-                                    action_shape=self.act_space.shape)
+                                    action_shape=self.act_space.shape,
+                                    image_input=image_input)
         # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.obs)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
@@ -106,7 +111,7 @@ class TrpoModel(ModelWithCritic):
         self.debug = True
 
     def predict(self, observation):
-        if len(observation.shape) == 1:
+        if len(observation.shape) == len(self.ob_space.shape):
             obs = np.expand_dims(observation, 0)
         else:
             obs = observation

@@ -13,7 +13,8 @@ class Baseline(object):
 
     def __init__(self, session=None, scope="value_f",
                  shape=None, hidden_sizes=(64, 64), activation=tf.nn.tanh,
-                 max_iter=25, timestep_limit=1000):
+                 max_iter=25, timestep_limit=1000,
+                 image_input=False):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = True

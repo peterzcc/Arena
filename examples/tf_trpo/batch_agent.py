@@ -12,7 +12,9 @@ class BatchUpdateAgent(Agent):
                  model=None,
                  batch_size=1,
                  discount=0.995,
-                 lam=0.97
+                 lam=0.97,
+                 timestep_limit=1000,
+                 image_input=False
                  ):
         Agent.__init__(
             self,
@@ -20,6 +22,7 @@ class BatchUpdateAgent(Agent):
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid
         )
+        self.image_input = image_input
         self.use_filter = False
         if self.use_filter:
             self.obsfilter = ZFilter(observation_space.shape, clip=5)
@@ -46,11 +49,12 @@ class BatchUpdateAgent(Agent):
         self.counter = batch_size
         self.episode_step = 0
         self.epoch_reward = 0
-        max_l = 10000
+        # max_l = 10000
 
         if model is None:
             # self.model = TrpoTheanoModel(self.observation_space, self.action_space)
-            self.model = TrpoModel(self.observation_space, self.action_space)
+            self.model = TrpoModel(self.observation_space, self.action_space,
+                                   timestep_limit=timestep_limit, image_input=image_input)
         else:
             self.model = model
         # self.memory = AcMemory(observation_shape=self.observation_space.shape,
@@ -72,6 +76,8 @@ class BatchUpdateAgent(Agent):
         #     pass
 
         # TODO: Implement this predict
+        if self.image_input:
+            observation = observation.astype(np.float32) / 255.0
         observation = self.obsfilter(observation)
         action, agent_info = self.model.predict(observation)
         # final_action = \

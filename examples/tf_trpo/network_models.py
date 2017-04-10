@@ -4,10 +4,12 @@ from tensorflow.contrib.layers import initializers as tf_init
 import prettytensor as pt
 import numpy as np
 
+dtype = tf.float32
 
 # TODO: remove this class
 class NetworkContinous(object):
-    def __init__(self, scope, obs_shape, action_shape):
+    def __init__(self, scope, obs_shape, action_shape,
+                 image_input=False):
         with tf.variable_scope("%s_shared" % scope):
             self.obs = obs = tf.placeholder(
                 dtype, shape=(None,) + obs_shape, name="%s_obs" % scope)

@@ -35,7 +35,7 @@ class Experiment(object):
                  f_create_shared_params,
                  stats_file_dir=None,
                  single_process_mode=False,
-                 render_option="once_per_epoch"):
+                 render_option="false"):
         """
         Parameters
         ----------

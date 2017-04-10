@@ -5,9 +5,9 @@ os.environ["MXNET_CPU_WORKER_NTHREADS"] = "32"
 import numpy as np
 from arena.games.gym_wrapper import GymWrapper
 from arena.experiment import Experiment
+from arena.agents.test_mp_agent import TestMpAgent
 import gym
 import argparse
-# from trpo_model import TrpoModel
 from batch_agent import BatchUpdateAgent
 import logging
 from custom_ant import CustomAnt
@@ -15,9 +15,8 @@ from gather_env import GatherEnv
 from maze_env import MazeEnv
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
-import multiprocessing as mp
 
-BATH_SIZE = 50000
+BATH_SIZE = 5000
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
@@ -56,11 +55,13 @@ def main():
 
     def f_create_env():
         # env = GatherEnv()
-        env = gym.make('Ant-v1')
-        # env = MazeEnv()
         # env = gym.make('Ant-v1')
+        # env = MazeEnv()
+        env = gym.make('InvertedPendulum-v1')
 
-        return GymWrapper(env, max_null_op=0, max_episode_length=T, action_reduce=False)
+        return GymWrapper(env,
+                          max_null_op=0, max_episode_length=T)
+        # change_to_image=True,new_img_size=(84,84),rgb_to_gray=True)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
@@ -69,8 +70,15 @@ def main():
             observation_space, action_space,
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid,
-            batch_size=args.batch_size
+            batch_size=args.batch_size,
+            timestep_limit=T
         )
+
+        # return TestMpAgent(
+        #     observation_space, action_space,
+        #     shared_params, stats_rx, acts_tx,
+        #     is_learning, global_t, pid
+        # )
 
     def f_create_shared_params():
         return None
