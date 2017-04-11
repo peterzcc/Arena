@@ -1,6 +1,7 @@
 from arena.memory import AcMemory
 from arena.agents import Agent
-from trpo_model import TrpoModel
+# from trpo_model import TrpoModel
+from multi_trpo_model import MultiTrpoModel
 import numpy as np
 import logging
 from dict_memory import DictMemory
@@ -13,8 +14,7 @@ class BatchUpdateAgent(Agent):
                  batch_size=1,
                  discount=0.995,
                  lam=0.97,
-                 timestep_limit=1000,
-                 image_input=False
+                 timestep_limit=1000
                  ):
         Agent.__init__(
             self,
@@ -22,17 +22,16 @@ class BatchUpdateAgent(Agent):
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid
         )
-        self.image_input = image_input
-        self.use_filter = False
-        if self.use_filter:
-            self.obsfilter = ZFilter(observation_space.shape, clip=5)
-            self.rewfilter = ZFilter((), demean=False, clip=10)
-        else:
-            self.obsfilter = IDENTITY
-            self.rewfilter = IDENTITY
+        # self.use_filter = False
+        # if self.use_filter:
+        #     self.obsfilter = ZFilter(observation_space.shape, clip=5)
+        #     self.rewfilter = ZFilter((), demean=False, clip=10)
+        # else:
+        #     self.obsfilter = IDENTITY
+        #     self.rewfilter = IDENTITY
 
-        self.action_dimension = action_space.low.shape[0]
-        self.state_dimension = observation_space.low.shape[0]
+        # self.action_dimension = action_space.low.shape[0]
+        # self.state_dimension = observation_space.low.shape[0]
 
         if shared_params is None:
             pass
@@ -52,9 +51,8 @@ class BatchUpdateAgent(Agent):
         # max_l = 10000
 
         if model is None:
-            # self.model = TrpoTheanoModel(self.observation_space, self.action_space)
-            self.model = TrpoModel(self.observation_space, self.action_space,
-                                   timestep_limit=timestep_limit, image_input=image_input)
+            self.model = MultiTrpoModel(self.observation_space, self.action_space,
+                                        timestep_limit=timestep_limit)
         else:
             self.model = model
         # self.memory = AcMemory(observation_shape=self.observation_space.shape,
@@ -76,9 +74,9 @@ class BatchUpdateAgent(Agent):
         #     pass
 
         # TODO: Implement this predict
-        if self.image_input:
-            observation = observation.astype(np.float32) / 255.0
-        observation = self.obsfilter(observation)
+        # if self.image_input:
+        #     observation = observation.astype(np.float32) / 255.0
+        # observation = self.obsfilter(observation)
         action, agent_info = self.model.predict(observation)
         # final_action = \
         #     np.clip(action, self.action_space.low, self.action_space.high).flatten()
@@ -92,7 +90,7 @@ class BatchUpdateAgent(Agent):
     def receive_feedback(self, reward, done, info={}):
         # logging.debug("rx r: {} \td:{}".format(reward, done))
         self.epoch_reward += reward
-        reward = self.rewfilter(reward)
+        # reward = self.rewfilter(reward)
 
         self.memory.append_feedback(reward)
         self.episode_step += 1
@@ -104,6 +102,7 @@ class BatchUpdateAgent(Agent):
                 terminated = np.asscalar(info["terminated"])
                 # logging.debug("terminated {} ".format(terminated))
             except KeyError:
+                logging.debug("warning: no info about real termination ")
                 terminated = done
             self.memory.add_path(terminated)
             self.num_episodes += 1

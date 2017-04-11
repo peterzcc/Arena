@@ -7,7 +7,7 @@ from arena.experiment import Experiment
 from arena.agents.test_mp_agent import TestMpAgent
 import gym
 import argparse
-# from batch_agent import BatchUpdateAgent
+from batch_agent import BatchUpdateAgent
 import logging
 from custom_ant import CustomAnt
 from gather_env import GatherEnv
@@ -66,19 +66,19 @@ def main():
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
                        is_learning, global_t, pid):
-        # return BatchUpdateAgent(
-        #     observation_space, action_space,
-        #     shared_params, stats_rx, acts_tx,
-        #     is_learning, global_t, pid,
-        #     batch_size=args.batch_size,
-        #     timestep_limit=T
-        # )
-
-        return TestMpAgent(
+        return BatchUpdateAgent(
             observation_space, action_space,
             shared_params, stats_rx, acts_tx,
-            is_learning, global_t, pid
+            is_learning, global_t, pid,
+            batch_size=args.batch_size,
+            timestep_limit=T
         )
+
+        # return TestMpAgent(
+        #     observation_space, action_space,
+        #     shared_params, stats_rx, acts_tx,
+        #     is_learning, global_t, pid
+        # )
 
     def f_create_shared_params():
         return None

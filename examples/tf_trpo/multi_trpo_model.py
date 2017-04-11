@@ -19,7 +19,7 @@ tf.set_random_seed(seed)
 dtype = tf.float32
 
 
-class TrpoModel(ModelWithCritic):
+class MultiTrpoModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,
                  min_std=1e-6,
                  subsample_factor=0.8,
@@ -52,7 +52,7 @@ class TrpoModel(ModelWithCritic):
 
         else:
             self.session = session
-        self.critic = Baseline(session=self.session, shape=self.ob_space.shape,
+        self.critic = Baseline(session=self.session, shape=self.ob_space[0].shape,
                                timestep_limit=timestep_limit)
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
@@ -62,7 +62,7 @@ class TrpoModel(ModelWithCritic):
                                clips=())
 
         self.net = NetworkContinous(scope="network_continous",
-                                    obs_shape=self.ob_space.shape,
+                                    obs_shape=self.ob_space[0].shape,
                                     action_shape=self.act_space.shape)
         # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.obs)[0]
@@ -108,10 +108,10 @@ class TrpoModel(ModelWithCritic):
         self.debug = True
 
     def predict(self, observation):
-        if len(observation.shape) == len(self.ob_space.shape):
-            obs = np.expand_dims(observation, 0)
+        if len(observation[0].shape) == len(self.ob_space[0].shape):
+            obs = np.expand_dims(observation[0], 0)
         else:
-            obs = observation
+            obs = observation[0]
         action_dist_means_n, action_dist_log_stds_n, action_std_n = \
             self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
                              {self.net.obs: obs})
@@ -131,7 +131,7 @@ class TrpoModel(ModelWithCritic):
         return action, agent_info
 
     def compute_critic(self, states):
-        raise ValueError("Deprecated")
+
         return self.critic.predict(states)
 
     def compute_update(self, paths):
@@ -141,7 +141,7 @@ class TrpoModel(ModelWithCritic):
         # advant_n = sample_data["advantages"]
 
         # prob_np = concat([path["prob"] for path in paths])  # self._act_prob(ob[None])[0]
-        obs_n = concat([path["observation"] for path in paths])
+        obs_n = concat([path["observation"][0] for path in paths])
         action_n = concat([path["action"] for path in paths])
         advant_n = concat([path["advantage"] for path in paths])
         logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
@@ -179,6 +179,7 @@ class TrpoModel(ModelWithCritic):
         fullstep = stepdir / lm
         neggdotstepdir = -g.dot(stepdir)
         logging.debug("\nlagrange multiplier:{}\tgnorm:{}\t".format(lm, np.linalg.norm(g)))
+
         def loss(th):
             self.set_params_with_flat_data(th)
             return self.session.run(self.losses, feed_dict=feed)[0]
@@ -198,7 +199,4 @@ class TrpoModel(ModelWithCritic):
 
     def update(self, diff, new=None):
         pass
-        #self.set_params_with_flat_data(new)
-
-
-
+        # self.set_params_with_flat_data(new)

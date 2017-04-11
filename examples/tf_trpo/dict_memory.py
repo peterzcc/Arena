@@ -48,27 +48,29 @@ class DictMemory(object):
 
     def fill_episode_critic(self, f_critic):
         self.f_critic = f_critic
+        pass
 
     def add_path(self, done):
         if done:
             self.current_path["terminated"] = True
         else:
             self.current_path["terminated"] = False
-        self.paths.append({k: np.array(v) for (k, v) in list(self.current_path.items())})
+        self.paths.append({k: v for (k, v) in list(self.current_path.items())})
+        # self.paths.append({k: np.array(v) for (k, v) in list(self.current_path.items())})
         self.current_path = defaultdict(list)
 
     def extract_all(self):
         if self.use_gae:
             # Compute return, baseline, advantage
             for path in self.paths:
-                path["return"] = discount(path["reward"], self.gamma)
+                path["return"] = discount(np.array(path["reward"]), self.gamma)
                 b = path["baseline"] = self.f_critic(path)
-                b1 = np.append(b, 0 if path["terminated"] else b[-1])
+                b1 = np.append(b, 0 if np.array(path["terminated"]) else b[-1])
                 deltas = path["reward"] + self.gamma * b1[1:] - b1[:-1]
                 path["advantage"] = discount(deltas, self.gamma * self.lam)
         else:
             for path in self.paths:
-                path["return"] = discount(path["reward"], self.gamma)
+                path["return"] = discount(np.array(path["reward"]), self.gamma)
                 b = path["baseline"] = self.f_critic(path)
                 path["advantage"] = path["return"] - b
         if self.normalize:
