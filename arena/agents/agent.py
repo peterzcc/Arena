@@ -4,6 +4,7 @@ import queue
 import logging
 import numpy as np
 
+
 class Agent(object):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx, acts_tx,
@@ -16,6 +17,12 @@ class Agent(object):
         action_space : gym.Space
         """
         self.observation_space = observation_space
+        if isinstance(observation_space, list):
+            self.multi_obs = True
+            self.copy_obs = self.copy_multi
+        else:
+            self.copy_obs = self.copy_single
+            self.multi_obs = False
         self.action_space = action_space
         self.params = shared_params
         self.stats_rx = stats_rx
@@ -31,6 +38,12 @@ class Agent(object):
         self.id = pid
         logging.debug("Agent {} initialized".format(self.id))
 
+    def copy_multi(self, rxmsg):
+        self.current_obs = list(map(np.copy, rxmsg))
+
+    def copy_single(self, rxmsg):
+        self.current_obs = rxmsg.copy()
+
     def reset(self):
         self.current_obs = None
         self.current_action = None
@@ -43,7 +56,8 @@ class Agent(object):
             # logging.debug("Agent: {} waiting for observation".format(self.id))
             rx_msg = self.stats_rx[0].recv()
             try:
-                self.current_obs = rx_msg["observation"].copy()
+                # self.current_obs = rx_msg["observation"].copy()
+                self.copy_obs(rx_msg["observation"])
             except KeyError:
                 raise ValueError("Failed to receive observation")
 

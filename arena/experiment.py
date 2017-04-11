@@ -1,7 +1,7 @@
 import gym
 from arena.agents.test_mp_agent import Agent
 from arena.actuator import Actuator
-from arena.mp_utils import ProcessState, force_map, FastPipe, RenderOption
+from arena.mp_utils import ProcessState, force_map, FastPipe, RenderOption, MultiFastPipe
 from time import time
 import logging
 import os
@@ -116,23 +116,17 @@ class Experiment(object):
         def agent_run_thread(agent, pid):
             agent.run_loop()
 
-        def agent_thread(observation_space, action_space,
-                         shared_params, stats_rx, acts_tx,
-                         is_learning, global_t, pid):
-
-            this_agent = self.f_create_agent(observation_space, action_space,
-                                             shared_params, stats_rx, acts_tx,
-                                             is_learning, global_t, pid)
-            this_agent.run_loop()
-
-        observation_sample = space_to_np(self.observation_space)
+        if isinstance(self.observation_space, list):
+            observation_sample = list(map(space_to_np, self.observation_space))
+            obs_type = MultiFastPipe
+        else:
+            observation_sample = space_to_np(self.observation_space)
+            obs_type = FastPipe
         action_sample = space_to_np(self.action_space)
 
         for process_id in range(num_actor):
             self.actuator_channels.append(mp.Queue())
-            # tx_stats, rx_stats = mp.Pipe()
-            # tx_acts, rx_acts = mp.Pipe()
-            obs_pipe = FastPipe({"observation": observation_sample})
+            obs_pipe = obs_type({"observation": observation_sample})
             action_pipe = FastPipe({"action": action_sample})
             feedback_sample = {"reward": 0.0, "done": False}
             feedback_sample.update(self.info_sample)
@@ -160,21 +154,6 @@ class Experiment(object):
                                         self.global_t,
                                         process_id)
             agents.append(agent)
-
-            # this_agent_thread = \
-            #     thd.Thread(
-            #         target=agent_thread,
-            #         args=(self.observation_space,
-            #               self.action_space,
-            #               self.shared_params,
-            #               rx_stats,
-            #               tx_acts,
-            #               self.is_learning,
-            #               self.global_t,
-            #               process_id)
-            #     )
-            # this_agent_thread.daemon = True
-            # self.agent_threads.append(this_agent_thread)
         for process_id in range(num_actor):
             this_agent_thread = \
                 thd.Thread(
@@ -271,6 +250,7 @@ class Experiment(object):
         test_episode_num = 0
         start_time = time()
         while test_t < test_length:
+            raise ValueError("not implemented")
             rx_msg = self.episode_q.get(block=True)
             try:
                 if rx_msg["id"] != process_id:

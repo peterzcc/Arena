@@ -102,6 +102,7 @@ class GymWrapper(object):
             return image_observation
         else:
             return self.env.reset()
+
     def step(self, a):
         a = np.append(a, (0,))
         # logging.debug("rx a:{}".format(a))
@@ -136,13 +137,6 @@ class GymWrapper(object):
 
         if self.episode_steps >= self.max_episode_length:
             final_done = True
-
-        # logging.debug("tx r:{},d:{}".format(reward, done))
-
-        # if final_done:
-        #     logging.debug("a:{},r:{},d:{}".format(a, reward, done))
-        # else:
-        #     logging.debug("a:{},r:{}".format(a, reward))
 
         return final_observation, final_reward, final_done, info_terminated
 

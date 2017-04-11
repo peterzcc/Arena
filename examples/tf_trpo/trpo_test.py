@@ -1,14 +1,13 @@
 import os
 
-os.environ["MXNET_GPU_WORKER_NTHREADS"] = "20"
-os.environ["MXNET_CPU_WORKER_NTHREADS"] = "32"
 import numpy as np
 from arena.games.gym_wrapper import GymWrapper
+from arena.games.complex_wrapper import ComplexWrapper
 from arena.experiment import Experiment
 from arena.agents.test_mp_agent import TestMpAgent
 import gym
 import argparse
-from batch_agent import BatchUpdateAgent
+# from batch_agent import BatchUpdateAgent
 import logging
 from custom_ant import CustomAnt
 from gather_env import GatherEnv
@@ -59,26 +58,27 @@ def main():
         # env = MazeEnv()
         env = gym.make('InvertedPendulum-v1')
 
-        return GymWrapper(env,
-                          max_null_op=0, max_episode_length=T)
-        # change_to_image=True,new_img_size=(84,84),rgb_to_gray=True)
+        # return GymWrapper(env,
+        #                   max_null_op=0, max_episode_length=T)
+        return ComplexWrapper(env, max_episode_length=T,
+                              append_image=True, new_img_size=(64, 64), rgb_to_gray=True)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
                        is_learning, global_t, pid):
-        return BatchUpdateAgent(
-            observation_space, action_space,
-            shared_params, stats_rx, acts_tx,
-            is_learning, global_t, pid,
-            batch_size=args.batch_size,
-            timestep_limit=T
-        )
-
-        # return TestMpAgent(
+        # return BatchUpdateAgent(
         #     observation_space, action_space,
         #     shared_params, stats_rx, acts_tx,
-        #     is_learning, global_t, pid
+        #     is_learning, global_t, pid,
+        #     batch_size=args.batch_size,
+        #     timestep_limit=T
         # )
+
+        return TestMpAgent(
+            observation_space, action_space,
+            shared_params, stats_rx, acts_tx,
+            is_learning, global_t, pid
+        )
 
     def f_create_shared_params():
         return None

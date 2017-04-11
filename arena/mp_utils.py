@@ -54,7 +54,18 @@ def create_shared_memory(src):
     return var, shape, srctype
 
 
-class FastPipe(object):
+class Pipe(object):
+    def __init__(self, data_dict: dict):
+        raise NotImplementedError
+
+    def send(self, data):
+        raise NotImplementedError
+
+    def recv(self, timeout=None):
+        raise NotImplementedError
+
+
+class FastPipe(Pipe):
     def __init__(self, data_dict: dict):
         self.var_dict = {}
         self.shape_dict = {}
@@ -82,6 +93,55 @@ class FastPipe(object):
         self.prepare_np()
         for k, v in self.var_dict.items():
             self.npdata[k][:] = data[k]
+        self.event_signal.set()
+
+    def recv(self, timeout=None):
+        self.prepare_np()
+        success = self.event_signal.wait(timeout=timeout)
+        if success:
+            self.event_signal.clear()
+        return self.npdata
+
+    def poll(self, timeout):
+        return self.event_signal.wait(timeout=timeout)
+
+
+class MultiFastPipe(Pipe):
+    def __init__(self, data_dict: dict):
+        self.var_dict = {}
+        self.shape_dict = {}
+        self.dtype_dict = {}
+        for k, list_v in data_dict.items():
+            n = len(list_v)
+            self.var_dict[k] = [None] * n
+            self.dtype_dict[k] = [None] * n
+            self.shape_dict[k] = [None] * n
+            for i, v in enumerate(list_v):
+                this_var, this_shape, this_dtype = create_shared_memory(v)
+                self.var_dict[k][i] = this_var
+                self.dtype_dict[k][i] = this_dtype
+                self.shape_dict[k][i] = this_shape
+        self.event_signal = mp.Event()
+        self.event_signal.clear()
+        self.npdata = None
+
+    def prepare_np(self):
+        if self.npdata is None:
+            self.npdata = {}
+            for k, list_v in self.var_dict.items():
+                self.npdata[k] = [None] * len(list_v)
+                for i, v in enumerate(list_v):
+                    this_dtype = self.dtype_dict[k][i]
+                    this_shape = self.shape_dict[k][i]
+                    this_var = self.var_dict[k][i]
+                    buffer = np.frombuffer(this_var, dtype=this_dtype)
+                    self.npdata[k][i] = buffer.reshape(this_shape)
+
+    def send(self, data):
+        self.prepare_np()
+        for k, list_v in self.var_dict.items():
+            for i, _ in enumerate(list_v):
+                self.npdata[k][i][:] = data[k][i]
         self.event_signal.set()
 
     def recv(self, timeout=None):
