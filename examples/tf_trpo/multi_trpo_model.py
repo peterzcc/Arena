@@ -141,7 +141,7 @@ class MultiTrpoModel(ModelWithCritic):
         # advant_n = sample_data["advantages"]
 
         # prob_np = concat([path["prob"] for path in paths])  # self._act_prob(ob[None])[0]
-        obs_n = concat([path["observation"][0] for path in paths])
+        obs_n = concat([np.array([o[0] for o in path["observation"]]) for path in paths])
         action_n = concat([path["action"] for path in paths])
         advant_n = concat([path["advantage"] for path in paths])
         logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))

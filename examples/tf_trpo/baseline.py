@@ -59,13 +59,12 @@ class Baseline(object):
 
     def preproc(self, ob_no):
         return concat(
-            [ob_no, np.arange(len(ob_no)).reshape(-1, 1) / float(self.timestep_limit)], axis=1)
+            [np.array(ob_no), np.arange(len(ob_no)).reshape(-1, 1) / float(self.timestep_limit)], axis=1)
 
     def fit(self, paths):
         # featmat = self._features(paths)
         # returns = paths["values"]
-        obs0 = [np.array((o[0] for o in path["observation"])) for path in paths]
-        featmat = concat([self.preproc(seq) for seq in obs0], axis=0)
+        featmat = concat([self.preproc([o[0] for o in path["observation"]]) for path in paths], axis=0)
         returns = concat([path["return"] for path in paths])
         if self.use_lbfgs_b:
             if self.mix_frac != 1:
@@ -94,5 +93,6 @@ class Baseline(object):
             # return np.zeros((path["values"].shape[0]))
         else:
             # ret = self.session.run(self.net, {self.x: self._features(path)})
-            ret = self.session.run(self.net, {self.x: self.preproc(path["observation"][:][0])})
+            obs = [o[0] for o in path["observation"]]
+            ret = self.session.run(self.net, {self.x: self.preproc(obs)})
             return np.reshape(ret, (ret.shape[0],))
