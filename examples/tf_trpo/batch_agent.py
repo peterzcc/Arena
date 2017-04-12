@@ -52,7 +52,7 @@ class BatchUpdateAgent(Agent):
 
         if model is None:
             self.model = MultiTrpoModel(self.observation_space, self.action_space,
-                                        timestep_limit=timestep_limit)
+                                        timestep_limit=timestep_limit, with_image=False)
         else:
             self.model = model
         # self.memory = AcMemory(observation_shape=self.observation_space.shape,
@@ -63,7 +63,8 @@ class BatchUpdateAgent(Agent):
         #                        use_gae=False,
         #                        get_critic_online=False,
         #                        info_shape=self.model.info_shape)
-        self.memory = DictMemory(gamma=self.discount, lam=lam, use_gae=True, normalize=True)
+        self.memory = DictMemory(gamma=self.discount, lam=lam, use_gae=True, normalize=True,
+                                 timestep_limit=timestep_limit)
 
         self.num_episodes = 0
 

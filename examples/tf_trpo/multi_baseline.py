@@ -7,14 +7,16 @@ import logging
 from tf_utils import LbfgsOptimizer
 
 concat = np.concatenate
+
+
 # TODO: l_bfgs optimizer
-class Baseline(object):
+class MultiBaseline(object):
     coeffs = None
 
     def __init__(self, session=None, scope="value_f",
-                 shape=None, hidden_sizes=(64, 64), activation=tf.nn.tanh,
-                 max_iter=25, timestep_limit=1000,
-                 image_input=False):
+                 obs_space=None, hidden_sizes=(64, 64),
+                 conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)), activation=tf.nn.tanh,
+                 max_iter=25, timestep_limit=1000, with_image=True):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = True
@@ -22,12 +24,35 @@ class Baseline(object):
         self.mix_frac = 1
         self.timestep_limit = timestep_limit
         self.scope = scope
+        assert len(obs_space) == 2
 
         with tf.variable_scope(scope):
             # add  timestep
-            self.x = tf.placeholder(tf.float32, shape=(None, shape[0] + 1), name="x")
+            self.state_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name="x")
+            self.img_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[1].shape, name="img")
+
+            self.time_input = tf.placeholder(tf.float32, shape=(None, 1), name="t")
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
-            hidden_units = pt.wrap(self.x).sequential()
+
+            if with_image:
+                expanded_img = tf.expand_dims(self.img_input, -1)
+                img_features = pt.wrap(expanded_img).sequential()
+                for conv_size in conv_sizes:
+                    img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
+                                        stride=conv_size[2],
+                                        init=tf_init.variance_scaling_initializer(factor=1.0,
+                                                                                  mode='FAN_AVG',
+                                                                                  uniform=True)
+                                        )
+                img_features.flatten()
+                self.full_feature = tf.concat(
+                    concat_dim=1,
+                    values=[self.state_input, img_features.as_layer(), self.time_input])
+            else:
+                self.full_feature = tf.concat(
+                    concat_dim=1,
+                    values=[self.state_input, self.time_input])
+            hidden_units = pt.wrap(self.full_feature).sequential()
             for hidden_size in hidden_sizes:
                 hidden_units.fully_connected(hidden_size, activation_fn=activation,
                                              init=tf_init.variance_scaling_initializer(factor=1.0,
@@ -58,21 +83,20 @@ class Baseline(object):
     #     ret = np.concatenate((obs, path["times"][:, None],), axis=1)
     #     return ret
 
-    def preproc(self, ob_no):
-        return concat(
-            [np.array(ob_no), np.arange(len(ob_no)).reshape(-1, 1) / float(self.timestep_limit)], axis=1)
-
     def fit(self, paths):
         # featmat = self._features(paths)
         # returns = paths["values"]
-        featmat = concat([self.preproc([o[0] for o in path["observation"]]) for path in paths], axis=0)
+        state_mat = concat([path["observation"][0] for path in paths], axis=0)
+        img_mat = concat([path["observation"][1] for path in paths], axis=0)
+        times = concat([path["times"] for path in paths], axis=0)
         returns = concat([path["return"] for path in paths])
+        if self.mix_frac != 1:
+            obj = returns * self.mix_frac + self.predict(paths) * (1 - self.mix_frac)
+        else:
+            obj = returns
+        feed = {self.state_input: state_mat, self.img_input: img_mat,
+                self.time_input: times, self.y: obj}
         if self.use_lbfgs_b:
-            if self.mix_frac != 1:
-                obj = returns * self.mix_frac + self.predict(paths) * (1 - self.mix_frac)
-            else:
-                obj = returns
-            feed = {self.x: featmat, self.y: obj}
             if self.debug_mode:
                 mse, l2 = self.session.run([self.mse, self.l2], feed_dict=feed)
                 logging.debug("vf_before: mse={}\tl2={}\n".format(mse, l2))
@@ -86,7 +110,7 @@ class Baseline(object):
 
         else:
             for _ in range(self.max_iter):  # TODO: verify this
-                loss, _ = self.session.run([self.mse, self.train], {self.x: featmat, self.y: returns})
+                loss, _ = self.session.run([self.mse, self.train], feed_dict=feed)
 
     def predict(self, path):
         if self.net is None:
@@ -94,6 +118,7 @@ class Baseline(object):
             # return np.zeros((path["values"].shape[0]))
         else:
             # ret = self.session.run(self.net, {self.x: self._features(path)})
-            obs = [o[0] for o in path["observation"]]
-            ret = self.session.run(self.net, {self.x: self.preproc(obs)})
+            feed = {self.state_input: path["observation"][0], self.img_input: path["observation"][1],
+                    self.time_input: path["times"]}
+            ret = self.session.run(self.net, feed_dict=feed)
             return np.reshape(ret, (ret.shape[0],))

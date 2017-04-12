@@ -2,9 +2,10 @@ from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg
-from baseline import Baseline
+# from baseline import Baseline
+from multi_baseline import MultiBaseline
 from diagonal_gaussian import DiagonalGaussian
-from network_models import NetworkContinous
+from network_models import MultiNetwork
 import numpy as np
 import random
 import math
@@ -24,10 +25,11 @@ class MultiTrpoModel(ModelWithCritic):
                  min_std=1e-6,
                  subsample_factor=0.8,
                  cg_damping=0.1,
-                 cg_iters=20,
+                 cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
-                 session=None):
+                 session=None,
+                 with_image=True):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -41,19 +43,19 @@ class MultiTrpoModel(ModelWithCritic):
 
         if session is None:
 
-            cpu_config = tf.ConfigProto(
-                device_count={'GPU': 0}, log_device_placement=False
-            )
-            self.session = tf.Session(config=cpu_config)
+            # cpu_config = tf.ConfigProto(
+            #     device_count={'GPU': 0}, log_device_placement=False
+            # )
+            # self.session = tf.Session(config=cpu_config)
 
-            # gpu_options = tf.GPUOptions(allow_growth=True)
-            # self.session = tf.Session(config=tf.ConfigProto( gpu_options=gpu_options,
-            #     log_device_placement=True, ))
+            gpu_options = tf.GPUOptions(allow_growth=True)
+            self.session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
+                                                            log_device_placement=False))
 
         else:
             self.session = session
-        self.critic = Baseline(session=self.session, shape=self.ob_space[0].shape,
-                               timestep_limit=timestep_limit)
+        self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
+                                    timestep_limit=timestep_limit, with_image=with_image)
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
@@ -61,11 +63,12 @@ class MultiTrpoModel(ModelWithCritic):
                                log_std=self.act_space.shape,
                                clips=())
 
-        self.net = NetworkContinous(scope="network_continous",
-                                    obs_shape=self.ob_space[0].shape,
-                                    action_shape=self.act_space.shape)
+        self.net = MultiNetwork(scope="network_continous",
+                                observation_space=self.ob_space,
+                                action_shape=self.act_space.shape,
+                                with_image=with_image)
         # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
-        batch_size = tf.shape(self.net.obs)[0]
+        batch_size = tf.shape(self.net.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
         self.action_dist_log_stds_n = self.net.action_dist_logstds_n  # log_std_var
         self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
@@ -109,12 +112,12 @@ class MultiTrpoModel(ModelWithCritic):
 
     def predict(self, observation):
         if len(observation[0].shape) == len(self.ob_space[0].shape):
-            obs = np.expand_dims(observation[0], 0)
+            obs = [np.expand_dims(observation[0], 0), np.expand_dims(observation[1], 0)]
         else:
-            obs = observation[0]
+            obs = observation
         action_dist_means_n, action_dist_log_stds_n, action_std_n = \
             self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
-                             {self.net.obs: obs})
+                             {self.net.state_input: obs[0], self.net.img_input: obs[1]})
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         output = rnd * action_std_n[0] + action_dist_means_n[0]
@@ -141,14 +144,16 @@ class MultiTrpoModel(ModelWithCritic):
         # advant_n = sample_data["advantages"]
 
         # prob_np = concat([path["prob"] for path in paths])  # self._act_prob(ob[None])[0]
-        obs_n = concat([np.array([o[0] for o in path["observation"]]) for path in paths])
+        state_input = concat([path["observation"][0] for path in paths])
+        img_input = concat([path["observation"][1] for path in paths])
         action_n = concat([path["action"] for path in paths])
         advant_n = concat([path["advantage"] for path in paths])
         logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
 
         action_dist_means_n = concat([path["mean"] for path in paths])
         action_dist_logstds_n = concat([path["log_std"] for path in paths])
-        feed = {self.net.obs: obs_n,
+        feed = {self.net.state_input: state_input,
+                self.net.img_input: img_input,
                 self.net.advant: advant_n,
                 self.net.old_dist_means_n: action_dist_means_n,
                 self.net.old_dist_logstds_n: action_dist_logstds_n,

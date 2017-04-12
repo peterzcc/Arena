@@ -27,13 +27,14 @@ def discount(x, gamma):
 # TODO: add agent info,important
 class DictMemory(object):
     def __init__(self, gamma=0.995, use_gae=False,
-                 lam=0.96, normalize=True):
+                 lam=0.96, normalize=True, timestep_limit=1000):
         self.gamma = gamma
         self.lam = lam
         self.use_gae = use_gae
         self.normalize = normalize
         self.paths = []
         self.current_path = defaultdict(list)
+        self.timestep_limit = timestep_limit
         self.f_critic = None
 
     def append_state(self, observation, action, info):
@@ -65,6 +66,10 @@ class DictMemory(object):
             for path in self.paths:
                 path["reward"] = np.array(path["reward"])
                 path["action"] = np.array(path["action"])
+                path["observation"] = \
+                    [np.array([o[0] for o in path["observation"]]),
+                     np.array([o[1] for o in path["observation"]]).astype(np.float32) / 255.0]
+                path["times"] = np.arange(len(path["reward"])).reshape(-1, 1) / float(self.timestep_limit)
                 path["return"] = discount(path["reward"], self.gamma)
                 b = path["baseline"] = self.f_critic(path)
                 b1 = np.append(b, 0 if path["terminated"] else b[-1])
