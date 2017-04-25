@@ -79,6 +79,13 @@ class MultiNetwork(object):
                                                                                   uniform=True)
                                         )
                 img_features.flatten()
+                img_features.fully_connected(1, activation_fn=tf.nn.tanh,
+                                             init=tf_init.variance_scaling_initializer(factor=1.0,
+                                                                                       mode='FAN_AVG',
+                                                                                       uniform=True)
+                                             )
+
+                # img_features.flatten()
                 self.full_feature = tf.concat(
                     concat_dim=1,
                     values=[self.state_input, img_features.as_layer()])
