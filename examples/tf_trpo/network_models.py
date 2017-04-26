@@ -52,7 +52,9 @@ class NetworkContinous(object):
 
 
 class MultiNetwork(object):
-    def __init__(self, scope, observation_space, action_shape, conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
+    def __init__(self, scope, observation_space, action_shape,
+                 conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
+                 n_imgfeat=1,
                  with_image=True):
         with tf.variable_scope("%s_shared" % scope):
             self.state_input = tf.placeholder(
@@ -79,16 +81,17 @@ class MultiNetwork(object):
                                                                                   uniform=True)
                                         )
                 img_features.flatten()
-                img_features.fully_connected(1, activation_fn=tf.nn.tanh,
+                img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
                                              init=tf_init.variance_scaling_initializer(factor=1.0,
                                                                                        mode='FAN_AVG',
                                                                                        uniform=True)
                                              )
+                self.image_features = img_features.as_layer()
 
                 # img_features.flatten()
                 self.full_feature = tf.concat(
                     concat_dim=1,
-                    values=[self.state_input, img_features.as_layer()])
+                    values=[self.state_input, self.image_features])
             else:
                 self.full_feature = self.state_input
 

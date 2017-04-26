@@ -11,7 +11,7 @@ import logging
 class ComplexWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=False, new_img_size=None,
                  max_episode_length=100000, action_reduce=False,
-                 append_image=False):
+                 append_image=False, remove_obs_until=-1):
         self.env = env
         self.action_reduce = action_reduce
         self.env = env
@@ -20,11 +20,14 @@ class ComplexWrapper(object):
             self.action_space.low = np.array((self.action_space.low[0],))
             self.action_space.high = np.array((self.action_space.high[0],))
         self.action_map = None
+        self.obs_start = remove_obs_until + 1
 
         # obs_min =np.ravel(self.env.observation_space.low)
         # obs_max = np.ravel(self.env.observation_space.high)
         # state_shape = self.env.observation_space.shape
-        self.observation_space = [env.observation_space]
+        self.state_space = Box(low=env.observation_space.low[self.obs_start:],
+                               high=env.observation_space.high[self.obs_start:])
+        self.observation_space = [self.state_space]
         self.append_image = append_image
         if append_image:
             sample_image = self.env.render(mode="rgb_array")
@@ -52,7 +55,7 @@ class ComplexWrapper(object):
                                          high=img_max,
                                          shape=image_size + (num_channel,)
                                          )
-            self.observation_space = [env.observation_space, self.img_space]
+            self.observation_space += [self.img_space]
         self.rgb_to_gray = rgb_to_gray
         self.new_img_size = new_img_size
         self.max_episode_length = max_episode_length
@@ -81,20 +84,20 @@ class ComplexWrapper(object):
             state_observation, reward, done, info = self.env.step(a)
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
-            return [state_observation, image_observation], reward, done, info
+            return [state_observation[self.obs_start:], image_observation], reward, done, info
         else:
             state_observation, reward, done, info = self.env.step(a)
-            return [state_observation], reward, done, info
+            return [state_observation[self.obs_start:]], reward, done, info
 
     def env_reset(self):
         if self.append_image:
             state_observation = self.env.reset()
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
-            return [state_observation, image_observation]
+            return [state_observation[self.obs_start:], image_observation]
         else:
             state_observation = self.env.reset()
-            return [state_observation]
+            return [state_observation[self.obs_start:]]
 
     def step(self, a):
         a = np.append(a, (0,))

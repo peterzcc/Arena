@@ -52,7 +52,7 @@ class BatchUpdateAgent(Agent):
 
         if model is None:
             self.model = MultiTrpoModel(self.observation_space, self.action_space,
-                                        timestep_limit=timestep_limit, with_image=False)
+                                        timestep_limit=timestep_limit)
         else:
             self.model = model
         # self.memory = AcMemory(observation_shape=self.observation_space.shape,

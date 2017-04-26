@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
-from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg
+from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
 from diagonal_gaussian import DiagonalGaussian
@@ -28,8 +28,7 @@ class MultiTrpoModel(ModelWithCritic):
                  cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
-                 session=None,
-                 with_image=True):
+                 session=None):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -40,6 +39,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.cg_damping = cg_damping
         self.cg_iters = cg_iters
         self.max_kl = max_kl
+        self.minibatch_size = 64
 
         if session is None:
 
@@ -48,25 +48,25 @@ class MultiTrpoModel(ModelWithCritic):
             # )
             # self.session = tf.Session(config=cpu_config)
 
-            gpu_options = tf.GPUOptions(allow_growth=True)
+            gpu_options = tf.GPUOptions(allow_growth=True)  # False,per_process_gpu_memory_fraction=0.75)
             self.session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
                                                             log_device_placement=False))
 
         else:
             self.session = session
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
-                                    timestep_limit=timestep_limit, with_image=with_image)
+                                    timestep_limit=timestep_limit, with_image=True)
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
         self.info_shape = dict(mean=self.act_space.shape,
                                log_std=self.act_space.shape,
                                clips=())
-
+        self.policy_with_image_input = True
         self.net = MultiNetwork(scope="network_continous",
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
-                                with_image=with_image)
+                                with_image=self.policy_with_image_input)
         # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
@@ -80,11 +80,13 @@ class MultiTrpoModel(ModelWithCritic):
 
         self.ratio_n = -tf.exp(self.new_likelihood_sym - self.old_likelihood) / self.batch_size_float
 
-        surr = tf.reduce_sum(self.ratio_n * self.net.advant)  # Surrogate loss
+        surr = self.surr = tf.reduce_sum(self.ratio_n * self.net.advant)  # Surrogate loss
         kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ents = self.distribution.entropy(self.old_dist_info_vars)
         ent = tf.reduce_sum(ents) / self.batch_size_float
         self.losses = [surr, kl, ent]
+        if self.policy_with_image_input:
+            self.infos = [tf.reduce_mean(self.net.image_features)]
         var_list = self.net.var_list
         self.get_flat_params = GetFlat(var_list, session=self.session)  # get theta from var_list
         self.set_params_with_flat_data = SetFromFlat(var_list, session=self.session)  # set theta from var_List
@@ -159,23 +161,27 @@ class MultiTrpoModel(ModelWithCritic):
                 self.net.old_dist_logstds_n: action_dist_logstds_n,
                 self.net.action_n: action_n
                 }
+        batch_size = advant_n.shape[0]
         self.critic.fit(paths)
         thprev = self.get_flat_params()  # get theta_old
 
         def fisher_vector_product(p):
-            feed[self.flat_tangent] = p
-            # print("ratio_n")
-            # print(self.session.run(tf.sqrt(tf.reduce_sum(self.ratio_n, feed)**2)),feed)
-            return self.session.run(self.fvp, feed) + self.cg_damping * p
+            # feed[self.flat_tangent] = p
 
-        g = self.session.run(
-            self.pg,
-            feed_dict=feed)
+            fvp = run_batched(self.fvp, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
+                              extra_input={self.flat_tangent: p})
+            return fvp + self.cg_damping * p
+
+        g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
         if self.debug:
             logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
             logging.debug("act_mean mean: {}".format(np.mean(action_dist_means_n, axis=0)))
             logging.debug("act_mean std: {}".format(np.std(action_dist_means_n, axis=0)))
             logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
+            if self.policy_with_image_input:
+                img_features = run_batched(self.infos, feed, batch_size, self.session,
+                                           minibatch_size=self.minibatch_size)
+                logging.debug("infos: {}".format(img_features))
 
         stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters)
         sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
@@ -185,19 +191,26 @@ class MultiTrpoModel(ModelWithCritic):
         neggdotstepdir = -g.dot(stepdir)
         logging.debug("\nlagrange multiplier:{}\tgnorm:{}\t".format(lm, np.linalg.norm(g)))
 
+
         def loss(th):
             self.set_params_with_flat_data(th)
-            return self.session.run(self.losses, feed_dict=feed)[0]
+            surr = run_batched(self.surr, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
+                               extra_input={})
+            return surr
 
-        surr_o, kl_o, ent_o = self.session.run(self.losses, feed_dict=feed)
+
         if self.debug:
+            surr_o, kl_o, ent_o = run_batched(self.losses, feed, batch_size, self.session,
+                                              minibatch_size=self.minibatch_size)
             logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
             # logging.debug("\nold theta: {}\n".format(np.linalg.norm(thprev)))
         logging.debug("\nfullstep: {}\n".format(np.linalg.norm(fullstep)))
         theta, d_theta = linesearch(loss, thprev, fullstep, neggdotstepdir / lm)
         self.set_params_with_flat_data(theta)
-        surr_new, kl_new, ent_new = self.session.run(self.losses, feed_dict=feed)
+
         if self.debug:
+            surr_new, kl_new, ent_new = run_batched(self.losses, feed, batch_size, self.session,
+                                                    minibatch_size=self.minibatch_size)
             logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
             # logging.debug("\nnew theta: {}\nd_theta: {}\n".format(np.linalg.norm(theta), np.linalg.norm(d_theta)))
         return None, None

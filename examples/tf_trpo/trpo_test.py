@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
-BATH_SIZE = 5000
+BATH_SIZE = 50000
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
@@ -61,7 +61,8 @@ def main():
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
-                              append_image=True, new_img_size=(64, 64), rgb_to_gray=True)
+                              append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                              remove_obs_until=0)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,

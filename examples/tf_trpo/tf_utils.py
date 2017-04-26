@@ -173,7 +173,20 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
     return x, 0
 
 
-
+def run_batched(func, feed, N, session, minibatch_size=64, extra_input={}):
+    result = None
+    for start in range(0, N, minibatch_size):  # TODO: verify this
+        end = min(start + minibatch_size, N)
+        this_size = end - start
+        slc = range(start, end)
+        this_feed = {k: v[slc] for k, v in list(feed.items())}
+        this_result = np.array(session.run(func, feed_dict={**this_feed, **extra_input})) * this_size
+        if result is None:
+            result = this_result
+        else:
+            result += this_result
+    result /= N
+    return result
 
 
 # http://www.johndcook.com/blog/standard_deviation/

@@ -4,7 +4,7 @@ from tensorflow.contrib.layers import initializers as tf_init
 import numpy as np
 import prettytensor as pt
 import logging
-from tf_utils import LbfgsOptimizer
+from tf_utils import LbfgsOptimizer, run_batched
 
 concat = np.concatenate
 
@@ -15,15 +15,16 @@ class MultiBaseline(object):
 
     def __init__(self, session=None, scope="value_f",
                  obs_space=None, hidden_sizes=(64, 64),
-                 conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)), activation=tf.nn.tanh,
+                 conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)), n_imgfeat=1, activation=tf.nn.tanh,
                  max_iter=25, timestep_limit=1000, with_image=True):
         self.session = session
         self.max_iter = max_iter
-        self.use_lbfgs_b = True
-        self.l2_k = 1e-3
+        self.use_lbfgs_b = False  # not with_image
+        self.l2_k = 1e-4
         self.mix_frac = 1
         self.timestep_limit = timestep_limit
         self.scope = scope
+        self.minibatch_size = 32
         assert len(obs_space) == 2
 
         with tf.variable_scope(scope):
@@ -45,7 +46,7 @@ class MultiBaseline(object):
                                                                                   uniform=True)
                                         )
                 img_features.flatten()
-                img_features.fully_connected(1, activation_fn=tf.nn.tanh,
+                img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
                                              init=tf_init.variance_scaling_initializer(factor=1.0,
                                                                                        mode='FAN_AVG',
                                                                                        uniform=True)
@@ -78,7 +79,8 @@ class MultiBaseline(object):
                 #                                          options={'maxiter': self.max_iter}
                 #                                          )
             else:
-                self.train = tf.train.AdamOptimizer().minimize(self.final_loss)
+                self.opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT)
         self.session.run(tf.initialize_all_variables())
         self.debug_mode = True
 
@@ -102,21 +104,33 @@ class MultiBaseline(object):
             obj = returns
         feed = {self.state_input: state_mat, self.img_input: img_mat,
                 self.time_input: times, self.y: obj}
-        if self.use_lbfgs_b:
-            if self.debug_mode:
-                mse, l2 = self.session.run([self.mse, self.l2], feed_dict=feed)
-                logging.debug("vf_before: mse={}\tl2={}\n".format(mse, l2))
+        batch_N = returns.shape[0]
 
+        if self.debug_mode:
+            mse = run_batched(self.mse, feed, batch_N, self.session,
+                              minibatch_size=self.minibatch_size)
+            l2 = self.session.run(self.l2, feed_dict=feed)
+
+            logging.debug("vf_before:\n mse={}\tl2={}\n".format(mse, l2))
+
+        if self.use_lbfgs_b:
             # self.optimizer.minimize(session=self.session,
             #                         feed_dict=feed)
             self.opt.update(session=self.session, feed=feed)
-            if self.debug_mode:
-                mse, l2 = self.session.run([self.mse, self.l2], feed_dict=feed)
-                logging.debug("vf_after: mse={}\tl2={}\n".format(mse, l2))
-
         else:
-            for _ in range(self.max_iter):  # TODO: verify this
-                loss, _ = self.session.run([self.mse, self.train], feed_dict=feed)
+            training_inds = np.random.permutation(batch_N)
+            for start in range(0, batch_N, self.minibatch_size):  # TODO: verify this
+                end = min(start + self.minibatch_size, batch_N)
+                slc = training_inds[range(start, end)]
+                this_feed = {self.state_input: state_mat[slc], self.img_input: img_mat[slc],
+                             self.time_input: times[slc], self.y: obj[slc]}
+                loss, _ = self.session.run([self.mse, self.train], feed_dict=this_feed)
+
+        if self.debug_mode:
+            mse = run_batched(self.mse, feed, batch_N, self.session,
+                              minibatch_size=self.minibatch_size)
+            l2 = self.session.run(self.l2, feed_dict=feed)
+            logging.debug("vf_after:\n mse={}\tl2={}\n".format(mse, l2))
 
     def predict(self, path):
         if self.net is None:
