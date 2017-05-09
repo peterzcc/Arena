@@ -31,6 +31,12 @@ def flatgrad(loss, var_list):
                                      for (grad, v) in zip(grads, var_list)])
 
 
+def flatgrad_batch(loss, var_list):
+    grads = tf.gradients(loss, var_list)
+    return tf.concat(axis=1, values=[tf.reshape(grad, [var_shape(v)[0], np.prod(var_shape(v)[1:])])
+                                     for (grad, v) in zip(grads, var_list)])
+
+
 # set theta
 class SetFromFlat(object):
     def __init__(self, var_list, session=None):
@@ -210,11 +216,11 @@ def cg(f_Ax, b, cg_iters=10, verbose=True, residual_tol=1e-10):
         #     callback(x)
         if verbose: logging.debug(fmtstr % (i, rdotr, np.linalg.norm(x)))
         z = f_Ax(p)
-        v = rdotr / (p.dot(z) + 0.0 * 1e-8)  # TODO: reset to nonzero
+        v = rdotr / (p.dot(z) + 1e-6)
         x += v * p
         r -= v * z
         newrdotr = r.dot(r)
-        mu = newrdotr / (rdotr + 0.0 * 1e-8)
+        mu = newrdotr / (rdotr + 1e-6)
         p = r + mu * p
 
         rdotr = newrdotr

@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.contrib.opt.python.training.external_optimizer import ScipyOptimizerInterface
-from tensorflow.contrib.layers import initializers as tf_init
+# from tensorflow.contrib.layers import initializers as tf_init
+from tensorflow.contrib.layers import variance_scaling_initializer
 import numpy as np
 import prettytensor as pt
 import logging
@@ -16,7 +17,7 @@ class MultiBaseline(object):
     def __init__(self, session=None, scope="value_f",
                  obs_space=None, hidden_sizes=(64, 64),
                  conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)), n_imgfeat=1, activation=tf.nn.tanh,
-                 max_iter=25, timestep_limit=1000, with_image=True):
+                 max_iter=25, timestep_limit=1000, with_image=True, only_image=False):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = False  # not with_image
@@ -41,20 +42,25 @@ class MultiBaseline(object):
                 for conv_size in conv_sizes:
                     img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
                                         stride=conv_size[2],
-                                        init=tf_init.variance_scaling_initializer(factor=1.0,
-                                                                                  mode='FAN_AVG',
-                                                                                  uniform=True)
+                                        weights=variance_scaling_initializer(factor=1.0,
+                                                                             mode='FAN_AVG',
+                                                                             uniform=True)
                                         )
                 img_features.flatten()
                 img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                                             init=tf_init.variance_scaling_initializer(factor=1.0,
-                                                                                       mode='FAN_AVG',
-                                                                                       uniform=True)
+                                             weights=variance_scaling_initializer(factor=1.0,
+                                                                                  mode='FAN_AVG',
+                                                                                  uniform=True)
                                              )
                 # img_features.flatten()
-                self.full_feature = tf.concat(
-                    axis=1,
-                    values=[self.state_input, img_features.as_layer(), self.time_input])
+                if only_image:
+                    self.full_feature = tf.concat(
+                        axis=1,
+                        values=[img_features.as_layer(), self.time_input])
+                else:
+                    self.full_feature = tf.concat(
+                        axis=1,
+                        values=[self.state_input, img_features.as_layer(), self.time_input])
             else:
                 self.full_feature = tf.concat(
                     axis=1,
@@ -62,9 +68,9 @@ class MultiBaseline(object):
             hidden_units = pt.wrap(self.full_feature).sequential()
             for hidden_size in hidden_sizes:
                 hidden_units.fully_connected(hidden_size, activation_fn=activation,
-                                             init=tf_init.variance_scaling_initializer(factor=1.0,
-                                                                                       mode='FAN_AVG',
-                                                                                       uniform=True)
+                                             weights=variance_scaling_initializer(factor=1.0,
+                                                                                  mode='FAN_AVG',
+                                                                                  uniform=True)
                                              )
 
             self.net = tf.reshape(hidden_units.fully_connected(1).as_layer(), (-1,))  # why reshape?

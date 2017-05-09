@@ -1,5 +1,6 @@
 import numpy as np
 import scipy
+from scipy import signal
 from collections import defaultdict
 
 
@@ -21,7 +22,7 @@ def discount(x, gamma):
 
     """
     assert x.ndim >= 1
-    return scipy.signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
+    return signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
 
 # TODO: add agent info,important

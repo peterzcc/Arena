@@ -5,6 +5,7 @@ from multi_trpo_model import MultiTrpoModel
 import numpy as np
 import logging
 from dict_memory import DictMemory
+import time
 
 
 class BatchUpdateAgent(Agent):
@@ -110,13 +111,17 @@ class BatchUpdateAgent(Agent):
             self.num_episodes += 1
             self.episode_step = 0
             if self.counter <= 0:
+                train_before = time.time()
                 self.train_once()
+                train_after = time.time()
+                fps = (self.batch_size - self.counter) / (train_after - train_before)
 
                 logging.info(
-                    'Thd[%d] Average Return:%f,  Num Traj:%d ' \
+                    'Thd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f' \
                     % (self.id,
                        self.epoch_reward / self.num_episodes,
                        self.num_episodes,
+                       fps
                        ))
 
                 self.memory.reset()

@@ -40,6 +40,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.cg_iters = cg_iters
         self.max_kl = max_kl
         self.minibatch_size = 64
+        self.use_empirical_fim = False
 
         if session is None:
 
@@ -54,19 +55,22 @@ class MultiTrpoModel(ModelWithCritic):
 
         else:
             self.session = session
+        only_image = False
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
-                                    timestep_limit=timestep_limit, with_image=True)
+                                    timestep_limit=timestep_limit, with_image=False, only_image=only_image,
+                                    n_imgfeat=4)
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
         self.info_shape = dict(mean=self.act_space.shape,
                                log_std=self.act_space.shape,
                                clips=())
-        self.policy_with_image_input = True
+        self.policy_with_image_input = False
         self.net = MultiNetwork(scope="network_continous",
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
-                                with_image=self.policy_with_image_input)
+                                with_image=self.policy_with_image_input, only_image=only_image,
+                                n_imgfeat=4)
         # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
@@ -108,6 +112,23 @@ class MultiTrpoModel(ModelWithCritic):
             start += size
         self.gvp = [tf.reduce_sum(g * t) for (g, t) in zip(grads, tangents)]
         self.fvp = flatgrad(tf.reduce_sum(self.gvp), var_list)  # get kl''*p
+
+        # splitted_l = self.new_likelihood_sym.unpack()
+        # splitted_l = [tf.slice(self.new_likelihood_sym, begin=i, size=1) for i in range(self.minibatch_size)]
+        # def grad_varlist(x):
+        #     return flatgrad(x, var_list)
+        # grad_l_per_sample = tf.map_fn(grad_varlist,splitted_l)
+        # def batch_fvp(g):
+        #     return g * tf.reduce_sum(g*self.flat_tangent)
+        # batch_g_gT_x = tf.map_fn(batch_fvp, grad_l_per_sample)
+        # self.agg_g_gT_x = tf.reduce_sum(batch_g_gT_x, 0)/self.batch_size_float
+
+
+
+        grad_loglikelihood = flatgrad(self.new_likelihood_sym, var_list)
+        gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
+        self.g_gT_x = grad_loglikelihood * gT_x
+        # TODO: implement empirical
         self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
         self.session.run(tf.global_variables_initializer())
         self.debug = True
@@ -164,13 +185,20 @@ class MultiTrpoModel(ModelWithCritic):
         batch_size = advant_n.shape[0]
         self.critic.fit(paths)
         thprev = self.get_flat_params()  # get theta_old
+        if self.use_empirical_fim:
+            def fisher_vector_product(p):
+                # feed[self.flat_tangent] = p
 
-        def fisher_vector_product(p):
-            # feed[self.flat_tangent] = p
+                fvp = run_batched(self.g_gT_x, feed, batch_size, self.session, minibatch_size=1,
+                                  extra_input={self.flat_tangent: p})
+                return fvp + self.cg_damping * p
+        else:
+            def fisher_vector_product(p):
+                # feed[self.flat_tangent] = p
 
-            fvp = run_batched(self.fvp, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
-                              extra_input={self.flat_tangent: p})
-            return fvp + self.cg_damping * p
+                fvp = run_batched(self.fvp, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
+                                  extra_input={self.flat_tangent: p})
+                return fvp + self.cg_damping * p
 
         g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
         if self.debug:

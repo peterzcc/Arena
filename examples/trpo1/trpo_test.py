@@ -16,7 +16,7 @@ from maze_env import MazeEnv
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
-BATH_SIZE = 50000
+BATH_SIZE = 5000
 
 
 def main():
