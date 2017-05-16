@@ -117,7 +117,7 @@ class BatchUpdateAgent(Agent):
                 fps = (self.batch_size - self.counter) / (train_after - train_before)
 
                 logging.info(
-                    'Thd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f' \
+                    'Thd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f \n' \
                     % (self.id,
                        self.epoch_reward / self.num_episodes,
                        self.num_episodes,
@@ -132,8 +132,8 @@ class BatchUpdateAgent(Agent):
     def train_once(self):
         train_data = self.memory.extract_all()
         diff, new = self.model.compute_update(train_data)
-        self.model.update(diff=diff, new=new)
-        # with self.param_lock: TODO: async
+        self.model.update(diff=diff, new=new) \
+            # with self.param_lock: TODO: async
         #     self.global_model.update(diff)
 
 

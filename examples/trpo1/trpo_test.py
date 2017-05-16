@@ -66,7 +66,7 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
-                              remove_obs_until=0)
+                              remove_obs_until=-1)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,

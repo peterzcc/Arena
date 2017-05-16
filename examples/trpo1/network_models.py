@@ -57,7 +57,7 @@ class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_shape,
                  conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
                  n_imgfeat=1,
-                 with_image=True, only_image=False):
+                 with_image=True, only_image=False, extra_feaatures=[]):
         with tf.variable_scope("%s_shared" % scope):
             self.state_input = tf.placeholder(
                 dtype, shape=(None,) + observation_space[0].shape, name="%s_state" % scope)
@@ -98,7 +98,10 @@ class MultiNetwork(object):
                         axis=1,
                         values=[self.state_input, self.image_features])
             else:
-                self.full_feature = self.state_input
+                if len(extra_feaatures) > 0:
+                    self.full_feature = tf.concat(axis=1, values=[*extra_feaatures])
+                else:
+                    self.full_feature = self.state_input
 
             self.action_dist_means_n = (pt.wrap(self.full_feature).
                                         fully_connected(64, activation_fn=tf.nn.tanh,

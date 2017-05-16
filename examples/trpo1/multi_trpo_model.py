@@ -40,7 +40,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.cg_iters = cg_iters
         self.max_kl = max_kl
         self.minibatch_size = 64
-        self.use_empirical_fim = False
+        self.use_empirical_fim = True
 
         if session is None:
 
@@ -55,10 +55,11 @@ class MultiTrpoModel(ModelWithCritic):
 
         else:
             self.session = session
-        only_image = False
+        only_image = True
+        n_imgfeat = 4
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
-                                    timestep_limit=timestep_limit, with_image=False, only_image=only_image,
-                                    n_imgfeat=4)
+                                    timestep_limit=timestep_limit, with_image=True, only_image=only_image,
+                                    n_imgfeat=n_imgfeat)
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
@@ -70,7 +71,8 @@ class MultiTrpoModel(ModelWithCritic):
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
                                 with_image=self.policy_with_image_input, only_image=only_image,
-                                n_imgfeat=4)
+                                n_imgfeat=n_imgfeat,
+                                extra_feaatures=[self.critic.image_features])
         # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
@@ -123,15 +125,55 @@ class MultiTrpoModel(ModelWithCritic):
         # batch_g_gT_x = tf.map_fn(batch_fvp, grad_l_per_sample)
         # self.agg_g_gT_x = tf.reduce_sum(batch_g_gT_x, 0)/self.batch_size_float
 
+        self.is_real_data = tf.placeholder(shape=(self.minibatch_size,), dtype=tf.float32)
+
 
 
         grad_loglikelihood = flatgrad(self.new_likelihood_sym, var_list)
+        list_logl = tf.unstack(self.new_likelihood_sym, num=self.minibatch_size)
+        batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data, axis=1)
+        batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
+        self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
+
+
         gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
         self.g_gT_x = grad_loglikelihood * gT_x
+
         # TODO: implement empirical
         self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
         self.session.run(tf.global_variables_initializer())
+        self.update_critic = True
         self.debug = True
+
+    def run_batched_fvp(self, func_batch, func_single, feed, N, session, minibatch_size=64, extra_input={}):
+        result = None
+        for start in range(0, N, minibatch_size):  # TODO: verify this
+            end = min(start + minibatch_size, N)
+            this_size = end - start
+
+            if this_size == minibatch_size:
+                slc = range(start, end)
+                this_feed = {k: v[slc] for k, v in list(feed.items())}
+                this_result = \
+                    np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
+                                                                self.is_real_data: np.ones(minibatch_size)}))
+            else:
+                slc = range(start, end)
+                is_real_data = np.zeros(minibatch_size)
+                is_real_data[0:this_size] = 1
+                this_feed = \
+                    {k:
+                         np.concatenate([v[slc], np.zeros(shape=(minibatch_size - this_size,) + v.shape[1:])])
+                     for k, v in list(feed.items())}
+                this_result = \
+                    np.array(session.run(func_single, feed_dict={**this_feed, **extra_input,
+                                                                 self.is_real_data: is_real_data}))
+            if result is None:
+                result = this_result
+            else:
+                result += this_result
+        result /= N
+        return result
 
     def predict(self, observation):
         if len(observation[0].shape) == len(self.ob_space[0].shape):
@@ -140,7 +182,7 @@ class MultiTrpoModel(ModelWithCritic):
             obs = observation
         action_dist_means_n, action_dist_log_stds_n, action_std_n = \
             self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
-                             {self.net.state_input: obs[0], self.net.img_input: obs[1]})
+                             {self.net.state_input: obs[0], self.net.img_input: obs[1], self.critic.img_input: obs[1]})
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         output = rnd * action_std_n[0] + action_dist_means_n[0]
@@ -167,6 +209,14 @@ class MultiTrpoModel(ModelWithCritic):
         # advant_n = sample_data["advantages"]
 
         # prob_np = concat([path["prob"] for path in paths])  # self._act_prob(ob[None])[0]
+
+        if self.update_critic:
+            self.critic.fit(paths)
+            self.update_critic = False
+            return None, None
+        else:
+            self.update_critic = True
+
         state_input = concat([path["observation"][0] for path in paths])
         img_input = concat([path["observation"][1] for path in paths])
         action_n = concat([path["action"] for path in paths])
@@ -180,17 +230,18 @@ class MultiTrpoModel(ModelWithCritic):
                 self.net.advant: advant_n,
                 self.net.old_dist_means_n: action_dist_means_n,
                 self.net.old_dist_logstds_n: action_dist_logstds_n,
-                self.net.action_n: action_n
+                self.net.action_n: action_n,
+                self.critic.img_input: img_input
                 }
         batch_size = advant_n.shape[0]
-        self.critic.fit(paths)
         thprev = self.get_flat_params()  # get theta_old
         if self.use_empirical_fim:
             def fisher_vector_product(p):
                 # feed[self.flat_tangent] = p
 
-                fvp = run_batched(self.g_gT_x, feed, batch_size, self.session, minibatch_size=1,
-                                  extra_input={self.flat_tangent: p})
+                fvp = self.run_batched_fvp(self.batch_g_gT_x, self.g_gT_x, feed, batch_size, self.session,
+                                           minibatch_size=self.minibatch_size,
+                                           extra_input={self.flat_tangent: p})
                 return fvp + self.cg_damping * p
         else:
             def fisher_vector_product(p):
