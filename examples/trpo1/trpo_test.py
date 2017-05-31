@@ -67,7 +67,7 @@ def main():
 
     mean = np.array([0,0,0,0])
     final_std = np.array([1,1,0,0])
-    final_n_batch = 100
+    final_n_batch = 60
     noise_k = (final_std)/final_n_batch
     def state_preprocess(x,t):
         t_batch = t/BATH_SIZE
