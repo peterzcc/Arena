@@ -87,8 +87,8 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
-                              visible_state_ids=np.array((True, True, True, True)),
-                              s_transform=state_preprocess)
+                              visible_state_ids=np.array((True, True, True, True)))#,
+                              #s_transform=state_preprocess)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,

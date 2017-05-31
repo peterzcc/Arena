@@ -264,8 +264,9 @@ class MultiTrpoModel(ModelWithCritic):
         g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
         if self.debug:
             logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
-            logging.debug("act_mean mean: {}".format(np.mean(action_dist_means_n, axis=0)))
-            logging.debug("act_mean std: {}".format(np.std(action_dist_means_n, axis=0)))
+            # logging.debug("act_mean mean: {}".format(np.mean(action_dist_means_n, axis=0)))
+            # logging.debug("act_mean std: {}".format(np.std(action_dist_means_n, axis=0)))
+            logging.debug("state_std: {}".format(np.std(state_input, axis=0))))
             logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
             if self.policy_with_image_input:
                 img_features = run_batched(self.infos, feed, batch_size, self.session,
