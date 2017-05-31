@@ -77,9 +77,6 @@ def main():
         current_noise = np.random.normal(loc=mean,scale=current_std)
         return x + current_noise
 
-
-
-    s_transform = lambda x: 1.0 / 3 * x
     def f_create_env():
         # env = GatherEnv()
         # env = gym.make('Ant-v1')
