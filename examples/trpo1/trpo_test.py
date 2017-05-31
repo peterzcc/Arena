@@ -65,17 +65,19 @@ def main():
     # final_factor = 0.01
     test_length = 0
 
-    mean = np.array([0,0,0,0])
-    final_std = np.array([1,1,0,0])
-    final_n_batch = 200
+    mean = np.array([0,0])
+    final_std = np.array([1,1])
+    final_n_batch = 100
     noise_k = (final_std)/final_n_batch
     def state_preprocess(x,t):
+        y = x.copy()
         t_batch = t/BATH_SIZE
-        current_std = \
-            noise_k*t_batch*final_std if t_batch < final_n_batch else final_std
+        ratio = \
+            noise_k*t_batch if t_batch < final_n_batch else 1.0
         #logging.debug("current_noise_std: {}".format(current_std))
-        current_noise = np.random.normal(loc=mean,scale=current_std)
-        return x + current_noise
+        noise = np.random.normal(loc=mean,scale=final_std)
+        y[0:2] = (1-noise)*y[0:2] + noise*ratio
+        return y
 
     def f_create_env():
         # env = GatherEnv()
