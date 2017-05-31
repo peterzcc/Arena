@@ -68,13 +68,13 @@ class MultiTrpoModel(ModelWithCritic):
         self.info_shape = dict(mean=self.act_space.shape,
                                log_std=self.act_space.shape,
                                clips=())
-        self.policy_with_image_input = True
+        self.policy_with_image_input = False
         self.net = MultiNetwork(scope="network_continous",
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
                                 with_image=self.policy_with_image_input, only_image=only_image,
                                 n_imgfeat=n_imgfeat,
-                                extra_feaatures=[])  # [*self.critic.image_features])
+                                extra_feaatures= [*self.critic.image_features])
         # log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
@@ -145,7 +145,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
         self.session.run(tf.global_variables_initializer())
         self.n_update = 0
-        self.separate_update = False
+        self.separate_update = True
         self.update_critic = True
         self.update_policy = True
         self.debug = True

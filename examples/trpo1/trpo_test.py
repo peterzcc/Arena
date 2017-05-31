@@ -30,7 +30,7 @@ ch.setFormatter(formatter)
 root.addHandler(fh)
 root.addHandler(ch)
 
-BATH_SIZE = 2 * 5000
+BATH_SIZE = 5000
 
 
 def main():
@@ -73,7 +73,7 @@ def main():
         t_batch = t/BATH_SIZE
         current_std = \
             noise_k*t_batch*final_std if t_batch < final_n_batch else final_std
-        logging.debug("current_noise_std: {}".format(current_std))
+        #logging.debug("current_noise_std: {}".format(current_std))
         current_noise = np.random.normal(loc=mean,scale=current_std)
         return x + current_noise
 
