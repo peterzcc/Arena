@@ -12,11 +12,25 @@ import logging
 from custom_ant import CustomAnt
 from gather_env import GatherEnv
 from maze_env import MazeEnv
-
+import sys
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
-BATH_SIZE = 5000
+# create file handler which logs even debug messages
+fh = logging.FileHandler('log.txt')
+fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+# add the handlers to the logger
+root.addHandler(fh)
+root.addHandler(ch)
+
+BATH_SIZE = 2 * 5000
 
 
 def main():
@@ -55,7 +69,7 @@ def main():
     #     ctx = mx.cpu()
     # else:
     #     ctx = mx.gpu(args.gpu)
-
+    s_transform = lambda x: 1.0 / 3 * x
     def f_create_env():
         # env = GatherEnv()
         # env = gym.make('Ant-v1')
@@ -66,7 +80,7 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
-                              remove_obs_until=-1)
+                              visible_state_ids=np.array((True, True, True, True)))  # ,s_transform=s_transform)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,

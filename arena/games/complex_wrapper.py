@@ -11,7 +11,7 @@ import logging
 class ComplexWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=False, new_img_size=None,
                  max_episode_length=100000, action_reduce=False,
-                 append_image=False, remove_obs_until=-1):
+                 append_image=False, visible_state_ids=None, s_transform=lambda x: x):
         self.env = env
         self.action_reduce = action_reduce
         self.env = env
@@ -20,15 +20,16 @@ class ComplexWrapper(object):
             self.action_space.low = np.array((self.action_space.low[0],))
             self.action_space.high = np.array((self.action_space.high[0],))
         self.action_map = None
-        self.obs_start = remove_obs_until + 1
-
+        # self.obs_start = remove_obs_until + 1
+        self.vs_id = visible_state_ids
         # obs_min =np.ravel(self.env.observation_space.low)
         # obs_max = np.ravel(self.env.observation_space.high)
         # state_shape = self.env.observation_space.shape
-        self.state_space = Box(low=env.observation_space.low[self.obs_start:],
-                               high=env.observation_space.high[self.obs_start:])
+        self.state_space = Box(low=env.observation_space.low[self.vs_id],
+                               high=env.observation_space.high[self.vs_id])
         self.observation_space = [self.state_space]
         self.append_image = append_image
+        self.s_transform = s_transform
         if append_image:
             sample_image = self.env.render(mode="rgb_array")
             image_shape = sample_image.shape
@@ -82,22 +83,26 @@ class ComplexWrapper(object):
     def env_step(self, a):
         if self.append_image:
             state_observation, reward, done, info = self.env.step(a)
+            state_observation = self.s_transform(state_observation)
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
-            return [state_observation[self.obs_start:], image_observation], reward, done, info
+            return [state_observation[self.vs_id], image_observation], reward, done, info
         else:
             state_observation, reward, done, info = self.env.step(a)
-            return [state_observation[self.obs_start:]], reward, done, info
+            state_observation = self.s_transform(state_observation)
+            return [state_observation[self.vs_id]], reward, done, info
 
     def env_reset(self):
         if self.append_image:
             state_observation = self.env.reset()
+            state_observation = self.s_transform(state_observation)
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
-            return [state_observation[self.obs_start:], image_observation]
+            return [state_observation[self.vs_id], image_observation]
         else:
             state_observation = self.env.reset()
-            return [state_observation[self.obs_start:]]
+            state_observation = self.s_transform(state_observation)
+            return [state_observation[self.vs_id]]
 
     def step(self, a):
         a = np.append(a, (0,))

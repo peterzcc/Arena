@@ -99,7 +99,7 @@ class MultiNetwork(object):
                         values=[self.state_input, self.image_features])
             else:
                 if len(extra_feaatures) > 0:
-                    self.full_feature = tf.concat(axis=1, values=[*extra_feaatures])
+                    self.full_feature = tf.concat(axis=1, values=[self.state_input, *extra_feaatures])
                 else:
                     self.full_feature = self.state_input
 

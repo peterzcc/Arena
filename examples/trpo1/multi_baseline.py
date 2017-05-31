@@ -53,16 +53,17 @@ class MultiBaseline(object):
                                                                                   uniform=True)
                                              )
                 # img_features.flatten()
-                self.image_features = img_features.as_layer()
+                self.image_features = [img_features.as_layer()]
                 if only_image:
                     self.full_feature = tf.concat(
                         axis=1,
-                        values=[self.image_features, self.time_input])
+                        values=[*self.image_features, self.time_input])
                 else:
                     self.full_feature = tf.concat(
                         axis=1,
                         values=[self.state_input, img_features.as_layer(), self.time_input])
             else:
+                self.image_features = []
                 self.full_feature = tf.concat(
                     axis=1,
                     values=[self.state_input, self.time_input])
