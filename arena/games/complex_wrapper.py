@@ -11,7 +11,8 @@ import logging
 class ComplexWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=False, new_img_size=None,
                  max_episode_length=100000, action_reduce=False,
-                 append_image=False, visible_state_ids=None, s_transform=lambda x: x):
+                 append_image=False, visible_state_ids=None,
+                 s_transform=lambda x,t: x):
         self.env = env
         self.action_reduce = action_reduce
         self.env = env
@@ -64,9 +65,7 @@ class ComplexWrapper(object):
 
         # Episode information
         self.episode_steps = 0
-        print("Obs_space: " + str(self.observation_space))
-        print("Act_space.low: " + str(env.action_space.low))
-        print("Act_space.high: " + str(env.action_space.high))
+        self.total_steps = 0
 
     def render(self, mode='human', close=False):
         return self.env.render(mode=mode, close=close)
@@ -81,27 +80,23 @@ class ComplexWrapper(object):
         return final
 
     def env_step(self, a):
+        state_observation, reward, done, info = self.env.step(a)
+        state_observation = self.s_transform(state_observation,self.total_steps)
         if self.append_image:
-            state_observation, reward, done, info = self.env.step(a)
-            state_observation = self.s_transform(state_observation)
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
             return [state_observation[self.vs_id], image_observation], reward, done, info
         else:
-            state_observation, reward, done, info = self.env.step(a)
-            state_observation = self.s_transform(state_observation)
             return [state_observation[self.vs_id]], reward, done, info
 
     def env_reset(self):
+        state_observation = self.env.reset()
+        state_observation = self.s_transform(state_observation,self.total_steps)
         if self.append_image:
-            state_observation = self.env.reset()
-            state_observation = self.s_transform(state_observation)
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
             return [state_observation[self.vs_id], image_observation]
         else:
-            state_observation = self.env.reset()
-            state_observation = self.s_transform(state_observation)
             return [state_observation[self.vs_id]]
 
     def step(self, a):
@@ -119,6 +114,7 @@ class ComplexWrapper(object):
 
         self.episode_steps += 1
 
+
         if self.episode_steps >= self.max_episode_length:
             final_done = True
 
@@ -126,5 +122,6 @@ class ComplexWrapper(object):
 
     def reset(self):
         observation = self.env_reset()
+        self.total_steps += self.episode_steps
         self.episode_steps = 0
         return observation

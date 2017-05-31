@@ -65,10 +65,20 @@ def main():
     # final_factor = 0.01
     test_length = 0
 
-    # if args.gpu < 0:
-    #     ctx = mx.cpu()
-    # else:
-    #     ctx = mx.gpu(args.gpu)
+    mean = np.array([0,0,0,0])
+    final_std = np.array([1,1,0,0])
+    final_n_batch = 100
+    noise_k = (final_std)/final_n_batch
+    def state_preprocess(x,t):
+        t_batch = t/BATH_SIZE
+        current_std = \
+            noise_k*t_batch*final_std if t_batch < final_n_batch else final_std
+        logging.debug("current_noise_std: {}".format(current_std))
+        current_noise = np.random.normal(loc=mean,scale=current_std)
+        return x + current_noise
+
+
+
     s_transform = lambda x: 1.0 / 3 * x
     def f_create_env():
         # env = GatherEnv()
@@ -80,7 +90,8 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
-                              visible_state_ids=np.array((True, True, True, True)))  # ,s_transform=s_transform)
+                              visible_state_ids=np.array((True, True, True, True)),
+                              s_transform=state_preprocess)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
