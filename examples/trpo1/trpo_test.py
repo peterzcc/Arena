@@ -78,6 +78,8 @@ def main():
         noise = np.random.normal(loc=mean,scale=final_std)
         y[0:2] = (1-noise)*y[0:2] + noise*ratio
         return y
+    def ident(x,t):
+        return x
 
     def f_create_env():
         # env = GatherEnv()
@@ -90,7 +92,7 @@ def main():
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
                               visible_state_ids=np.array((True, True, True, True)),
-                              s_transform=state_preprocess)
+                              s_transform=ident)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
