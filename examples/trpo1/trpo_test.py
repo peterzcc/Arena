@@ -76,7 +76,7 @@ def main():
             noise_k*t_batch if t_batch < final_n_batch else 1.0
         #logging.debug("current_noise_std: {}".format(current_std))
         noise = np.random.normal(loc=mean,scale=final_std)
-        y[0:2] = (1-noise)*y[0:2] + noise*ratio
+        y[0:2] = (1-ratio)*y[0:2] + noise*ratio
         return y
     def ident(x,t):
         return x
@@ -91,7 +91,7 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
-                              visible_state_ids=np.array((True, True, True, True)),
+                              visible_state_ids=np.array((False, False, True, True)),
                               s_transform=ident)
 
     def f_create_agent(observation_space, action_space,
