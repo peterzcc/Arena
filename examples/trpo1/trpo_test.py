@@ -17,7 +17,7 @@ root = logging.getLogger()
 root.setLevel(logging.DEBUG)
 
 # create file handler which logs even debug messages
-fh = logging.FileHandler('log.txt')
+fh = logging.FileHandler('log.txt', mode='w')
 fh.setLevel(logging.DEBUG)
 # create console handler with a higher log level
 ch = logging.StreamHandler()
@@ -66,9 +66,9 @@ def main():
     test_length = 0
 
     mean = np.array([0,0])
-    final_std = np.array([1,1])
-    final_n_batch = 100
-    noise_k = (final_std)/final_n_batch
+    final_std = np.array([0.3, 0.3])
+    final_n_batch = 25
+    noise_k = 1.0 / final_n_batch
     def state_preprocess(x,t):
         y = x.copy()
         t_batch = t/BATH_SIZE
@@ -77,6 +77,37 @@ def main():
         #logging.debug("current_noise_std: {}".format(current_std))
         noise = np.random.normal(loc=mean,scale=final_std)
         y[0:2] = (1-ratio)*y[0:2] + noise*ratio
+        return y
+
+    def eliminated_state(x, t):
+        y = x.copy()
+        t_batch = t / BATH_SIZE
+        ratio = \
+            noise_k * t_batch if t_batch < final_n_batch else 1.0
+        # logging.debug("current_noise_std: {}".format(current_std))
+        noise = mean
+        y[0:2] = (1 - ratio) * y[0:2] + noise * ratio
+        return y
+
+    def dropout_state(x, t):
+        y = x.copy()
+        t_batch = t / BATH_SIZE
+        ratio = \
+            noise_k * t_batch if t_batch < final_n_batch else 1.0
+        # logging.debug("current_noise_std: {}".format(current_std))
+        is_removed = (np.random.random_sample(size=None) < ratio)
+        y[0:2] = mean if is_removed else y[0:2]
+        return y
+
+    def zeroed_state(x, t):
+        y = x.copy()
+        y[0:2] = mean
+        return y
+
+    def const_noise(x, t):
+        y = x.copy()
+        noise = np.random.normal(loc=mean, scale=final_std)
+        y[0:2] = noise
         return y
     def ident(x,t):
         return x
@@ -91,7 +122,7 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
-                              visible_state_ids=np.array((False, False, True, True)),
+                              visible_state_ids=np.array((True, True, True, True)),
                               s_transform=ident)
 
     def f_create_agent(observation_space, action_space,

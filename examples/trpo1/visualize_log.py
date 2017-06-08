@@ -20,15 +20,15 @@ def get_loss(logfile, outpath, starting_point=1):
         out_file = open(outpath, 'w')
     loss_file = open(logfile, 'r')
 
-    print "Parsing log from %s" %(logfile)
+    print("Parsing log from %s" % (logfile))
     loss_list = []
     for line in loss_file:
-        m = re.search('Average Return:([.0-9]+)/.*', line)
+        m = re.search('Average Return:[+-]?([0-9]*[.])?[0-9]+', line)
         if m is not None:
             loss = m.group(1)
             out_file.write(str(loss) + "\n")
             loss_list.append(loss)
-    plt.plot(xrange(len(loss_list) - starting_point), loss_list[starting_point:])
+    plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:])
     plt.xlabel('Epoch')
     plt.ylabel('Return')
     filename = os.path.basename(logfile)

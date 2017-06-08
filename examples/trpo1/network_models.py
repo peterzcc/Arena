@@ -8,56 +8,14 @@ import numpy as np
 dtype = tf.float32
 
 
-# # TODO: remove this class
-# class NetworkContinous(object):
-#     def __init__(self, scope, obs_shape, action_shape,
-#                  image_input=False):
-#         with tf.variable_scope("%s_shared" % scope):
-#             self.obs = obs = tf.placeholder(
-#                 dtype, shape=(None,) + obs_shape, name="%s_obs" % scope)
-#             self.action_n = tf.placeholder(dtype, shape=(None,) + action_shape, name="%s_action" % scope)
-#             self.advant = tf.placeholder(dtype, shape=[None], name="%s_advant" % scope)
-#
-#             self.old_dist_means_n = tf.placeholder(dtype, shape=(None,) + action_shape,
-#                                                    name="%s_oldaction_dist_means" % scope)
-#             self.old_dist_logstds_n = tf.placeholder(dtype, shape=(None,) + action_shape,
-#                                                      name="%s_oldaction_dist_logstds" % scope)
-#
-#             self.action_dist_means_n = (pt.wrap(self.obs).
-#                                         fully_connected(64, activation_fn=tf.nn.tanh,
-#                                                         init=variance_scaling_initializer(factor=1.0,
-#                                                                                                   mode='FAN_AVG',
-#                                                                                                   uniform=True),
-#                                                         name="%s_fc1" % scope).
-#                                         fully_connected(64, activation_fn=tf.nn.tanh,
-#                                                         init=variance_scaling_initializer(factor=1.0,
-#                                                                                                   mode='FAN_AVG',
-#                                                                                                   uniform=True),
-#                                                         name="%s_fc2" % scope).
-#                                         fully_connected(np.prod(action_shape),
-#                                                         init=variance_scaling_initializer(factor=0.01,
-#                                                                                                   mode='FAN_AVG',
-#                                                                                                   uniform=True),
-#                                                         name="%s_fc3" % scope))
-#             # TODO: STD should be trainable, learn this later
-#             # TODO: understand this machine code, could be potentially prone to bugs
-#             self.action_dist_logstd_param = tf.Variable(
-#                 initial_value=(np.log(1) + 0.01 * np.random.randn(1, *action_shape)).astype(np.float32),
-#                 trainable=True, name="%spolicy_logstd" % scope)
-#             self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
-#                                                  tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))
-#             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
-#
-#     def get_action_dist_means_n(self, session, obs):
-#         return session.run(self.action_dist_means_n,
-#                            {self.obs: obs})
+
 
 
 class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_shape,
                  conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
                  n_imgfeat=1,
-                 with_image=True, only_image=False, extra_feaatures=[]):
+                 with_image=True, only_image=False, extra_feaatures=[], st_enabled=None):
         with tf.variable_scope("%s_shared" % scope):
             self.state_input = tf.placeholder(
                 dtype, shape=(None,) + observation_space[0].shape, name="%s_state" % scope)
@@ -71,6 +29,7 @@ class MultiNetwork(object):
                                                    name="%s_oldaction_dist_means" % scope)
             self.old_dist_logstds_n = tf.placeholder(dtype, shape=(None,) + action_shape,
                                                      name="%s_oldaction_dist_logstds" % scope)
+            self.st_enabled = st_enabled
 
             if with_image:
                 expanded_img = tf.expand_dims(self.img_input, -1)
@@ -99,7 +58,7 @@ class MultiNetwork(object):
                         values=[self.state_input, self.image_features])
             else:
                 if len(extra_feaatures) > 0:
-                    self.full_feature = tf.concat(axis=1, values=[self.state_input, *extra_feaatures])
+                    self.full_feature = tf.concat(axis=1, values=[self.st_enabled * self.state_input, *extra_feaatures])
                 else:
                     self.full_feature = self.state_input
 

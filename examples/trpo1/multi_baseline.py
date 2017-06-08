@@ -32,7 +32,8 @@ class MultiBaseline(object):
             # add  timestep
             self.state_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name="x")
             self.img_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[1].shape, name="img")
-
+            self.img_enabled = tf.placeholder(tf.float32, shape=[], name='img_enabled')
+            self.st_enabled = tf.placeholder(tf.float32, shape=obs_space[0].shape, name='st_enabled')
             self.time_input = tf.placeholder(tf.float32, shape=(None, 1), name="t")
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
 
@@ -53,7 +54,7 @@ class MultiBaseline(object):
                                                                                   uniform=True)
                                              )
                 # img_features.flatten()
-                self.image_features = [img_features.as_layer()]
+                self.image_features = [self.img_enabled * img_features.as_layer()]
                 if only_image:
                     self.full_feature = tf.concat(
                         axis=1,
@@ -61,7 +62,7 @@ class MultiBaseline(object):
                 else:
                     self.full_feature = tf.concat(
                         axis=1,
-                        values=[self.state_input, img_features.as_layer(), self.time_input])
+                        values=[self.st_enabled * self.state_input, *self.image_features, self.time_input])
             else:
                 self.image_features = []
                 self.full_feature = tf.concat(
@@ -111,12 +112,14 @@ class MultiBaseline(object):
         else:
             obj = returns
         feed = {self.state_input: state_mat, self.img_input: img_mat,
-                self.time_input: times, self.y: obj}
+                self.time_input: times, self.y: obj,
+                self.st_enabled: paths[0]["st_enabled"], self.img_enabled: paths[0]["img_enabled"]}
         batch_N = returns.shape[0]
 
         if self.debug_mode:
-            mse = run_batched(self.mse, feed, batch_N, self.session,
-                              minibatch_size=self.minibatch_size)
+            # mse = run_batched(self.mse, feed, batch_N, self.session,
+            #                   minibatch_size=self.minibatch_size)
+            mse = self.session.run(self.mse, feed_dict=feed)
             l2 = self.session.run(self.l2, feed_dict=feed)
 
             logging.debug("vf_before:\n mse={}\tl2={}\n".format(mse, l2))
@@ -131,12 +134,12 @@ class MultiBaseline(object):
                 end = min(start + self.minibatch_size, batch_N)
                 slc = training_inds[range(start, end)]
                 this_feed = {self.state_input: state_mat[slc], self.img_input: img_mat[slc],
-                             self.time_input: times[slc], self.y: obj[slc]}
+                             self.time_input: times[slc], self.y: obj[slc],
+                             self.st_enabled: paths[0]["st_enabled"], self.img_enabled: paths[0]["img_enabled"]}
                 loss, _ = self.session.run([self.mse, self.train], feed_dict=this_feed)
 
         if self.debug_mode:
-            mse = run_batched(self.mse, feed, batch_N, self.session,
-                              minibatch_size=self.minibatch_size)
+            mse = self.session.run(self.mse, feed_dict=feed)
             l2 = self.session.run(self.l2, feed_dict=feed)
             logging.debug("vf_after:\n mse={}\tl2={}\n".format(mse, l2))
 
@@ -147,6 +150,7 @@ class MultiBaseline(object):
         else:
             # ret = self.session.run(self.net, {self.x: self._features(path)})
             feed = {self.state_input: path["observation"][0], self.img_input: path["observation"][1],
-                    self.time_input: path["times"]}
+                    self.time_input: path["times"],
+                    self.st_enabled: path["st_enabled"], self.img_enabled: path["img_enabled"]}
             ret = self.session.run(self.net, feed_dict=feed)
             return np.reshape(ret, (ret.shape[0],))
