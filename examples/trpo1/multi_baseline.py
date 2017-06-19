@@ -5,7 +5,7 @@ from tensorflow.contrib.layers import variance_scaling_initializer
 import numpy as np
 import prettytensor as pt
 import logging
-from tf_utils import LbfgsOptimizer, run_batched
+from tf_utils import LbfgsOptimizer, run_batched, aggregate_feature
 
 concat = np.concatenate
 
@@ -17,7 +17,7 @@ class MultiBaseline(object):
     def __init__(self, session=None, scope="value_f",
                  obs_space=None, hidden_sizes=(64, 64),
                  conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)), n_imgfeat=1, activation=tf.nn.tanh,
-                 max_iter=25, timestep_limit=1000, with_image=True, only_image=False):
+                 max_iter=25, timestep_limit=1000, with_image=True, comb_method=aggregate_feature):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = False  # not with_image
@@ -26,48 +26,49 @@ class MultiBaseline(object):
         self.timestep_limit = timestep_limit
         self.scope = scope
         self.minibatch_size = 32
+        self.comb_method = comb_method
         assert len(obs_space) == 2
-
         with tf.variable_scope(scope):
             # add  timestep
             self.state_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name="x")
             self.img_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[1].shape, name="img")
-            self.img_enabled = tf.placeholder(tf.float32, shape=[], name='img_enabled')
-            self.st_enabled = tf.placeholder(tf.float32, shape=obs_space[0].shape, name='st_enabled')
+            self.img_enabled = tf.placeholder(tf.float32, shape=(None,), name='img_enabled')
+            self.st_enabled = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name='st_enabled')
             self.time_input = tf.placeholder(tf.float32, shape=(None, 1), name="t")
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
-
+            self.final_state = self.st_enabled * self.state_input
+        img_scope = scope + "_img"
+        with tf.variable_scope(img_scope):
+            expanded_img = tf.expand_dims(self.img_input, -1)
+            img_features = pt.wrap(expanded_img).sequential()
+            for conv_size in conv_sizes:
+                img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
+                                    stride=conv_size[2],
+                                    weights=variance_scaling_initializer(factor=1.0,
+                                                                         mode='FAN_AVG',
+                                                                         uniform=True)
+                                    )
+            img_features.flatten()
+            img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
+                                         weights=variance_scaling_initializer(factor=1.0,
+                                                                              mode='FAN_AVG',
+                                                                              uniform=True)
+                                         )
+            # img_features.flatten()
+            self.pre_image_features = [img_features.as_layer()]
+            self.image_features = [self.img_enabled[:, tf.newaxis] * img_features.as_layer()]
+            self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
+        with tf.variable_scope(scope):
             if with_image:
-                expanded_img = tf.expand_dims(self.img_input, -1)
-                img_features = pt.wrap(expanded_img).sequential()
-                for conv_size in conv_sizes:
-                    img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
-                                        stride=conv_size[2],
-                                        weights=variance_scaling_initializer(factor=1.0,
-                                                                             mode='FAN_AVG',
-                                                                             uniform=True)
-                                        )
-                img_features.flatten()
-                img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                                             weights=variance_scaling_initializer(factor=1.0,
-                                                                                  mode='FAN_AVG',
-                                                                                  uniform=True)
-                                             )
-                # img_features.flatten()
-                self.image_features = [self.img_enabled * img_features.as_layer()]
-                if only_image:
-                    self.full_feature = tf.concat(
-                        axis=1,
-                        values=[*self.image_features, self.time_input])
-                else:
-                    self.full_feature = tf.concat(
-                        axis=1,
-                        values=[self.st_enabled * self.state_input, *self.image_features, self.time_input])
-            else:
-                self.image_features = []
                 self.full_feature = tf.concat(
                     axis=1,
-                    values=[self.state_input, self.time_input])
+                    values=[self.final_state, *self.image_features, self.time_input])
+            else:
+                self.image_features = []
+                self.aggregated_feature = self.comb_method(self.final_state, self.image_features[0])
+                self.full_feature = tf.concat(
+                    axis=1,
+                    values=[self.aggregated_feature, self.time_input])
             hidden_units = pt.wrap(self.full_feature).sequential()
             for hidden_size in hidden_sizes:
                 hidden_units.fully_connected(hidden_size, activation_fn=activation,
@@ -78,9 +79,13 @@ class MultiBaseline(object):
 
             self.net = tf.reshape(hidden_units.fully_connected(1).as_layer(), (-1,))  # why reshape?
             self.mse = tf.reduce_mean(tf.square(self.net - self.y))
-            self.var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
-            self.l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
-            self.final_loss = self.mse + self.l2 * self.l2_k
+            self.st_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope)
+            self.var_list = [*self.img_var_list, *self.st_var_list]
+            self.st_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.st_var_list])
+            self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
+            self.l2 = self.st_l2 + self.img_l2
+            self.final_loss = self.mse + (self.l2) * self.l2_k
+            self.pretrain_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, 0:2]))
             if self.use_lbfgs_b:
                 self.opt = LbfgsOptimizer(
                     self.final_loss, params=self.var_list, maxiter=self.max_iter, session=self.session)
@@ -89,7 +94,14 @@ class MultiBaseline(object):
                 #                                          )
             else:
                 self.opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
-                self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT)
+                self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
+                                               var_list=self.var_list)
+                self.img_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                self.img_train = self.opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
+                                                   var_list=self.img_var_list)
+                self.upper_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                self.upper_train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
+                                                     var_list=self.st_var_list)
         self.session.run(tf.global_variables_initializer())
         self.debug_mode = True
 
@@ -100,22 +112,31 @@ class MultiBaseline(object):
     #     ret = np.concatenate((obs, path["times"][:, None],), axis=1)
     #     return ret
 
-    def fit(self, paths):
+    def fit(self, paths, update_mode="full"):
         # featmat = self._features(paths)
         # returns = paths["values"]
         state_mat = concat([path["observation"][0] for path in paths], axis=0)
         img_mat = concat([path["observation"][1] for path in paths], axis=0)
         times = concat([path["times"] for path in paths], axis=0)
         returns = concat([path["return"] for path in paths])
+        img_enabled = concat([path["img_enabled"] for path in paths])
+        st_enabled = concat([path["st_enabled"] for path in paths])
         if self.mix_frac != 1:
             obj = returns * self.mix_frac + self.predict(paths) * (1 - self.mix_frac)
         else:
             obj = returns
         feed = {self.state_input: state_mat, self.img_input: img_mat,
                 self.time_input: times, self.y: obj,
-                self.st_enabled: paths[0]["st_enabled"], self.img_enabled: paths[0]["img_enabled"]}
+                self.st_enabled: st_enabled, self.img_enabled: img_enabled}
         batch_N = returns.shape[0]
-
+        if update_mode == "full":
+            train_op = [self.mse, self.train]
+        elif update_mode == "both":
+            train_op = [self.mse, self.upper_train, self.img_train]
+        elif update_mode == "img":
+            train_op = [self.mse, self.img_train]
+        elif update_mode == "st":
+            train_op = [self.mse, self.st_train]
         if self.debug_mode:
             # mse = run_batched(self.mse, feed, batch_N, self.session,
             #                   minibatch_size=self.minibatch_size)
@@ -135,8 +156,8 @@ class MultiBaseline(object):
                 slc = training_inds[range(start, end)]
                 this_feed = {self.state_input: state_mat[slc], self.img_input: img_mat[slc],
                              self.time_input: times[slc], self.y: obj[slc],
-                             self.st_enabled: paths[0]["st_enabled"], self.img_enabled: paths[0]["img_enabled"]}
-                loss, _ = self.session.run([self.mse, self.train], feed_dict=this_feed)
+                             self.st_enabled: st_enabled[slc], self.img_enabled: img_enabled[slc]}
+                loss = self.session.run(train_op, feed_dict=this_feed)[0]
 
         if self.debug_mode:
             mse = self.session.run(self.mse, feed_dict=feed)

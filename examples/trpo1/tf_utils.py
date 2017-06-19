@@ -157,6 +157,8 @@ class LbfgsOptimizer(EzFlat):
 #         if ratio > accept_ratio and actual_improve > 0:
 #             return xnew
 #     return x
+def aggregate_feature(st, img):
+    return st + tf.pad(img, paddings=tf.constant(value=[[0, 0], [0, 2]]))
 
 def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_ratio=.1):
     """

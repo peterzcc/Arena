@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib.layers import variance_scaling_initializer
 import prettytensor as pt
 import numpy as np
-
+from tf_utils import aggregate_feature
 dtype = tf.float32
 
 
@@ -15,7 +15,9 @@ class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_shape,
                  conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
                  n_imgfeat=1,
-                 with_image=True, only_image=False, extra_feaatures=[], st_enabled=None):
+                 with_image=True, extra_feaatures=[], st_enabled=None,
+                 comb_method=aggregate_feature):
+        self.comb_method = comb_method
         with tf.variable_scope("%s_shared" % scope):
             self.state_input = tf.placeholder(
                 dtype, shape=(None,) + observation_space[0].shape, name="%s_state" % scope)
@@ -50,15 +52,14 @@ class MultiNetwork(object):
                 self.image_features = img_features.as_layer()
 
                 # img_features.flatten()
-                if only_image:
-                    self.full_feature = self.image_features
-                else:
-                    self.full_feature = tf.concat(
-                        axis=1,
-                        values=[self.state_input, self.image_features])
+
+                self.full_feature = tf.concat(
+                    axis=1,
+                    values=[self.state_input, self.image_features])
             else:
                 if len(extra_feaatures) > 0:
-                    self.full_feature = tf.concat(axis=1, values=[self.st_enabled * self.state_input, *extra_feaatures])
+                    # self.full_feature = tf.concat(axis=1, values=[self.st_enabled * self.state_input. *extra_feaatures])
+                    self.full_feature = self.comb_method(self.st_enabled * self.state_input, extra_feaatures[0])
                 else:
                     self.full_feature = self.state_input
 
@@ -68,7 +69,7 @@ class MultiNetwork(object):
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc1" % scope).
-                                        fully_connected(64, activation_fn=tf.nn.tanh,
+                                        fully_connected(16, activation_fn=tf.nn.tanh,
                                                         weights=variance_scaling_initializer(factor=1.0,
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),

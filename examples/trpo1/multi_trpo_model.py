@@ -57,22 +57,23 @@ class MultiTrpoModel(ModelWithCritic):
 
         else:
             self.session = session
-        only_image = False
         n_imgfeat = 2
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
-                                    timestep_limit=timestep_limit, with_image=True, only_image=only_image,
-                                    n_imgfeat=n_imgfeat)
+                                    timestep_limit=timestep_limit, with_image=True,
+                                    n_imgfeat=n_imgfeat, hidden_sizes=(64, 16))
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
         self.info_shape = dict(mean=self.act_space.shape,
                                log_std=self.act_space.shape,
-                               clips=())
+                               clips=(),
+                               img_enabled=(),
+                               st_enabled=self.ob_space[0].low.shape)
         self.policy_with_image_input = False
         self.net = MultiNetwork(scope="network_continous",
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
-                                with_image=self.policy_with_image_input, only_image=only_image,
+                                with_image=self.policy_with_image_input,
                                 n_imgfeat=n_imgfeat,
                                 extra_feaatures=[*self.critic.image_features],
                                 st_enabled=self.critic.st_enabled)
@@ -133,7 +134,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
         self.session.run(tf.global_variables_initializer())
         self.n_update = 0
-        self.separate_update = True
+        self.separate_update = False
         self.update_critic = True
         self.update_policy = True
         self.debug = True
@@ -169,14 +170,23 @@ class MultiTrpoModel(ModelWithCritic):
         return result
 
     def get_state_activation(self, t_batch):
-        # final_n_batch = 25
-        # noise_k = 1.0 / final_n_batch
-        # ratio = \
-        #     noise_k * t_batch if t_batch < final_n_batch else 1.0
-        is_enabled = (t_batch % 2 == 0)
+        # start_ratio = 0.1
+        # end_ratio = 0.0
+        # start_n_batch = 100
+        # final_n_batch = 350
+        # noise_k = 0.0 if t_batch < start_n_batch else \
+        #     ((t_batch-start_n_batch)/(final_n_batch-start_n_batch) if t_batch < final_n_batch else 1.0)
+        # ratio = noise_k * end_ratio + (1 - noise_k)*start_ratio
+        # is_enabled = (np.random.random_sample(size=None) < ratio)
+
+        # is_enabled = (t_batch % 2 == 0)
+
+        is_enabled = True
+
         st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 1.0, 1.0])
         img_enabled = 1.0 - is_enabled
         return st_enabled, img_enabled
+
     def predict(self, observation):
         if len(observation[0].shape) == len(self.ob_space[0].shape):
             obs = [np.expand_dims(observation[0], 0), np.expand_dims(observation[1], 0)]
@@ -188,27 +198,26 @@ class MultiTrpoModel(ModelWithCritic):
         action_dist_means_n, action_dist_log_stds_n, action_std_n = \
             self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
                              {self.net.state_input: obs[0], self.net.img_input: obs[1], self.critic.img_input: obs[1],
-                              self.critic.st_enabled: st_enabled, self.critic.img_enabled: img_enabled})
+                              self.critic.st_enabled: np.expand_dims(st_enabled, 0),
+                              self.critic.img_enabled: np.expand_dims(img_enabled, 0)})
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         output = rnd * action_std_n[0] + action_dist_means_n[0]
         action = output  # np.clip(output,self.act_space.low,self.act_space.high).flatten()
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
+        agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0],
+                          st_enabled=st_enabled, img_enabled=img_enabled)
         if self.debug:
             is_clipped = np.logical_or((action <= self.act_space.low), (action >= self.act_space.high))
             num_clips = np.count_nonzero(is_clipped)
-            agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0], clips=num_clips)
-        else:
-            agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0])
+            agent_info["clips"] = num_clips
+
         # logging.debug("tx a:{},\n".format(action))
 
         return action, agent_info
 
     def compute_critic(self, states):
-        st_enabled, img_enabled = self.get_state_activation(self.n_update)
-        states["st_enabled"] = st_enabled
-        states["img_enabled"] = img_enabled
         return self.critic.predict(states)
 
     # TODO: add a compatible function for disabling image input
@@ -219,9 +228,6 @@ class MultiTrpoModel(ModelWithCritic):
         # advant_n = sample_data["advantages"]
 
         # prob_np = concat([path["prob"] for path in paths])  # self._act_prob(ob[None])[0]
-        st_enabled, img_enabled = self.get_state_activation(self.n_update)
-        paths[0]["st_enabled"] = st_enabled
-        paths[0]["img_enabled"] = img_enabled
         if self.separate_update:
             if self.n_update % 4 < 2:
                 self.update_critic = True
@@ -230,7 +236,7 @@ class MultiTrpoModel(ModelWithCritic):
                 self.update_critic = False
                 self.update_policy = True
         if self.update_critic:
-            self.critic.fit(paths)
+            self.critic.fit(paths, update_mode="full")
         self.n_update += 1
         if not self.update_policy:
             return None, None
@@ -239,6 +245,8 @@ class MultiTrpoModel(ModelWithCritic):
         img_input = concat([path["observation"][1] for path in paths])
         action_n = concat([path["action"] for path in paths])
         advant_n = concat([path["advantage"] for path in paths])
+        img_enabled = concat([path["img_enabled"] for path in paths])
+        st_enabled = concat([path["st_enabled"] for path in paths])
         logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
 
         action_dist_means_n = concat([path["mean"] for path in paths])
@@ -249,7 +257,9 @@ class MultiTrpoModel(ModelWithCritic):
                 self.net.old_dist_means_n: action_dist_means_n,
                 self.net.old_dist_logstds_n: action_dist_logstds_n,
                 self.net.action_n: action_n,
-                self.critic.img_input: img_input
+                self.critic.img_input: img_input,
+                self.critic.st_enabled: st_enabled,
+                self.critic.img_enabled: img_enabled
                 }
         batch_size = advant_n.shape[0]
         thprev = self.get_flat_params()  # get theta_old
@@ -259,9 +269,7 @@ class MultiTrpoModel(ModelWithCritic):
 
                 fvp = self.run_batched_fvp(self.batch_g_gT_x, self.g_gT_x, feed, batch_size, self.session,
                                            minibatch_size=self.minibatch_size,
-                                           extra_input={self.flat_tangent: p,
-                                                        self.critic.st_enabled: st_enabled,
-                                                        self.critic.img_enabled: img_enabled})
+                                           extra_input={self.flat_tangent: p})
                 return fvp + self.cg_damping * p
         else:
             def fisher_vector_product(p):
@@ -271,10 +279,7 @@ class MultiTrpoModel(ModelWithCritic):
                                   extra_input={self.flat_tangent: p})
                 return fvp + self.cg_damping * p
 
-        g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
-                        extra_input={self.critic.st_enabled: st_enabled,
-                                     self.critic.img_enabled: img_enabled}
-                        )
+        g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
         if self.debug:
             logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
             # logging.debug("act_mean mean: {}".format(np.mean(action_dist_means_n, axis=0)))
@@ -296,16 +301,12 @@ class MultiTrpoModel(ModelWithCritic):
 
         def loss(th):
             self.set_params_with_flat_data(th)
-            surr = run_batched(self.surr, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
-                               extra_input={self.critic.st_enabled: st_enabled,
-                                            self.critic.img_enabled: img_enabled})
+            surr = run_batched(self.surr, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
             return surr
 
         if self.debug:
             surr_o, kl_o, ent_o = run_batched(self.losses, feed, batch_size, self.session,
-                                              minibatch_size=self.minibatch_size,
-                                              extra_input={self.critic.st_enabled: st_enabled,
-                                                           self.critic.img_enabled: img_enabled})
+                                              minibatch_size=self.minibatch_size)
             logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
             # logging.debug("\nold theta: {}\n".format(np.linalg.norm(thprev)))
         logging.debug("\nfullstep: {}\n".format(np.linalg.norm(fullstep)))
@@ -314,9 +315,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         if self.debug:
             surr_new, kl_new, ent_new = run_batched(self.losses, feed, batch_size, self.session,
-                                                    minibatch_size=self.minibatch_size,
-                                                    extra_input={self.critic.st_enabled: st_enabled,
-                                                                 self.critic.img_enabled: img_enabled})
+                                                    minibatch_size=self.minibatch_size)
             logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
             # logging.debug("\nnew theta: {}\nd_theta: {}\n".format(np.linalg.norm(theta), np.linalg.norm(d_theta)))
         return None, None
