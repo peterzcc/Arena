@@ -47,6 +47,7 @@ class BatchUpdateAgent(Agent):
         self.discount = discount
 
         # State information
+        self.num_epoch = 0
         self.counter = batch_size
         self.episode_step = 0
         self.epoch_reward = 0
@@ -117,8 +118,9 @@ class BatchUpdateAgent(Agent):
                 fps = (self.batch_size - self.counter) / (train_after - train_before)
 
                 logging.info(
-                    'Thd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f \n' \
-                    % (self.id,
+                    'Epoch:%d \nThd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f \n' \
+                    % (self.num_epoch,
+                       self.id,
                        self.epoch_reward / self.num_episodes,
                        self.num_episodes,
                        fps
@@ -128,6 +130,7 @@ class BatchUpdateAgent(Agent):
                 self.epoch_reward = 0
                 self.counter = self.batch_size
                 self.num_episodes = 0
+                self.num_epoch += 1
 
     def train_once(self):
         train_data = self.memory.extract_all()

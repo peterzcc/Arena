@@ -12,7 +12,7 @@ class ComplexWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=False, new_img_size=None,
                  max_episode_length=100000, action_reduce=False,
                  append_image=False, visible_state_ids=None,
-                 s_transform=lambda x,t: x):
+                 s_transform=lambda x, t: x, num_frame=1):
         self.env = env
         self.action_reduce = action_reduce
         self.env = env
@@ -31,16 +31,18 @@ class ComplexWrapper(object):
         self.observation_space = [self.state_space]
         self.append_image = append_image
         self.s_transform = s_transform
+        self.num_frame = num_frame
         if append_image:
             sample_image = self.env.render(mode="rgb_array")
             image_shape = sample_image.shape
+            logging.info("original size: {}".format(image_shape))
             img_min = 0
             img_max = 255
             if rgb_to_gray or new_img_size is not None:
                 assert len(image_shape) == 3
                 assert image_shape[2] == 3
                 if rgb_to_gray:
-                    num_channel = 1
+                    num_channel = 1 * num_frame
                 else:
                     num_channel = 3
                 if new_img_size is None:
@@ -50,7 +52,7 @@ class ComplexWrapper(object):
                 if rgb_to_gray:
                     self.img_space = Box(low=img_min,
                                          high=img_max,
-                                         shape=image_size
+                                         shape=image_size + (num_channel,)
                                          )
                 else:
                     self.img_space = Box(low=img_min,
@@ -62,6 +64,9 @@ class ComplexWrapper(object):
         self.new_img_size = new_img_size
         self.max_episode_length = max_episode_length
         self.info_sample = {"terminated": False}
+
+        self.frame_buffer = self.img_space.low.copy()
+        self.x_buffer = self.num_frame - 1
 
         # Episode information
         self.episode_steps = 0
@@ -85,17 +90,24 @@ class ComplexWrapper(object):
         if self.append_image:
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
-            return [state_observation[self.vs_id], image_observation], reward, done, info
+            self.x_buffer = (self.x_buffer + 1) % self.num_frame
+            self.frame_buffer[:, :, self.x_buffer] = image_observation
+            stacked_obs = np.take(self.frame_buffer, np.arange(self.x_buffer + 1 - self.num_frame, self.x_buffer + 1),
+                                  mode='wrap')
+            return [state_observation[self.vs_id], stacked_obs], reward, done, info
         else:
             return [state_observation[self.vs_id]], reward, done, info
 
     def env_reset(self):
         state_observation = self.env.reset()
+        self.frame_buffer = self.img_space.low.copy()
+        self.x_buffer = self.num_frame - 1
         state_observation = self.s_transform(state_observation,self.total_steps)
         if self.append_image:
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
-            return [state_observation[self.vs_id], image_observation]
+            self.frame_buffer[:, :, self.x_buffer] = image_observation
+            return [state_observation[self.vs_id], self.frame_buffer.copy()]
         else:
             return [state_observation[self.vs_id]]
 

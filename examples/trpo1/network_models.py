@@ -15,7 +15,7 @@ class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_shape,
                  conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
                  n_imgfeat=1,
-                 with_image=True, extra_feaatures=[], st_enabled=None,
+                 with_image=True, extra_feaatures=[], st_enabled=None, img_enabled=None,
                  comb_method=aggregate_feature):
         self.comb_method = comb_method
         with tf.variable_scope("%s_shared" % scope):
@@ -32,9 +32,10 @@ class MultiNetwork(object):
             self.old_dist_logstds_n = tf.placeholder(dtype, shape=(None,) + action_shape,
                                                      name="%s_oldaction_dist_logstds" % scope)
             self.st_enabled = st_enabled
+            self.img_enabled = img_enabled
 
             if with_image:
-                expanded_img = tf.expand_dims(self.img_input, -1)
+                expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
                 img_features = pt.wrap(expanded_img).sequential()
                 for conv_size in conv_sizes:
                     img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
@@ -61,7 +62,24 @@ class MultiNetwork(object):
                     # self.full_feature = tf.concat(axis=1, values=[self.st_enabled * self.state_input. *extra_feaatures])
                     self.full_feature = self.comb_method(self.st_enabled * self.state_input, extra_feaatures[0])
                 else:
-                    self.full_feature = self.state_input
+                    expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
+                    img_features = pt.wrap(expanded_img).sequential()
+                    for conv_size in conv_sizes:
+                        img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
+                                            stride=conv_size[2],
+                                            weights=variance_scaling_initializer(factor=1.0,
+                                                                                 mode='FAN_AVG',
+                                                                                 uniform=True)
+                                            )
+                    img_features.flatten()
+                    img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
+                                                 weights=variance_scaling_initializer(factor=1.0,
+                                                                                      mode='FAN_AVG',
+                                                                                      uniform=True)
+                                                 )
+                    self.image_features = img_features.as_layer()
+                    self.full_feature = self.st_enabled * self.state_input + \
+                                        self.img_enabled[:, tf.newaxis] * self.image_features
 
             self.action_dist_means_n = (pt.wrap(self.full_feature).
                                         fully_connected(64, activation_fn=tf.nn.tanh,
@@ -79,8 +97,7 @@ class MultiNetwork(object):
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc3" % scope))
-            # TODO: STD should be trainable, learn this later
-            # TODO: understand this machine code, could be potentially prone to bugs
+
             self.action_dist_logstd_param = tf.Variable(
                 initial_value=(np.log(1) + 0.01 * np.random.randn(1, *action_shape)).astype(np.float32),
                 trainable=True, name="%spolicy_logstd" % scope)

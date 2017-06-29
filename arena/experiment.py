@@ -236,7 +236,7 @@ class Experiment(object):
                     start_times = np.repeat(time(), num_actor)
 
                 epoch_num += 1
-                logging.debug("Epoch {} Finished.\n".format(epoch_num))
+                logging.debug("exp: Epoch {} Finished.\n".format(epoch_num))
                 if self.render_option == "once_per_epoch":
                     self.actuator_channels[0].put(RenderOption.one_episode)
 

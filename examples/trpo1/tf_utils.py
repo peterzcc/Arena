@@ -158,7 +158,7 @@ class LbfgsOptimizer(EzFlat):
 #             return xnew
 #     return x
 def aggregate_feature(st, img):
-    return st + tf.pad(img, paddings=tf.constant(value=[[0, 0], [0, 2]]))
+    return st + img  # tf.pad(img, paddings=tf.constant(value=[[0, 0], [0, 2]]))
 
 def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_ratio=.1):
     """
@@ -212,24 +212,29 @@ def cg(f_Ax, b, cg_iters=10, verbose=True, residual_tol=1e-10):
     fmtstr = "%10i %10.3g %10.3g"
     titlestr = "%10s %10s %10s"
     if verbose: logging.debug(titlestr % ("iter", "residual norm", "soln norm"))
-
+    if verbose: logging.debug(fmtstr % (0, rdotr, np.linalg.norm(x)))
     for i in range(cg_iters):
         # if callback is not None:
         #     callback(x)
-        if verbose: logging.debug(fmtstr % (i, rdotr, np.linalg.norm(x)))
+
         z = f_Ax(p)
         v = rdotr / (p.dot(z) + 1e-6)
+        if i == cg_iters - 1:
+            old_x = x
         x += v * p
         r -= v * z
         newrdotr = r.dot(r)
         mu = newrdotr / (rdotr + 1e-6)
         p = r + mu * p
-
+        if verbose: logging.debug(fmtstr % (i + 1, newrdotr, np.linalg.norm(x)))
+        if i == cg_iters - 1 and newrdotr > rdotr:
+            x = old_x
+            logging.debug("Last iteration failed, rollback")
         rdotr = newrdotr
+
         if rdotr < residual_tol:
             break
 
     # if callback is not None:
     #     callback(x)
-    if verbose: logging.debug(fmtstr % (i + 1, rdotr, np.linalg.norm(x)))  # pylint: disable=W0631
     return x

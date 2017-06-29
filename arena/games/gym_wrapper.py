@@ -48,7 +48,7 @@ class GymWrapper(object):
             if rgb_to_gray:
                 self.observation_space = Box(low=obs_min,
                                              high=obs_max,
-                                             shape=image_size
+                                             shape=image_size + (num_channel,)
                                              )
             else:
                 self.observation_space = Box(low=obs_min,

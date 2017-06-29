@@ -65,8 +65,8 @@ def main():
     # final_factor = 0.01
     test_length = 0
 
-    mean = np.array([0,0])
-    final_std = np.array([0.3, 0.3])
+    mean = np.array([0, 0, 0, 0])
+    final_std = np.array([0.5, 0.5, 0.5, 0.5])
     final_n_batch = 25
     noise_k = 1.0 / final_n_batch
     def state_preprocess(x,t):
@@ -107,7 +107,7 @@ def main():
     def const_noise(x, t):
         y = x.copy()
         noise = np.random.normal(loc=mean, scale=final_std)
-        y[0:2] = noise
+        y += noise
         return y
     def ident(x,t):
         return x
@@ -121,9 +121,10 @@ def main():
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
         return ComplexWrapper(env, max_episode_length=T,
-                              append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                              append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
                               visible_state_ids=np.array((True, True, True, True)),
-                              s_transform=ident)
+                              s_transform=ident,
+                              num_frame=3)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
