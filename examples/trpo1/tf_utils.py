@@ -197,8 +197,14 @@ def run_batched(func, feed, N, session, minibatch_size=64, extra_input={}):
     return result
 
 
-# http://www.johndcook.com/blog/standard_deviation/
+def lrelu(x, leak=0.2, name="lrelu"):
+    with tf.variable_scope(name):
+        f1 = 0.5 * (1 + leak)
+        f2 = 0.5 * (1 - leak)
+        return f1 * x + f2 * abs(x)
 
+# http://www.johndcook.com/blog/standard_deviation/
+EPS = 1e-6
 def cg(f_Ax, b, cg_iters=10, verbose=True, residual_tol=1e-10):
     """
     Demmel p 312
@@ -218,13 +224,13 @@ def cg(f_Ax, b, cg_iters=10, verbose=True, residual_tol=1e-10):
         #     callback(x)
 
         z = f_Ax(p)
-        v = rdotr / (p.dot(z) + 1e-6)
+        v = rdotr / (p.dot(z) + EPS)
         if i == cg_iters - 1:
             old_x = x
         x += v * p
         r -= v * z
         newrdotr = r.dot(r)
-        mu = newrdotr / (rdotr + 1e-6)
+        mu = newrdotr / (rdotr + EPS)
         p = r + mu * p
         if verbose: logging.debug(fmtstr % (i + 1, newrdotr, np.linalg.norm(x)))
         if i == cg_iters - 1 and newrdotr > rdotr:

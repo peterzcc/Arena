@@ -93,6 +93,7 @@ class ComplexWrapper(object):
             self.x_buffer = (self.x_buffer + 1) % self.num_frame
             self.frame_buffer[:, :, self.x_buffer] = image_observation
             stacked_obs = np.take(self.frame_buffer, np.arange(self.x_buffer + 1 - self.num_frame, self.x_buffer + 1),
+                                  axis=2,
                                   mode='wrap')
             return [state_observation[self.vs_id], stacked_obs], reward, done, info
         else:

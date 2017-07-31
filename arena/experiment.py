@@ -76,6 +76,24 @@ class Experiment(object):
             self.stats_file_dir = stats_file_dir
         if not os.path.exists(self.stats_file_dir):
             os.mkdir(self.stats_file_dir)
+
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+
+        # create file handler which logs even debug messages
+        fh = logging.FileHandler(self.stats_file_dir + '/log.txt', mode='w')
+        fh.setLevel(logging.DEBUG)
+        # create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # add the handlers to the logger
+        root.addHandler(fh)
+        root.addHandler(ch)
+
         logging.info("Saving data at: {}".format(self.stats_file_dir))
         self.log_train_path = os.path.join(self.stats_file_dir, "train_log.csv")
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
@@ -236,7 +254,7 @@ class Experiment(object):
                     start_times = np.repeat(time(), num_actor)
 
                 epoch_num += 1
-                logging.debug("exp: Epoch {} Finished.\n".format(epoch_num))
+                # logging.debug("exp: Epoch {} Finished.\n".format(epoch_num))
                 if self.render_option == "once_per_epoch":
                     self.actuator_channels[0].put(RenderOption.one_episode)
 

@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib.layers import variance_scaling_initializer
 import prettytensor as pt
 import numpy as np
-from tf_utils import aggregate_feature
+from tf_utils import aggregate_feature, lrelu
 dtype = tf.float32
 
 
@@ -31,21 +31,23 @@ class MultiNetwork(object):
                                                    name="%s_oldaction_dist_means" % scope)
             self.old_dist_logstds_n = tf.placeholder(dtype, shape=(None,) + action_shape,
                                                      name="%s_oldaction_dist_logstds" % scope)
-            self.st_enabled = st_enabled
-            self.img_enabled = img_enabled
+            # self.st_enabled = st_enabled
+            # self.img_enabled = img_enabled
+            self.st_enabled = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name='st_enabled')
+            self.img_enabled = tf.placeholder(tf.float32, shape=(None,), name='img_enabled')
 
             if with_image:
                 expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
                 img_features = pt.wrap(expanded_img).sequential()
                 for conv_size in conv_sizes:
-                    img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
+                    img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
                                         stride=conv_size[2],
                                         weights=variance_scaling_initializer(factor=1.0,
                                                                              mode='FAN_AVG',
                                                                              uniform=True)
                                         )
                 img_features.flatten()
-                img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
+                img_features.fully_connected(n_imgfeat, activation_fn=None,
                                              weights=variance_scaling_initializer(factor=1.0,
                                                                                   mode='FAN_AVG',
                                                                                   uniform=True)
@@ -65,42 +67,44 @@ class MultiNetwork(object):
                     expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
                     img_features = pt.wrap(expanded_img).sequential()
                     for conv_size in conv_sizes:
-                        img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=tf.nn.relu,
+                        img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
                                             stride=conv_size[2],
-                                            weights=variance_scaling_initializer(factor=1.0,
+                                            weights=variance_scaling_initializer(factor=0.1,
                                                                                  mode='FAN_AVG',
                                                                                  uniform=True)
                                             )
                     img_features.flatten()
-                    img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                                                 weights=variance_scaling_initializer(factor=1.0,
+                    img_features.fully_connected(n_imgfeat, activation_fn=lrelu,
+                                                 weights=variance_scaling_initializer(factor=0.1,
                                                                                       mode='FAN_AVG',
                                                                                       uniform=True)
                                                  )
                     self.image_features = img_features.as_layer()
-                    self.full_feature = self.st_enabled * self.state_input + \
-                                        self.img_enabled[:, tf.newaxis] * self.image_features
+                    # self.full_feature = self.st_enabled * self.state_input + \
+                    #                     self.img_enabled[:, tf.newaxis] * self.image_features
+                    self.full_feature = self.image_features
 
             self.action_dist_means_n = (pt.wrap(self.full_feature).
-                                        fully_connected(64, activation_fn=tf.nn.tanh,
-                                                        weights=variance_scaling_initializer(factor=1.0,
+                                        fully_connected(64, activation_fn=lrelu,
+                                                        weights=variance_scaling_initializer(factor=0.5,
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc1" % scope).
-                                        fully_connected(16, activation_fn=tf.nn.tanh,
-                                                        weights=variance_scaling_initializer(factor=1.0,
+                                        fully_connected(64, activation_fn=lrelu,
+                                                        weights=variance_scaling_initializer(factor=0.5,
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc2" % scope).
                                         fully_connected(np.prod(action_shape),
-                                                        weights=variance_scaling_initializer(factor=0.01,
+                                                        activation_fn=None,
+                                                        weights=variance_scaling_initializer(factor=0.1,
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc3" % scope))
 
             self.action_dist_logstd_param = tf.Variable(
-                initial_value=(np.log(1) + 0.01 * np.random.randn(1, *action_shape)).astype(np.float32),
-                trainable=True, name="%spolicy_logstd" % scope)
+                initial_value=(np.log(0.9) + 0.0 * np.random.randn(1, *action_shape)).astype(np.float32),
+                trainable=False, name="%spolicy_logstd" % scope)
             self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
                                                  tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))
             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]

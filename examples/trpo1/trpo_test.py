@@ -12,25 +12,10 @@ import logging
 from custom_ant import CustomAnt
 from gather_env import GatherEnv
 from maze_env import MazeEnv
+from custom_pend import CustomPend
 import sys
-root = logging.getLogger()
-root.setLevel(logging.DEBUG)
 
-# create file handler which logs even debug messages
-fh = logging.FileHandler('log.txt', mode='w')
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-root.addHandler(fh)
-root.addHandler(ch)
-
-BATH_SIZE = 5000
+BATH_SIZE = 10000
 
 
 def main():
@@ -116,10 +101,11 @@ def main():
         # env = GatherEnv()
         # env = gym.make('Ant-v1')
         # env = MazeEnv()
-        env = gym.make('InvertedPendulum-v1')
+        # env = gym.make('InvertedPendulum-v1')
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
+        env = CustomPend()
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
                               visible_state_ids=np.array((True, True, True, True)),

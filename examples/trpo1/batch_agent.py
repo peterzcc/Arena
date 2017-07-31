@@ -55,7 +55,10 @@ class BatchUpdateAgent(Agent):
 
         if model is None:
             self.model = MultiTrpoModel(self.observation_space, self.action_space,
-                                        timestep_limit=timestep_limit)
+                                        timestep_limit=timestep_limit,
+                                        cg_damping=0.1,
+                                        max_kl=0.01,
+                                        cg_iters=10)
         else:
             self.model = model
         # self.memory = AcMemory(observation_shape=self.observation_space.shape,
@@ -118,12 +121,13 @@ class BatchUpdateAgent(Agent):
                 fps = (self.batch_size - self.counter) / (train_after - train_before)
 
                 logging.info(
-                    'Epoch:%d \nThd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f \n' \
+                    'Epoch:%d \nThd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f \nAve. Length:%f' \
                     % (self.num_epoch,
                        self.id,
                        self.epoch_reward / self.num_episodes,
                        self.num_episodes,
-                       fps
+                       fps,
+                       float(self.batch_size - self.counter) / self.num_episodes
                        ))
 
                 self.memory.reset()

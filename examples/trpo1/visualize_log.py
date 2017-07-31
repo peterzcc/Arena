@@ -24,8 +24,10 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
 
     print("Parsing log from %s" % (logfile))
     loss_list = []
-    regex_list = ['Average Return:([+-]?[0-9]*[.]?[0-9]+)', ' std: ([+-]?[0-9]*[.]?[0-9]+)']
-    name_list = ['Return', 'Std']
+    regex_list = ['Average Return:([+-]?[0-9]*[.]?[0-9]+)', ' std: ([+-]?[0-9]*[.]?[0-9]+)',
+                  'img_loss=([+-]?[0-9]*[.]?[0-9]+)',
+                  'act_clips: ([+-]?[0-9]*[.]?[0-9]+)']
+    name_list = ['Return', 'Std', 'image_loss', 'Number of action overflows']
     for line in loss_file:
         m = re.search(regex_list[mode], line)
         if m is not None:
@@ -36,7 +38,9 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
         plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.')
     elif mode == 1:
         plt.plot(2 * np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
-    plt.xlabel('Epoch')
+    else:
+        plt.plot(np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
+    plt.xlabel('t')
     plt.ylabel(name_list[mode])
     filename = os.path.basename(logfile)
     plt.savefig('vis_' + name_list[mode] + '_' + filename + '.pdf', bbox_inches='tight')
