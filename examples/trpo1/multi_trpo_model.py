@@ -40,7 +40,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.max_kl = max_kl
         self.minibatch_size = 64
         self.use_empirical_fim = True
-        self.real_start = -1
+        self.real_start = 1e7
 
         if session is None:
 
@@ -108,7 +108,10 @@ class MultiTrpoModel(ModelWithCritic):
         self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.net.var_list])
         self.k_p_l2 = 0.01
         self.img_feature_norm = tf.reduce_mean(tf.square(self.real_net.image_features))
-        surr = self.surr = tf.reduce_mean(self.ratio_n * self.net.advant)  # Surrogate loss
+        self.PPO_eps = 0.2
+        self.clipped_ratio = tf.clip_by_value(self.ratio_n,1.0-self.PPO_eps,1.0+self.PPO_eps)
+        surr = self.surr = tf.reduce_mean(tf.minimum(self.ratio_n * self.net.advant,
+                                                     self.clipped_ratio * self.net.advant))  # Surrogate loss
         kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ents = self.distribution.entropy(self.old_dist_info_vars)
         ent = tf.reduce_sum(ents) / self.batch_size_float
@@ -201,7 +204,7 @@ class MultiTrpoModel(ModelWithCritic):
         # ratio = noise_k * end_ratio + (1 - noise_k)*start_ratio
         # is_enabled = (np.random.random_sample(size=None) < ratio)
 
-        is_enabled = True  # (t_batch < 20)
+        is_enabled = False  # (t_batch < 20)
 
         st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
         img_enabled = 1.0 - is_enabled
@@ -276,10 +279,10 @@ class MultiTrpoModel(ModelWithCritic):
                 # self.critic.img_enabled: img_enabled,
                 self.net.st_enabled: st_enabled,
                 self.net.img_enabled: img_enabled,
-                self.real_net.state_input: state_input,
-                self.real_net.img_input: img_input,
-                self.real_net.st_enabled: np.zeros_like(st_enabled),
-                self.real_net.img_enabled: np.ones_like(img_enabled),
+                # self.real_net.state_input: state_input,
+                # self.real_net.img_input: img_input,
+                # self.real_net.st_enabled: np.zeros_like(st_enabled),
+                # self.real_net.img_enabled: np.ones_like(img_enabled),
                 }
         # if not real_feed:
         #     feed = {self.net.state_input: state_input,
