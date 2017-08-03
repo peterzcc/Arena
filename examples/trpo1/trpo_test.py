@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 from custom_pend import CustomPend
 import sys
 
-BATH_SIZE = 10000
+BATH_SIZE = 5000
 
 
 def main():

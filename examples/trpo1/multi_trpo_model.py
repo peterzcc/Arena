@@ -76,9 +76,9 @@ class MultiTrpoModel(ModelWithCritic):
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
                                 with_image=self.policy_with_image_input,
-                                n_imgfeat=n_imgfeat,
-                                extra_feaatures=[np.zeros((4,), dtype=np.float32)],
-                                conv_sizes=(((3, 3), 2, 2),),  # (((4, 4), 16, 2), ((3, 3), 16, 1)),
+                                n_imgfeat=32,
+                                extra_feaatures=[],#[np.zeros((4,), dtype=np.float32)],
+                                conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),#(((3, 3), 2, 2),),  #
                                 )
         self.real_net = MultiNetwork(scope="img_agent",
                                      observation_space=self.ob_space,
