@@ -104,7 +104,7 @@ class MultiNetwork(object):
 
             self.action_dist_logstd_param = tf.Variable(
                 initial_value=(np.log(0.9) + 0.0 * np.random.randn(1, *action_shape)).astype(np.float32),
-                trainable=False, name="%spolicy_logstd" % scope)
+                trainable=True, name="%spolicy_logstd" % scope)
             self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
                                                  tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))
             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]

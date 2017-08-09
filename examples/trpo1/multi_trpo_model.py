@@ -77,14 +77,14 @@ class MultiTrpoModel(ModelWithCritic):
                                 action_shape=self.act_space.shape,
                                 with_image=self.policy_with_image_input,
                                 n_imgfeat=32,
-                                extra_feaatures=[],#[np.zeros((4,), dtype=np.float32)],
-                                conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),#(((3, 3), 2, 2),),  #
+                                extra_feaatures=[],  # [np.zeros((4,), dtype=np.float32)],#
+                                conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #(((3, 3), 2, 2),),  #
                                 )
         self.real_net = MultiNetwork(scope="img_agent",
                                      observation_space=self.ob_space,
                                      action_shape=self.act_space.shape,
                                      with_image=self.policy_with_image_input,
-                                     n_imgfeat=32,
+                                     n_imgfeat=4,
                                      extra_feaatures=[],  # [*self.critic.pre_image_features],
                                      conv_sizes=(((4, 4), 64, 1), ((3, 3), 64, 1)),  #
                                      )
@@ -104,14 +104,17 @@ class MultiTrpoModel(ModelWithCritic):
         self.new_likelihood_sym = self.distribution.log_likelihood_sym(self.net.action_n, self.new_dist_info_vars)
         self.old_likelihood = self.distribution.log_likelihood_sym(self.net.action_n, self.old_dist_info_vars)
 
-        self.ratio_n = -tf.exp(self.new_likelihood_sym - self.old_likelihood)
+        self.ratio_n = tf.exp(self.new_likelihood_sym - self.old_likelihood)
         self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.net.var_list])
         self.k_p_l2 = 0.01
         self.img_feature_norm = tf.reduce_mean(tf.square(self.real_net.image_features))
         self.PPO_eps = 0.2
         self.clipped_ratio = tf.clip_by_value(self.ratio_n,1.0-self.PPO_eps,1.0+self.PPO_eps)
-        surr = self.surr = tf.reduce_mean(tf.minimum(self.ratio_n * self.net.advant,
-                                                     self.clipped_ratio * self.net.advant))  # Surrogate loss
+        raw_surr = self.ratio_n * self.net.advant
+        clipped_surr = self.clipped_ratio * self.net.advant
+        surr = self.surr = -tf.reduce_mean(tf.minimum(raw_surr,
+                                                      clipped_surr))  # Surrogate loss
+
         kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ents = self.distribution.entropy(self.old_dist_info_vars)
         ent = tf.reduce_sum(ents) / self.batch_size_float
@@ -147,6 +150,20 @@ class MultiTrpoModel(ModelWithCritic):
         batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
         self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
 
+        self.vanila_surr = - tf.reduce_mean(self.new_likelihood_sym * self.net.advant)
+        self.vanila_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="step_size")
+        self.vanila_opt = tf.train.AdamOptimizer(learning_rate=self.vanila_sym_step_size,
+                                                 beta1=0.9, beta2=0.999, epsilon=1e-8)
+        self.vanila_train = self.vanila_opt.minimize(self.vanila_surr, var_list=var_list)
+        self.vanila_step_size = 1e-3
+        self.vanila_losses = [self.vanila_surr, kl, ent]
+        self.vn_grad_list = tf.gradients(self.vanila_surr, var_list)
+        self.vn_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="dummy")
+                                     for g in self.vn_grad_list]
+        self.vn_apply_grad = self.vanila_opt.apply_gradients(grads_and_vars=zip(self.vn_grad_placeholders, var_list))
+        self.v_ds_kl = 2e-3
+        self.use_trpo = True
+
 
         gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
         self.g_gT_x = grad_loglikelihood * gT_x
@@ -159,7 +176,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.init_model_path = self.saver.save(self.session, 'init_model')
         self.n_update = 0
         self.separate_update = True
-        self.update_critic = True
+        self.update_critic = False
         self.update_policy = True
         self.debug = True
 
@@ -243,7 +260,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         output = rnd * action_std_n[0] + action_dist_means_n[0]
-        action = np.clip(output, self.act_space.low, self.act_space.high).flatten()
+        action = output  #np.clip(output, self.act_space.low, self.act_space.high).flatten()
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
         agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0],
@@ -409,6 +426,32 @@ class MultiTrpoModel(ModelWithCritic):
                 logging.debug("\nimi_loss: {}\n img_norm: {}".format(imi_loss, img_norm))
             return None, None
 
+        if not self.use_trpo:
+            surr_o, kl_o, ent_o = run_batched(self.vanila_losses, feed, batch_size, self.session,
+                                              minibatch_size=self.minibatch_size)
+            logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+
+            # _ = self.session.run(self.vanila_train, feed_dict={**feed,
+            #                                                    self.vanila_sym_step_size:self.vanila_step_size})
+            grads = run_batched(self.vn_grad_list, feed, batch_size, self.session,
+                                minibatch_size=self.minibatch_size)
+            grad_dict = {p: v for (p, v) in zip(self.vn_grad_placeholders, grads)}
+            _ = self.session.run(self.vn_apply_grad,
+                                 feed_dict={**grad_dict, self.vanila_sym_step_size: self.vanila_step_size})
+            surr_new, kl_new, ent_new = run_batched(self.vanila_losses, feed, batch_size, self.session,
+                                                    minibatch_size=self.minibatch_size)
+            logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
+            if kl_new > self.v_ds_kl * 2:
+                self.vanila_step_size /= 1.5
+                print('stepsize -> %s' % self.vanila_step_size)
+            elif kl_new < self.v_ds_kl / 2:
+                self.vanila_step_size *= 1.5
+                print('stepsize -> %s' % self.vanila_step_size)
+            else:
+                print('stepsize OK')
+
+            return None, None
+
         if self.use_empirical_fim:
             def fisher_vector_product(p):
                 # feed[self.flat_tangent] = p
@@ -427,7 +470,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
 
-        stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-5)
+        stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-7)
         sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
         # if shs<0, then the nan error would appear
         lm = np.sqrt(sAs / self.max_kl)

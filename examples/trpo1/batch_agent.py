@@ -80,11 +80,8 @@ class BatchUpdateAgent(Agent):
         #     #TODO: sync from global model
         #     pass
 
-        # TODO: Implement this predict
-        # if self.image_input:
-        #     observation = observation.astype(np.float32) / 255.0
-        # observation = self.obsfilter(observation)
-        action, agent_info = self.model.predict(observation)
+        processed_observation = [observation[0], observation[1].astype(np.float32) / 255.0]
+        action, agent_info = self.model.predict(processed_observation)
         # final_action = \
         #     np.clip(action, self.action_space.low, self.action_space.high).flatten()
 

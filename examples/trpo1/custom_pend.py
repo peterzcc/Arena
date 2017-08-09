@@ -12,7 +12,7 @@ class CustomPend(mujoco_env.MujocoEnv, utils.EzPickle):
         self.do_simulation(a, self.frame_skip)
         ob = self._get_obs()
         notdone = np.isfinite(ob).all() and (np.abs(ob[1]) <= .2)
-        reward = 1.0 if not notdone else (1.0 + 1.0 * (0.2 - np.abs(ob[1])) + (3.0-np.abs(a))/3.0)
+        reward = 1.0 if not notdone else 1.0 + 1.0 * (0.2 - np.abs(ob[1])) + (3.0 - np.square(a).sum()) / 9.0
         done = not notdone
         return ob, reward, done, {}
 
