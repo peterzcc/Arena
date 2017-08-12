@@ -56,7 +56,7 @@ class BatchUpdateAgent(Agent):
         if model is None:
             self.model = MultiTrpoModel(self.observation_space, self.action_space,
                                         timestep_limit=timestep_limit,
-                                        cg_damping=0.1,
+                                        cg_damping=0.0,
                                         max_kl=0.01,
                                         cg_iters=10)
         else:

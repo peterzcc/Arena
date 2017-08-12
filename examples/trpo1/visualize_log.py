@@ -37,7 +37,7 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
     if mode == 0:
         plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.')
     elif mode == 1:
-        plt.plot(2 * np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
+        plt.plot(1.0 * np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
     else:
         plt.plot(np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
     plt.xlabel('t')

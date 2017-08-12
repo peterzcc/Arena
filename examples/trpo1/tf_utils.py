@@ -203,6 +203,23 @@ def lrelu(x, leak=0.2, name="lrelu"):
         f2 = 0.5 * (1 - leak)
         return f1 * x + f2 * abs(x)
 
+
+def stochastic_cg(f_Ax, v, cg_iters=10, verbose=True, residual_tol=1e-10, scale=1.0, initial_guess=None):
+    Hjv = v.copy() if initial_guess is None else initial_guess
+    fmtstr = "%10i %10.3g %10.3g"
+    titlestr = "%10s %10s %10s"
+    if verbose: logging.debug(titlestr % ("iter", "residual norm", "soln norm"))
+    if verbose: logging.debug(fmtstr % (0, -1, np.linalg.norm(Hjv)))
+    for i in range(cg_iters):
+        Hjv_old = Hjv
+        new_est = f_Ax(Hjv_old)
+        r = v - new_est
+        Hjv = Hjv_old + r / scale
+        rdotr = r.dot(r)
+        if verbose: logging.debug(fmtstr % (i + 1, rdotr, np.linalg.norm(Hjv)))
+        if rdotr < residual_tol:
+            break
+    return Hjv
 # http://www.johndcook.com/blog/standard_deviation/
 EPS = 1e-6
 def cg(f_Ax, b, cg_iters=10, verbose=True, residual_tol=1e-10):

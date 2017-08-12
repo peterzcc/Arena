@@ -65,11 +65,11 @@ class MultiBaseline(object):
             self.image_features = [self.img_enabled[:, tf.newaxis] * self.pre_image_features[0]]
             self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
             self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
-            self.img_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
-            self.pretrain_loss = self.img_loss
-            self.img_opt = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-8)
-            self.img_train = self.img_opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
-                                                   var_list=self.img_var_list)
+            # self.img_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
+            # self.pretrain_loss = self.img_loss
+            # self.img_opt = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+            # self.img_train = self.img_opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
+            #                                        var_list=self.img_var_list)
 
         with tf.variable_scope(scope):
             if with_image:
@@ -77,7 +77,8 @@ class MultiBaseline(object):
                     axis=1,
                     values=[self.final_state, *self.image_features, self.time_input])
             else:
-                self.aggregated_feature = self.comb_method(self.final_state, self.image_features[0])
+                self.aggregated_feature = self.image_features[
+                    0]  # self.comb_method(self.final_state, self.image_features[0])
                 self.full_feature = tf.concat(
                     axis=1,
                     values=[self.aggregated_feature, self.time_input])
@@ -107,7 +108,7 @@ class MultiBaseline(object):
                 self.upper_train = None
                 self.train = None
             else:
-                self.opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                self.opt = tf.train.AdamOptimizer(learning_rate=0.004, beta1=0.9, beta2=0.999, epsilon=1e-8)
                 self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
                                                var_list=self.var_list)
                 # self.train = None
@@ -126,15 +127,18 @@ class MultiBaseline(object):
     #     ret = np.concatenate((obs, path["times"][:, None],), axis=1)
     #     return ret
     def print_loss(self, feed):
-        mse, l2, img_loss, img_l2 = \
-            run_batched([self.mse, self.l2, self.img_loss, self.img_l2],
+        # mse, l2, img_loss, img_l2 = \
+        #     run_batched([self.mse, self.l2, self.img_loss, self.img_l2],
+        #                 feed=feed, N=feed[self.y].shape[0],
+        #                 session=self.session,
+        #                 minibatch_size=self.minibatch_size)
+        # logging.debug("vf:\n mse={}\tl2={}\nimg_loss={}\nimg_l2={}\n".format(mse, l2, img_loss, img_l2))
+        mse = \
+            run_batched([self.mse],
                         feed=feed, N=feed[self.y].shape[0],
                         session=self.session,
-                        minibatch_size=self.minibatch_size)
-        logging.debug("vf:\n mse={}\tl2={}\nimg_loss={}\nimg_l2={}\n".format(mse, l2, img_loss, img_l2))
-
-        # mse = self.session.run([self.mse], feed_dict=feed)[0]
-        # logging.debug("vf:\n mse:{}\n".format(mse))
+                        minibatch_size=self.minibatch_size)[0]
+        logging.debug("vf:\n mse:{}\n".format(mse))
 
     def fit(self, path_dict, update_mode="full", num_pass=1):
         # featmat = self._features(paths)

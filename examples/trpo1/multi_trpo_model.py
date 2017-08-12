@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
-from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched
+from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, stochastic_cg
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
 from diagonal_gaussian import DiagonalGaussian
@@ -38,7 +38,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.cg_damping = cg_damping
         self.cg_iters = cg_iters
         self.max_kl = max_kl
-        self.minibatch_size = 64
+        self.minibatch_size = 256
         self.use_empirical_fim = True
         self.real_start = 1e7
 
@@ -55,7 +55,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         else:
             self.session = session
-        n_imgfeat = 4
+        n_imgfeat = 32
         self.critic_append_image = False
         self.policy_with_image_input = False
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
@@ -76,8 +76,8 @@ class MultiTrpoModel(ModelWithCritic):
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
                                 with_image=self.policy_with_image_input,
-                                n_imgfeat=32,
-                                extra_feaatures=[],  # [np.zeros((4,), dtype=np.float32)],#
+                                n_imgfeat=n_imgfeat,
+                                extra_feaatures=[np.zeros((4,), dtype=np.float32)],  # [],  #
                                 conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #(((3, 3), 2, 2),),  #
                                 )
         self.real_net = MultiNetwork(scope="img_agent",
@@ -85,7 +85,7 @@ class MultiTrpoModel(ModelWithCritic):
                                      action_shape=self.act_space.shape,
                                      with_image=self.policy_with_image_input,
                                      n_imgfeat=4,
-                                     extra_feaatures=[],  # [*self.critic.pre_image_features],
+                                     extra_feaatures=[],  #*self.critic.pre_image_features],#
                                      conv_sizes=(((4, 4), 64, 1), ((3, 3), 64, 1)),  #
                                      )
         self.imi_loss = tf.reduce_mean(tf.square(self.net.action_dist_means_n - self.real_net.action_dist_means_n))
@@ -176,40 +176,85 @@ class MultiTrpoModel(ModelWithCritic):
         self.init_model_path = self.saver.save(self.session, 'init_model')
         self.n_update = 0
         self.separate_update = True
-        self.update_critic = False
+        self.update_critic = True
         self.update_policy = True
         self.debug = True
 
+    def fvp_minibatch(self, func_batch, feed, slc, session, minibatch_size=64, extra_input={}):
+        this_feed = {k: v[slc] for k, v in list(feed.items())}
+        this_size = len(slc)
+        if this_size == minibatch_size:
+            this_feed = {k: v[slc] for k, v in list(feed.items())}
+            this_result = \
+                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
+                                                            self.is_real_data: np.ones(minibatch_size)}))
+        else:
+            is_real_data = np.zeros(minibatch_size)
+            is_real_data[0:this_size] = 1
+            this_feed = \
+                {k:
+                     np.concatenate([v[slc], np.zeros(shape=(minibatch_size - this_size,) + v.shape[1:])])
+                 for k, v in list(feed.items())}
+            this_result = \
+                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
+                                                            self.is_real_data: is_real_data}))
+        return this_result
 
-    def run_batched_fvp(self, func_batch, func_single, feed, N, session, minibatch_size=64, extra_input={}):
+    def run_batched_fvp(self, func_batch, feed, N, session, minibatch_size=64, extra_input={}):
         result = None
         for start in range(0, N, minibatch_size):
             end = min(start + minibatch_size, N)
-            this_size = end - start
-
-            if this_size == minibatch_size:
-                slc = range(start, end)
-                this_feed = {k: v[slc] for k, v in list(feed.items())}
-                this_result = \
-                    np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
-                                                                self.is_real_data: np.ones(minibatch_size)}))
-            else:
-                slc = range(start, end)
-                is_real_data = np.zeros(minibatch_size)
-                is_real_data[0:this_size] = 1
-                this_feed = \
-                    {k:
-                         np.concatenate([v[slc], np.zeros(shape=(minibatch_size - this_size,) + v.shape[1:])])
-                     for k, v in list(feed.items())}
-                this_result = \
-                    np.array(session.run(func_single, feed_dict={**this_feed, **extra_input,
-                                                                 self.is_real_data: is_real_data}))
+            # this_size = end - start
+            slc = range(start, end)
+            this_result = self.fvp_minibatch(func_batch, feed, slc, session, minibatch_size, extra_input)
             if result is None:
                 result = this_result
             else:
                 result += this_result
         result /= N
         return result
+
+    def run_lissa(self, func_batch, v, feed, N, session, minibatch_size=64, lr=1.0,
+                  recursion_depth=80,
+                  initial_guess=None,
+                  verbose=True):
+        num_samples = 1
+        log_iter = 10
+        inverse_hvp = None
+        for i in range(num_samples):
+            fmtstr = "%10i %10.3g %10.3g"
+            titlestr = "%10s %10s %10s"
+            if verbose: logging.debug(titlestr % ("iter", "residual norm", "soln norm"))
+            cur_estimate = v if initial_guess is None else initial_guess
+            j = 0
+            while j < recursion_depth:
+                training_inds = np.concatenate([np.random.permutation(N), np.random.permutation(N)])
+                for start in range(0, N, self.minibatch_size):
+                    end = start + self.minibatch_size
+                    this_size = start - end
+                    slc = training_inds[range(start, end)]
+                    h_inv_x = self.fvp_minibatch(func_batch, feed, slc, session, minibatch_size,
+                                                 extra_input={self.flat_tangent: cur_estimate})
+                    diff = v - self.cg_damping * cur_estimate - h_inv_x * 1.0 / this_size
+                    # porp = np.mean(np.linalg.norm(v) /np.linalg.norm(h_inv_x))
+
+                    if verbose and ((j % log_iter == 0) or (j == recursion_depth - 1)):
+                        # r = v - self.cg_damping*cur_estimate -\
+                        #     self.run_batched_fvp(func_batch, feed, N, session, minibatch_size,
+                        #                                 extra_input={self.flat_tangent: cur_estimate})
+                        logging.debug(fmtstr % (j, diff.dot(diff), np.linalg.norm(cur_estimate)))
+                    cur_estimate = cur_estimate + lr * diff
+
+                    j += 1
+                    if j >= recursion_depth:
+                        break
+            if inverse_hvp is None:
+                inverse_hvp = cur_estimate * 1.0 / scale
+            else:
+                inverse_hvp += cur_estimate * 1.0 / scale
+        inverse_hvp /= num_samples
+        return inverse_hvp
+
 
     def get_state_activation(self, t_batch):
         # start_ratio = 0.1
@@ -221,7 +266,7 @@ class MultiTrpoModel(ModelWithCritic):
         # ratio = noise_k * end_ratio + (1 - noise_k)*start_ratio
         # is_enabled = (np.random.random_sample(size=None) < ratio)
 
-        is_enabled = False  # (t_batch < 20)
+        is_enabled = True  # (t_batch < 20)
 
         st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
         img_enabled = 1.0 - is_enabled
@@ -409,7 +454,7 @@ class MultiTrpoModel(ModelWithCritic):
                 logging.debug("\nimi_loss: {}".format(imi_loss))
 
             training_inds = np.random.permutation(batch_size)
-            for start in range(0, batch_size, self.minibatch_size):  # TODO: verify this
+            for start in range(0, batch_size, self.minibatch_size):
                 if start > batch_size - 2 * self.minibatch_size:
                     end = batch_size
                 else:
@@ -456,7 +501,7 @@ class MultiTrpoModel(ModelWithCritic):
             def fisher_vector_product(p):
                 # feed[self.flat_tangent] = p
 
-                fvp = self.run_batched_fvp(self.batch_g_gT_x, self.g_gT_x, feed, batch_size, self.session,
+                fvp = self.run_batched_fvp(self.batch_g_gT_x, feed, batch_size, self.session,
                                            minibatch_size=self.minibatch_size,
                                            extra_input={self.flat_tangent: p})
                 return fvp + self.cg_damping * p
@@ -470,7 +515,11 @@ class MultiTrpoModel(ModelWithCritic):
 
         g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
 
-        stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-7)
+        stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-5)
+        test_stepdir = self.run_lissa(self.batch_g_gT_x, -g, feed, batch_size, self.session, self.minibatch_size,
+                                      recursion_depth=5000, initial_guess=stepdir, lr=0.0)
+        # test_stepdir = stochastic_cg(fisher_vector_product, -g, cg_iters=100, residual_tol=1e-10,
+        #                              initial_guess=stepdir,scale=25.0)
         sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
         # if shs<0, then the nan error would appear
         lm = np.sqrt(sAs / self.max_kl)
