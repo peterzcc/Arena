@@ -17,7 +17,7 @@ class MultiBaseline(object):
     def __init__(self, session=None, scope="value_f",
                  obs_space=None, hidden_sizes=(64, 64),
                  conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)), n_imgfeat=1, activation=tf.nn.tanh,
-                 max_iter=25, timestep_limit=1000, with_image=True, comb_method=aggregate_feature):
+                 max_iter=25, timestep_limit=1000, comb_method=aggregate_feature):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = False  # not with_image
@@ -54,7 +54,7 @@ class MultiBaseline(object):
                                                                               mode='FAN_AVG',
                                                                               uniform=True)
                                          )
-            img_features.fully_connected(n_imgfeat, activation_fn=None,
+            img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
                                          weights=variance_scaling_initializer(factor=1.0,
                                                                               mode='FAN_AVG',
                                                                               uniform=True)
@@ -65,23 +65,18 @@ class MultiBaseline(object):
             self.image_features = [self.img_enabled[:, tf.newaxis] * self.pre_image_features[0]]
             self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
             self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
-            # self.img_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
+            # self.img_loss =tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
             # self.pretrain_loss = self.img_loss
             # self.img_opt = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-8)
             # self.img_train = self.img_opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
             #                                        var_list=self.img_var_list)
 
         with tf.variable_scope(scope):
-            if with_image:
-                self.full_feature = tf.concat(
-                    axis=1,
-                    values=[self.final_state, *self.image_features, self.time_input])
-            else:
-                self.aggregated_feature = self.image_features[
-                    0]  # self.comb_method(self.final_state, self.image_features[0])
-                self.full_feature = tf.concat(
-                    axis=1,
-                    values=[self.aggregated_feature, self.time_input])
+            self.aggregated_feature = \
+                self.comb_method(self.final_state, self.image_features[0])  # self.image_features[00]  #
+            self.full_feature = tf.concat(
+                axis=1,
+                values=[self.aggregated_feature, self.time_input])
             hidden_units = pt.wrap(self.full_feature).sequential()
             for hidden_size in hidden_sizes:
                 hidden_units.fully_connected(hidden_size, activation_fn=activation,
@@ -108,7 +103,7 @@ class MultiBaseline(object):
                 self.upper_train = None
                 self.train = None
             else:
-                self.opt = tf.train.AdamOptimizer(learning_rate=0.004, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                self.opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
                 self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
                                                var_list=self.var_list)
                 # self.train = None

@@ -74,15 +74,17 @@ class MultiNetwork(object):
                                                                                  uniform=True)
                                             )
                     img_features.flatten()
-                    img_features.fully_connected(n_imgfeat, activation_fn=lrelu,
+                    img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
                                                  weights=variance_scaling_initializer(factor=0.1,
                                                                                       mode='FAN_AVG',
                                                                                       uniform=True)
                                                  )
                     self.image_features = img_features.as_layer()
+                    self.full_feature = self.comb_method(self.st_enabled * self.state_input,
+                                                         self.img_enabled[:, tf.newaxis] * self.image_features)
                     # self.full_feature = self.st_enabled * self.state_input + \
                     #                     self.img_enabled[:, tf.newaxis] * self.image_features
-                    self.full_feature = self.image_features
+                    # self.full_feature = self.image_features
 
             self.action_dist_means_n = (pt.wrap(self.full_feature).
                                         fully_connected(64, activation_fn=lrelu,

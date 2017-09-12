@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
-from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, stochastic_cg
+from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
+    aggregate_feature
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
 from diagonal_gaussian import DiagonalGaussian
@@ -38,7 +39,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.cg_damping = cg_damping
         self.cg_iters = cg_iters
         self.max_kl = max_kl
-        self.minibatch_size = 256
+        self.minibatch_size = 64
         self.use_empirical_fim = True
         self.real_start = 1e7
 
@@ -55,13 +56,14 @@ class MultiTrpoModel(ModelWithCritic):
 
         else:
             self.session = session
-        n_imgfeat = 32
-        self.critic_append_image = False
+        n_imgfeat = 4
         self.policy_with_image_input = False
+        self.comb_method = concat_feature
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
-                                    timestep_limit=timestep_limit, with_image=self.critic_append_image,
+                                    timestep_limit=timestep_limit,
                                     n_imgfeat=n_imgfeat, hidden_sizes=(64, 64),
-                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)))
+                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),
+                                    comb_method=self.comb_method)
         # conv_sizes=(((3, 3), 32, 1), ((3, 3), 64, 1)))
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
@@ -77,16 +79,19 @@ class MultiTrpoModel(ModelWithCritic):
                                 action_shape=self.act_space.shape,
                                 with_image=self.policy_with_image_input,
                                 n_imgfeat=n_imgfeat,
-                                extra_feaatures=[np.zeros((4,), dtype=np.float32)],  # [],  #
+                                extra_feaatures=self.critic.image_features,
+                                # [],  #[np.zeros((4,), dtype=np.float32)],  #
                                 conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #(((3, 3), 2, 2),),  #
+                                comb_method=self.comb_method
                                 )
         self.real_net = MultiNetwork(scope="img_agent",
                                      observation_space=self.ob_space,
                                      action_shape=self.act_space.shape,
                                      with_image=self.policy_with_image_input,
-                                     n_imgfeat=4,
-                                     extra_feaatures=[],  #*self.critic.pre_image_features],#
-                                     conv_sizes=(((4, 4), 64, 1), ((3, 3), 64, 1)),  #
+                                     n_imgfeat=n_imgfeat,
+                                     extra_feaatures=self.critic.pre_image_features,  #
+                                     conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #
+                                     comb_method=self.comb_method
                                      )
         self.imi_loss = tf.reduce_mean(tf.square(self.net.action_dist_means_n - self.real_net.action_dist_means_n))
         self.imi_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
@@ -115,7 +120,7 @@ class MultiTrpoModel(ModelWithCritic):
         surr = self.surr = -tf.reduce_mean(tf.minimum(raw_surr,
                                                       clipped_surr))  # Surrogate loss
 
-        kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
+        kl = self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ents = self.distribution.entropy(self.old_dist_info_vars)
         ent = tf.reduce_sum(ents) / self.batch_size_float
         self.losses = [surr, kl, ent]
@@ -149,9 +154,10 @@ class MultiTrpoModel(ModelWithCritic):
         batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data, axis=1)
         batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
         self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
-
+        self.target_kl = 0.002
+        # Vanila
         self.vanila_surr = - tf.reduce_mean(self.new_likelihood_sym * self.net.advant)
-        self.vanila_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="step_size")
+        self.vanila_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="vn_step_size")
         self.vanila_opt = tf.train.AdamOptimizer(learning_rate=self.vanila_sym_step_size,
                                                  beta1=0.9, beta2=0.999, epsilon=1e-8)
         self.vanila_train = self.vanila_opt.minimize(self.vanila_surr, var_list=var_list)
@@ -161,8 +167,26 @@ class MultiTrpoModel(ModelWithCritic):
         self.vn_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="dummy")
                                      for g in self.vn_grad_list]
         self.vn_apply_grad = self.vanila_opt.apply_gradients(grads_and_vars=zip(self.vn_grad_placeholders, var_list))
-        self.v_ds_kl = 2e-3
-        self.use_trpo = True
+
+        # adaptive kl
+        self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
+        self.a_beta_value = 3
+        self.a_surr = -tf.reduce_mean(raw_surr) + self.a_beta * kl
+        self.a_step_size = 0.001
+        self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
+        self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size,
+                                            beta1=0.9, beta2=0.999, epsilon=1e-8)
+        # self.a_opt = tf.train.GradientDescentOptimizer(learning_rate=0.01)
+        # self.a_train = self.a_opt.minimize(self.a_surr,var_list=var_list)
+        self.a_grad_list = tf.gradients(self.a_surr, var_list)
+        self.a_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="a_grad_sym")
+                                    for g in self.a_grad_list]
+        self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
+        self.a_losses = [self.a_surr, kl, ent]
+        self.a_beta_max = 10
+        self.a_beta_min = 0.1
+
+        self.mode = 'ADA_KL'
 
 
         gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
@@ -214,63 +238,24 @@ class MultiTrpoModel(ModelWithCritic):
         result /= N
         return result
 
-    def run_lissa(self, func_batch, v, feed, N, session, minibatch_size=64, lr=1.0,
-                  recursion_depth=80,
-                  initial_guess=None,
-                  verbose=True):
-        num_samples = 1
-        log_iter = 10
-        inverse_hvp = None
-        for i in range(num_samples):
-            fmtstr = "%10i %10.3g %10.3g"
-            titlestr = "%10s %10s %10s"
-            if verbose: logging.debug(titlestr % ("iter", "residual norm", "soln norm"))
-            cur_estimate = v if initial_guess is None else initial_guess
-            j = 0
-            while j < recursion_depth:
-                training_inds = np.concatenate([np.random.permutation(N), np.random.permutation(N)])
-                for start in range(0, N, self.minibatch_size):
-                    end = start + self.minibatch_size
-                    this_size = start - end
-                    slc = training_inds[range(start, end)]
-                    h_inv_x = self.fvp_minibatch(func_batch, feed, slc, session, minibatch_size,
-                                                 extra_input={self.flat_tangent: cur_estimate})
-                    diff = v - self.cg_damping * cur_estimate - h_inv_x * 1.0 / this_size
-                    # porp = np.mean(np.linalg.norm(v) /np.linalg.norm(h_inv_x))
-
-                    if verbose and ((j % log_iter == 0) or (j == recursion_depth - 1)):
-                        # r = v - self.cg_damping*cur_estimate -\
-                        #     self.run_batched_fvp(func_batch, feed, N, session, minibatch_size,
-                        #                                 extra_input={self.flat_tangent: cur_estimate})
-                        logging.debug(fmtstr % (j, diff.dot(diff), np.linalg.norm(cur_estimate)))
-                    cur_estimate = cur_estimate + lr * diff
-
-                    j += 1
-                    if j >= recursion_depth:
-                        break
-            if inverse_hvp is None:
-                inverse_hvp = cur_estimate * 1.0 / scale
-            else:
-                inverse_hvp += cur_estimate * 1.0 / scale
-        inverse_hvp /= num_samples
-        return inverse_hvp
 
 
     def get_state_activation(self, t_batch):
-        # start_ratio = 0.1
+        # start_ratio = 1.0
         # end_ratio = 0.0
-        # start_n_batch = 100
-        # final_n_batch = 350
+        # start_n_batch = 90
+        # final_n_batch = 140
         # noise_k = 0.0 if t_batch < start_n_batch else \
         #     ((t_batch-start_n_batch)/(final_n_batch-start_n_batch) if t_batch < final_n_batch else 1.0)
         # ratio = noise_k * end_ratio + (1 - noise_k)*start_ratio
         # is_enabled = (np.random.random_sample(size=None) < ratio)
 
-        is_enabled = True  # (t_batch < 20)
+        is_enabled = t_batch < 100
 
         st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
         img_enabled = 1.0 - is_enabled
-        # st_enabled = np.array([0.0, 0.0])
+        # st_enabled = np.array([ 1.0, 1.0])
+        # img_enabled = 1.0
         return st_enabled, img_enabled
 
     def predict(self, observation):
@@ -298,6 +283,9 @@ class MultiTrpoModel(ModelWithCritic):
             action_dist_means_n, action_dist_log_stds_n, action_std_n = \
                 self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
                                  {self.net.state_input: obs[0], self.net.img_input: obs[1],
+                                  self.critic.img_input: obs[1],
+                                  self.critic.st_enabled: exp_st_enabled,
+                                  self.critic.img_enabled: exp_img_enabled,
                                   self.net.st_enabled: exp_st_enabled,
                                   self.net.img_enabled: exp_img_enabled,
                                   })
@@ -336,9 +324,9 @@ class MultiTrpoModel(ModelWithCritic):
                 self.net.old_dist_means_n: action_dist_means_n,
                 self.net.old_dist_logstds_n: action_dist_logstds_n,
                 self.net.action_n: action_n,
-                # self.critic.img_input: img_input,
-                # self.critic.st_enabled: st_enabled,
-                # self.critic.img_enabled: img_enabled,
+                self.critic.img_input: img_input,
+                self.critic.st_enabled: st_enabled,
+                self.critic.img_enabled: img_enabled,
                 self.net.st_enabled: st_enabled,
                 self.net.img_enabled: img_enabled,
                 # self.real_net.state_input: state_input,
@@ -428,10 +416,12 @@ class MultiTrpoModel(ModelWithCritic):
         # else:
         #     self.update_critic = True
         #     self.update_policy = True
+        if self.n_update < 100:
+            self.critic.fit(path_dict, update_mode="img", num_pass=2)
 
 
         if self.update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=2)
+            self.critic.fit(path_dict, update_mode="st", num_pass=2)
         self.n_update += 1
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
@@ -470,14 +460,48 @@ class MultiTrpoModel(ModelWithCritic):
                                                  minibatch_size=self.minibatch_size)
                 logging.debug("\nimi_loss: {}\n img_norm: {}".format(imi_loss, img_norm))
             return None, None
+        if self.mode == "ADA_KL":
+            surr_o, kl_o, ent_o = run_batched(self.a_losses, feed, batch_size, self.session,
+                                              minibatch_size=self.minibatch_size,
+                                              extra_input={self.a_beta: self.a_beta_value})
+            logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+            grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
+                                minibatch_size=self.minibatch_size,
+                                extra_input={self.a_beta: self.a_beta_value}
+                                )
+            grad_dict = {p: v for (p, v) in zip(self.a_grad_placeholders, grads)}
+            _ = self.session.run(self.a_apply_grad,
+                                 feed_dict={**grad_dict,
+                                            self.a_sym_step_size: self.a_step_size})
 
-        if not self.use_trpo:
+            surr_new, kl_new, ent_new = run_batched(self.a_losses, feed, batch_size, self.session,
+                                                    minibatch_size=self.minibatch_size,
+                                                    extra_input={self.a_beta: self.a_beta_value})
+            logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
+            if kl_new > self.target_kl * 2:
+                if self.a_beta_value < self.a_beta_max:
+                    self.a_beta_value *= 1.5
+                else:
+                    self.a_step_size /= 1.5
+                logging.debug('beta -> %s' % self.a_beta_value)
+                logging.debug('step_size -> %s' % self.a_step_size)
+            elif kl_new < self.target_kl / 2:
+                if self.a_beta_value > self.a_beta_min:
+                    self.a_beta_value /= 1.5
+                else:
+                    self.a_step_size *= 1.5
+                logging.debug('beta -> %s' % self.a_beta_value)
+                logging.debug('step_size -> %s' % self.a_step_size)
+            else:
+                logging.debug('beta OK = %s' % self.a_beta_value)
+                logging.debug('step_size OK = %s' % self.a_step_size)
+            return None, None
+
+        if self.mode == "VANILA":
             surr_o, kl_o, ent_o = run_batched(self.vanila_losses, feed, batch_size, self.session,
                                               minibatch_size=self.minibatch_size)
             logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
 
-            # _ = self.session.run(self.vanila_train, feed_dict={**feed,
-            #                                                    self.vanila_sym_step_size:self.vanila_step_size})
             grads = run_batched(self.vn_grad_list, feed, batch_size, self.session,
                                 minibatch_size=self.minibatch_size)
             grad_dict = {p: v for (p, v) in zip(self.vn_grad_placeholders, grads)}
@@ -486,10 +510,10 @@ class MultiTrpoModel(ModelWithCritic):
             surr_new, kl_new, ent_new = run_batched(self.vanila_losses, feed, batch_size, self.session,
                                                     minibatch_size=self.minibatch_size)
             logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
-            if kl_new > self.v_ds_kl * 2:
+            if kl_new > self.target_kl * 2:
                 self.vanila_step_size /= 1.5
                 print('stepsize -> %s' % self.vanila_step_size)
-            elif kl_new < self.v_ds_kl / 2:
+            elif kl_new < self.target_kl / 2:
                 self.vanila_step_size *= 1.5
                 print('stepsize -> %s' % self.vanila_step_size)
             else:
@@ -516,10 +540,7 @@ class MultiTrpoModel(ModelWithCritic):
         g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
 
         stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-5)
-        test_stepdir = self.run_lissa(self.batch_g_gT_x, -g, feed, batch_size, self.session, self.minibatch_size,
-                                      recursion_depth=5000, initial_guess=stepdir, lr=0.0)
-        # test_stepdir = stochastic_cg(fisher_vector_product, -g, cg_iters=100, residual_tol=1e-10,
-        #                              initial_guess=stepdir,scale=25.0)
+
         sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
         # if shs<0, then the nan error would appear
         lm = np.sqrt(sAs / self.max_kl)

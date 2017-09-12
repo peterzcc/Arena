@@ -160,6 +160,12 @@ class LbfgsOptimizer(EzFlat):
 def aggregate_feature(st, img):
     return st + img  # tf.pad(img, paddings=tf.constant(value=[[0, 0], [0, 2]]))
 
+
+def concat_feature(st, img):
+    return tf.concat(
+        axis=1,
+        values=[st, img])
+
 def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_ratio=.1):
     """
     Backtracking linesearch, where expected_improve_rate is the slope dy/dx at the initial point
