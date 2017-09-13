@@ -41,7 +41,6 @@ class MultiTrpoModel(ModelWithCritic):
         self.max_kl = max_kl
         self.minibatch_size = 64
         self.use_empirical_fim = True
-        self.real_start = 1e7
 
         if session is None:
 
@@ -58,7 +57,7 @@ class MultiTrpoModel(ModelWithCritic):
             self.session = session
         n_imgfeat = 4
         self.policy_with_image_input = False
-        self.comb_method = concat_feature
+        self.comb_method = aggregate_feature
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
                                     n_imgfeat=n_imgfeat, hidden_sizes=(64, 64),
@@ -84,20 +83,7 @@ class MultiTrpoModel(ModelWithCritic):
                                 conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #(((3, 3), 2, 2),),  #
                                 comb_method=self.comb_method
                                 )
-        self.real_net = MultiNetwork(scope="img_agent",
-                                     observation_space=self.ob_space,
-                                     action_shape=self.act_space.shape,
-                                     with_image=self.policy_with_image_input,
-                                     n_imgfeat=n_imgfeat,
-                                     extra_feaatures=self.critic.pre_image_features,  #
-                                     conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #
-                                     comb_method=self.comb_method
-                                     )
-        self.imi_loss = tf.reduce_mean(tf.square(self.net.action_dist_means_n - self.real_net.action_dist_means_n))
-        self.imi_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
-        self.imi_train = self.imi_opt.minimize(self.imi_loss,
-                                               aggregation_method=tf.AggregationMethod.DEFAULT,
-                                               var_list=self.real_net.var_list)
+
         log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.net.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
@@ -112,7 +98,6 @@ class MultiTrpoModel(ModelWithCritic):
         self.ratio_n = tf.exp(self.new_likelihood_sym - self.old_likelihood)
         self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.net.var_list])
         self.k_p_l2 = 0.01
-        self.img_feature_norm = tf.reduce_mean(tf.square(self.real_net.image_features))
         self.PPO_eps = 0.2
         self.clipped_ratio = tf.clip_by_value(self.ratio_n,1.0-self.PPO_eps,1.0+self.PPO_eps)
         raw_surr = self.ratio_n * self.net.advant
@@ -195,10 +180,12 @@ class MultiTrpoModel(ModelWithCritic):
 
         # self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
         self.session.run(tf.global_variables_initializer())
-        # self.saver = tf.train.Saver([*self.net.var_list,*self.critic.var_list])
-        self.saver = tf.train.Saver(var_list=self.net.var_list)
+        self.saver = tf.train.Saver()
+        self.feat_saver = tf.train.Saver(var_list=self.critic.img_var_list)
+        # self.saver = tf.train.Saver(var_list=self.net.var_list)
         self.init_model_path = self.saver.save(self.session, 'init_model')
         self.n_update = 0
+        self.n_pretrain = 0
         self.separate_update = True
         self.update_critic = True
         self.update_policy = True
@@ -250,7 +237,7 @@ class MultiTrpoModel(ModelWithCritic):
         # ratio = noise_k * end_ratio + (1 - noise_k)*start_ratio
         # is_enabled = (np.random.random_sample(size=None) < ratio)
 
-        is_enabled = t_batch < 100
+        is_enabled = t_batch < self.n_pretrain
 
         st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
         img_enabled = 1.0 - is_enabled
@@ -268,27 +255,15 @@ class MultiTrpoModel(ModelWithCritic):
         exp_st_enabled = np.expand_dims(st_enabled, 0)
         exp_img_enabled = np.expand_dims(img_enabled, 0)
 
-        if self.n_update > self.real_start:
-            action_dist_means_n, action_dist_log_stds_n, action_std_n = \
-                self.session.run(
-                    [self.real_net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
-                    {self.real_net.state_input: obs[0], self.real_net.img_input: obs[1],
-                     self.net.state_input: obs[0], self.net.img_input: obs[1],
-                     self.net.st_enabled: exp_st_enabled,
-                     self.net.img_enabled: exp_img_enabled,
-                     self.real_net.st_enabled: np.zeros_like(exp_st_enabled),
-                     self.real_net.img_enabled: np.ones_like(exp_img_enabled)
-                     })
-        else:
-            action_dist_means_n, action_dist_log_stds_n, action_std_n = \
-                self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
-                                 {self.net.state_input: obs[0], self.net.img_input: obs[1],
-                                  self.critic.img_input: obs[1],
-                                  self.critic.st_enabled: exp_st_enabled,
-                                  self.critic.img_enabled: exp_img_enabled,
-                                  self.net.st_enabled: exp_st_enabled,
-                                  self.net.img_enabled: exp_img_enabled,
-                                  })
+        action_dist_means_n, action_dist_log_stds_n, action_std_n = \
+            self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
+                             {self.net.state_input: obs[0], self.net.img_input: obs[1],
+                              self.critic.img_input: obs[1],
+                              self.critic.st_enabled: exp_st_enabled,
+                              self.critic.img_enabled: exp_img_enabled,
+                              self.net.st_enabled: exp_st_enabled,
+                              self.net.img_enabled: exp_img_enabled,
+                              })
 
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
@@ -307,7 +282,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         return action, agent_info
 
-    def concat_paths(self, paths, real_feed=False):
+    def concat_paths(self, paths):
         state_input = concat([path["observation"][0] for path in paths])
         img_input = concat([path["observation"][1] for path in paths])
         times = concat([path["times"] for path in paths], axis=0)
@@ -329,45 +304,7 @@ class MultiTrpoModel(ModelWithCritic):
                 self.critic.img_enabled: img_enabled,
                 self.net.st_enabled: st_enabled,
                 self.net.img_enabled: img_enabled,
-                # self.real_net.state_input: state_input,
-                # self.real_net.img_input: img_input,
-                # self.real_net.st_enabled: np.zeros_like(st_enabled),
-                # self.real_net.img_enabled: np.ones_like(img_enabled),
                 }
-        # if not real_feed:
-        #     feed = {self.net.state_input: state_input,
-        #             self.net.img_input: img_input,
-        #             self.net.advant: advant_n,
-        #             self.net.old_dist_means_n: action_dist_means_n,
-        #             self.net.old_dist_logstds_n: action_dist_logstds_n,
-        #             self.net.action_n: action_n,
-        #             # self.critic.img_input: img_input,
-        #             # self.critic.st_enabled: st_enabled,
-        #             # self.critic.img_enabled: img_enabled,
-        #             self.net.st_enabled: st_enabled,
-        #             self.net.img_enabled: img_enabled,
-        #             self.real_net.state_input: state_input,
-        #             self.real_net.img_input: img_input,
-        #             self.real_net.st_enabled: np.zeros_like(st_enabled),
-        #             self.real_net.img_enabled: np.ones_like(img_enabled),
-        #             }
-        # else:
-        #     feed = {self.net.state_input: state_input,
-        #             self.net.img_input: img_input,
-        #             # self.net.advant: advant_n,
-        #             # self.net.old_dist_means_n: action_dist_means_n,
-        #             # self.net.old_dist_logstds_n: action_dist_logstds_n,
-        #             # self.net.action_n: action_n,
-        #             # self.critic.img_input: img_input,
-        #             # self.critic.st_enabled: st_enabled,
-        #             # self.critic.img_enabled: img_enabled,
-        #             self.net.st_enabled: st_enabled,
-        #             self.net.img_enabled: img_enabled,
-        #             self.real_net.state_input: state_input,
-        #             self.real_net.img_input: img_input,
-        #             self.real_net.st_enabled: np.zeros_like(st_enabled),
-        #             self.real_net.img_enabled: np.ones_like(img_enabled),
-        #             }
         path_dict = {"state_input": state_input,
                      "img_input": img_input,
                      "times": times,
@@ -387,11 +324,8 @@ class MultiTrpoModel(ModelWithCritic):
         #     else:
         #         self.update_critic = False
         #         self.update_policy = True
-        if self.n_update == self.real_start + 1:
-            self.saver.restore(self.session, "pretrain_model")
-            self.pretrain_model_path = self.saver.save(self.session, 'pretrain_model')
-            logging.info("model_path: {}".format(self.pretrain_model_path))
-        self.update_critic = not self.n_update > self.real_start
+
+        self.update_critic = True
         self.update_policy = True
 
         # if self.n_update % 2 != 0 or self.n_update < 20:
@@ -401,22 +335,24 @@ class MultiTrpoModel(ModelWithCritic):
         # else:
         #     self.update_critic = True
         #     self.update_policy = True
-        feed, path_dict = self.concat_paths(paths, real_feed=(self.n_update > self.real_start))
+        feed, path_dict = self.concat_paths(paths)
 
-        # if self.n_update < 20:
-        #     self.saved_paths = [*self.saved_paths, *paths]
-        # elif self.n_update == 20:
-        #     # self.saver.restore(self.session, 'pretrained_model')
-        #
-        #     self.saver.restore(self.session,self.init_model_path)
-        #     _, img_path_dict = self.concat_paths(self.saved_paths)
-        #     self.saved_paths = []
-        #     self.critic.fit(img_path_dict, update_mode="img", num_pass=5)
-        #     self.saver.save(self.session, 'pretrained_model')
-        # else:
-        #     self.update_critic = True
-        #     self.update_policy = True
-        if self.n_update < 100:
+        if self.n_update < self.n_pretrain:
+            pass
+            # self.saved_paths = [*self.saved_paths, *paths]
+        elif self.n_update == self.n_pretrain:
+            # pretrain_model_path = self.feat_saver.save(self.session, 'pretrain_model')
+            # logging.debug("model_path: {}".format(pretrain_model_path))
+            self.saver.restore(self.session, self.init_model_path)
+            self.feat_saver.restore(self.session, 'pretrain_model')
+            self.update_critic = True
+            self.update_policy = True
+            # _, img_path_dict = self.concat_paths(self.saved_paths)
+            # self.saved_paths = []
+            # self.critic.fit(img_path_dict, update_mode="img", num_pass=5)
+            # self.saver.save(self.session, 'pretrained_model')
+
+        if self.n_update < self.n_pretrain:
             self.critic.fit(path_dict, update_mode="img", num_pass=2)
 
 
@@ -437,29 +373,7 @@ class MultiTrpoModel(ModelWithCritic):
         if not self.update_policy:
             return None, None
 
-        if self.n_update > self.real_start:
-            if self.debug:
-                imi_loss = run_batched(self.imi_loss, feed, batch_size, self.session,
-                                       minibatch_size=self.minibatch_size)
-                logging.debug("\nimi_loss: {}".format(imi_loss))
 
-            training_inds = np.random.permutation(batch_size)
-            for start in range(0, batch_size, self.minibatch_size):
-                if start > batch_size - 2 * self.minibatch_size:
-                    end = batch_size
-                else:
-                    end = start + self.minibatch_size
-                slc = training_inds[range(start, end)]
-                this_feed = {k: v[slc] for k, v in list(feed.items())}
-                self.session.run(self.imi_train, feed_dict=this_feed)
-                if end == batch_size:
-                    break
-
-            if self.debug:
-                imi_loss, img_norm = run_batched([self.imi_loss, self.img_feature_norm], feed, batch_size, self.session,
-                                                 minibatch_size=self.minibatch_size)
-                logging.debug("\nimi_loss: {}\n img_norm: {}".format(imi_loss, img_norm))
-            return None, None
         if self.mode == "ADA_KL":
             surr_o, kl_o, ent_o = run_batched(self.a_losses, feed, batch_size, self.session,
                                               minibatch_size=self.minibatch_size,

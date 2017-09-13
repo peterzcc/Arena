@@ -65,11 +65,11 @@ class MultiBaseline(object):
             self.image_features = [self.img_enabled[:, tf.newaxis] * self.pre_image_features[0]]
             self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
             self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
-            # self.img_loss =tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
-            # self.pretrain_loss = self.img_loss
-            # self.img_opt = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-8)
-            # self.img_train = self.img_opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
-            #                                        var_list=self.img_var_list)
+            self.img_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
+            self.pretrain_loss = self.img_loss
+            self.img_opt = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+            self.img_train = self.img_opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
+                                                   var_list=self.img_var_list)
 
         with tf.variable_scope(scope):
             self.aggregated_feature = \
