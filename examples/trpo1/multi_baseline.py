@@ -38,42 +38,45 @@ class MultiBaseline(object):
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
             self.final_state = self.st_enabled * self.state_input
         img_scope = "img_" + scope  # + "_img"
-        with tf.variable_scope(img_scope):
-            expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
-            img_features = pt.wrap(expanded_img).sequential()
-            for conv_size in conv_sizes:
-                img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
-                                    stride=conv_size[2],
-                                    weights=variance_scaling_initializer(factor=1.0,
-                                                                         mode='FAN_AVG',
-                                                                         uniform=True)
-                                    )
-            img_features.flatten()
-            img_features.fully_connected(16, activation_fn=lrelu,
-                                         weights=variance_scaling_initializer(factor=1.0,
-                                                                              mode='FAN_AVG',
-                                                                              uniform=True)
-                                         )
-            img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                                         weights=variance_scaling_initializer(factor=1.0,
-                                                                              mode='FAN_AVG',
-                                                                              uniform=True)
-                                         )
+        if n_imgfeat > 0:
+            with tf.variable_scope(img_scope):
+                expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
+                img_features = pt.wrap(expanded_img).sequential()
+                for conv_size in conv_sizes:
+                    img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
+                                        stride=conv_size[2],
+                                        weights=variance_scaling_initializer(factor=1.0,
+                                                                             mode='FAN_AVG',
+                                                                             uniform=True)
+                                        )
+                img_features.flatten()
+                img_features.fully_connected(16, activation_fn=lrelu,
+                                             weights=variance_scaling_initializer(factor=1.0,
+                                                                                  mode='FAN_AVG',
+                                                                                  uniform=True)
+                                             )
+                img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
+                                             weights=variance_scaling_initializer(factor=1.0,
+                                                                                  mode='FAN_AVG',
+                                                                                  uniform=True)
+                                             )
 
-            # img_features.flatten()
-            self.pre_image_features = [img_features.as_layer()]
-            self.image_features = [self.img_enabled[:, tf.newaxis] * self.pre_image_features[0]]
-            self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
-            self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
-            self.img_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
-            self.pretrain_loss = self.img_loss
-            self.img_opt = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-8)
-            self.img_train = self.img_opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
-                                                   var_list=self.img_var_list)
-
+                # img_features.flatten()
+                self.pre_image_features = [img_features.as_layer()]
+                self.image_features = [self.img_enabled[:, tf.newaxis] * self.pre_image_features[0]]
+                self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
+                self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
+                # self.img_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
+                # self.pretrain_loss = self.img_loss
+                # self.img_opt = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                # self.img_train = self.img_opt.minimize(self.pretrain_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
+                #                                        var_list=self.img_var_list)
+        else:
+            self.img_var_list = []
+            self.image_features = [tf.constant(0.0)]
         with tf.variable_scope(scope):
             self.aggregated_feature = \
-                self.comb_method(self.final_state, self.image_features[0])  # self.image_features[00]  #
+                self.comb_method(self.final_state, self.image_features[0])
             self.full_feature = tf.concat(
                 axis=1,
                 values=[self.aggregated_feature, self.time_input])

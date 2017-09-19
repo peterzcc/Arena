@@ -13,10 +13,11 @@ class BatchUpdateAgent(Agent):
                  shared_params, stats_rx, acts_tx,
                  is_learning, global_t, pid=0,
                  model=None,
-                 batch_size=1,
+                 batch_size=None,
                  discount=0.995,
                  lam=0.97,
-                 timestep_limit=1000
+                 timestep_limit=1000,
+                 episode_batch_size=None
                  ):
         Agent.__init__(
             self,
@@ -44,6 +45,7 @@ class BatchUpdateAgent(Agent):
 
         # Constant vars
         self.batch_size = batch_size
+        self.episode_batch_size = episode_batch_size
         self.discount = discount
 
         # State information
@@ -56,7 +58,7 @@ class BatchUpdateAgent(Agent):
         if model is None:
             self.model = MultiTrpoModel(self.observation_space, self.action_space,
                                         timestep_limit=timestep_limit,
-                                        cg_damping=0.0,
+                                        cg_damping=0.1,
                                         max_kl=0.01,
                                         cg_iters=10)
         else:
@@ -111,18 +113,19 @@ class BatchUpdateAgent(Agent):
             self.memory.add_path(terminated)
             self.num_episodes += 1
             self.episode_step = 0
-            if self.counter <= 0:
+            if (self.batch_size is not None and self.counter <= 0) \
+                    or (self.episode_batch_size is not None and self.num_episodes >= self.episode_batch_size):
                 train_before = time.time()
                 self.train_once()
                 train_after = time.time()
                 fps = (self.batch_size - self.counter) / (train_after - train_before)
 
                 logging.info(
-                    'Epoch:%d \nThd[%d] \nAverage Return:%f,  \nNum Traj:%d \nfps:%f \nAve. Length:%f' \
+                    'Epoch:%d \nThd[%d] \nAverage Return:%f,  \nNum steps:%d \nfps:%f \nAve. Length:%f' \
                     % (self.num_epoch,
                        self.id,
                        self.epoch_reward / self.num_episodes,
-                       self.num_episodes,
+                       self.batch_size - self.counter,
                        fps,
                        float(self.batch_size - self.counter) / self.num_episodes
                        ))

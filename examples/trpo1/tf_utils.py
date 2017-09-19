@@ -161,6 +161,9 @@ def aggregate_feature(st, img):
     return st + img  # tf.pad(img, paddings=tf.constant(value=[[0, 0], [0, 2]]))
 
 
+def select_st(st, img):
+    final = st + img[0, 0]
+    return final
 def concat_feature(st, img):
     return tf.concat(
         axis=1,

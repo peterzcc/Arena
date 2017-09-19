@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
-    aggregate_feature
+    aggregate_feature, select_st
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
 from diagonal_gaussian import DiagonalGaussian
@@ -55,8 +55,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         else:
             self.session = session
-        n_imgfeat = 4
-        self.policy_with_image_input = False
+        n_imgfeat = 0
         self.comb_method = aggregate_feature
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
@@ -76,9 +75,8 @@ class MultiTrpoModel(ModelWithCritic):
         self.net = MultiNetwork(scope="state_agent",
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
-                                with_image=self.policy_with_image_input,
                                 n_imgfeat=n_imgfeat,
-                                extra_feaatures=self.critic.image_features,
+                                extra_feaatures=[],
                                 # [],  #[np.zeros((4,), dtype=np.float32)],  #
                                 conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #(((3, 3), 2, 2),),  #
                                 comb_method=self.comb_method
@@ -109,8 +107,6 @@ class MultiTrpoModel(ModelWithCritic):
         ents = self.distribution.entropy(self.old_dist_info_vars)
         ent = tf.reduce_sum(ents) / self.batch_size_float
         self.losses = [surr, kl, ent]
-        if self.policy_with_image_input:
-            self.infos = [tf.reduce_mean(self.net.image_features)]
         var_list = self.net.var_list
         self.get_flat_params = GetFlat(var_list, session=self.session)  # get theta from var_list
         self.set_params_with_flat_data = SetFromFlat(var_list, session=self.session)  # set theta from var_List
@@ -139,7 +135,7 @@ class MultiTrpoModel(ModelWithCritic):
         batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data, axis=1)
         batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
         self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
-        self.target_kl = 0.002
+        self.target_kl = 0.003
         # Vanila
         self.vanila_surr = - tf.reduce_mean(self.new_likelihood_sym * self.net.advant)
         self.vanila_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="vn_step_size")
@@ -157,10 +153,9 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
         self.a_surr = -tf.reduce_mean(raw_surr) + self.a_beta * kl
-        self.a_step_size = 0.001
+        self.a_step_size = 0.0001
         self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
-        self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size,
-                                            beta1=0.9, beta2=0.999, epsilon=1e-8)
+        self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size)
         # self.a_opt = tf.train.GradientDescentOptimizer(learning_rate=0.01)
         # self.a_train = self.a_opt.minimize(self.a_surr,var_list=var_list)
         self.a_grad_list = tf.gradients(self.a_surr, var_list)
@@ -168,10 +163,10 @@ class MultiTrpoModel(ModelWithCritic):
                                     for g in self.a_grad_list]
         self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
         self.a_losses = [self.a_surr, kl, ent]
-        self.a_beta_max = 10
-        self.a_beta_min = 0.1
+        self.a_beta_max = 30.0
+        self.a_beta_min = 1.0 / 30.0
 
-        self.mode = 'ADA_KL'
+        self.mode = 'TRPO'
 
 
         gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
@@ -181,7 +176,7 @@ class MultiTrpoModel(ModelWithCritic):
         # self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver()
-        self.feat_saver = tf.train.Saver(var_list=self.critic.img_var_list)
+        # self.feat_saver = tf.train.Saver(var_list=self.critic.img_var_list)
         # self.saver = tf.train.Saver(var_list=self.net.var_list)
         self.init_model_path = self.saver.save(self.session, 'init_model')
         self.n_update = 0
@@ -237,12 +232,16 @@ class MultiTrpoModel(ModelWithCritic):
         # ratio = noise_k * end_ratio + (1 - noise_k)*start_ratio
         # is_enabled = (np.random.random_sample(size=None) < ratio)
 
-        is_enabled = t_batch < self.n_pretrain
-
-        st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
-        img_enabled = 1.0 - is_enabled
+        # is_enabled = t_batch < self.n_pretrain
+        #
+        # st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
+        # img_enabled = 1.0 - is_enabled
         # st_enabled = np.array([ 1.0, 1.0])
         # img_enabled = 1.0
+
+        all_st_enabled = True
+        st_enabled = np.ones((111,)) if all_st_enabled else np.zeros((111,))
+        img_enabled = 1.0 - all_st_enabled
         return st_enabled, img_enabled
 
     def predict(self, observation):
@@ -268,7 +267,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         output = rnd * action_std_n[0] + action_dist_means_n[0]
-        action = output  #np.clip(output, self.act_space.low, self.act_space.high).flatten()
+        action = np.clip(output, self.act_space.low, self.act_space.high).flatten()
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
         agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0],
@@ -341,12 +340,15 @@ class MultiTrpoModel(ModelWithCritic):
             pass
             # self.saved_paths = [*self.saved_paths, *paths]
         elif self.n_update == self.n_pretrain:
+            pass
             # pretrain_model_path = self.feat_saver.save(self.session, 'pretrain_model')
             # logging.debug("model_path: {}".format(pretrain_model_path))
-            self.saver.restore(self.session, self.init_model_path)
-            self.feat_saver.restore(self.session, 'pretrain_model')
-            self.update_critic = True
-            self.update_policy = True
+
+            # self.saver.restore(self.session, self.init_model_path)
+            # self.feat_saver.restore(self.session, 'pretrain_model')
+            # self.update_critic = True
+            # self.update_policy = True
+
             # _, img_path_dict = self.concat_paths(self.saved_paths)
             # self.saved_paths = []
             # self.critic.fit(img_path_dict, update_mode="img", num_pass=5)
@@ -357,7 +359,7 @@ class MultiTrpoModel(ModelWithCritic):
 
 
         if self.update_critic:
-            self.critic.fit(path_dict, update_mode="st", num_pass=2)
+            self.critic.fit(path_dict, update_mode="full", num_pass=2)
         self.n_update += 1
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
@@ -367,7 +369,7 @@ class MultiTrpoModel(ModelWithCritic):
         batch_size = advant_n.shape[0]
         thprev = self.get_flat_params()  # get theta_old
         if self.debug:
-            logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
+            # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
             logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
             logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
         if not self.update_policy:

@@ -35,7 +35,8 @@ class Experiment(object):
                  f_create_shared_params,
                  stats_file_dir=None,
                  single_process_mode=False,
-                 render_option="false"):
+                 render_option="false",
+                 log_episodes=False):
         """
         Parameters
         ----------
@@ -64,6 +65,7 @@ class Experiment(object):
         self.episode_q = mp.Queue(maxsize=1000)
         self.num_actor = None
         self.render_option = render_option
+        self.log_episodes = log_episodes
 
         # 2. Configure log files
         if stats_file_dir is None:
@@ -235,14 +237,15 @@ class Experiment(object):
             current_time = time()
             fps = episode_count / (current_time - start_times[pid])
             start_times[pid] = current_time
-
-            with open(self.log_train_path, 'a') as log_train_file:
-                train_log = ",".join(
-                    map(str,
-                        [datetime.datetime.now(), pid, epoch_num, self.global_t.value, episode_count, episode_reward,
-                         round(fps)]
-                        )) + "\n"
-                log_train_file.write(train_log)
+            if self.log_episodes:
+                with open(self.log_train_path, 'a') as log_train_file:
+                    train_log = ",".join(
+                        map(str,
+                            [datetime.datetime.now(), pid, epoch_num, self.global_t.value, episode_count,
+                             episode_reward,
+                             round(fps)]
+                            )) + "\n"
+                    log_train_file.write(train_log)
 
             if self.global_t.value > (epoch_num+1)*epoch_length:
                 if with_testing_length > 0:

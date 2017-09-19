@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 from custom_pend import CustomPend
 import sys
 
-BATH_SIZE = 5000
+BATH_SIZE = 15000
 
 
 def main():
@@ -105,12 +105,17 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
-        env = CustomPend()
+        env = CustomAnt()
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
-                              visible_state_ids=np.array((True, True, True, True)),
-                              s_transform=ident,
+                              s_transform=ident, visible_state_ids=np.ones((111,), dtype=bool),
                               num_frame=3)
+        # env = CustomPend()
+        # return ComplexWrapper(env, max_episode_length=T,
+        #                       append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
+        #                       visible_state_ids=np.array((False, False, True, True)),
+        #                       s_transform=ident,
+        #                       num_frame=3)
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
