@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 from custom_pend import CustomPend
 import sys
 
-BATH_SIZE = 15000
+BATH_SIZE = 25000
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=BATH_SIZE * 500,
+    parser.add_argument('--num-steps', required=False, type=int, default=50000000,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
@@ -105,15 +105,16 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
+
         env = CustomAnt()
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
                               s_transform=ident, visible_state_ids=np.ones((111,), dtype=bool),
-                              num_frame=3)
+                              num_frame=1)
         # env = CustomPend()
         # return ComplexWrapper(env, max_episode_length=T,
         #                       append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
-        #                       visible_state_ids=np.array((False, False, True, True)),
+        #                       visible_state_ids=np.array((True, True, True, True)),
         #                       s_transform=ident,
         #                       num_frame=3)
 
@@ -124,7 +125,7 @@ def main():
             observation_space, action_space,
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid,
-            batch_size=args.batch_size,
+            episode_batch_size=20,
             timestep_limit=T
         )
 

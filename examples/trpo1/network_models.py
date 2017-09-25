@@ -68,17 +68,17 @@ class MultiNetwork(object):
             hid2_size = int(np.sqrt(hid1_size * hid3_size))
 
             self.action_dist_means_n = (pt.wrap(self.full_feature).
-                                        fully_connected(hid1_size, activation_fn=lrelu,
+                                        fully_connected(hid1_size, activation_fn=tf.tanh,
                                                         weights=variance_scaling_initializer(factor=0.1,
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc1" % scope).
-                                        fully_connected(hid2_size, activation_fn=lrelu,
+                                        fully_connected(hid2_size, activation_fn=tf.tanh,
                                                         weights=variance_scaling_initializer(factor=0.1,
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc1" % scope).
-                                        fully_connected(hid3_size, activation_fn=lrelu,
+                                        fully_connected(hid3_size, activation_fn=tf.tanh,
                                                         weights=variance_scaling_initializer(factor=0.1,
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
@@ -91,7 +91,7 @@ class MultiNetwork(object):
                                                         name="%s_fc3" % scope))
 
             self.action_dist_logstd_param = tf.Variable(
-                initial_value=(np.log(0.5) + 0.001 * np.random.randn(1, *action_shape)).astype(np.float32),
+                initial_value=(np.log(0.7) + 0.001 * np.random.randn(1, *action_shape)).astype(np.float32),
                 trainable=True, name="%spolicy_logstd" % scope)
             self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
                                                  tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))

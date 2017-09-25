@@ -57,11 +57,18 @@ class MultiTrpoModel(ModelWithCritic):
             self.session = session
         n_imgfeat = 0
         self.comb_method = aggregate_feature
+
+        hid1_size = observation_space[1].shape[0] * 10
+        hid3_size = 5
+        hid2_size = int(np.sqrt(hid1_size * hid3_size))
+        hidden_sizes = (hid1_size, hid2_size, hid3_size)
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
-                                    n_imgfeat=n_imgfeat, hidden_sizes=(64, 64),
+                                    activation=tf.tanh,
+                                    n_imgfeat=n_imgfeat, hidden_sizes=hidden_sizes,
                                     conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),
                                     comb_method=self.comb_method)
+
         # conv_sizes=(((3, 3), 32, 1), ((3, 3), 64, 1)))
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
@@ -163,10 +170,11 @@ class MultiTrpoModel(ModelWithCritic):
                                     for g in self.a_grad_list]
         self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
         self.a_losses = [self.a_surr, kl, ent]
-        self.a_beta_max = 30.0
-        self.a_beta_min = 1.0 / 30.0
+        self.a_beta_max = 35.0
+        self.a_beta_min = 1.0 / 35.0
+        self.update_per_epoch = 20
 
-        self.mode = 'TRPO'
+        self.mode = 'ADA_KL'
 
 
         gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
@@ -176,7 +184,8 @@ class MultiTrpoModel(ModelWithCritic):
         # self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
         self.session.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver()
-        # self.feat_saver = tf.train.Saver(var_list=self.critic.img_var_list)
+        if len(self.critic.img_var_list) > 0:
+            self.feat_saver = tf.train.Saver(var_list=self.critic.img_var_list)
         # self.saver = tf.train.Saver(var_list=self.net.var_list)
         self.init_model_path = self.saver.save(self.session, 'init_model')
         self.n_update = 0
@@ -234,10 +243,10 @@ class MultiTrpoModel(ModelWithCritic):
 
         # is_enabled = t_batch < self.n_pretrain
         #
+        # is_enabled = False
         # st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
         # img_enabled = 1.0 - is_enabled
-        # st_enabled = np.array([ 1.0, 1.0])
-        # img_enabled = 1.0
+
 
         all_st_enabled = True
         st_enabled = np.ones((111,)) if all_st_enabled else np.zeros((111,))
@@ -359,7 +368,7 @@ class MultiTrpoModel(ModelWithCritic):
 
 
         if self.update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=2)
+            self.critic.fit(path_dict, update_mode="full", num_pass=10)
         self.n_update += 1
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
@@ -381,14 +390,15 @@ class MultiTrpoModel(ModelWithCritic):
                                               minibatch_size=self.minibatch_size,
                                               extra_input={self.a_beta: self.a_beta_value})
             logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
-            grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
-                                minibatch_size=self.minibatch_size,
-                                extra_input={self.a_beta: self.a_beta_value}
-                                )
-            grad_dict = {p: v for (p, v) in zip(self.a_grad_placeholders, grads)}
-            _ = self.session.run(self.a_apply_grad,
-                                 feed_dict={**grad_dict,
-                                            self.a_sym_step_size: self.a_step_size})
+            for e in range(self.update_per_epoch):
+                grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
+                                    minibatch_size=self.minibatch_size,
+                                    extra_input={self.a_beta: self.a_beta_value}
+                                    )
+                grad_dict = {p: v for (p, v) in zip(self.a_grad_placeholders, grads)}
+                _ = self.session.run(self.a_apply_grad,
+                                     feed_dict={**grad_dict,
+                                                self.a_sym_step_size: self.a_step_size})
 
             surr_new, kl_new, ent_new = run_batched(self.a_losses, feed, batch_size, self.session,
                                                     minibatch_size=self.minibatch_size,

@@ -25,7 +25,7 @@ class MultiBaseline(object):
         self.mix_frac = 1
         self.timestep_limit = timestep_limit
         self.scope = scope
-        self.minibatch_size = 32
+        self.minibatch_size = 256
         self.comb_method = comb_method
         assert len(obs_space) == 2
         with tf.variable_scope(scope):
@@ -95,7 +95,7 @@ class MultiBaseline(object):
             self.var_list = [*self.img_var_list, *self.st_var_list]
             self.st_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.st_var_list])
             self.l2 = self.st_l2  #+ self.img_l2
-            self.final_loss = self.mse + (self.l2) * self.l2_k
+            self.final_loss = self.mse  # S+ (self.l2) * self.l2_k
 
             if self.use_lbfgs_b:
                 self.opt = LbfgsOptimizer(
@@ -106,15 +106,16 @@ class MultiBaseline(object):
                 self.upper_train = None
                 self.train = None
             else:
-                self.opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                self.lr = 1e-2 / np.sqrt(hidden_sizes[1])
+                self.opt = tf.train.AdamOptimizer(learning_rate=self.lr)
                 self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
                                                var_list=self.var_list)
                 # self.train = None
-                self.upper_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                # self.upper_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
                 # self.upper_opt = tf.train.AdagradOptimizer(learning_rate=0.0005,initial_accumulator_value=0.1)
-                self.upper_train = self.upper_opt.minimize(self.final_loss,
-                                                           aggregation_method=tf.AggregationMethod.DEFAULT,
-                                                           var_list=self.st_var_list)
+                # self.upper_train = self.upper_opt.minimize(self.final_loss,
+                #                                            aggregation_method=tf.AggregationMethod.DEFAULT,
+                #                                            var_list=self.st_var_list)
         self.session.run(tf.global_variables_initializer())
         self.debug_mode = True
 
@@ -157,7 +158,7 @@ class MultiBaseline(object):
                 self.st_enabled: st_enabled, self.img_enabled: img_enabled}
         batch_N = returns.shape[0]
         if update_mode == "full":
-            train_op = [self.mse, self.train]
+            train_op = [self.train]
         elif update_mode == "both":
             train_op = [self.mse, self.img_train, self.upper_train]
         elif update_mode == "img":

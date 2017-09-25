@@ -44,15 +44,16 @@ class BatchUpdateAgent(Agent):
         self.model = model
 
         # Constant vars
-        self.batch_size = batch_size
+        self.batch_size = 0 if batch_size is None else batch_size
         self.episode_batch_size = episode_batch_size
         self.discount = discount
 
         # State information
         self.num_epoch = 0
-        self.counter = batch_size
+        self.counter = self.batch_size
         self.episode_step = 0
         self.epoch_reward = 0
+        self.global_t = 0
         # max_l = 10000
 
         if model is None:
@@ -103,6 +104,7 @@ class BatchUpdateAgent(Agent):
 
         if done:
             self.counter -= self.episode_step
+            self.global_t += self.episode_step
             self.memory.fill_episode_critic(self.model.compute_critic)
             try:
                 terminated = np.asscalar(info["terminated"])
@@ -113,7 +115,7 @@ class BatchUpdateAgent(Agent):
             self.memory.add_path(terminated)
             self.num_episodes += 1
             self.episode_step = 0
-            if (self.batch_size is not None and self.counter <= 0) \
+            if (self.batch_size > 0 and self.counter <= 0) \
                     or (self.episode_batch_size is not None and self.num_episodes >= self.episode_batch_size):
                 train_before = time.time()
                 self.train_once()
@@ -121,11 +123,13 @@ class BatchUpdateAgent(Agent):
                 fps = (self.batch_size - self.counter) / (train_after - train_before)
 
                 logging.info(
-                    'Epoch:%d \nThd[%d] \nAverage Return:%f,  \nNum steps:%d \nfps:%f \nAve. Length:%f' \
+                    'Epoch:%d \nThd[%d] \nt: %d \nAverage Return:%f,  \nNum steps: %d \nNum traj:%d \nfps:%f \nAve. Length:%f' \
                     % (self.num_epoch,
                        self.id,
+                       self.global_t,
                        self.epoch_reward / self.num_episodes,
                        self.batch_size - self.counter,
+                       self.num_episodes,
                        fps,
                        float(self.batch_size - self.counter) / self.num_episodes
                        ))

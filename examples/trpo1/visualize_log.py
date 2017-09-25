@@ -27,14 +27,22 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
     regex_list = ['Average Return:([+-]?[0-9]*[.]?[0-9]+)', ' std: ([+-]?[0-9]*[.]?[0-9]+)',
                   'img_loss=([+-]?[0-9]*[.]?[0-9]+)',
                   'act_clips: ([+-]?[0-9]*[.]?[0-9]+)',
-                  'new kl: ([+-]?[0-9]*[.]?[0-9]+)']
-    name_list = ['Return', 'Std', 'image_loss', 'Number of action overflows', 'KL']
+                  'new kl: ([+-]?[0-9]*[.]?[0-9]+)',
+                  'Average Return:([+-]?[0-9]*[.]?[0-9]+)']
+    name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance']
+    timestep_list = []
     for line in loss_file:
         m = re.search(regex_list[mode], line)
+        t = re.search('^t: ([+-]?[0-9]*[.]?[0-9]+)', line)
         if m is not None:
             loss = m.group(1)
             out_file.write(str(loss) + "\n")
             loss_list.append(loss)
+        if t is not None:
+            num_steps = t.group(1)
+            out_file.write("@" + str(num_steps) + "\n")
+            timestep_list.append(num_steps)
+    t_array = np.array(timestep_list, dtype=np.float32) / 1000
     if mode == 0:
         plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.')
     elif mode == 1:
@@ -44,6 +52,9 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
             np.array(list(range(len(loss_list) - starting_point))),
             np.log10(np.array(loss_list[starting_point:]).astype(np.float32) + 1e-8),
             '.')
+    elif mode == 5:
+        l_data = np.minimum(t_array.shape[0], len(loss_list))
+        plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.')
     else:
         plt.plot(np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
     plt.xlabel('t')

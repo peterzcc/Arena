@@ -71,10 +71,14 @@ class DictMemory(object):
                     [np.array([o[0] for o in path["observation"]]),
                      np.array([o[1] for o in path["observation"]]).astype(np.float32) / 255.0]
                 path["times"] = np.arange(len(path["reward"])).reshape(-1, 1) / float(self.timestep_limit)
-                path["return"] = discount(path["reward"], self.gamma)
+                if self.gamma < 0.999:  # don't scale for gamma ~= 1
+                    scaled_rewards = path['reward'] * (1 - self.gamma)
+                else:
+                    scaled_rewards = path['reward']
+                path["return"] = discount(scaled_rewards, self.gamma)
                 b = path["baseline"] = self.f_critic(path)
                 b1 = np.append(b, 0 if path["terminated"] else b[-1])
-                deltas = path["reward"] + self.gamma * b1[1:] - b1[:-1]
+                deltas = scaled_rewards + self.gamma * b1[1:] - b1[:-1]
                 path["advantage"] = discount(deltas, self.gamma * self.lam)
         else:
             for path in self.paths:
@@ -89,7 +93,7 @@ class DictMemory(object):
             std = alladv.std()
             mean = alladv.mean()
             for path in self.paths:
-                path["advantage"] = (path["advantage"] - mean) / std
+                path["advantage"] = (path["advantage"] - mean) / (std + 1e-6)
         return self.paths
 
     def reset(self):
