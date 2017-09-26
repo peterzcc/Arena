@@ -60,13 +60,22 @@ class ComplexWrapper(object):
                                          shape=image_size + (num_channel,)
                                          )
             self.observation_space += [self.img_space]
-        self.rgb_to_gray = rgb_to_gray
-        self.new_img_size = new_img_size
+            self.rgb_to_gray = rgb_to_gray
+            self.new_img_size = new_img_size
+            self.frame_buffer = self.img_space.low.copy()
+            self.x_buffer = self.num_frame - 1
+        # else:
+        #     self.new_img_size = (0, 0)
+        #     self.img_space = Box(low=np.empty(shape=(0, 0, 0)),
+        #                          high=np.empty(shape=(0, 0, 0)),
+        #                          shape=(0, 0, 0)
+        #                          )
+        #     self.observation_space += [self.img_space]
         self.max_episode_length = max_episode_length
         self.info_sample = {"terminated": False}
 
-        self.frame_buffer = self.img_space.low.copy()
-        self.x_buffer = self.num_frame - 1
+
+
 
         # Episode information
         self.episode_steps = 0
@@ -101,10 +110,10 @@ class ComplexWrapper(object):
 
     def env_reset(self):
         state_observation = self.env.reset()
-        self.frame_buffer = self.img_space.low.copy()
-        self.x_buffer = self.num_frame - 1
         state_observation = self.s_transform(state_observation,self.total_steps)
         if self.append_image:
+            self.frame_buffer = self.img_space.low.copy()
+            self.x_buffer = self.num_frame - 1
             image_observation = self.env.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
             self.frame_buffer[:, :, self.x_buffer] = image_observation

@@ -83,7 +83,9 @@ class BatchUpdateAgent(Agent):
         #     #TODO: sync from global model
         #     pass
 
-        processed_observation = [observation[0], observation[1].astype(np.float32) / 255.0]
+        processed_observation = [observation[0]]
+        if len(observation) == 2:
+            processed_observation.append(observation[1].astype(np.float32) / 255.0)
         action, agent_info = self.model.predict(processed_observation)
         # final_action = \
         #     np.clip(action, self.action_space.low, self.action_space.high).flatten()

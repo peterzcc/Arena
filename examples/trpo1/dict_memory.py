@@ -67,9 +67,13 @@ class DictMemory(object):
             for path in self.paths:
                 path["reward"] = np.array(path["reward"])
                 path["action"] = np.array(path["action"])
-                path["observation"] = \
-                    [np.array([o[0] for o in path["observation"]]),
-                     np.array([o[1] for o in path["observation"]]).astype(np.float32) / 255.0]
+                if len(path["observation"][0]) == 2:
+                    path["observation"] = \
+                        [np.array([o[0] for o in path["observation"]]),
+                         np.array([o[1] for o in path["observation"]]).astype(np.float32) / 255.0]
+                else:
+                    path["observation"] = \
+                        [np.array([o[0] for o in path["observation"]])]
                 path["times"] = np.arange(len(path["reward"])).reshape(-1, 1) / float(self.timestep_limit)
                 if self.gamma < 0.999:  # don't scale for gamma ~= 1
                     scaled_rewards = path['reward'] * (1 - self.gamma)

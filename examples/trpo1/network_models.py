@@ -20,8 +20,9 @@ class MultiNetwork(object):
         with tf.variable_scope("%s_shared" % scope):
             self.state_input = tf.placeholder(
                 dtype, shape=(None,) + observation_space[0].shape, name="%s_state" % scope)
-            self.img_input = \
-                tf.placeholder(tf.float32, shape=(None,) + observation_space[1].shape, name="%s_img" % scope)
+            if n_imgfeat > 0:
+                self.img_input = \
+                    tf.placeholder(tf.float32, shape=(None,) + observation_space[1].shape, name="%s_img" % scope)
 
             self.action_n = tf.placeholder(dtype, shape=(None,) + action_shape, name="%s_action" % scope)
             self.advant = tf.placeholder(dtype, shape=[None], name="%s_advant" % scope)
@@ -63,7 +64,7 @@ class MultiNetwork(object):
                     # self.full_feature = self.image_features
                 else:
                     self.full_feature = self.state_input
-            hid1_size = observation_space[1].shape[0] * 10
+            hid1_size = observation_space[0].shape[0] * 10
             hid3_size = action_shape[0] * 10
             hid2_size = int(np.sqrt(hid1_size * hid3_size))
 

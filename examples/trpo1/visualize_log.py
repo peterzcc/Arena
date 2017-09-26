@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 import numpy as np
-
+import mujoco_py as mj
 
 def get_loss(logfile, outpath, starting_point=1, mode=0):
     """
@@ -27,7 +27,7 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
     regex_list = ['Average Return:([+-]?[0-9]*[.]?[0-9]+)', ' std: ([+-]?[0-9]*[.]?[0-9]+)',
                   'img_loss=([+-]?[0-9]*[.]?[0-9]+)',
                   'act_clips: ([+-]?[0-9]*[.]?[0-9]+)',
-                  'new kl: ([+-]?[0-9]*[.]?[0-9]+)',
+                  'new kl: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
                   'Average Return:([+-]?[0-9]*[.]?[0-9]+)']
     name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance']
     timestep_list = []
@@ -48,9 +48,10 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
     elif mode == 1:
         plt.plot(1.0 * np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
     elif mode == 4:
+        kls = np.array(loss_list[starting_point:]).astype(np.float32) + 1e-6
         plt.plot(
             np.array(list(range(len(loss_list) - starting_point))),
-            np.log10(np.array(loss_list[starting_point:]).astype(np.float32) + 1e-8),
+            kls,
             '.')
     elif mode == 5:
         l_data = np.minimum(t_array.shape[0], len(loss_list))

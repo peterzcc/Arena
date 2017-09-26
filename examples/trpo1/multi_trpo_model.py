@@ -56,9 +56,10 @@ class MultiTrpoModel(ModelWithCritic):
         else:
             self.session = session
         n_imgfeat = 0
+        self.n_imgfeat = n_imgfeat
         self.comb_method = aggregate_feature
 
-        hid1_size = observation_space[1].shape[0] * 10
+        hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
         hid2_size = int(np.sqrt(hid1_size * hid3_size))
         hidden_sizes = (hid1_size, hid2_size, hid3_size)
@@ -255,24 +256,27 @@ class MultiTrpoModel(ModelWithCritic):
 
     def predict(self, observation):
         if len(observation[0].shape) == len(self.ob_space[0].shape):
-            obs = [np.expand_dims(observation[0], 0), np.expand_dims(observation[1], 0)]
+            obs = [np.expand_dims(observation[0], 0)]
+            if self.n_imgfeat > 0:
+                obs.append(np.expand_dims(observation[1], 0))
         else:
             obs = observation
         st_enabled, img_enabled = self.get_state_activation(self.n_update)
 
         exp_st_enabled = np.expand_dims(st_enabled, 0)
         exp_img_enabled = np.expand_dims(img_enabled, 0)
-
+        feed = {self.net.state_input: obs[0],
+                self.critic.st_enabled: exp_st_enabled,
+                self.critic.img_enabled: exp_img_enabled,
+                self.net.st_enabled: exp_st_enabled,
+                self.net.img_enabled: exp_img_enabled,
+                }
+        if self.n_imgfeat > 0:
+            feed[self.critic.img_input] = obs[1]
+            feed[self.net.img_input] = obs[1]
         action_dist_means_n, action_dist_log_stds_n, action_std_n = \
             self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
-                             {self.net.state_input: obs[0], self.net.img_input: obs[1],
-                              self.critic.img_input: obs[1],
-                              self.critic.st_enabled: exp_st_enabled,
-                              self.critic.img_enabled: exp_img_enabled,
-                              self.net.st_enabled: exp_st_enabled,
-                              self.net.img_enabled: exp_img_enabled,
-                              })
-
+                             feed)
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         output = rnd * action_std_n[0] + action_dist_means_n[0]
@@ -292,7 +296,7 @@ class MultiTrpoModel(ModelWithCritic):
 
     def concat_paths(self, paths):
         state_input = concat([path["observation"][0] for path in paths])
-        img_input = concat([path["observation"][1] for path in paths])
+
         times = concat([path["times"] for path in paths], axis=0)
         returns = concat([path["return"] for path in paths])
         img_enabled = concat([path["img_enabled"] for path in paths])
@@ -302,23 +306,26 @@ class MultiTrpoModel(ModelWithCritic):
         action_dist_means_n = concat([path["mean"] for path in paths])
         action_dist_logstds_n = concat([path["log_std"] for path in paths])
         feed = {self.net.state_input: state_input,
-                self.net.img_input: img_input,
                 self.net.advant: advant_n,
                 self.net.old_dist_means_n: action_dist_means_n,
                 self.net.old_dist_logstds_n: action_dist_logstds_n,
                 self.net.action_n: action_n,
-                self.critic.img_input: img_input,
+
                 self.critic.st_enabled: st_enabled,
                 self.critic.img_enabled: img_enabled,
                 self.net.st_enabled: st_enabled,
                 self.net.img_enabled: img_enabled,
                 }
         path_dict = {"state_input": state_input,
-                     "img_input": img_input,
                      "times": times,
                      "returns": returns,
                      "img_enabled": img_enabled,
                      "st_enabled": st_enabled}
+        if self.n_imgfeat > 0:
+            img_input = concat([path["observation"][1] for path in paths])
+            feed[self.net] = img_input
+            feed[self.critic.img_input] = img_input
+            path_dict["img_input"] = img_input
         return feed, path_dict
 
     def compute_critic(self, states):
