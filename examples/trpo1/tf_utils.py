@@ -191,10 +191,12 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
 
 
 def run_batched(func, feed, N, session, minibatch_size=64, extra_input={}):
+    assert N > 0
     result = None
     for start in range(0, N, minibatch_size):  # TODO: verify this
         end = min(start + minibatch_size, N)
         this_size = end - start
+        assert this_size > 0
         slc = range(start, end)
         this_feed = {k: v[slc] for k, v in list(feed.items())}
         this_result = np.array(session.run(func, feed_dict={**this_feed, **extra_input})) * this_size

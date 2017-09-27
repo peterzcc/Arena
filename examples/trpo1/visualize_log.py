@@ -44,7 +44,7 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
             timestep_list.append(num_steps)
     t_array = np.array(timestep_list, dtype=np.float32) / 1000
     if mode == 0:
-        plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.')
+        plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.', markersize=1.0)
     elif mode == 1:
         plt.plot(1.0 * np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
     elif mode == 4:

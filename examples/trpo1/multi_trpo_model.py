@@ -39,7 +39,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.cg_damping = cg_damping
         self.cg_iters = cg_iters
         self.max_kl = max_kl
-        self.minibatch_size = 64
+        self.minibatch_size = 128
         self.use_empirical_fim = True
 
         if session is None:
@@ -169,6 +169,9 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_grad_list = tf.gradients(self.a_surr, var_list)
         self.a_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="a_grad_sym")
                                     for g in self.a_grad_list]
+        self.a_old_parameters = [tf.Variable(tf.zeros(v.shape, dtype=tf.float32), name="a_old_param") for v in var_list]
+        self.a_backup_op = [tf.assign(old_v, v) for (old_v, v) in zip(self.a_old_parameters, var_list)]
+        self.a_rollback_op = [[tf.assign(v, old_v) for (old_v, v) in zip(self.a_old_parameters, var_list)]]
         self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
         self.a_losses = [self.a_surr, kl, ent]
         self.a_beta_max = 35.0
@@ -280,7 +283,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         rnd = np.random.normal(size=action_dist_means_n[0].shape)
         output = rnd * action_std_n[0] + action_dist_means_n[0]
-        action = np.clip(output, self.act_space.low, self.act_space.high).flatten()
+        action = output  # np.clip(output, self.act_space.low, self.act_space.high).flatten()
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
         agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0],
@@ -397,6 +400,7 @@ class MultiTrpoModel(ModelWithCritic):
                                               minibatch_size=self.minibatch_size,
                                               extra_input={self.a_beta: self.a_beta_value})
             logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+            # self.session.run(self.a_backup_op)
             for e in range(self.update_per_epoch):
                 grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
                                     minibatch_size=self.minibatch_size,
@@ -406,10 +410,16 @@ class MultiTrpoModel(ModelWithCritic):
                 _ = self.session.run(self.a_apply_grad,
                                      feed_dict={**grad_dict,
                                                 self.a_sym_step_size: self.a_step_size})
+                kl_new = run_batched(self.a_losses[1], feed, batch_size, self.session,
+                                     minibatch_size=self.minibatch_size,
+                                     extra_input={self.a_beta: self.a_beta_value})
+                if kl_new > self.target_kl * 4:
+                    logging.debug("KL too large, early stop")
+                    break
 
-            surr_new, kl_new, ent_new = run_batched(self.a_losses, feed, batch_size, self.session,
-                                                    minibatch_size=self.minibatch_size,
-                                                    extra_input={self.a_beta: self.a_beta_value})
+            surr_new, ent_new = run_batched([self.a_losses[0], self.a_losses[2]], feed, batch_size, self.session,
+                                            minibatch_size=self.minibatch_size,
+                                            extra_input={self.a_beta: self.a_beta_value})
             logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
             if kl_new > self.target_kl * 2:
                 if self.a_beta_value < self.a_beta_max:
@@ -428,6 +438,10 @@ class MultiTrpoModel(ModelWithCritic):
             else:
                 logging.debug('beta OK = %s' % self.a_beta_value)
                 logging.debug('step_size OK = %s' % self.a_step_size)
+
+            # if kl_new > self.target_kl * 30:
+            #     logging.debug("KL too large, rollback")
+            #     self.session.run(self.a_rollback_op)
             return None, None
 
         if self.mode == "VANILA":
