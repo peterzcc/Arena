@@ -13,6 +13,8 @@ class ComplexWrapper(object):
                  max_episode_length=100000, action_reduce=False,
                  append_image=False, visible_state_ids=None,
                  s_transform=lambda x, t: x, num_frame=1):
+        args = locals()
+        logging.debug("Environment args:\n {}".format(args))
         self.env = env
         self.action_reduce = action_reduce
         self.env = env

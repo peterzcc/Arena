@@ -90,12 +90,17 @@ class MultiNetwork(object):
                                                                                              mode='FAN_AVG',
                                                                                              uniform=True),
                                                         name="%s_fc3" % scope))
+            logvar_speed = (10 * hid3_size) // 48
+            log_vars = tf.get_variable("%s_logvars" % scope, (logvar_speed, action_shape[0]), tf.float32,
+                                       tf.constant_initializer(0.0))
+            self.action_dist_logstds_n = tf.reduce_sum(log_vars, axis=0) - 1.0
 
-            self.action_dist_logstd_param = tf.Variable(
-                initial_value=(np.log(0.7) + 0.001 * np.random.randn(1, *action_shape)).astype(np.float32),
-                trainable=True, name="%spolicy_logstd" % scope)
-            self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
-                                                 tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))
+            # self.action_dist_logstd_param = tf.Variable(
+            #     initial_value=(np.log(0.7) + 0.001 * np.random.randn(1, *action_shape)).astype(np.float32),
+            #     trainable=True, name="%spolicy_logstd" % scope)
+
+            # self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
+            #                                      tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))
             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
 
     def get_action_dist_means_n(self, session, obs):

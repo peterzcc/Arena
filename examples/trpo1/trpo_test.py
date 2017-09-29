@@ -32,7 +32,7 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=50000000,
+    parser.add_argument('--num-steps', required=False, type=int, default=8e7,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
@@ -109,7 +109,8 @@ def main():
         env = CustomAnt()
         return ComplexWrapper(env, max_episode_length=T,
                               append_image=False, new_img_size=(84, 84), rgb_to_gray=True,
-                              s_transform=ident, visible_state_ids=np.ones((111,), dtype=bool),
+                              s_transform=ident,
+                              visible_state_ids=np.ones(env.observation_space.shape, dtype=bool),
                               num_frame=1)
         # env = CustomPend()
         # return ComplexWrapper(env, max_episode_length=T,

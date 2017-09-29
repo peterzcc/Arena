@@ -27,12 +27,16 @@ class MultiTrpoModel(ModelWithCritic):
                  cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
-                 session=None):
+                 n_imgfeat=0,
+                 target_kl=0.003,
+                 mode="ADA_KL"):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
         logging.debug("\naction space: {} to {}".format(action_space.low, action_space.high))
         logging.debug("\nstate space: {} to {}".format(observation_space[0].low, observation_space[0].high))
+        args = locals()
+        logging.debug("model args:\n {}".format(args))
 
         # store constants
         self.min_std = min_std
@@ -42,20 +46,16 @@ class MultiTrpoModel(ModelWithCritic):
         self.minibatch_size = 128
         self.use_empirical_fim = True
 
-        if session is None:
+        # cpu_config = tf.ConfigProto(
+        #     device_count={'GPU': 0}, log_device_placement=False
+        # )
+        # self.session = tf.Session(config=cpu_config)
 
-            # cpu_config = tf.ConfigProto(
-            #     device_count={'GPU': 0}, log_device_placement=False
-            # )
-            # self.session = tf.Session(config=cpu_config)
-
-            gpu_options = tf.GPUOptions(allow_growth=True)  # False,per_process_gpu_memory_fraction=0.75)
-            self.session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
+        gpu_options = tf.GPUOptions(allow_growth=True)  # False,per_process_gpu_memory_fraction=0.75)
+        self.session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
                                                             log_device_placement=False))
 
-        else:
-            self.session = session
-        n_imgfeat = 0
+        n_imgfeat = n_imgfeat
         self.n_imgfeat = n_imgfeat
         self.comb_method = aggregate_feature
 
@@ -94,7 +94,7 @@ class MultiTrpoModel(ModelWithCritic):
         batch_size = tf.shape(self.net.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
         self.action_dist_log_stds_n = log_std_var  #self.net.action_dist_logstds_n  #
-        self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
+        # self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
         self.old_dist_info_vars = dict(mean=self.net.old_dist_means_n, log_std=self.net.old_dist_logstds_n)
         self.new_dist_info_vars = dict(mean=self.net.action_dist_means_n, log_std=self.net.action_dist_logstds_n)
         self.likehood_action_dist = self.distribution.log_likelihood_sym(self.net.action_n, self.new_dist_info_vars)
@@ -143,25 +143,18 @@ class MultiTrpoModel(ModelWithCritic):
         batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data, axis=1)
         batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
         self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
-        self.target_kl = 0.003
-        # Vanila
-        self.vanila_surr = - tf.reduce_mean(self.new_likelihood_sym * self.net.advant)
-        self.vanila_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="vn_step_size")
-        self.vanila_opt = tf.train.AdamOptimizer(learning_rate=self.vanila_sym_step_size,
-                                                 beta1=0.9, beta2=0.999, epsilon=1e-8)
-        self.vanila_train = self.vanila_opt.minimize(self.vanila_surr, var_list=var_list)
-        self.vanila_step_size = 1e-3
-        self.vanila_losses = [self.vanila_surr, kl, ent]
-        self.vn_grad_list = tf.gradients(self.vanila_surr, var_list)
-        self.vn_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="dummy")
-                                     for g in self.vn_grad_list]
-        self.vn_apply_grad = self.vanila_opt.apply_gradients(grads_and_vars=zip(self.vn_grad_placeholders, var_list))
+        self.target_kl = target_kl
+
 
         # adaptive kl
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
-        self.a_surr = -tf.reduce_mean(raw_surr) + self.a_beta * kl
+        self.a_eta_value = 50
+        self.a_surr = -tf.reduce_mean(raw_surr) + self.a_beta * kl + \
+                      self.a_eta_value * tf.square(tf.maximum(0.0, self.kl - 2.0 * self.target_kl))
         self.a_step_size = 0.0001
+        self.a_max_step_size = 0.01
+        self.a_min_step_size = 1e-7
         self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
         self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size)
         # self.a_opt = tf.train.GradientDescentOptimizer(learning_rate=0.01)
@@ -178,7 +171,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta_min = 1.0 / 35.0
         self.update_per_epoch = 20
 
-        self.mode = 'ADA_KL'
+        self.mode = mode
 
 
         gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
@@ -199,42 +192,6 @@ class MultiTrpoModel(ModelWithCritic):
         self.update_policy = True
         self.debug = True
 
-    def fvp_minibatch(self, func_batch, feed, slc, session, minibatch_size=64, extra_input={}):
-        this_feed = {k: v[slc] for k, v in list(feed.items())}
-        this_size = len(slc)
-        if this_size == minibatch_size:
-            this_feed = {k: v[slc] for k, v in list(feed.items())}
-            this_result = \
-                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
-                                                            self.is_real_data: np.ones(minibatch_size)}))
-        else:
-            is_real_data = np.zeros(minibatch_size)
-            is_real_data[0:this_size] = 1
-            this_feed = \
-                {k:
-                     np.concatenate([v[slc], np.zeros(shape=(minibatch_size - this_size,) + v.shape[1:])])
-                 for k, v in list(feed.items())}
-            this_result = \
-                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
-                                                            self.is_real_data: is_real_data}))
-        return this_result
-
-    def run_batched_fvp(self, func_batch, feed, N, session, minibatch_size=64, extra_input={}):
-        result = None
-        for start in range(0, N, minibatch_size):
-            end = min(start + minibatch_size, N)
-            # this_size = end - start
-            slc = range(start, end)
-            this_result = self.fvp_minibatch(func_batch, feed, slc, session, minibatch_size, extra_input)
-            if result is None:
-                result = this_result
-            else:
-                result += this_result
-        result /= N
-        return result
-
-
-
     def get_state_activation(self, t_batch):
         # start_ratio = 1.0
         # end_ratio = 0.0
@@ -253,7 +210,7 @@ class MultiTrpoModel(ModelWithCritic):
 
 
         all_st_enabled = True
-        st_enabled = np.ones((111,)) if all_st_enabled else np.zeros((111,))
+        st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
         img_enabled = 1.0 - all_st_enabled
         return st_enabled, img_enabled
 
@@ -277,17 +234,15 @@ class MultiTrpoModel(ModelWithCritic):
         if self.n_imgfeat > 0:
             feed[self.critic.img_input] = obs[1]
             feed[self.net.img_input] = obs[1]
-        action_dist_means_n, action_dist_log_stds_n, action_std_n = \
-            self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n, self.action_dist_std_n],
+        action_dist_means_n, action_dist_log_stds_n = \
+            self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n],
                              feed)
 
-        rnd = np.random.normal(size=action_dist_means_n[0].shape)
-        output = rnd * action_std_n[0] + action_dist_means_n[0]
-        action = output  # np.clip(output, self.act_space.low, self.act_space.high).flatten()
-
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
-        agent_info = dict(mean=action_dist_means_n[0], log_std=action_dist_log_stds_n[0],
+
+        agent_info = dict(mean=action_dist_means_n[0, :], log_std=action_dist_log_stds_n,
                           st_enabled=st_enabled, img_enabled=img_enabled)
+        action = self.distribution.sample(agent_info)
         if self.debug:
             is_clipped = np.logical_or((action <= self.act_space.low), (action >= self.act_space.high))
             num_clips = np.count_nonzero(is_clipped)
@@ -401,6 +356,7 @@ class MultiTrpoModel(ModelWithCritic):
                                               extra_input={self.a_beta: self.a_beta_value})
             logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
             # self.session.run(self.a_backup_op)
+            early_stopped = False
             for e in range(self.update_per_epoch):
                 grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
                                     minibatch_size=self.minibatch_size,
@@ -415,6 +371,7 @@ class MultiTrpoModel(ModelWithCritic):
                                      extra_input={self.a_beta: self.a_beta_value})
                 if kl_new > self.target_kl * 4:
                     logging.debug("KL too large, early stop")
+                    early_stopped = True
                     break
 
             surr_new, ent_new = run_batched([self.a_losses[0], self.a_losses[2]], feed, batch_size, self.session,
@@ -422,17 +379,15 @@ class MultiTrpoModel(ModelWithCritic):
                                             extra_input={self.a_beta: self.a_beta_value})
             logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
             if kl_new > self.target_kl * 2:
-                if self.a_beta_value < self.a_beta_max:
-                    self.a_beta_value *= 1.5
-                else:
-                    self.a_step_size /= 1.5
+                self.a_beta_value = np.minimum(self.a_beta_max, 1.5 * self.a_beta_value)
+                if self.a_beta_value > self.a_beta_max - 5 or early_stopped:
+                    self.a_step_size = np.maximum(self.a_min_step_size, self.a_step_size / 1.5)
                 logging.debug('beta -> %s' % self.a_beta_value)
                 logging.debug('step_size -> %s' % self.a_step_size)
             elif kl_new < self.target_kl / 2:
-                if self.a_beta_value > self.a_beta_min:
-                    self.a_beta_value /= 1.5
-                else:
-                    self.a_step_size *= 1.5
+                self.a_beta_value = np.maximum(self.a_beta_min, self.a_beta_value / 1.5)
+                if self.a_beta_value < self.a_beta_min:
+                    self.a_step_size = np.minimum(self.a_max_step_size, 1.3 * self.a_step_size)
                 logging.debug('beta -> %s' % self.a_beta_value)
                 logging.debug('step_size -> %s' % self.a_step_size)
             else:
@@ -444,29 +399,6 @@ class MultiTrpoModel(ModelWithCritic):
             #     self.session.run(self.a_rollback_op)
             return None, None
 
-        if self.mode == "VANILA":
-            surr_o, kl_o, ent_o = run_batched(self.vanila_losses, feed, batch_size, self.session,
-                                              minibatch_size=self.minibatch_size)
-            logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
-
-            grads = run_batched(self.vn_grad_list, feed, batch_size, self.session,
-                                minibatch_size=self.minibatch_size)
-            grad_dict = {p: v for (p, v) in zip(self.vn_grad_placeholders, grads)}
-            _ = self.session.run(self.vn_apply_grad,
-                                 feed_dict={**grad_dict, self.vanila_sym_step_size: self.vanila_step_size})
-            surr_new, kl_new, ent_new = run_batched(self.vanila_losses, feed, batch_size, self.session,
-                                                    minibatch_size=self.minibatch_size)
-            logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
-            if kl_new > self.target_kl * 2:
-                self.vanila_step_size /= 1.5
-                print('stepsize -> %s' % self.vanila_step_size)
-            elif kl_new < self.target_kl / 2:
-                self.vanila_step_size *= 1.5
-                print('stepsize -> %s' % self.vanila_step_size)
-            else:
-                print('stepsize OK')
-
-            return None, None
 
         if self.use_empirical_fim:
             def fisher_vector_product(p):
@@ -519,3 +451,37 @@ class MultiTrpoModel(ModelWithCritic):
     def update(self, diff, new=None):
         pass
         # self.set_params_with_flat_data(new)
+
+    def fvp_minibatch(self, func_batch, feed, slc, session, minibatch_size=64, extra_input={}):
+        this_feed = {k: v[slc] for k, v in list(feed.items())}
+        this_size = len(slc)
+        if this_size == minibatch_size:
+            this_feed = {k: v[slc] for k, v in list(feed.items())}
+            this_result = \
+                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
+                                                            self.is_real_data: np.ones(minibatch_size)}))
+        else:
+            is_real_data = np.zeros(minibatch_size)
+            is_real_data[0:this_size] = 1
+            this_feed = \
+                {k:
+                     np.concatenate([v[slc], np.zeros(shape=(minibatch_size - this_size,) + v.shape[1:])])
+                 for k, v in list(feed.items())}
+            this_result = \
+                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
+                                                            self.is_real_data: is_real_data}))
+        return this_result
+
+    def run_batched_fvp(self, func_batch, feed, N, session, minibatch_size=64, extra_input={}):
+        result = None
+        for start in range(0, N, minibatch_size):
+            end = min(start + minibatch_size, N)
+            # this_size = end - start
+            slc = range(start, end)
+            this_result = self.fvp_minibatch(func_batch, feed, slc, session, minibatch_size, extra_input)
+            if result is None:
+                result = this_result
+            else:
+                result += this_result
+        result /= N
+        return result
