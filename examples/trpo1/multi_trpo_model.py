@@ -27,8 +27,9 @@ class MultiTrpoModel(ModelWithCritic):
                  cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
-                 n_imgfeat=0,
+                 n_imgfeat=111,
                  target_kl=0.003,
+                 minibatch_size=128,
                  mode="ADA_KL"):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -43,7 +44,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.cg_damping = cg_damping
         self.cg_iters = cg_iters
         self.max_kl = max_kl
-        self.minibatch_size = 128
+        self.minibatch_size = minibatch_size
         self.use_empirical_fim = True
 
         # cpu_config = tf.ConfigProto(
@@ -209,7 +210,7 @@ class MultiTrpoModel(ModelWithCritic):
         # img_enabled = 1.0 - is_enabled
 
 
-        all_st_enabled = True
+        all_st_enabled = False
         st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
         img_enabled = 1.0 - all_st_enabled
         return st_enabled, img_enabled
@@ -281,7 +282,7 @@ class MultiTrpoModel(ModelWithCritic):
                      "st_enabled": st_enabled}
         if self.n_imgfeat > 0:
             img_input = concat([path["observation"][1] for path in paths])
-            feed[self.net] = img_input
+            feed[self.net.img_input] = img_input
             feed[self.critic.img_input] = img_input
             path_dict["img_input"] = img_input
         return feed, path_dict
@@ -387,7 +388,7 @@ class MultiTrpoModel(ModelWithCritic):
             elif kl_new < self.target_kl / 2:
                 self.a_beta_value = np.maximum(self.a_beta_min, self.a_beta_value / 1.5)
                 if self.a_beta_value < self.a_beta_min:
-                    self.a_step_size = np.minimum(self.a_max_step_size, 1.3 * self.a_step_size)
+                    self.a_step_size = np.minimum(self.a_max_step_size, 1.5 * self.a_step_size)
                 logging.debug('beta -> %s' % self.a_beta_value)
                 logging.debug('step_size -> %s' % self.a_step_size)
             else:

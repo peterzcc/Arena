@@ -108,10 +108,10 @@ def main():
 
         env = CustomAnt()
         return ComplexWrapper(env, max_episode_length=T,
-                              append_image=False, new_img_size=(84, 84), rgb_to_gray=True,
+                              append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
                               s_transform=ident,
                               visible_state_ids=np.ones(env.observation_space.shape, dtype=bool),
-                              num_frame=1)
+                              num_frame=3)
         # env = CustomPend()
         # return ComplexWrapper(env, max_episode_length=T,
         #                       append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
