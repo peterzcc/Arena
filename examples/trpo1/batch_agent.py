@@ -54,6 +54,7 @@ class BatchUpdateAgent(Agent):
         self.episode_step = 0
         self.epoch_reward = 0
         self.global_t = 0
+        self.batch_start_time = None
         # max_l = 10000
 
         if model is None:
@@ -82,7 +83,8 @@ class BatchUpdateAgent(Agent):
         # if self.memory.Tmax == 0:
         #     #TODO: sync from global model
         #     pass
-
+        if self.batch_start_time is None:
+            self.batch_start_time = time.time()
         processed_observation = [observation[0]]
         if len(observation) == 2:
             processed_observation.append(observation[1].astype(np.float32) / 255.0)
@@ -122,18 +124,23 @@ class BatchUpdateAgent(Agent):
                 train_before = time.time()
                 self.train_once()
                 train_after = time.time()
-                fps = (self.batch_size - self.counter) / (train_after - train_before)
+                num_steps = self.batch_size - self.counter
+                train_time = (train_after - train_before) / num_steps
+                fps = 1.0 / train_time
+                execution_time = (train_before - self.batch_start_time) / num_steps
 
                 logging.info(
-                    'Epoch:%d \nThd[%d] \nt: %d \nAverage Return:%f,  \nNum steps: %d \nNum traj:%d \nfps:%f \nAve. Length:%f' \
+                    'Epoch:%d \nThd[%d]\nt: %d\nAverage Return:%f, \nNum steps: %d\nNum traj:%d\nfps:%f\nAve. Length:%f\ntt:%f\nte:%f\n' \
                     % (self.num_epoch,
                        self.id,
                        self.global_t,
                        self.epoch_reward / self.num_episodes,
-                       self.batch_size - self.counter,
+                       num_steps,
                        self.num_episodes,
                        fps,
-                       float(self.batch_size - self.counter) / self.num_episodes
+                       float(self.batch_size - self.counter) / self.num_episodes,
+                       train_time,
+                       execution_time
                        ))
 
                 self.memory.reset()

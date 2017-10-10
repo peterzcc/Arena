@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 from custom_pend import CustomPend
 import sys
 
-BATH_SIZE = 25000
+BATH_SIZE = 5000
 
 
 def main():
@@ -32,12 +32,12 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=8e7,
+    parser.add_argument('--num-steps', required=False, type=int, default=2e4,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
 
-    should_profile = False
+    should_profile = True
     if should_profile:
         import yappi
 
@@ -140,7 +140,7 @@ def main():
         return None
 
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=True, render_option="false")
+                            f_create_shared_params, single_process_mode=False, render_option="false")
 
     if should_profile:
         yappi.start(builtins=True, profile_threads=True)
