@@ -14,8 +14,6 @@ class BatchUpdateAgent(Agent):
                  is_learning, global_t, pid=0,
                  model=None,
                  batch_size=None,
-                 discount=0.995,
-                 lam=0.97,
                  timestep_limit=1000,
                  episode_batch_size=None
                  ):
@@ -35,18 +33,18 @@ class BatchUpdateAgent(Agent):
 
         # self.action_dimension = action_space.low.shape[0]
         # self.state_dimension = observation_space.low.shape[0]
-
+        self.model = model
         if shared_params is None:
             pass
         else:
-            self.param_lock = shared_params["lock"]
+            # self.param_lock = shared_params["lock"]
             self.global_model = shared_params["global_model"]
-        self.model = model
+            self.model = self.global_model
 
         # Constant vars
         self.batch_size = 0 if batch_size is None else batch_size
         self.episode_batch_size = episode_batch_size
-        self.discount = discount
+        # self.discount = discount
 
         # State information
         self.num_epoch = 0
@@ -57,14 +55,14 @@ class BatchUpdateAgent(Agent):
         self.batch_start_time = None
         # max_l = 10000
 
-        if model is None:
-            self.model = MultiTrpoModel(self.observation_space, self.action_space,
-                                        timestep_limit=timestep_limit,
-                                        cg_damping=0.1,
-                                        max_kl=0.01,
-                                        cg_iters=10)
-        else:
-            self.model = model
+        # if model is None:
+        #     self.model = MultiTrpoModel(self.observation_space, self.action_space,
+        #                                 timestep_limit=timestep_limit,
+        #                                 cg_damping=0.1,
+        #                                 max_kl=0.01,
+        #                                 cg_iters=10)
+        # else:
+        #     self.model = model
         # self.memory = AcMemory(observation_shape=self.observation_space.shape,
         #                        action_shape=self.action_space.shape,
         #                        max_size=batch_size + max_l,
@@ -73,10 +71,10 @@ class BatchUpdateAgent(Agent):
         #                        use_gae=False,
         #                        get_critic_online=False,
         #                        info_shape=self.model.info_shape)
-        self.memory = DictMemory(gamma=self.discount, lam=lam, use_gae=True, normalize=True,
-                                 timestep_limit=timestep_limit)
+
 
         self.num_episodes = 0
+        self.train_data = None
 
     def act(self, observation):
         # logging.debug("rx obs: {}".format(observation))
@@ -89,10 +87,12 @@ class BatchUpdateAgent(Agent):
         if len(observation) == 2:
             processed_observation.append(observation[1].astype(np.float32) / 255.0)
         action, agent_info = self.model.predict(processed_observation)
+        # action = self.action_space.sample()
+        # agent_info = {}
         # final_action = \
         #     np.clip(action, self.action_space.low, self.action_space.high).flatten()
 
-        self.memory.append_state(observation, action, info=agent_info)
+        self.model.memory.append_state(observation, action, info=agent_info, pid=self.id)
 
         # logging.debug("tx a: {}".format(action))
         # print("action: "+str(final_action))
@@ -103,31 +103,32 @@ class BatchUpdateAgent(Agent):
         self.epoch_reward += reward
         # reward = self.rewfilter(reward)
 
-        self.memory.append_feedback(reward)
+        self.model.memory.append_feedback(reward, pid=self.id)
         self.episode_step += 1
 
         if done:
             self.counter -= self.episode_step
             self.global_t += self.episode_step
-            self.memory.fill_episode_critic(self.model.compute_critic)
             try:
                 terminated = np.asscalar(info["terminated"])
                 # logging.debug("terminated {} ".format(terminated))
             except KeyError:
                 logging.debug("warning: no info about real termination ")
                 terminated = done
-            self.memory.add_path(terminated)
+            self.model.memory.add_path(terminated, pid=self.id)
             self.num_episodes += 1
             self.episode_step = 0
             if (self.batch_size > 0 and self.counter <= 0) \
                     or (self.episode_batch_size is not None and self.num_episodes >= self.episode_batch_size):
                 train_before = time.time()
+                self.train_data = self.model.memory.extract_all()
                 self.train_once()
                 train_after = time.time()
                 num_steps = self.batch_size - self.counter
                 train_time = (train_after - train_before) / num_steps
                 fps = 1.0 / train_time
                 execution_time = (train_before - self.batch_start_time) / num_steps
+                self.batch_start_time = None
 
                 logging.info(
                     'Epoch:%d \nThd[%d]\nt: %d\nAverage Return:%f, \nNum steps: %d\nNum traj:%d\nfps:%f\nAve. Length:%f\ntt:%f\nte:%f\n' \
@@ -143,15 +144,15 @@ class BatchUpdateAgent(Agent):
                        execution_time
                        ))
 
-                self.memory.reset()
+                # self.model.memory.reset()
                 self.epoch_reward = 0
                 self.counter = self.batch_size
                 self.num_episodes = 0
                 self.num_epoch += 1
 
     def train_once(self):
-        train_data = self.memory.extract_all()
-        diff, new = self.model.compute_update(train_data)
+
+        diff, new = self.model.compute_update(self.train_data)
         self.model.update(diff=diff, new=new) \
             # with self.param_lock: TODO: async
         #     self.global_model.update(diff)

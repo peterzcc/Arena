@@ -11,6 +11,7 @@ import numpy as np
 import random
 import math
 import logging
+from dict_memory import DictMemory
 
 concat = np.concatenate
 seed = 1
@@ -27,10 +28,13 @@ class MultiTrpoModel(ModelWithCritic):
                  cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
-                 n_imgfeat=111,
+                 n_imgfeat=0,
                  target_kl=0.003,
                  minibatch_size=128,
-                 mode="ADA_KL"):
+                 gamma=0.995,
+                 gae_lam=0.97,
+                 mode="ADA_KL",
+                 num_actors=1):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -46,18 +50,22 @@ class MultiTrpoModel(ModelWithCritic):
         self.max_kl = max_kl
         self.minibatch_size = minibatch_size
         self.use_empirical_fim = True
+        self.mode = mode
 
         # cpu_config = tf.ConfigProto(
         #     device_count={'GPU': 0}, log_device_placement=False
         # )
         # self.session = tf.Session(config=cpu_config)
+        self.memory = DictMemory(gamma=gamma, lam=gae_lam, use_gae=True, normalize=True,
+                                 timestep_limit=timestep_limit,
+                                 f_critic=self.compute_critic,
+                                 num_actors=num_actors)
 
         gpu_options = tf.GPUOptions(allow_growth=True)  # False,per_process_gpu_memory_fraction=0.75)
         self.session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
                                                             log_device_placement=False))
 
-        n_imgfeat = n_imgfeat
-        self.n_imgfeat = n_imgfeat
+        self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
         self.comb_method = aggregate_feature
 
         hid1_size = observation_space[0].shape[0] * 10
@@ -67,7 +75,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
                                     activation=tf.tanh,
-                                    n_imgfeat=n_imgfeat, hidden_sizes=hidden_sizes,
+                                    n_imgfeat=self.n_imgfeat, hidden_sizes=hidden_sizes,
                                     conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),
                                     comb_method=self.comb_method)
 
@@ -84,7 +92,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.net = MultiNetwork(scope="state_agent",
                                 observation_space=self.ob_space,
                                 action_shape=self.act_space.shape,
-                                n_imgfeat=n_imgfeat,
+                                n_imgfeat=self.n_imgfeat,
                                 extra_feaatures=[],
                                 # [],  #[np.zeros((4,), dtype=np.float32)],  #
                                 conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #(((3, 3), 2, 2),),  #
@@ -141,9 +149,11 @@ class MultiTrpoModel(ModelWithCritic):
 
         grad_loglikelihood = flatgrad(self.new_likelihood_sym, var_list)
         list_logl = tf.unstack(self.new_likelihood_sym, num=self.minibatch_size)
-        batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data, axis=1)
-        batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
-        self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
+        if self.mode == "TRPO":
+            batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data,
+                                                                                               axis=1)
+            batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
+            self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
         self.target_kl = target_kl
 
 
@@ -171,9 +181,6 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta_max = 35.0
         self.a_beta_min = 1.0 / 35.0
         self.update_per_epoch = 20
-
-        self.mode = mode
-
 
         gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
         self.g_gT_x = grad_loglikelihood * gT_x

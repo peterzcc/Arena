@@ -32,7 +32,7 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=2e4,
+    parser.add_argument('--num-steps', required=False, type=int, default=5e7,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
@@ -106,9 +106,9 @@ def main():
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
 
-        env = CustomAnt()
+        env = CustomPend()
         return ComplexWrapper(env, max_episode_length=T,
-                              append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                              append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
                               s_transform=ident,
                               visible_state_ids=np.ones(env.observation_space.shape, dtype=bool),
                               num_frame=3)
@@ -136,11 +136,22 @@ def main():
         #     is_learning, global_t, pid
         # )
 
+    sample_env = f_create_env()
+    observation_space = sample_env.observation_space
+    action_space = sample_env.action_space
+
     def f_create_shared_params():
-        return None
+        from multi_trpo_model import MultiTrpoModel
+        model = MultiTrpoModel(observation_space, action_space,
+                               timestep_limit=T,
+                               cg_damping=0.1,
+                               max_kl=0.01,
+                               cg_iters=10,
+                               num_actors=num_actors)
+        return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=False, render_option="false")
+                            f_create_shared_params, single_process_mode=True, render_option="false")
 
     if should_profile:
         yappi.start(builtins=True, profile_threads=True)
