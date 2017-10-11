@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import logging
 
+import time
 
 # TODO: test this class
 
@@ -35,7 +36,7 @@ class ComplexWrapper(object):
         self.s_transform = s_transform
         self.num_frame = num_frame
         if append_image:
-            sample_image = self.env.render(mode="rgb_array")
+            sample_image = self.render(mode="rgb_array")
             image_shape = sample_image.shape
             logging.info("original size: {}".format(image_shape))
             img_min = 0
@@ -84,7 +85,10 @@ class ComplexWrapper(object):
         self.total_steps = 0
 
     def render(self, mode='human', close=False):
-        return self.env.render(mode=mode, close=close)
+        # self.render_lock.acquire()
+        result = self.env.render(mode=mode, close=close)
+        # self.render_lock.release()
+        return result
 
     def preprocess_observation(self, obs):
         final = obs
@@ -99,7 +103,7 @@ class ComplexWrapper(object):
         state_observation, reward, done, info = self.env.step(a)
         state_observation = self.s_transform(state_observation,self.total_steps)
         if self.append_image:
-            image_observation = self.env.render(mode="rgb_array")
+            image_observation = self.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
             self.x_buffer = (self.x_buffer + 1) % self.num_frame
             self.frame_buffer[:, :, self.x_buffer] = image_observation
@@ -116,7 +120,7 @@ class ComplexWrapper(object):
         if self.append_image:
             self.frame_buffer = self.img_space.low.copy()
             self.x_buffer = self.num_frame - 1
-            image_observation = self.env.render(mode="rgb_array")
+            image_observation = self.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
             self.frame_buffer[:, :, self.x_buffer] = image_observation
             return [state_observation[self.vs_id], self.frame_buffer.copy()]
@@ -143,6 +147,9 @@ class ComplexWrapper(object):
             final_done = True
 
         return final_observation, final_reward, final_done, info_terminated
+
+    def close(self):
+        self.env.close()
 
     def reset(self):
         observation = self.env_reset()

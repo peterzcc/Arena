@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
-    parser.add_argument('--nactor', required=False, type=int, default=1,
+    parser.add_argument('--nactor', required=False, type=int, default=2,
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
@@ -37,7 +37,7 @@ def main():
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
 
-    should_profile = True
+    should_profile = False
     if should_profile:
         import yappi
 
@@ -97,6 +97,9 @@ def main():
     def ident(x,t):
         return x
 
+    import multiprocessing
+    render_lock = multiprocessing.Lock()
+    barrier = multiprocessing.Barrier(num_actors)
     def f_create_env():
         # env = GatherEnv()
         # env = gym.make('Ant-v1')
@@ -105,13 +108,13 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
-
         env = CustomPend()
-        return ComplexWrapper(env, max_episode_length=T,
-                              append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
-                              s_transform=ident,
-                              visible_state_ids=np.ones(env.observation_space.shape, dtype=bool),
-                              num_frame=3)
+        final_env = ComplexWrapper(env, max_episode_length=T,
+                                   append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                                   s_transform=ident,
+                                   visible_state_ids=range(env.observation_space.shape[0]),
+                                   num_frame=3)
+        return final_env
         # env = CustomPend()
         # return ComplexWrapper(env, max_episode_length=T,
         #                       append_image=True, new_img_size=(84, 84), rgb_to_gray=True,
@@ -126,7 +129,6 @@ def main():
             observation_space, action_space,
             shared_params, stats_rx, acts_tx,
             is_learning, global_t, pid,
-            episode_batch_size=20,
             timestep_limit=T
         )
 
@@ -136,18 +138,22 @@ def main():
         #     is_learning, global_t, pid
         # )
 
-    sample_env = f_create_env()
-    observation_space = sample_env.observation_space
-    action_space = sample_env.action_space
+
 
     def f_create_shared_params():
         from multi_trpo_model import MultiTrpoModel
+        sample_env = f_create_env()
+        observation_space = sample_env.observation_space
+        action_space = sample_env.action_space
+        sample_env.env.close()
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,
                                cg_damping=0.1,
                                max_kl=0.01,
                                cg_iters=10,
-                               num_actors=num_actors)
+                               num_actors=num_actors,
+                               batch_size=20,
+                               batch_mode="episode")
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,

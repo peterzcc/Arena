@@ -13,9 +13,7 @@ class BatchUpdateAgent(Agent):
                  shared_params, stats_rx, acts_tx,
                  is_learning, global_t, pid=0,
                  model=None,
-                 batch_size=None,
                  timestep_limit=1000,
-                 episode_batch_size=None
                  ):
         Agent.__init__(
             self,
@@ -42,13 +40,11 @@ class BatchUpdateAgent(Agent):
             self.model = self.global_model
 
         # Constant vars
-        self.batch_size = 0 if batch_size is None else batch_size
-        self.episode_batch_size = episode_batch_size
+
         # self.discount = discount
 
         # State information
         self.num_epoch = 0
-        self.counter = self.batch_size
         self.episode_step = 0
         self.epoch_reward = 0
         self.global_t = 0
@@ -86,7 +82,7 @@ class BatchUpdateAgent(Agent):
         processed_observation = [observation[0]]
         if len(observation) == 2:
             processed_observation.append(observation[1].astype(np.float32) / 255.0)
-        action, agent_info = self.model.predict(processed_observation)
+        action, agent_info = self.model.predict(processed_observation, pid=self.id)
         # action = self.action_space.sample()
         # agent_info = {}
         # final_action = \
@@ -107,48 +103,28 @@ class BatchUpdateAgent(Agent):
         self.episode_step += 1
 
         if done:
-            self.counter -= self.episode_step
-            self.global_t += self.episode_step
+            # self.counter -= self.episode_step
+            # self.global_t += self.episode_step
             try:
                 terminated = np.asscalar(info["terminated"])
                 # logging.debug("terminated {} ".format(terminated))
             except KeyError:
                 logging.debug("warning: no info about real termination ")
                 terminated = done
-            self.model.memory.add_path(terminated, pid=self.id)
-            self.num_episodes += 1
-            self.episode_step = 0
-            if (self.batch_size > 0 and self.counter <= 0) \
-                    or (self.episode_batch_size is not None and self.num_episodes >= self.episode_batch_size):
+            extracted_result = self.model.memory.add_path(terminated, pid=self.id)
+            if extracted_result is not None:
                 train_before = time.time()
-                self.train_data = self.model.memory.extract_all()
-                self.train_once()
+                self.model.compute_update(extracted_result["paths"])
                 train_after = time.time()
-                num_steps = self.batch_size - self.counter
-                train_time = (train_after - train_before) / num_steps
+                train_time = (train_after - train_before) / extracted_result["time_count"]
                 fps = 1.0 / train_time
-                execution_time = (train_before - self.batch_start_time) / num_steps
-                self.batch_start_time = None
-
                 logging.info(
-                    'Epoch:%d \nThd[%d]\nt: %d\nAverage Return:%f, \nNum steps: %d\nNum traj:%d\nfps:%f\nAve. Length:%f\ntt:%f\nte:%f\n' \
-                    % (self.num_epoch,
-                       self.id,
-                       self.global_t,
-                       self.epoch_reward / self.num_episodes,
-                       num_steps,
-                       self.num_episodes,
+                    '\nfps:%f\ntt:%f\n' \
+                    % (
                        fps,
-                       float(self.batch_size - self.counter) / self.num_episodes,
                        train_time,
-                       execution_time
                        ))
 
-                # self.model.memory.reset()
-                self.epoch_reward = 0
-                self.counter = self.batch_size
-                self.num_episodes = 0
-                self.num_epoch += 1
 
     def train_once(self):
 

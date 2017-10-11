@@ -9,10 +9,10 @@ from diagonal_gaussian import DiagonalGaussian
 from network_models import MultiNetwork
 import numpy as np
 import random
-import math
+import threading as thd
 import logging
 from dict_memory import DictMemory
-
+from read_write_lock import ReadWriteLock
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -28,13 +28,15 @@ class MultiTrpoModel(ModelWithCritic):
                  cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
-                 n_imgfeat=0,
+                 n_imgfeat=None,
                  target_kl=0.003,
                  minibatch_size=128,
                  gamma=0.995,
                  gae_lam=0.97,
                  mode="ADA_KL",
-                 num_actors=1):
+                 num_actors=1,
+                 batch_size=20,
+                 batch_mode="episode"):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -51,6 +53,16 @@ class MultiTrpoModel(ModelWithCritic):
         self.minibatch_size = minibatch_size
         self.use_empirical_fim = True
         self.mode = mode
+        self.policy_lock = ReadWriteLock()
+        self.critic_lock = ReadWriteLock()
+        self.num_actors = num_actors
+        self.execution_barrier = thd.Barrier(num_actors)
+        self.act_means = None
+        self.act_logstds = None
+        self.obs_list = [None for i in range(num_actors)]
+        self.act_list = [None for i in range(num_actors)]
+        self.batch_mode = batch_mode  # "episode" #"timestep"
+        self.batch_size = batch_size
 
         # cpu_config = tf.ConfigProto(
         #     device_count={'GPU': 0}, log_device_placement=False
@@ -59,7 +71,8 @@ class MultiTrpoModel(ModelWithCritic):
         self.memory = DictMemory(gamma=gamma, lam=gae_lam, use_gae=True, normalize=True,
                                  timestep_limit=timestep_limit,
                                  f_critic=self.compute_critic,
-                                 num_actors=num_actors)
+                                 num_actors=num_actors,
+                                 f_check_batch=self.check_batch_finished)
 
         gpu_options = tf.GPUOptions(allow_growth=True)  # False,per_process_gpu_memory_fraction=0.75)
         self.session = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
@@ -217,22 +230,37 @@ class MultiTrpoModel(ModelWithCritic):
         # img_enabled = 1.0 - is_enabled
 
 
-        all_st_enabled = False
+        all_st_enabled = True
         st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
-        img_enabled = 1.0 - all_st_enabled
+        img_enabled = np.array((1.0 - all_st_enabled,))
         return st_enabled, img_enabled
 
-    def predict(self, observation):
-        if len(observation[0].shape) == len(self.ob_space[0].shape):
-            obs = [np.expand_dims(observation[0], 0)]
-            if self.n_imgfeat > 0:
-                obs.append(np.expand_dims(observation[1], 0))
-        else:
-            obs = observation
-        st_enabled, img_enabled = self.get_state_activation(self.n_update)
+    def predict(self, observation, pid=0):
 
-        exp_st_enabled = np.expand_dims(st_enabled, 0)
-        exp_img_enabled = np.expand_dims(img_enabled, 0)
+        if self.num_actors == 1:
+            if len(observation[0].shape) == len(self.ob_space[0].shape):
+                obs = [np.expand_dims(observation[0], 0)]
+                if self.n_imgfeat > 0:
+                    obs.append(np.expand_dims(observation[1], 0))
+            else:
+                obs = observation
+            st_enabled, img_enabled = self.get_state_activation(self.n_update)
+            exp_st_enabled = np.expand_dims(st_enabled, 0)
+            exp_img_enabled = img_enabled
+        else:
+            self.obs_list[pid] = observation
+            self.execution_barrier.wait()
+            obs = [np.stack([ob[0] for ob in self.obs_list])]
+            if self.n_imgfeat > 0:
+                obs.append(np.stack([o[1] for o in self.obs_list]))
+            st_enabled, img_enabled = self.get_state_activation(self.n_update)
+            st_enabled = np.tile(st_enabled, (self.num_actors, 1))
+            img_enabled = np.repeat(img_enabled, self.num_actors, axis=0)
+            exp_st_enabled = st_enabled
+            exp_img_enabled = img_enabled
+
+
+
         feed = {self.net.state_input: obs[0],
                 self.critic.st_enabled: exp_st_enabled,
                 self.critic.img_enabled: exp_img_enabled,
@@ -242,14 +270,20 @@ class MultiTrpoModel(ModelWithCritic):
         if self.n_imgfeat > 0:
             feed[self.critic.img_input] = obs[1]
             feed[self.net.img_input] = obs[1]
-        action_dist_means_n, action_dist_log_stds_n = \
-            self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n],
-                             feed)
+        if pid == 0:
+            self.policy_lock.acquire_read()
+            action_dist_means_n, action_dist_log_stds_n = \
+                self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n],
+                                 feed)
+            self.act_means = action_dist_means_n
+            self.act_logstds = action_dist_log_stds_n
+            self.policy_lock.release_read()
+        self.execution_barrier.wait()
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
 
-        agent_info = dict(mean=action_dist_means_n[0, :], log_std=action_dist_log_stds_n,
-                          st_enabled=st_enabled, img_enabled=img_enabled)
+        agent_info = dict(mean=self.act_means[pid, :], log_std=self.act_logstds,
+                          st_enabled=exp_st_enabled[pid, :], img_enabled=exp_img_enabled[pid])
         action = self.distribution.sample(agent_info)
         if self.debug:
             is_clipped = np.logical_or((action <= self.act_space.low), (action >= self.act_space.high))
@@ -295,9 +329,19 @@ class MultiTrpoModel(ModelWithCritic):
         return feed, path_dict
 
     def compute_critic(self, states):
-        return self.critic.predict(states)
+        self.critic_lock.acquire_read()
+        result = self.critic.predict(states)
+        self.critic_lock.release_read()
+        return result
+
+    def check_batch_finished(self, time, epis):
+        if self.batch_mode == "episode":
+            return epis >= self.batch_size
+        if self.batch_mode == "timestep":
+            return time >= self.batch_size
 
     def compute_update(self, paths):
+
         # if self.separate_update:
         #     if self.n_update % 4< 2 :
         #         self.update_critic = True
@@ -335,13 +379,14 @@ class MultiTrpoModel(ModelWithCritic):
             # self.saved_paths = []
             # self.critic.fit(img_path_dict, update_mode="img", num_pass=5)
             # self.saver.save(self.session, 'pretrained_model')
-
+        self.critic_lock.acquire_write()
         if self.n_update < self.n_pretrain:
             self.critic.fit(path_dict, update_mode="img", num_pass=2)
 
 
         if self.update_critic:
             self.critic.fit(path_dict, update_mode="full", num_pass=10)
+        self.critic_lock.release_write()
         self.n_update += 1
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
@@ -359,6 +404,7 @@ class MultiTrpoModel(ModelWithCritic):
 
 
         if self.mode == "ADA_KL":
+            self.policy_lock.acquire_write()
             surr_o, kl_o, ent_o = run_batched(self.a_losses, feed, batch_size, self.session,
                                               minibatch_size=self.minibatch_size,
                                               extra_input={self.a_beta: self.a_beta_value})
@@ -405,6 +451,7 @@ class MultiTrpoModel(ModelWithCritic):
             # if kl_new > self.target_kl * 30:
             #     logging.debug("KL too large, rollback")
             #     self.session.run(self.a_rollback_op)
+            self.policy_lock.release_write()
             return None, None
 
 

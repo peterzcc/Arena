@@ -1,7 +1,7 @@
 import numpy as np
 from gym import utils
 from gym.envs.mujoco import mujoco_env
-
+import mujoco_py
 
 class CustomPend(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self):
@@ -30,6 +30,27 @@ class CustomPend(mujoco_env.MujocoEnv, utils.EzPickle):
         v.cam.trackbodyid = 0
         v.cam.distance = v.model.stat.extent
 
+    def _render(self, mode='human', close=False):
+        if close:
+            if self.viewer is not None:
+                self._get_viewer().finish()
+                self.viewer = None
+            return
+
+        if mode == 'rgb_array':
+            self._get_viewer().render()
+            data, width, height = self._get_viewer().get_image()
+            return np.fromstring(data, dtype='uint8').reshape(height, width, 3)[::-1, :, :]
+        elif mode == 'human':
+            self._get_viewer().loop_once()
+
+    def _get_viewer(self):
+        if self.viewer is None:
+            self.viewer = mujoco_py.MjViewer(init_height=64, init_width=64, visible=False)
+            self.viewer.start()
+            self.viewer.set_model(self.model)
+            self.viewer_setup()
+        return self.viewer
 # class CustomAnt(mujoco_env.MujocoEnv, utils.EzPickle):
 #     FILE = 'ant.xml'
 #
