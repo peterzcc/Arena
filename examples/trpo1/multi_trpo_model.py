@@ -28,7 +28,7 @@ class MultiTrpoModel(ModelWithCritic):
                  cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
-                 n_imgfeat=None,
+                 n_imgfeat=0,
                  target_kl=0.003,
                  minibatch_size=128,
                  gamma=0.995,
@@ -36,7 +36,8 @@ class MultiTrpoModel(ModelWithCritic):
                  mode="ADA_KL",
                  num_actors=1,
                  batch_size=20,
-                 batch_mode="episode"):
+                 batch_mode="episode",
+                 recompute_old_dist=False):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -61,8 +62,14 @@ class MultiTrpoModel(ModelWithCritic):
         self.act_logstds = None
         self.obs_list = [None for i in range(num_actors)]
         self.act_list = [None for i in range(num_actors)]
+        self.exp_st_enabled = None
+        self.exp_img_enabled = None
         self.batch_mode = batch_mode  # "episode" #"timestep"
         self.batch_size = batch_size
+        if self.batch_mode == "timestep":
+            self.batch_barrier = thd.Barrier(num_actors)
+        else:
+            self.batch_barrier = None
 
         # cpu_config = tf.ConfigProto(
         #     device_count={'GPU': 0}, log_device_placement=False
@@ -212,6 +219,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.update_critic = True
         self.update_policy = True
         self.debug = True
+        self.recompute_old_dist = recompute_old_dist
 
     def get_state_activation(self, t_batch):
         # start_ratio = 1.0
@@ -245,32 +253,31 @@ class MultiTrpoModel(ModelWithCritic):
             else:
                 obs = observation
             st_enabled, img_enabled = self.get_state_activation(self.n_update)
-            exp_st_enabled = np.expand_dims(st_enabled, 0)
-            exp_img_enabled = img_enabled
+            self.exp_st_enabled = np.expand_dims(st_enabled, 0)
+            self.exp_img_enabled = img_enabled
         else:
             self.obs_list[pid] = observation
             self.execution_barrier.wait()
-            obs = [np.stack([ob[0] for ob in self.obs_list])]
-            if self.n_imgfeat > 0:
-                obs.append(np.stack([o[1] for o in self.obs_list]))
-            st_enabled, img_enabled = self.get_state_activation(self.n_update)
-            st_enabled = np.tile(st_enabled, (self.num_actors, 1))
-            img_enabled = np.repeat(img_enabled, self.num_actors, axis=0)
-            exp_st_enabled = st_enabled
-            exp_img_enabled = img_enabled
+            if pid == 0:
+                obs = [np.stack([ob[0] for ob in self.obs_list])]
+                if self.n_imgfeat > 0:
+                    obs.append(np.stack([o[1] for o in self.obs_list]))
+                st_enabled, img_enabled = self.get_state_activation(self.n_update)
+                st_enabled = np.tile(st_enabled, (self.num_actors, 1))
+                img_enabled = np.repeat(img_enabled, self.num_actors, axis=0)
+                self.exp_st_enabled = st_enabled
+                self.exp_img_enabled = img_enabled
 
-
-
-        feed = {self.net.state_input: obs[0],
-                self.critic.st_enabled: exp_st_enabled,
-                self.critic.img_enabled: exp_img_enabled,
-                self.net.st_enabled: exp_st_enabled,
-                self.net.img_enabled: exp_img_enabled,
-                }
-        if self.n_imgfeat > 0:
-            feed[self.critic.img_input] = obs[1]
-            feed[self.net.img_input] = obs[1]
         if pid == 0:
+            feed = {self.net.state_input: obs[0],
+                    self.critic.st_enabled: self.exp_st_enabled,
+                    self.critic.img_enabled: self.exp_img_enabled,
+                    self.net.st_enabled: self.exp_st_enabled,
+                    self.net.img_enabled: self.exp_img_enabled,
+                    }
+            if self.n_imgfeat > 0:
+                feed[self.critic.img_input] = obs[1]
+                feed[self.net.img_input] = obs[1]
             self.policy_lock.acquire_read()
             action_dist_means_n, action_dist_log_stds_n = \
                 self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n],
@@ -283,7 +290,7 @@ class MultiTrpoModel(ModelWithCritic):
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
 
         agent_info = dict(mean=self.act_means[pid, :], log_std=self.act_logstds,
-                          st_enabled=exp_st_enabled[pid, :], img_enabled=exp_img_enabled[pid])
+                          st_enabled=self.exp_st_enabled[pid, :], img_enabled=self.exp_img_enabled[pid])
         action = self.distribution.sample(agent_info)
         if self.debug:
             is_clipped = np.logical_or((action <= self.act_space.low), (action >= self.act_space.high))
@@ -303,12 +310,10 @@ class MultiTrpoModel(ModelWithCritic):
         st_enabled = concat([path["st_enabled"] for path in paths])
         action_n = concat([path["action"] for path in paths])
         advant_n = concat([path["advantage"] for path in paths])
-        action_dist_means_n = concat([path["mean"] for path in paths])
-        action_dist_logstds_n = concat([path["log_std"] for path in paths])
+
         feed = {self.net.state_input: state_input,
                 self.net.advant: advant_n,
-                self.net.old_dist_means_n: action_dist_means_n,
-                self.net.old_dist_logstds_n: action_dist_logstds_n,
+
                 self.net.action_n: action_n,
 
                 self.critic.st_enabled: st_enabled,
@@ -316,16 +321,47 @@ class MultiTrpoModel(ModelWithCritic):
                 self.net.st_enabled: st_enabled,
                 self.net.img_enabled: img_enabled,
                 }
+
         path_dict = {"state_input": state_input,
                      "times": times,
                      "returns": returns,
                      "img_enabled": img_enabled,
                      "st_enabled": st_enabled}
+        img_input = None
         if self.n_imgfeat > 0:
             img_input = concat([path["observation"][1] for path in paths])
             feed[self.net.img_input] = img_input
             feed[self.critic.img_input] = img_input
             path_dict["img_input"] = img_input
+        if self.recompute_old_dist:
+            feed_forw = {self.net.state_input: state_input,
+                         self.critic.st_enabled: st_enabled,
+                         self.critic.img_enabled: img_enabled,
+                         self.net.st_enabled: st_enabled,
+                         self.net.img_enabled: img_enabled,
+                         }
+            if self.n_imgfeat > 0:
+                feed_forw[self.critic.img_input] = img_input
+                feed_forw[self.net.img_input] = img_input
+            action_dist_means_n, action_dist_logstds = \
+                self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n],
+                                 feed_forw)
+            action_dist_logstds_n = np.tile(action_dist_logstds, (state_input.shape[0], 1))
+            feed.update(
+                {
+                    self.net.old_dist_means_n: action_dist_means_n,
+                    self.net.old_dist_logstds_n: action_dist_logstds_n,
+                }
+            )
+        else:
+            action_dist_means_n = concat([path["mean"] for path in paths])
+            action_dist_logstds_n = concat([path["log_std"] for path in paths])
+            feed.update(
+                {
+                    self.net.old_dist_means_n: action_dist_means_n,
+                    self.net.old_dist_logstds_n: action_dist_logstds_n,
+                }
+            )
         return feed, path_dict
 
     def compute_critic(self, states):
@@ -336,9 +372,11 @@ class MultiTrpoModel(ModelWithCritic):
 
     def check_batch_finished(self, time, epis):
         if self.batch_mode == "episode":
-            return epis >= self.batch_size
+            assert epis <= self.batch_size
+            return epis == self.batch_size
         if self.batch_mode == "timestep":
-            return time >= self.batch_size
+            assert time <= self.batch_size
+            return time == self.batch_size
 
     def compute_update(self, paths):
 

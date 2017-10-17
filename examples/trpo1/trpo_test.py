@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 from custom_pend import CustomPend
 import sys
 
-BATH_SIZE = 5000
+BATH_SIZE = 1000
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
-    parser.add_argument('--nactor', required=False, type=int, default=2,
+    parser.add_argument('--nactor', required=False, type=int, default=1,
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
@@ -108,9 +108,9 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
-        env = CustomPend()
+        env = CustomAnt()
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                                   append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=3)
@@ -148,16 +148,16 @@ def main():
         sample_env.env.close()
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,
-                               cg_damping=0.1,
-                               max_kl=0.01,
-                               cg_iters=10,
                                num_actors=num_actors,
-                               batch_size=20,
-                               batch_mode="episode")
+                               batch_size=BATH_SIZE,
+                               batch_mode="timestep",
+                               target_kl=0.003 * BATH_SIZE / 5000,
+                               recompute_old_dist=True)
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=True, render_option="false")
+                            f_create_shared_params, single_process_mode=True, render_option="false",
+                            log_episodes=True)
 
     if should_profile:
         yappi.start(builtins=True, profile_threads=True)

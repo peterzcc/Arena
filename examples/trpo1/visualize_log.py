@@ -55,7 +55,7 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
             '.')
     elif mode == 5:
         l_data = np.minimum(t_array.shape[0], len(loss_list))
-        plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.')
+        plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)
     else:
         plt.plot(np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
     plt.xlabel('t')

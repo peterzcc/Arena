@@ -144,6 +144,7 @@ class ComplexWrapper(object):
 
 
         if self.episode_steps >= self.max_episode_length:
+            info_terminated.update({"terminated": True})  # let the clipped episode be terminated
             final_done = True
 
         return final_observation, final_reward, final_done, info_terminated

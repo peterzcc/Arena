@@ -45,8 +45,6 @@ class BatchUpdateAgent(Agent):
 
         # State information
         self.num_epoch = 0
-        self.episode_step = 0
-        self.epoch_reward = 0
         self.global_t = 0
         self.batch_start_time = None
         # max_l = 10000
@@ -67,8 +65,12 @@ class BatchUpdateAgent(Agent):
         #                        use_gae=False,
         #                        get_critic_online=False,
         #                        info_shape=self.model.info_shape)
-
-
+        self.time_count = 0
+        if self.model.batch_mode == 'timestep':
+            self.thread_batch_size = self.model.batch_size / self.model.num_actors
+            assert self.model.batch_size % self.model.num_actors == 0
+        else:
+            self.thread_batch_size = np.inf
         self.num_episodes = 0
         self.train_data = None
 
@@ -96,21 +98,23 @@ class BatchUpdateAgent(Agent):
 
     def receive_feedback(self, reward, done, info={}):
         # logging.debug("rx r: {} \td:{}".format(reward, done))
-        self.epoch_reward += reward
         # reward = self.rewfilter(reward)
 
         self.model.memory.append_feedback(reward, pid=self.id)
-        self.episode_step += 1
-
-        if done:
+        self.time_count += 1
+        assert self.time_count <= self.thread_batch_size
+        is_episode_clipped = self.time_count == self.thread_batch_size
+        if done or is_episode_clipped:
             # self.counter -= self.episode_step
             # self.global_t += self.episode_step
-            try:
-                terminated = np.asscalar(info["terminated"])
-                # logging.debug("terminated {} ".format(terminated))
-            except KeyError:
-                logging.debug("warning: no info about real termination ")
-                terminated = done
+            terminated = False
+            if done:
+                try:
+                    terminated = np.asscalar(info["terminated"])
+                    # logging.debug("terminated {} ".format(terminated))
+                except KeyError:
+                    logging.debug("warning: no info about real termination ")
+                    terminated = done
             extracted_result = self.model.memory.add_path(terminated, pid=self.id)
             if extracted_result is not None:
                 train_before = time.time()
@@ -124,6 +128,9 @@ class BatchUpdateAgent(Agent):
                        fps,
                        train_time,
                        ))
+            if is_episode_clipped:
+                self.model.batch_barrier.wait()
+                self.time_count = 0
 
 
     def train_once(self):
