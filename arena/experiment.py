@@ -43,6 +43,34 @@ class Experiment(object):
         env : gym.Env
         agent : Agent
         """
+        # 2. Configure log files
+        if stats_file_dir is None:
+            experiment_id = 1
+            self.stats_file_dir = "exp_{:d}".format(experiment_id)
+            while os.path.exists(self.stats_file_dir):
+                experiment_id += 1
+                self.stats_file_dir = "exp_{:d}".format(experiment_id)
+        else:
+            self.stats_file_dir = stats_file_dir
+        if not os.path.exists(self.stats_file_dir):
+            os.mkdir(self.stats_file_dir)
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+
+        # create file handler which logs even debug messages
+        fh = logging.FileHandler(self.stats_file_dir + '/log.txt', mode='w')
+        fh.setLevel(logging.DEBUG)
+        # create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # add the handlers to the logger
+        root.addHandler(fh)
+        root.addHandler(ch)
+
         # 1. Store variables
         env = f_create_env()
         self.observation_space = env.observation_space
@@ -67,34 +95,9 @@ class Experiment(object):
         self.render_option = render_option
         self.log_episodes = log_episodes
 
-        # 2. Configure log files
-        if stats_file_dir is None:
-            experiment_id = 1
-            self.stats_file_dir = "exp_{:d}".format(experiment_id)
-            while os.path.exists(self.stats_file_dir):
-                experiment_id += 1
-                self.stats_file_dir = "exp_{:d}".format(experiment_id)
-        else:
-            self.stats_file_dir = stats_file_dir
-        if not os.path.exists(self.stats_file_dir):
-            os.mkdir(self.stats_file_dir)
 
-        root = logging.getLogger()
-        root.setLevel(logging.DEBUG)
 
-        # create file handler which logs even debug messages
-        fh = logging.FileHandler(self.stats_file_dir + '/log.txt', mode='w')
-        fh.setLevel(logging.DEBUG)
-        # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        # add the handlers to the logger
-        root.addHandler(fh)
-        root.addHandler(ch)
+
 
         logging.info("Saving data at: {}".format(self.stats_file_dir))
         self.log_train_path = os.path.join(self.stats_file_dir, "train_log.csv")

@@ -37,7 +37,8 @@ class MultiTrpoModel(ModelWithCritic):
                  num_actors=1,
                  batch_size=20,
                  batch_mode="episode",
-                 recompute_old_dist=False):
+                 recompute_old_dist=False,
+                 update_per_epoch=4):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -109,71 +110,74 @@ class MultiTrpoModel(ModelWithCritic):
                                img_enabled=(),
                                st_enabled=self.ob_space[0].low.shape)
 
-        self.net = MultiNetwork(scope="state_agent",
-                                observation_space=self.ob_space,
-                                action_shape=self.act_space.shape,
-                                n_imgfeat=self.n_imgfeat,
-                                extra_feaatures=[],
-                                # [],  #[np.zeros((4,), dtype=np.float32)],  #
-                                conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  #(((3, 3), 2, 2),),  #
-                                comb_method=self.comb_method
-                                )
+        if self.mode == "SURP":
+            self.net = MultiNetwork(scope="state_agent",
+                                    observation_space=self.ob_space,
+                                    action_shape=self.act_space.shape,
+                                    n_imgfeat=0,
+                                    extra_feaatures=[],
+                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  # (((3, 3), 2, 2),),  #
+                                    comb_method=self.comb_method,
+                                    min_std=min_std,
+                                    distibution=self.distribution,
+                                    session=self.session
+                                    )
+            self.target_net = MultiNetwork(scope="target_agent",
+                                           observation_space=self.ob_space,
+                                           action_shape=self.act_space.shape,
+                                           n_imgfeat=self.n_imgfeat,
+                                           extra_feaatures=[],
+                                           conv_sizes=(((4, 4), 64, 2), ((3, 3), 64, 1)),
+                                           comb_method=self.comb_method,
+                                           min_std=min_std,
+                                           distibution=self.distribution,
+                                           session=self.session
+                                           )
+            self.executer_net = self.target_net
+        else:
+            self.net = MultiNetwork(scope="state_agent",
+                                    observation_space=self.ob_space,
+                                    action_shape=self.act_space.shape,
+                                    n_imgfeat=self.n_imgfeat,
+                                    extra_feaatures=[],
+                                    # [],  #[np.zeros((4,), dtype=np.float32)],  #
+                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  # (((3, 3), 2, 2),),  #
+                                    comb_method=self.comb_method,
+                                    min_std=min_std,
+                                    distibution=self.distribution,
+                                    session=self.session
+                                    )
+            self.executer_net = self.net
 
-        log_std_var = tf.maximum(self.net.action_dist_logstds_n, np.log(self.min_std))
-        batch_size = tf.shape(self.net.state_input)[0]
-        self.batch_size_float = tf.cast(batch_size, tf.float32)
-        self.action_dist_log_stds_n = log_std_var  #self.net.action_dist_logstds_n  #
-        # self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
-        self.old_dist_info_vars = dict(mean=self.net.old_dist_means_n, log_std=self.net.old_dist_logstds_n)
-        self.new_dist_info_vars = dict(mean=self.net.action_dist_means_n, log_std=self.net.action_dist_logstds_n)
-        self.likehood_action_dist = self.distribution.log_likelihood_sym(self.net.action_n, self.new_dist_info_vars)
-        self.new_likelihood_sym = self.distribution.log_likelihood_sym(self.net.action_n, self.new_dist_info_vars)
-        self.old_likelihood = self.distribution.log_likelihood_sym(self.net.action_n, self.old_dist_info_vars)
 
-        self.ratio_n = tf.exp(self.new_likelihood_sym - self.old_likelihood)
-        self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.net.var_list])
         self.k_p_l2 = 0.01
-        self.PPO_eps = 0.2
-        self.clipped_ratio = tf.clip_by_value(self.ratio_n,1.0-self.PPO_eps,1.0+self.PPO_eps)
-        raw_surr = self.ratio_n * self.net.advant
-        clipped_surr = self.clipped_ratio * self.net.advant
-        surr = self.surr = -tf.reduce_mean(tf.minimum(raw_surr,
-                                                      clipped_surr))  # Surrogate loss
 
-        kl = self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
-        ents = self.distribution.entropy(self.old_dist_info_vars)
-        ent = tf.reduce_sum(ents) / self.batch_size_float
-        self.losses = [surr, kl, ent]
+        self.losses = self.net.losses
         var_list = self.net.var_list
-        self.get_flat_params = GetFlat(var_list, session=self.session)  # get theta from var_list
-        self.set_params_with_flat_data = SetFromFlat(var_list, session=self.session)  # set theta from var_List
-        # get g
-        self.pg = flatgrad(surr, var_list)
-        # get A
-        # KL divergence where first arg is fixed
-        # replace old->tf.stop_gradient from previous kl
-        kl_firstfixed = self.distribution.kl_sym_firstfixed(self.new_dist_info_vars) / self.batch_size_float
-        grads = tf.gradients(kl_firstfixed, var_list)
-        self.flat_tangent = tf.placeholder(dtype, shape=[None])
-        shapes = list(map(var_shape, var_list))
-        start = 0
-        tangents = []
-        for shape in shapes:
-            size = np.prod(shape)
-            param = tf.reshape(self.flat_tangent[start:(start + size)], shape)
-            tangents.append(param)
-            start += size
-        self.gvp = [tf.reduce_sum(g * t) for (g, t) in zip(grads, tangents)]
-        self.fvp = flatgrad(tf.reduce_sum(self.gvp), var_list)  # get kl''*p
-        self.is_real_data = tf.placeholder(shape=(self.minibatch_size,), dtype=tf.float32)
 
-        grad_loglikelihood = flatgrad(self.new_likelihood_sym, var_list)
-        list_logl = tf.unstack(self.new_likelihood_sym, num=self.minibatch_size)
-        if self.mode == "TRPO":
-            batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data,
-                                                                                               axis=1)
-            batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
-            self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
+        # if self.mode == "TRPO":
+        #     self.flat_tangent = tf.placeholder(dtype, shape=[None])
+        #     shapes = list(map(var_shape, var_list))
+        #     start = 0
+        #     tangents = []
+        #     for shape in shapes:
+        #         size = np.prod(shape)
+        #         param = tf.reshape(self.flat_tangent[start:(start + size)], shape)
+        #         tangents.append(param)
+        #         start += size
+        #     self.gvp = [tf.reduce_sum(g * t) for (g, t) in zip(grads, tangents)]
+        #     self.fvp = flatgrad(tf.reduce_sum(self.gvp), var_list)  # get kl''*p
+        #     self.is_real_data = tf.placeholder(shape=(self.minibatch_size,), dtype=tf.float32)
+        #
+        #     grad_loglikelihood = flatgrad(self.new_likelihood_sym, var_list)
+        #     list_logl = tf.unstack(self.new_likelihood_sym, num=self.minibatch_size)
+        #     batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data,
+        #                                                                                        axis=1)
+        #     batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
+        #     self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
+        #     gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
+        #     self.g_gT_x = grad_loglikelihood * gT_x
+        #
         self.target_kl = target_kl
 
 
@@ -181,15 +185,13 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
         self.a_eta_value = 50
-        self.a_surr = -tf.reduce_mean(raw_surr) + self.a_beta * kl + \
-                      self.a_eta_value * tf.square(tf.maximum(0.0, self.kl - 2.0 * self.target_kl))
+        self.a_surr = -tf.reduce_mean(self.net.raw_surr) + self.a_beta * self.net.kl + \
+                      self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl))
         self.a_step_size = 0.0001
         self.a_max_step_size = 0.01
         self.a_min_step_size = 1e-7
         self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
         self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size)
-        # self.a_opt = tf.train.GradientDescentOptimizer(learning_rate=0.01)
-        # self.a_train = self.a_opt.minimize(self.a_surr,var_list=var_list)
         self.a_grad_list = tf.gradients(self.a_surr, var_list)
         self.a_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="a_grad_sym")
                                     for g in self.a_grad_list]
@@ -197,29 +199,38 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_backup_op = [tf.assign(old_v, v) for (old_v, v) in zip(self.a_old_parameters, var_list)]
         self.a_rollback_op = [[tf.assign(v, old_v) for (old_v, v) in zip(self.a_old_parameters, var_list)]]
         self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
-        self.a_losses = [self.a_surr, kl, ent]
+        self.a_losses = [self.a_surr, self.net.kl, self.net.ent]
         self.a_beta_max = 35.0
         self.a_beta_min = 1.0 / 35.0
-        self.update_per_epoch = 20
+        self.update_per_epoch = update_per_epoch
 
-        gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
-        self.g_gT_x = grad_loglikelihood * gT_x
+
         self.saved_paths = []
 
         # self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
-        self.session.run(tf.global_variables_initializer())
-        self.saver = tf.train.Saver()
+
         if len(self.critic.img_var_list) > 0:
             self.feat_saver = tf.train.Saver(var_list=self.critic.img_var_list)
-        # self.saver = tf.train.Saver(var_list=self.net.var_list)
-        self.init_model_path = self.saver.save(self.session, 'init_model')
+        self.saver = tf.train.Saver(var_list=self.net.var_list)
+        if self.mode == "SURP":
+            self.regression_loss = tf.reduce_mean(
+                tf.square(self.net.action_dist_means_n - self.target_net.action_dist_means_n))
+            self.s_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
+            self.s_train_op = self.s_opt.minimize(self.regression_loss, var_list=self.target_net.var_list)
+
+        # self.init_model_path = self.saver.save(self.session, 'init_model')
         self.n_update = 0
         self.n_pretrain = 0
         self.separate_update = True
-        self.update_critic = True
+        self.update_critic = False
         self.update_policy = True
         self.debug = True
         self.recompute_old_dist = recompute_old_dist
+        self.session.run(tf.global_variables_initializer())
+        self.restore_from_pretrained_policy = True
+        if self.restore_from_pretrained_policy:
+            self.saver.restore(self.session, 'policy_parameter')
+        self.session.run(tf.assign(self.target_net.log_vars, self.net.log_vars), feed_dict={})
 
     def get_state_activation(self, t_batch):
         # start_ratio = 1.0
@@ -238,7 +249,7 @@ class MultiTrpoModel(ModelWithCritic):
         # img_enabled = 1.0 - is_enabled
 
 
-        all_st_enabled = True
+        all_st_enabled = False
         st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
         img_enabled = np.array((1.0 - all_st_enabled,))
         return st_enabled, img_enabled
@@ -269,18 +280,18 @@ class MultiTrpoModel(ModelWithCritic):
                 self.exp_img_enabled = img_enabled
 
         if pid == 0:
-            feed = {self.net.state_input: obs[0],
+            feed = {self.executer_net.state_input: obs[0],
                     self.critic.st_enabled: self.exp_st_enabled,
                     self.critic.img_enabled: self.exp_img_enabled,
-                    self.net.st_enabled: self.exp_st_enabled,
-                    self.net.img_enabled: self.exp_img_enabled,
+                    self.executer_net.st_enabled: self.exp_st_enabled,
+                    self.executer_net.img_enabled: self.exp_img_enabled,
                     }
             if self.n_imgfeat > 0:
                 feed[self.critic.img_input] = obs[1]
-                feed[self.net.img_input] = obs[1]
+                feed[self.executer_net.img_input] = obs[1]
             self.policy_lock.acquire_read()
             action_dist_means_n, action_dist_log_stds_n = \
-                self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n],
+                self.session.run([self.executer_net.action_dist_means_n, self.executer_net.action_dist_log_stds_n],
                                  feed)
             self.act_means = action_dist_means_n
             self.act_logstds = action_dist_log_stds_n
@@ -344,7 +355,7 @@ class MultiTrpoModel(ModelWithCritic):
                 feed_forw[self.critic.img_input] = img_input
                 feed_forw[self.net.img_input] = img_input
             action_dist_means_n, action_dist_logstds = \
-                self.session.run([self.net.action_dist_means_n, self.action_dist_log_stds_n],
+                self.session.run([self.net.action_dist_means_n, self.net.action_dist_log_stds_n],
                                  feed_forw)
             action_dist_logstds_n = np.tile(action_dist_logstds, (state_input.shape[0], 1))
             feed.update(
@@ -378,6 +389,57 @@ class MultiTrpoModel(ModelWithCritic):
             assert time <= self.batch_size
             return time == self.batch_size
 
+    def supervised_update(self, paths):
+        state_input = concat([path["observation"][0] for path in paths])
+
+        img_enabled = concat([path["img_enabled"] for path in paths])
+        st_enabled = concat([path["st_enabled"] for path in paths])
+        action_n = concat([path["action"] for path in paths])
+        advant_n = concat([path["advantage"] for path in paths])
+
+        feed = {self.net.state_input: state_input,
+                self.net.advant: advant_n,
+                self.net.action_n: action_n,
+                self.net.st_enabled: st_enabled,
+                self.net.img_enabled: img_enabled,
+                self.target_net.state_input: state_input,
+                self.target_net.advant: advant_n,
+                self.target_net.action_n: action_n,
+                self.target_net.st_enabled: st_enabled,
+                self.target_net.img_enabled: img_enabled
+                }
+
+        img_input = None
+        action_dist_logstds_n = concat([path["log_std"] for path in paths])
+        if self.n_imgfeat > 0:
+            img_input = concat([path["observation"][1] for path in paths])
+            feed[self.target_net.img_input] = img_input
+        batch_size = advant_n.shape[0]
+        if self.debug:
+            # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
+            logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
+            logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
+        loss_o = run_batched(self.regression_loss, feed, batch_size, self.session,
+                             minibatch_size=self.minibatch_size)
+        logging.debug("\nold reg loss: {}\n".format(loss_o))
+        for n_pass in range(self.update_per_epoch):
+            training_inds = np.random.permutation(batch_size)
+            for start in range(0, batch_size, self.minibatch_size):  # TODO: verify this
+                if start > batch_size - 2 * self.minibatch_size:
+                    end = batch_size
+                else:
+                    end = start + self.minibatch_size
+                slc = training_inds[range(start, end)]
+                this_feed = {k: v[slc] for (k, v) in list(feed.items())}
+                self.session.run(self.s_train_op, feed_dict=this_feed)
+                if end == batch_size:
+                    break
+
+        loss_n = run_batched(self.regression_loss, feed, batch_size, self.session,
+                             minibatch_size=self.minibatch_size)
+        logging.debug("\nnew reg loss: {}\n".format(loss_n))
+
+
     def compute_update(self, paths):
 
         # if self.separate_update:
@@ -388,8 +450,6 @@ class MultiTrpoModel(ModelWithCritic):
         #         self.update_critic = False
         #         self.update_policy = True
 
-        self.update_critic = True
-        self.update_policy = True
 
         # if self.n_update % 2 != 0 or self.n_update < 20:
         #     self.update_critic = False
@@ -398,6 +458,12 @@ class MultiTrpoModel(ModelWithCritic):
         # else:
         #     self.update_critic = True
         #     self.update_policy = True
+        if self.mode == "SURP":
+            if self.update_policy:
+                self.policy_lock.acquire_write()
+                self.supervised_update(paths)
+                self.policy_lock.release_write()
+            return None, None
         feed, path_dict = self.concat_paths(paths)
 
         if self.n_update < self.n_pretrain:
@@ -417,13 +483,16 @@ class MultiTrpoModel(ModelWithCritic):
             # self.saved_paths = []
             # self.critic.fit(img_path_dict, update_mode="img", num_pass=5)
             # self.saver.save(self.session, 'pretrained_model')
+
+        # if self.n_update % 20 == 0:
+        #     self.saver.save(self.session,'policy_parameter')
         self.critic_lock.acquire_write()
         if self.n_update < self.n_pretrain:
             self.critic.fit(path_dict, update_mode="img", num_pass=2)
 
 
         if self.update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=10)
+            self.critic.fit(path_dict, update_mode="full", num_pass=self.update_per_epoch)
         self.critic_lock.release_write()
         self.n_update += 1
 
@@ -432,7 +501,7 @@ class MultiTrpoModel(ModelWithCritic):
         state_input = feed[self.net.state_input]
         action_dist_logstds_n = feed[self.net.old_dist_logstds_n]
         batch_size = advant_n.shape[0]
-        thprev = self.get_flat_params()  # get theta_old
+
         if self.debug:
             # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
             logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
@@ -492,54 +561,55 @@ class MultiTrpoModel(ModelWithCritic):
             self.policy_lock.release_write()
             return None, None
 
-
-        if self.use_empirical_fim:
-            def fisher_vector_product(p):
-                # feed[self.flat_tangent] = p
-
-                fvp = self.run_batched_fvp(self.batch_g_gT_x, feed, batch_size, self.session,
-                                           minibatch_size=self.minibatch_size,
-                                           extra_input={self.flat_tangent: p})
-                return fvp + self.cg_damping * p
-        else:
-            def fisher_vector_product(p):
-                # feed[self.flat_tangent] = p
-
-                fvp = run_batched(self.fvp, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
-                                  extra_input={self.flat_tangent: p})
-                return fvp + self.cg_damping * p
-
-        g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
-
-        stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-5)
-
-        sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
-        # if shs<0, then the nan error would appear
-        lm = np.sqrt(sAs / self.max_kl)
-        fullstep = stepdir / lm
-        neggdotstepdir = -g.dot(stepdir)
-        logging.debug("\nlagrange multiplier:{}\tgnorm:{}\t".format(lm, np.linalg.norm(g)))
-
-        def loss(th):
-            self.set_params_with_flat_data(th)
-            surr = run_batched(self.surr, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
-            return surr
-
-        if self.debug:
-            surr_o, kl_o, ent_o = run_batched(self.losses, feed, batch_size, self.session,
-                                              minibatch_size=self.minibatch_size)
-            logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
-            # logging.debug("\nold theta: {}\n".format(np.linalg.norm(thprev)))
-        logging.debug("\nfullstep: {}\n".format(np.linalg.norm(fullstep)))
-        theta, d_theta = linesearch(loss, thprev, fullstep, neggdotstepdir / lm)
-        self.set_params_with_flat_data(theta)
-
-        if self.debug:
-            surr_new, kl_new, ent_new = run_batched(self.losses, feed, batch_size, self.session,
-                                                    minibatch_size=self.minibatch_size)
-            logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
-            # logging.debug("\nnew theta: {}\nd_theta: {}\n".format(np.linalg.norm(theta), np.linalg.norm(d_theta)))
-        return None, None
+            # if self.mode=="TRPO":
+            #     thprev = self.get_flat_params()  # get theta_old
+            #     if self.use_empirical_fim:
+            #         def fisher_vector_product(p):
+            #             # feed[self.flat_tangent] = p
+            #
+            #             fvp = self.run_batched_fvp(self.batch_g_gT_x, feed, batch_size, self.session,
+            #                                        minibatch_size=self.minibatch_size,
+            #                                        extra_input={self.flat_tangent: p})
+            #             return fvp + self.cg_damping * p
+            #     else:
+            #         def fisher_vector_product(p):
+            #             # feed[self.flat_tangent] = p
+            #
+            #             fvp = run_batched(self.fvp, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
+            #                               extra_input={self.flat_tangent: p})
+            #             return fvp + self.cg_damping * p
+            #
+            #     g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
+            #
+            #     stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-5)
+            #
+            #     sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
+            #     # if shs<0, then the nan error would appear
+            #     lm = np.sqrt(sAs / self.max_kl)
+            #     fullstep = stepdir / lm
+            #     neggdotstepdir = -g.dot(stepdir)
+            #     logging.debug("\nlagrange multiplier:{}\tgnorm:{}\t".format(lm, np.linalg.norm(g)))
+            #
+            #     def loss(th):
+            #         self.set_params_with_flat_data(th)
+            #         surr = run_batched(self.surr, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
+            #         return surr
+            #
+            #     if self.debug:
+            #         surr_o, kl_o, ent_o = run_batched(self.losses, feed, batch_size, self.session,
+            #                                           minibatch_size=self.minibatch_size)
+            #         logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+            #         # logging.debug("\nold theta: {}\n".format(np.linalg.norm(thprev)))
+            #     logging.debug("\nfullstep: {}\n".format(np.linalg.norm(fullstep)))
+            #     theta, d_theta = linesearch(loss, thprev, fullstep, neggdotstepdir / lm)
+            #     self.set_params_with_flat_data(theta)
+            #
+            #     if self.debug:
+            #         surr_new, kl_new, ent_new = run_batched(self.losses, feed, batch_size, self.session,
+            #                                                 minibatch_size=self.minibatch_size)
+            #         logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
+            #         # logging.debug("\nnew theta: {}\nd_theta: {}\n".format(np.linalg.norm(theta), np.linalg.norm(d_theta)))
+            #     return None, None
 
     def update(self, diff, new=None):
         pass

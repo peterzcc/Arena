@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 from custom_pend import CustomPend
 import sys
 
-BATH_SIZE = 1000
+BATH_SIZE = 10000
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=5e7,
+    parser.add_argument('--num-steps', required=False, type=int, default=7e7,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()
@@ -110,7 +110,7 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         env = CustomAnt()
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
+                                   append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=3)
@@ -149,10 +149,12 @@ def main():
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,
                                num_actors=num_actors,
-                               batch_size=BATH_SIZE,
+                               batch_size=steps_per_epoch,
                                batch_mode="timestep",
-                               target_kl=0.003 * BATH_SIZE / 5000,
-                               recompute_old_dist=True)
+                               target_kl=0.003 * steps_per_epoch / 5000,
+                               recompute_old_dist=True,
+                               n_imgfeat=None,
+                               mode="SURP")
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,

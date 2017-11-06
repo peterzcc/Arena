@@ -10,6 +10,8 @@ def main():
                         help='window size')
     parser.add_argument('--batch', '-b', required=False, type=int, default=1,
                         help='batch size')
+    parser.add_argument('--x', '-x', required=False, type=int, default=None,
+                        help='x axis')
     args = parser.parse_args()
     data = pd.read_csv('train_log.csv')
     data["rs"] = data['Reward'].rolling(args.width, center=False, min_periods=0).mean()
