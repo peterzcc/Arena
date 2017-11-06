@@ -200,7 +200,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.n_update = 0
         self.n_pretrain = 0
         self.separate_update = True
-        self.update_critic = False
+        self.update_critic = True
         self.update_policy = True
         self.debug = True
         self.recompute_old_dist = recompute_old_dist
@@ -227,7 +227,7 @@ class MultiTrpoModel(ModelWithCritic):
         # img_enabled = 1.0 - is_enabled
 
 
-        all_st_enabled = False
+        all_st_enabled = True
         st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
         img_enabled = np.array((1.0 - all_st_enabled,))
         return st_enabled, img_enabled

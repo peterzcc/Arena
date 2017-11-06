@@ -160,17 +160,17 @@ def main():
         return 0.003
 
     start_t = 0
-    end_t = 5  # args.num_steps / 10000
+    end_t = args.num_steps / 10000
 
     def get_batch_size(n_update):
-        b1 = 1000 / num_actors
-        b2 = 10000 / num_actors
+        b1 = 2000 / num_actors
+        b2 = 20000 / num_actors
         b = round(linear_moving_value(b1, b2, start_t, end_t, n_update))
         return num_actors * b
 
     def get_target_kl(n_update):
         k1 = 0.003
-        k2 = 1e-5
+        k2 = 0.0001
         k = exp_moving_value(k1, k2, start_t, end_t, n_update)
         return k
 
