@@ -29,13 +29,13 @@ class MultiTrpoModel(ModelWithCritic):
                  max_kl=0.01,
                  timestep_limit=1000,
                  n_imgfeat=0,
-                 target_kl=0.003,
+                 f_target_kl=None,
                  minibatch_size=128,
                  gamma=0.995,
                  gae_lam=0.97,
                  mode="ADA_KL",
                  num_actors=1,
-                 batch_size=20,
+                 f_batch_size=None,
                  batch_mode="episode",
                  recompute_old_dist=False,
                  update_per_epoch=4):
@@ -66,7 +66,9 @@ class MultiTrpoModel(ModelWithCritic):
         self.exp_st_enabled = None
         self.exp_img_enabled = None
         self.batch_mode = batch_mode  # "episode" #"timestep"
-        self.batch_size = batch_size
+        self.f_batch_size = f_batch_size
+        self.batch_size = self.f_batch_size(0)
+        self.f_target_kl = f_target_kl
         if self.batch_mode == "timestep":
             self.batch_barrier = thd.Barrier(num_actors)
         else:
@@ -150,45 +152,21 @@ class MultiTrpoModel(ModelWithCritic):
             self.executer_net = self.net
 
 
-        self.k_p_l2 = 0.01
 
         self.losses = self.net.losses
         var_list = self.net.var_list
 
-        # if self.mode == "TRPO":
-        #     self.flat_tangent = tf.placeholder(dtype, shape=[None])
-        #     shapes = list(map(var_shape, var_list))
-        #     start = 0
-        #     tangents = []
-        #     for shape in shapes:
-        #         size = np.prod(shape)
-        #         param = tf.reshape(self.flat_tangent[start:(start + size)], shape)
-        #         tangents.append(param)
-        #         start += size
-        #     self.gvp = [tf.reduce_sum(g * t) for (g, t) in zip(grads, tangents)]
-        #     self.fvp = flatgrad(tf.reduce_sum(self.gvp), var_list)  # get kl''*p
-        #     self.is_real_data = tf.placeholder(shape=(self.minibatch_size,), dtype=tf.float32)
-        #
-        #     grad_loglikelihood = flatgrad(self.new_likelihood_sym, var_list)
-        #     list_logl = tf.unstack(self.new_likelihood_sym, num=self.minibatch_size)
-        #     batch_grad = tf.stack([flatgrad(l, var_list) for l in list_logl]) * tf.expand_dims(self.is_real_data,
-        #                                                                                        axis=1)
-        #     batch_gT_x = tf.matmul(batch_grad, tf.expand_dims(self.flat_tangent, axis=1))
-        #     self.batch_g_gT_x = tf.reshape(tf.matmul(batch_grad, batch_gT_x, transpose_a=True, transpose_b=False), [-1])
-        #     gT_x = tf.reduce_sum(grad_loglikelihood * self.flat_tangent)
-        #     self.g_gT_x = grad_loglikelihood * gT_x
-        #
-        self.target_kl = target_kl
-
+        self.target_kl_initial = f_target_kl(0)
+        self.target_kl_sym = tf.placeholder(shape=[], dtype=tf.float32, name="a_target_kl")
 
         # adaptive kl
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
         self.a_eta_value = 50
         self.a_surr = -tf.reduce_mean(self.net.raw_surr) + self.a_beta * self.net.kl + \
-                      self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl))
+                      self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl_sym))
         self.a_step_size = 0.0001
-        self.a_max_step_size = 0.01
+        self.a_max_step_size = 0.1
         self.a_min_step_size = 1e-7
         self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
         self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size)
@@ -227,10 +205,10 @@ class MultiTrpoModel(ModelWithCritic):
         self.debug = True
         self.recompute_old_dist = recompute_old_dist
         self.session.run(tf.global_variables_initializer())
-        self.restore_from_pretrained_policy = True
+        self.restore_from_pretrained_policy = False
         if self.restore_from_pretrained_policy:
             self.saver.restore(self.session, 'policy_parameter')
-        self.session.run(tf.assign(self.target_net.log_vars, self.net.log_vars), feed_dict={})
+            self.session.run(tf.assign(self.target_net.log_vars, self.net.log_vars), feed_dict={})
 
     def get_state_activation(self, t_batch):
         # start_ratio = 1.0
@@ -386,7 +364,9 @@ class MultiTrpoModel(ModelWithCritic):
             assert epis <= self.batch_size
             return epis == self.batch_size
         if self.batch_mode == "timestep":
-            assert time <= self.batch_size
+            if not time <= self.batch_size:
+                logging.debug("time: {} \nbatchsize: {}".format(time, self.batch_size))
+                assert time <= self.batch_size
             return time == self.batch_size
 
     def supervised_update(self, paths):
@@ -439,6 +419,9 @@ class MultiTrpoModel(ModelWithCritic):
                              minibatch_size=self.minibatch_size)
         logging.debug("\nnew reg loss: {}\n".format(loss_n))
 
+    def increment_n_update(self):
+        self.n_update += 1
+        self.batch_size = self.f_batch_size(self.n_update)
 
     def compute_update(self, paths):
 
@@ -492,9 +475,8 @@ class MultiTrpoModel(ModelWithCritic):
 
 
         if self.update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=self.update_per_epoch)
+            self.critic.fit(path_dict, update_mode="full", num_pass=4)
         self.critic_lock.release_write()
-        self.n_update += 1
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
         advant_n = feed[self.net.advant]
@@ -509,19 +491,23 @@ class MultiTrpoModel(ModelWithCritic):
         if not self.update_policy:
             return None, None
 
-
         if self.mode == "ADA_KL":
             self.policy_lock.acquire_write()
+            target_kl_value = self.f_target_kl(self.n_update)
+            logging.debug("\nbatch_size: {}\nkl_target: {}\n".format(self.batch_size, target_kl_value))
             surr_o, kl_o, ent_o = run_batched(self.a_losses, feed, batch_size, self.session,
                                               minibatch_size=self.minibatch_size,
-                                              extra_input={self.a_beta: self.a_beta_value})
+                                              extra_input={self.a_beta: self.a_beta_value,
+                                                           self.target_kl_sym: target_kl_value})
             logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
             # self.session.run(self.a_backup_op)
             early_stopped = False
+            kl_new = -1
             for e in range(self.update_per_epoch):
                 grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
                                     minibatch_size=self.minibatch_size,
-                                    extra_input={self.a_beta: self.a_beta_value}
+                                    extra_input={self.a_beta: self.a_beta_value,
+                                                 self.target_kl_sym: target_kl_value}
                                     )
                 grad_dict = {p: v for (p, v) in zip(self.a_grad_placeholders, grads)}
                 _ = self.session.run(self.a_apply_grad,
@@ -529,23 +515,25 @@ class MultiTrpoModel(ModelWithCritic):
                                                 self.a_sym_step_size: self.a_step_size})
                 kl_new = run_batched(self.a_losses[1], feed, batch_size, self.session,
                                      minibatch_size=self.minibatch_size,
-                                     extra_input={self.a_beta: self.a_beta_value})
-                if kl_new > self.target_kl * 4:
+                                     extra_input={self.a_beta: self.a_beta_value,
+                                                  self.target_kl_sym: target_kl_value})
+                if kl_new > target_kl_value * 4:
                     logging.debug("KL too large, early stop")
                     early_stopped = True
                     break
 
             surr_new, ent_new = run_batched([self.a_losses[0], self.a_losses[2]], feed, batch_size, self.session,
                                             minibatch_size=self.minibatch_size,
-                                            extra_input={self.a_beta: self.a_beta_value})
+                                            extra_input={self.a_beta: self.a_beta_value,
+                                                         self.target_kl_sym: target_kl_value})
             logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
-            if kl_new > self.target_kl * 2:
+            if kl_new > target_kl_value * 2:
                 self.a_beta_value = np.minimum(self.a_beta_max, 1.5 * self.a_beta_value)
                 if self.a_beta_value > self.a_beta_max - 5 or early_stopped:
                     self.a_step_size = np.maximum(self.a_min_step_size, self.a_step_size / 1.5)
                 logging.debug('beta -> %s' % self.a_beta_value)
                 logging.debug('step_size -> %s' % self.a_step_size)
-            elif kl_new < self.target_kl / 2:
+            elif kl_new < target_kl_value / 2:
                 self.a_beta_value = np.maximum(self.a_beta_min, self.a_beta_value / 1.5)
                 if self.a_beta_value < self.a_beta_min:
                     self.a_step_size = np.minimum(self.a_max_step_size, 1.5 * self.a_step_size)
@@ -558,93 +546,13 @@ class MultiTrpoModel(ModelWithCritic):
             # if kl_new > self.target_kl * 30:
             #     logging.debug("KL too large, rollback")
             #     self.session.run(self.a_rollback_op)
-            self.policy_lock.release_write()
-            return None, None
 
-            # if self.mode=="TRPO":
-            #     thprev = self.get_flat_params()  # get theta_old
-            #     if self.use_empirical_fim:
-            #         def fisher_vector_product(p):
-            #             # feed[self.flat_tangent] = p
-            #
-            #             fvp = self.run_batched_fvp(self.batch_g_gT_x, feed, batch_size, self.session,
-            #                                        minibatch_size=self.minibatch_size,
-            #                                        extra_input={self.flat_tangent: p})
-            #             return fvp + self.cg_damping * p
-            #     else:
-            #         def fisher_vector_product(p):
-            #             # feed[self.flat_tangent] = p
-            #
-            #             fvp = run_batched(self.fvp, feed, batch_size, self.session, minibatch_size=self.minibatch_size,
-            #                               extra_input={self.flat_tangent: p})
-            #             return fvp + self.cg_damping * p
-            #
-            #     g = run_batched(self.pg, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
-            #
-            #     stepdir = cg(fisher_vector_product, -g, cg_iters=self.cg_iters, residual_tol=1e-5)
-            #
-            #     sAs = 0.5 * stepdir.dot(fisher_vector_product(stepdir))  # theta
-            #     # if shs<0, then the nan error would appear
-            #     lm = np.sqrt(sAs / self.max_kl)
-            #     fullstep = stepdir / lm
-            #     neggdotstepdir = -g.dot(stepdir)
-            #     logging.debug("\nlagrange multiplier:{}\tgnorm:{}\t".format(lm, np.linalg.norm(g)))
-            #
-            #     def loss(th):
-            #         self.set_params_with_flat_data(th)
-            #         surr = run_batched(self.surr, feed, batch_size, self.session, minibatch_size=self.minibatch_size)
-            #         return surr
-            #
-            #     if self.debug:
-            #         surr_o, kl_o, ent_o = run_batched(self.losses, feed, batch_size, self.session,
-            #                                           minibatch_size=self.minibatch_size)
-            #         logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
-            #         # logging.debug("\nold theta: {}\n".format(np.linalg.norm(thprev)))
-            #     logging.debug("\nfullstep: {}\n".format(np.linalg.norm(fullstep)))
-            #     theta, d_theta = linesearch(loss, thprev, fullstep, neggdotstepdir / lm)
-            #     self.set_params_with_flat_data(theta)
-            #
-            #     if self.debug:
-            #         surr_new, kl_new, ent_new = run_batched(self.losses, feed, batch_size, self.session,
-            #                                                 minibatch_size=self.minibatch_size)
-            #         logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
-            #         # logging.debug("\nnew theta: {}\nd_theta: {}\n".format(np.linalg.norm(theta), np.linalg.norm(d_theta)))
-            #     return None, None
+            self.increment_n_update()
+            self.policy_lock.release_write()
+
+            return None, None
 
     def update(self, diff, new=None):
         pass
         # self.set_params_with_flat_data(new)
 
-    def fvp_minibatch(self, func_batch, feed, slc, session, minibatch_size=64, extra_input={}):
-        this_feed = {k: v[slc] for k, v in list(feed.items())}
-        this_size = len(slc)
-        if this_size == minibatch_size:
-            this_feed = {k: v[slc] for k, v in list(feed.items())}
-            this_result = \
-                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
-                                                            self.is_real_data: np.ones(minibatch_size)}))
-        else:
-            is_real_data = np.zeros(minibatch_size)
-            is_real_data[0:this_size] = 1
-            this_feed = \
-                {k:
-                     np.concatenate([v[slc], np.zeros(shape=(minibatch_size - this_size,) + v.shape[1:])])
-                 for k, v in list(feed.items())}
-            this_result = \
-                np.array(session.run(func_batch, feed_dict={**this_feed, **extra_input,
-                                                            self.is_real_data: is_real_data}))
-        return this_result
-
-    def run_batched_fvp(self, func_batch, feed, N, session, minibatch_size=64, extra_input={}):
-        result = None
-        for start in range(0, N, minibatch_size):
-            end = min(start + minibatch_size, N)
-            # this_size = end - start
-            slc = range(start, end)
-            this_result = self.fvp_minibatch(func_batch, feed, slc, session, minibatch_size, extra_input)
-            if result is None:
-                result = this_result
-            else:
-                result += this_result
-        result /= N
-        return result

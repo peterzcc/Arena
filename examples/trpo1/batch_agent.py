@@ -66,11 +66,11 @@ class BatchUpdateAgent(Agent):
         #                        get_critic_online=False,
         #                        info_shape=self.model.info_shape)
         self.time_count = 0
-        if self.model.batch_mode == 'timestep':
-            self.thread_batch_size = self.model.batch_size / self.model.num_actors
-            assert self.model.batch_size % self.model.num_actors == 0
-        else:
-            self.thread_batch_size = np.inf
+        # if self.model.batch_mode == 'timestep':
+        #     self.thread_batch_size = self.model.batch_size / self.model.num_actors
+        #     assert self.model.batch_size % self.model.num_actors == 0
+        # else:
+        #     self.thread_batch_size = np.inf
         self.num_episodes = 0
         self.train_data = None
 
@@ -102,8 +102,8 @@ class BatchUpdateAgent(Agent):
 
         self.model.memory.append_feedback(reward, pid=self.id)
         self.time_count += 1
-        assert self.time_count <= self.thread_batch_size
-        is_episode_clipped = self.time_count == self.thread_batch_size
+        # assert self.time_count <= self.thread_batch_size
+        is_episode_clipped = self.time_count * self.model.num_actors == self.model.batch_size
         if done or is_episode_clipped:
             # self.counter -= self.episode_step
             # self.global_t += self.episode_step

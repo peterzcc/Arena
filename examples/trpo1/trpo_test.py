@@ -18,6 +18,21 @@ import sys
 BATH_SIZE = 10000
 
 
+def linear_moving_value(x1, x2, t1, t2, t):
+    if t < t1:
+        return x1
+    if t > t2:
+        return x2
+    return x1 + (t - t1) * (x2 - x1) / (t2 - t1)
+
+
+def exp_moving_value(x1, x2, t1, t2, t):
+    if t < t1:
+        return x1
+    if t > t2:
+        return x2
+    return x1 * (x2 / x1) ** ((t - t1) / (t2 - t1))
+
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
@@ -110,7 +125,7 @@ def main():
         #                   max_null_op=0, max_episode_length=T)
         env = CustomAnt()
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                                   append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=3)
@@ -138,7 +153,26 @@ def main():
         #     is_learning, global_t, pid
         # )
 
+    def const_batch_size(n_update):
+        return args.batch_size
 
+    def const_target_kl(n_update):
+        return 0.003
+
+    start_t = 0
+    end_t = 5  # args.num_steps / 10000
+
+    def get_batch_size(n_update):
+        b1 = 1000 / num_actors
+        b2 = 10000 / num_actors
+        b = round(linear_moving_value(b1, b2, start_t, end_t, n_update))
+        return num_actors * b
+
+    def get_target_kl(n_update):
+        k1 = 0.003
+        k2 = 1e-5
+        k = exp_moving_value(k1, k2, start_t, end_t, n_update)
+        return k
 
     def f_create_shared_params():
         from multi_trpo_model import MultiTrpoModel
@@ -149,12 +183,13 @@ def main():
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,
                                num_actors=num_actors,
-                               batch_size=steps_per_epoch,
+                               f_batch_size=const_batch_size,
                                batch_mode="timestep",
-                               target_kl=0.003 * steps_per_epoch / 5000,
+                               f_target_kl=const_target_kl,
                                recompute_old_dist=True,
-                               n_imgfeat=None,
-                               mode="SURP")
+                               n_imgfeat=0,
+                               mode="ADA_KL",
+                               update_per_epoch=4)
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,
