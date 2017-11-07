@@ -15,7 +15,7 @@ from maze_env import MazeEnv
 from custom_pend import CustomPend
 import sys
 
-BATH_SIZE = 10000
+BATH_SIZE = 2000
 
 
 def linear_moving_value(x1, x2, t1, t2, t):
@@ -157,7 +157,7 @@ def main():
         return args.batch_size
 
     def const_target_kl(n_update):
-        return 0.003
+        return 0.003 * 10000 / args.batch_size
 
     start_t = 0
     end_t = args.num_steps / 10000
@@ -186,10 +186,11 @@ def main():
                                f_batch_size=const_batch_size,
                                batch_mode="timestep",
                                f_target_kl=const_target_kl,
-                               recompute_old_dist=True,
+                               recompute_old_dist=False,
                                n_imgfeat=0,
                                mode="ADA_KL",
-                               update_per_epoch=4)
+                               update_per_epoch=4,
+                               kl_history_length=5)
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,

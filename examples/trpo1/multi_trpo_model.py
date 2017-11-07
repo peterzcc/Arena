@@ -38,7 +38,8 @@ class MultiTrpoModel(ModelWithCritic):
                  f_batch_size=None,
                  batch_mode="episode",
                  recompute_old_dist=False,
-                 update_per_epoch=4):
+                 update_per_epoch=4,
+                 kl_history_length=1):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -163,14 +164,23 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
         self.a_eta_value = 50
-        self.a_surr = -tf.reduce_mean(self.net.raw_surr) + self.a_beta * self.net.kl + \
-                      self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl_sym))
+        self.a_rl_loss = -tf.reduce_mean(self.net.raw_surr)
+        self.a_kl_loss = self.a_beta * self.net.kl + \
+                         self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl_sym))
+        self.a_surr = self.a_rl_loss + self.a_kl_loss
         self.a_step_size = 0.0001
         self.a_max_step_size = 0.1
         self.a_min_step_size = 1e-7
         self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
         self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size)
         self.a_grad_list = tf.gradients(self.a_surr, var_list)
+        self.a_rl_grad = tf.gradients(self.a_rl_loss, var_list)
+        self.a_kl_grad = tf.gradients(self.a_kl_loss, var_list)
+        self.kl_history_length = kl_history_length
+        self.hist_obs0 = []
+        self.hist_obs1 = []
+        self.hist_st_en = []
+        self.hist_img_en = []
         self.a_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="a_grad_sym")
                                     for g in self.a_grad_list]
         self.a_old_parameters = [tf.Variable(tf.zeros(v.shape, dtype=tf.float32), name="a_old_param") for v in var_list]
@@ -351,7 +361,39 @@ class MultiTrpoModel(ModelWithCritic):
                     self.net.old_dist_logstds_n: action_dist_logstds_n,
                 }
             )
-        return feed, path_dict
+
+        hist_feed = {}
+        if self.kl_history_length > 1:
+            if len(self.hist_obs0) == self.kl_history_length:
+                del self.hist_obs0[0]
+                del self.hist_img_en[0]
+                del self.hist_st_en[0]
+                if self.n_imgfeat > 0:
+                    del self.hist_obs1[0]
+            self.hist_obs0.append(state_input)
+            self.hist_st_en.append(st_enabled)
+            self.hist_img_en.append(img_enabled)
+            if self.n_imgfeat > 0:
+                self.hist_obs1.append(img_input)
+            hist_feed = {self.net.state_input: np.concatenate(self.hist_obs0),
+                         self.net.st_enabled: np.concatenate(self.hist_st_en),
+                         self.net.img_enabled: np.concatenate(self.hist_img_en),
+                         }
+            if self.n_imgfeat > 0:
+                hist_feed[self.net.img_input] = np.concatenate(self.hist_obs1)
+
+            action_dist_means_n, action_dist_logstds = \
+                self.session.run([self.net.action_dist_means_n, self.net.action_dist_log_stds_n],
+                                 hist_feed)
+            action_dist_logstds_n = np.tile(action_dist_logstds, (hist_feed[self.net.st_enabled].shape[0], 1))
+            hist_feed.update(
+                {
+                    self.net.old_dist_means_n: action_dist_means_n,
+                    self.net.old_dist_logstds_n: action_dist_logstds_n,
+                }
+            )
+
+        return feed, path_dict, hist_feed
 
     def compute_critic(self, states):
         self.critic_lock.acquire_read()
@@ -447,7 +489,7 @@ class MultiTrpoModel(ModelWithCritic):
                 self.supervised_update(paths)
                 self.policy_lock.release_write()
             return None, None
-        feed, path_dict = self.concat_paths(paths)
+        feed, path_dict, hist_feed = self.concat_paths(paths)
 
         if self.n_update < self.n_pretrain:
             pass
@@ -504,19 +546,42 @@ class MultiTrpoModel(ModelWithCritic):
             early_stopped = False
             kl_new = -1
             for e in range(self.update_per_epoch):
-                grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
-                                    minibatch_size=self.minibatch_size,
-                                    extra_input={self.a_beta: self.a_beta_value,
-                                                 self.target_kl_sym: target_kl_value}
-                                    )
-                grad_dict = {p: v for (p, v) in zip(self.a_grad_placeholders, grads)}
-                _ = self.session.run(self.a_apply_grad,
-                                     feed_dict={**grad_dict,
-                                                self.a_sym_step_size: self.a_step_size})
-                kl_new = run_batched(self.a_losses[1], feed, batch_size, self.session,
-                                     minibatch_size=self.minibatch_size,
-                                     extra_input={self.a_beta: self.a_beta_value,
-                                                  self.target_kl_sym: target_kl_value})
+                if self.kl_history_length == 1:
+                    grads = run_batched(self.a_grad_list, feed, batch_size, self.session,
+                                        minibatch_size=self.minibatch_size,
+                                        extra_input={self.a_beta: self.a_beta_value,
+                                                     self.target_kl_sym: target_kl_value}
+                                        )
+                    grad_dict = {p: v for (p, v) in zip(self.a_grad_placeholders, grads)}
+                    _ = self.session.run(self.a_apply_grad,
+                                         feed_dict={**grad_dict,
+                                                    self.a_sym_step_size: self.a_step_size})
+                    kl_new = run_batched(self.a_losses[1], feed, batch_size, self.session,
+                                         minibatch_size=self.minibatch_size,
+                                         extra_input={self.a_beta: self.a_beta_value,
+                                                      self.target_kl_sym: target_kl_value})
+
+                else:
+                    grads_rl = run_batched(self.a_rl_grad, feed, batch_size, self.session,
+                                           minibatch_size=self.minibatch_size,
+                                           extra_input={self.a_beta: self.a_beta_value,
+                                                        self.target_kl_sym: target_kl_value}
+                                           )
+                    hist_size = hist_feed[self.net.st_enabled].shape[0]
+                    grads_kl = run_batched(self.a_kl_grad, hist_feed, hist_size, self.session,
+                                           minibatch_size=self.minibatch_size,
+                                           extra_input={self.a_beta: self.a_beta_value,
+                                                        self.target_kl_sym: target_kl_value}
+                                           )
+                    grads = [r + k for (r, k) in zip(grads_rl, grads_kl)]
+                    grad_dict = {p: v for (p, v) in zip(self.a_grad_placeholders, grads)}
+                    _ = self.session.run(self.a_apply_grad,
+                                         feed_dict={**grad_dict,
+                                                    self.a_sym_step_size: self.a_step_size})
+                    kl_new = run_batched(self.net.kl, hist_feed, hist_size, self.session,
+                                         minibatch_size=self.minibatch_size,
+                                         extra_input={self.a_beta: self.a_beta_value,
+                                                      self.target_kl_sym: target_kl_value})
                 if kl_new > target_kl_value * 4:
                     logging.debug("KL too large, early stop")
                     early_stopped = True
