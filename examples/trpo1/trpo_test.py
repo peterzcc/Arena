@@ -157,7 +157,7 @@ def main():
         return args.batch_size
 
     def const_target_kl(n_update):
-        return 0.003 * 10000 / args.batch_size
+        return 0.003 * args.batch_size / 10000
 
     start_t = 0
     end_t = args.num_steps / 10000

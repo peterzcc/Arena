@@ -16,9 +16,9 @@ def main():
     data = pd.read_csv('train_log.csv')
     data["rs"] = data['Reward'].rolling(args.width, center=False, min_periods=0).mean()
     x = 1.0 / args.batch * data['t'].values
-    plt.plot(x / 1000, data["rs"].values)
+    plt.plot(x / 1000, data["rs"].values, linewidth=0.5)
     plt.savefig('vis_train' + '.pdf', bbox_inches='tight')
-    plt.show()
+    # plt.show()
     plt.clf()
 
 
