@@ -13,7 +13,9 @@ from custom_ant import CustomAnt
 from gather_env import GatherEnv
 from maze_env import MazeEnv
 from custom_pend import CustomPend
+from single_gather_env import SingleGatherEnv
 import sys
+import os
 
 BATH_SIZE = 2000
 
@@ -115,6 +117,7 @@ def main():
     import multiprocessing
     render_lock = multiprocessing.Lock()
     barrier = multiprocessing.Barrier(num_actors)
+    cwd = os.getcwd()
     def f_create_env():
         # env = GatherEnv()
         # env = gym.make('Ant-v1')
@@ -123,9 +126,9 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
-        env = CustomAnt()
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
+                                   append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=3)
@@ -187,10 +190,10 @@ def main():
                                batch_mode="timestep",
                                f_target_kl=const_target_kl,
                                recompute_old_dist=False,
-                               n_imgfeat=0,
+                               n_imgfeat=None,
                                mode="ADA_KL",
                                update_per_epoch=4,
-                               kl_history_length=5)
+                               kl_history_length=1)
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,

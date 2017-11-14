@@ -282,245 +282,77 @@ class GatherViewer(MjViewer):
         mjlib.mjr_render(0, self.get_rect(), byref(tmpobjects), byref(
             self.ropt), byref(self.cam.pose), byref(self.con))
 
-        try:
-            import OpenGL.GL as GL
-        except:
-            return
 
-        def draw_rect(x, y, width, height):
-            # start drawing a rectangle
-            GL.glBegin(GL.GL_QUADS)
-            # bottom left point
-            GL.glVertex2f(x, y)
-            # bottom right point
-            GL.glVertex2f(x + width, y)
-            # top right point
-            GL.glVertex2f(x + width, y + height)
-            # top left point
-            GL.glVertex2f(x, y + height)
-            GL.glEnd()
-
-        def refresh2d(width, height):
-            GL.glViewport(0, 0, width, height)
-            GL.glMatrixMode(GL.GL_PROJECTION)
-            GL.glLoadIdentity()
-            GL.glOrtho(0.0, width, 0.0, height, 0.0, 1.0)
-            GL.glMatrixMode(GL.GL_MODELVIEW)
-            GL.glLoadIdentity()
-
-        GL.glLoadIdentity()
-        width, height = glfw.get_framebuffer_size(self.window)
-        refresh2d(width, height)
-        GL.glDisable(GL.GL_LIGHTING)
-        GL.glEnable(GL.GL_BLEND)
-
-        GL.glColor4f(0.0, 0.0, 0.0, 0.8)
-        draw_rect(10, 10, 300, 100)
-
-        apple_readings, bomb_readings = self.env._get_readings()
-        for idx, reading in enumerate(apple_readings):
-            if reading > 0:
-                GL.glColor4f(0.0, 1.0, 0.0, reading)
-                draw_rect(20 * (idx + 1), 10, 5, 50)
-        for idx, reading in enumerate(bomb_readings):
-            if reading > 0:
-                GL.glColor4f(1.0, 0.0, 0.0, reading)
-                draw_rect(20 * (idx + 1), 60, 5, 50)
+def x_forward_obj():
+    return np.array((1, 0))
 
 
-class GatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-    MODEL_CLASS = CustomAnt
+class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     ORI_IND = 6
+    OBJ_DIST = 1.25
 
     def __init__(
             self,
-            n_apples=8,
-            n_bombs=0,
             activity_range=6.,
-            robot_object_spacing=2.,
-            catch_range=1.,
-            n_bins=10,
-            sensor_range=6.,
-            sensor_span=math.pi,
+            f_gen_obj=x_forward_obj,
             frame_skip=5,
+            file_path='ant.xml',
+            with_state_task=True,
             *args, **kwargs
     ):
-        self.n_apples = n_apples
-        self.n_bombs = n_bombs
+        self.n_apples = 1
+        self.n_bombs = 0
         self.activity_range = activity_range
-        self.robot_object_spacing = robot_object_spacing
-        self.catch_range = catch_range
-        self.n_bins = n_bins
-        self.sensor_range = sensor_range
-        self.sensor_span = sensor_span
+        self.f_gen_obj = f_gen_obj
+        self.dir = None
         self.objects = []
-        model_cls = self.__class__.MODEL_CLASS
-        if model_cls is None:
-            raise ValueError("MODEL_CLASS unspecified!")
+        self.with_state_task = with_state_task
 
-        xml_path = model_cls.FILE
-        file_path = self.generate_full_xml(xml_path=xml_path)
         self._reset_objects()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
         utils.EzPickle.__init__(self)
 
-    def generate_full_xml(self, xml_path):
-        tree = ET.parse(xml_path)
-        worldbody = tree.find(".//worldbody")
-        attrs = dict(
-            type="box", conaffinity="1", rgba="0.8 0.9 0.8 1", condim="3"
-        )
-        walldist = self.activity_range + 1
-        ET.SubElement(
-            worldbody, "geom", dict(
-                attrs,
-                name="wall1",
-                pos="0 -%d 0" % walldist,
-                size="%d.5 0.5 1" % walldist))
-        ET.SubElement(
-            worldbody, "geom", dict(
-                attrs,
-                name="wall2",
-                pos="0 %d 0" % walldist,
-                size="%d.5 0.5 1" % walldist))
-        ET.SubElement(
-            worldbody, "geom", dict(
-                attrs,
-                name="wall3",
-                pos="-%d 0 0" % walldist,
-                size="0.5 %d.5 1" % walldist))
-        ET.SubElement(
-            worldbody, "geom", dict(
-                attrs,
-                name="wall4",
-                pos="%d 0 0" % walldist,
-                size="0.5 %d.5 1" % walldist))
-        _, file_path = tempfile.mkstemp(text=True)
-        tree.write(file_path)
-        return file_path
-
     def _reset(self):
         self._reset_objects()
-        super(GatherEnv, self)._reset()
+        super(SingleGatherEnv, self)._reset()
         return self._get_obs()
 
     def _reset_objects(self):
-        self.objects = []
-        existing = set()
-        while len(self.objects) < self.n_apples:
-            x = np.random.randint(-self.activity_range / 2,
-                                  self.activity_range / 2) * 2
-            y = np.random.randint(-self.activity_range / 2,
-                                  self.activity_range / 2) * 2
-            # regenerate, since it is too close to the robot's initial position
-            if x ** 2 + y ** 2 < self.robot_object_spacing ** 2:
-                continue
-            if (x, y) in existing:
-                continue
-            typ = APPLE
-            self.objects.append((x, y, typ))
-            existing.add((x, y))
-        while len(self.objects) < self.n_apples + self.n_bombs:
-            x = np.random.randint(-self.activity_range / 2,
-                                  self.activity_range / 2) * 2
-            y = np.random.randint(-self.activity_range / 2,
-                                  self.activity_range / 2) * 2
-            # regenerate, since it is too close to the robot's initial position
-            if x ** 2 + y ** 2 < self.robot_object_spacing ** 2:
-                continue
-            if (x, y) in existing:
-                continue
-            typ = BOMB
-            self.objects.append((x, y, typ))
-            existing.add((x, y))
+        self.dir = self.f_gen_obj()
+        self.objects = [np.concatenate([self.OBJ_DIST * self.dir, (0,)])]
 
     def _get_obs(self):
         # return sensor data along with data about itself
         self_obs = self._get_ant_obs()
-        apple_readings, bomb_readings = self._get_readings()
-        return np.concatenate([self_obs, apple_readings, bomb_readings])
-
-    def _get_readings(self):
-        # compute sensor readings
-        # first, obtain current orientation
-        apple_readings = np.zeros(self.n_bins)
-        bomb_readings = np.zeros(self.n_bins)
-        robot_x, robot_y = self.get_body_com("torso")[:2]
-        # sort objects by distance to the robot, so that farther objects'
-        # signals will be occluded by the closer ones'
-        sorted_objects = sorted(
-            self.objects, key=lambda o:
-            (o[0] - robot_x) ** 2 + (o[1] - robot_y) ** 2)[::-1]
-        # fill the readings
-        bin_res = self.sensor_span / self.n_bins
-        ori = self.model.data.qpos[self.__class__.ORI_IND]
-        for ox, oy, typ in sorted_objects:
-            # compute distance between object and robot
-            dist = ((oy - robot_y) ** 2 + (ox - robot_x) ** 2) ** 0.5
-            # only include readings for objects within range
-            if dist > self.sensor_range:
-                continue
-            angle = math.atan2(oy - robot_y, ox - robot_x) - ori
-            if math.isnan(angle):
-                import ipdb
-                ipdb.set_trace()
-            angle = angle % (2 * math.pi)
-            if angle > math.pi:
-                angle = angle - 2 * math.pi
-            if angle < -math.pi:
-                angle = angle + 2 * math.pi
-            # outside of sensor span - skip this
-            half_span = self.sensor_span * 0.5
-            if abs(angle) > half_span:
-                continue
-            # TODO: Need to know why I need to substract 1
-            bin_number = int((angle + half_span) / bin_res) - 1
-            #    ((angle + half_span) +
-            #     ori) % (2 * math.pi) / bin_res)
-            intensity = 1.0 - dist / self.sensor_range
-            if typ == APPLE:
-                apple_readings[bin_number] = intensity
-            else:
-                bomb_readings[bin_number] = intensity
-        return apple_readings, bomb_readings
+        return np.concatenate([self_obs, ])
 
     def _step(self, action):
-        _, _, done, info = self._ant_step(action)
+        obs, in_rw, done, info = self._ant_step(action)
         if done:
             return self._get_obs(), -10, done, info
         com = self.get_body_com("torso")
         x, y = com[:2]
-        reward = 0
-        new_objs = []
-        for obj in self.objects:
-            ox, oy, typ = obj
-            # object within zone!
-            if (ox - x) ** 2 + (oy - y) ** 2 < self.catch_range ** 2:
-                if typ == APPLE:
-                    reward = reward + 1
-                else:
-                    reward = reward - 1
-            else:
-                new_objs.append(obj)
-        self.objects = new_objs
-        done = len(self.objects) == 0
-        return self._get_obs(), reward, done, info
+        obj_pos = com[:2] + self.OBJ_DIST * self.dir
+        self.objects[0] = np.concatenate([obj_pos, (0,)])
+        return obs, in_rw, done, info
 
     def _ant_step(self, a):
-        xposbefore = self.get_body_com("torso")[0]
+        pos_t = self.get_body_com("torso")
         self.do_simulation(a, self.frame_skip)
-        xposafter = self.get_body_com("torso")[0]
-        forward_reward = (xposafter - xposbefore) / self.dt
+        pos_t_prime = self.get_body_com("torso")
+        fw_dist = np.dot(pos_t_prime[0:2] - pos_t[0:2], self.dir)
+        forward_reward = fw_dist / self.dt
         ctrl_cost = .5 * np.square(a).sum()
         contact_cost = 0.5 * 1e-3 * np.sum(
             np.square(np.clip(self.model.data.cfrc_ext, -1, 1)))
         survive_reward = 1.0
         reward = forward_reward - ctrl_cost - contact_cost + survive_reward
         state = self.state_vector()
+        rot_angle = self.data.xmat[1, 8]
         notdone = np.isfinite(state).all() \
-                  and state[2] >= 0.2 and state[2] <= 1.0
+                  and rot_angle > 0 and state[2] >= 0.2 and state[2] <= 1.0
         done = not notdone
-        ob = self._get_ant_obs()
+        ob = self._get_obs()
         return ob, reward, done, dict(
             reward_forward=forward_reward,
             reward_ctrl=-ctrl_cost,
@@ -528,11 +360,19 @@ class GatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             reward_survive=survive_reward)
 
     def _get_ant_obs(self):
-        return np.concatenate([
-            self.model.data.qpos.flat[2:],
-            self.model.data.qvel.flat,
-            np.clip(self.model.data.cfrc_ext, -1, 1).flat,
-        ])
+        if self.with_state_task:
+            return np.concatenate([
+                self.dir,
+                self.model.data.qpos.flat[2:],
+                self.model.data.qvel.flat,
+                np.clip(self.model.data.cfrc_ext, -1, 1).flat,
+            ])
+        else:
+            return np.concatenate([
+                self.model.data.qpos.flat[2:],
+                self.model.data.qvel.flat,
+                np.clip(self.model.data.cfrc_ext, -1, 1).flat,
+            ])
 
     def reset_model(self):
         qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq, low=-.1, high=.1)
@@ -545,7 +385,8 @@ class GatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             self.viewer = GatherViewer(self, init_height=init_height, init_width=init_height, visible=visible)
             self.viewer.start()
             self.viewer.set_model(self.model)
+            self.viewer_setup()
         return self.viewer
 
     def viewer_setup(self):
-        self.viewer.cam.distance = self.model.stat.extent * 0.5
+        self.viewer.cam.distance = self.model.stat.extent * 0.6

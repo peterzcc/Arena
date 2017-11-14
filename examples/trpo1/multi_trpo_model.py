@@ -90,7 +90,7 @@ class MultiTrpoModel(ModelWithCritic):
                                                             log_device_placement=False))
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
-        self.comb_method = aggregate_feature
+        self.comb_method = concat_feature
 
         hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
@@ -215,10 +215,12 @@ class MultiTrpoModel(ModelWithCritic):
         self.debug = True
         self.recompute_old_dist = recompute_old_dist
         self.session.run(tf.global_variables_initializer())
-        self.restore_from_pretrained_policy = False
-        if self.restore_from_pretrained_policy:
-            self.saver.restore(self.session, 'policy_parameter')
-            self.session.run(tf.assign(self.target_net.log_vars, self.net.log_vars), feed_dict={})
+        if self.mode == "SURP":
+            self.restore_from_pretrained_policy = True
+            self.update_critic = False
+            if self.restore_from_pretrained_policy:
+                self.saver.restore(self.session, 'policy_parameter')
+                self.session.run(tf.assign(self.target_net.log_vars, self.net.log_vars), feed_dict={})
 
     def get_state_activation(self, t_batch):
         # start_ratio = 1.0
@@ -239,7 +241,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         all_st_enabled = True
         st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
-        img_enabled = np.array((1.0 - all_st_enabled,))
+        img_enabled = np.array((1.0,))
         return st_enabled, img_enabled
 
     def predict(self, observation, pid=0):

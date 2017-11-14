@@ -12,11 +12,17 @@ def main():
                         help='batch size')
     parser.add_argument('--x', '-x', required=False, type=int, default=None,
                         help='x axis')
+
+    parser.add_argument('--n', '-n', required=False, type=int, default=None,
+                        help='length')
     args = parser.parse_args()
     data = pd.read_csv('train_log.csv')
     data["rs"] = data['Reward'].rolling(args.width, center=False, min_periods=0).mean()
-    x = 1.0 / args.batch * data['t'].values
-    plt.plot(x / 1000, data["rs"].values, linewidth=0.5)
+    x = (1.0 / args.batch) * data['t'].values / 1000
+    if args.n is not None:
+        plt.plot(x[:args.n], data["rs"].values[:args.n], linewidth=0.5)
+    else:
+        plt.plot(x / 1000, data["rs"].values, linewidth=0.5)
     plt.savefig('vis_train' + '.pdf', bbox_inches='tight')
     # plt.show()
     plt.clf()
