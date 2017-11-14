@@ -126,9 +126,9 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
-        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False)
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=True)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                                   append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=3)
@@ -190,7 +190,7 @@ def main():
                                batch_mode="timestep",
                                f_target_kl=const_target_kl,
                                recompute_old_dist=False,
-                               n_imgfeat=None,
+                               n_imgfeat=0,
                                mode="ADA_KL",
                                update_per_epoch=4,
                                kl_history_length=1)
