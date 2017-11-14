@@ -90,7 +90,7 @@ class MultiTrpoModel(ModelWithCritic):
                                                             log_device_placement=False))
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
-        self.comb_method = concat_feature
+        self.comb_method = aggregate_feature
 
         hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
