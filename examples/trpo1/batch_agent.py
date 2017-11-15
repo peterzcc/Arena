@@ -6,7 +6,7 @@ import numpy as np
 import logging
 from dict_memory import DictMemory
 import time
-
+import gc
 
 class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,

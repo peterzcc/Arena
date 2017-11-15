@@ -117,6 +117,7 @@ class DictMemory(object):
 
     def extract_all(self):
         self.paths = reduce(operator.add, self.dist_paths)
+        self.dist_paths = [[] for i in range(self.num_actors)]
         if self.use_gae:
             # Compute return, baseline, advantage
             for path in self.paths:
@@ -157,7 +158,6 @@ class DictMemory(object):
         self.paths = []
         self.time_count = 0
         self.num_episodes = 0
-        self.dist_paths = [[] for i in range(self.num_actors)]
         return paths
 
     def reset(self):

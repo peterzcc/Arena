@@ -17,7 +17,7 @@ from single_gather_env import SingleGatherEnv
 import sys
 import os
 
-BATH_SIZE = 2000
+BATH_SIZE = 10000
 
 
 def linear_moving_value(x1, x2, t1, t2, t):
@@ -45,7 +45,7 @@ def main():
     parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
-    parser.add_argument('--nactor', required=False, type=int, default=1,
+    parser.add_argument('--nactor', required=False, type=int, default=20,
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
@@ -118,6 +118,11 @@ def main():
     render_lock = multiprocessing.Lock()
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
+    DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
+
+    def random_direction():
+        choice = int(4 * np.random.rand())
+        return DIRECTIONS[choice, :]
     def f_create_env():
         # env = GatherEnv()
         # env = gym.make('Ant-v1')
@@ -126,7 +131,8 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
-        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=True)
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=True,
+                              f_gen_obj=random_direction)
         final_env = ComplexWrapper(env, max_episode_length=T,
                                    append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
                                    s_transform=ident,

@@ -39,8 +39,6 @@ if __name__ == '__main__':
     # want to change the amount of output.
     logger.setLevel(logging.INFO)
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-
-
     def random_direction():
         choice = int(4 * np.random.rand())
         return DIRECTIONS[choice, :]
@@ -55,7 +53,7 @@ if __name__ == '__main__':
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
     outdir = './random-agent-results'
-    # env = wrappers.Monitor(env, directory=outdir, force=True)
+    env = wrappers.Monitor(env, directory=outdir, force=True)
     # env = ComplexWrapper(env, max_episode_length=1000,
     #                            append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
     #                            visible_state_ids=range(env.observation_space.shape[0]),
@@ -70,7 +68,7 @@ if __name__ == '__main__':
         ob = env.reset()
         while True:
             action = agent.act(ob, reward, done)
-            env.render()
+            # env.render()
             ob, reward, done, _ = env.step(action)
             if done:
                 break

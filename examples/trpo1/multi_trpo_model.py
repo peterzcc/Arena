@@ -90,7 +90,7 @@ class MultiTrpoModel(ModelWithCritic):
                                                             log_device_placement=False))
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
-        self.comb_method = aggregate_feature
+        self.comb_method = concat_feature  # aggregate_feature#
 
         hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
@@ -237,7 +237,6 @@ class MultiTrpoModel(ModelWithCritic):
         # is_enabled = False
         # st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
         # img_enabled = 1.0 - is_enabled
-
 
         all_st_enabled = True
         st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
@@ -468,7 +467,6 @@ class MultiTrpoModel(ModelWithCritic):
         self.batch_size = self.f_batch_size(self.n_update)
 
     def compute_update(self, paths):
-
         # if self.separate_update:
         #     if self.n_update % 4< 2 :
         #         self.update_critic = True
