@@ -14,8 +14,8 @@ class ComplexWrapper(object):
                  max_episode_length=100000, action_reduce=False,
                  append_image=False, visible_state_ids=None,
                  s_transform=lambda x, t: x, num_frame=1):
-        args = locals()
-        logging.debug("Environment args:\n {}".format(args))
+        # args = locals()
+        # logging.debug("Environment args:\n {}".format(args))
         self.env = env
         self.action_reduce = action_reduce
         self.env = env
@@ -118,12 +118,15 @@ class ComplexWrapper(object):
         state_observation = self.env.reset()
         state_observation = self.s_transform(state_observation,self.total_steps)
         if self.append_image:
-            self.frame_buffer = self.img_space.low.copy()
+            self.frame_buffer[:] = 0
             self.x_buffer = self.num_frame - 1
             image_observation = self.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
             self.frame_buffer[:, :, self.x_buffer] = image_observation
-            return [state_observation[self.vs_id], self.frame_buffer.copy()]
+            stacked_obs = np.take(self.frame_buffer, np.arange(self.x_buffer + 1 - self.num_frame, self.x_buffer + 1),
+                                  axis=2,
+                                  mode='wrap')
+            return [state_observation[self.vs_id], stacked_obs]
         else:
             return [state_observation[self.vs_id]]
 

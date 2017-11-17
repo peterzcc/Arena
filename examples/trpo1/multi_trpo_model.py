@@ -467,22 +467,6 @@ class MultiTrpoModel(ModelWithCritic):
         self.batch_size = self.f_batch_size(self.n_update)
 
     def compute_update(self, paths):
-        # if self.separate_update:
-        #     if self.n_update % 4< 2 :
-        #         self.update_critic = True
-        #         self.update_policy = False
-        #     else:
-        #         self.update_critic = False
-        #         self.update_policy = True
-
-
-        # if self.n_update % 2 != 0 or self.n_update < 20:
-        #     self.update_critic = False
-        #     self.update_policy = False
-        #     self.critic.fit(path_dict, update_mode="img", num_pass=2)
-        # else:
-        #     self.update_critic = True
-        #     self.update_policy = True
         if self.mode == "SURP":
             if self.update_policy:
                 self.policy_lock.acquire_write()

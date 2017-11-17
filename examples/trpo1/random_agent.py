@@ -53,14 +53,14 @@ if __name__ == '__main__':
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
     outdir = './random-agent-results'
-    env = wrappers.Monitor(env, directory=outdir, force=True)
+    # env = wrappers.Monitor(env, directory=outdir, force=True)
     # env = ComplexWrapper(env, max_episode_length=1000,
     #                            append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
     #                            visible_state_ids=range(env.observation_space.shape[0]),
     #                            num_frame=3)
     agent = RandomAgent(env.action_space)
 
-    episode_count = 10
+    episode_count = 1000
     reward = 0
     done = False
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         ob = env.reset()
         while True:
             action = agent.act(ob, reward, done)
-            # env.render()
+            env.render()
             ob, reward, done, _ = env.step(action)
             if done:
                 break

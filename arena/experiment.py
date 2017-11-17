@@ -219,12 +219,12 @@ class Experiment(object):
             try:
                 rx_msg = self.episode_q.get(block=True, timeout=15 * 60)
             except queue.Empty:
-                pass
-                # logging.warning("Not received message for too long. Maybe there is something wrong")
-                # for (pid, p_actuator) in enumerate(self.actuator_processes):
-                #     logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
-                # for (pid, agent_thread) in enumerate(self.agent_threads):
-                #     logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
+                logging.warning("Not received message for too long. Maybe there is something wrong")
+                for (pid, p_actuator) in enumerate(self.actuator_processes):
+                    logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
+                for (pid, agent_thread) in enumerate(self.agent_threads):
+                    logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
+                continue
             try:
                 pid = rx_msg["id"]
                 episode_count = rx_msg["episode_count"]
@@ -237,9 +237,10 @@ class Experiment(object):
             with self.global_t.get_lock():
                 self.global_t.value += episode_count
 
-            current_time = time()
-            fps = episode_count / (current_time - start_times[pid])
-            start_times[pid] = current_time
+            # current_time = time()
+            # fps = episode_count / (current_time - start_times[pid])
+            # start_times[pid] = current_time
+            fps = 0
             if self.log_episodes:
                 with open(self.log_train_path, 'a') as log_train_file:
                     train_log = ",".join(
@@ -250,14 +251,14 @@ class Experiment(object):
                             )) + "\n"
                     log_train_file.write(train_log)
 
-            if self.global_t.value > (epoch_num+1)*epoch_length:
-                if with_testing_length > 0:
-                    self.terminate_all_actuators()
-                    self.is_learning.value = False
-                    self.run_testing_on_sub_process(with_testing_length)
-                    self.is_learning.value = True
-                    force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
-                    start_times = np.repeat(time(), num_actor)
+                    # if self.global_t.value > (epoch_num+1)*epoch_length:
+                    #     if with_testing_length > 0:
+                    #         self.terminate_all_actuators()
+                    #         self.is_learning.value = False
+                    #         self.run_testing_on_sub_process(with_testing_length)
+                    #         self.is_learning.value = True
+                    #         force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
+                    #         start_times = np.repeat(time(), num_actor)
 
                 epoch_num += 1
                 # logging.debug("exp: Epoch {} Finished.\n".format(epoch_num))

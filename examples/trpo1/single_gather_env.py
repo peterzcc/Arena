@@ -3,7 +3,8 @@ import os.path as osp
 import tempfile
 import xml.etree.ElementTree as ET
 from ctypes import byref
-
+import ctypes
+from ctypes import pointer, byref
 import numpy as np
 from custom_ant import CustomAnt
 from gym import utils
@@ -85,11 +86,11 @@ class EmbeddedViewer(object):
             self.model.ptr, self.data.ptr, byref(self.objects),
             byref(self.vopt), mjCAT_ALL, 0, None, None,
             ctypes.cast(arr, ctypes.POINTER(ctypes.c_double)))
-        mjlib.mjv_setCamera(self.model.ptr, self.data.ptr, byref(self.cam))
-        mjlib.mjv_updateCameraPose(
-            byref(self.cam), rect.width * 1.0 / rect.height)
-        mjlib.mjr_render(0, rect, byref(self.objects), byref(
-            self.ropt), byref(self.cam.pose), byref(self.con))
+        # mjlib.mjv_setCamera(self.model.ptr, self.data.ptr, byref(self.cam))
+        # mjlib.mjv_updateCameraPose(
+        #     byref(self.cam), rect.width * 1.0 / rect.height)
+        # mjlib.mjr_render(0, rect, byref(self.objects), byref(
+        #     self.ropt), byref(self.cam.pose), byref(self.con))
 
     def render_internal(self):
         if not self.data:
@@ -234,53 +235,68 @@ class GatherViewer(MjViewer):
         self.green_ball_renderer = EmbeddedViewer()
         self.green_ball_model = green_ball_model
         self.green_ball_renderer.set_model(green_ball_model)
-        red_ball_model = MjModel('red_ball.xml')
-        self.red_ball_renderer = EmbeddedViewer()
-        self.red_ball_model = red_ball_model
-        self.red_ball_renderer.set_model(red_ball_model)
+        mjextra.append_objects(
+            self.objects, self.green_ball_renderer.objects)
 
     def start(self):
         super(GatherViewer, self).start()
         self.green_ball_renderer.start(self.window)
-        self.red_ball_renderer.start(self.window)
 
     def handle_mouse_move(self, window, xpos, ypos):
         super(GatherViewer, self).handle_mouse_move(window, xpos, ypos)
         self.green_ball_renderer.handle_mouse_move(window, xpos, ypos)
-        self.red_ball_renderer.handle_mouse_move(window, xpos, ypos)
-
     def handle_scroll(self, window, x_offset, y_offset):
         super(GatherViewer, self).handle_scroll(window, x_offset, y_offset)
         self.green_ball_renderer.handle_scroll(window, x_offset, y_offset)
-        self.red_ball_renderer.handle_scroll(window, x_offset, y_offset)
 
     def render(self):
-        super(GatherViewer, self).render()
+        if not self.data:
+            return
+
+        self.gui_lock.acquire()
+        glfw.make_context_current(self.window)
+
+        obj = self.env.objects[0]
+        x, y, typ = obj
+        # print x, y
+        qpos = np.zeros_like(self.green_ball_model.data.qpos)
+        qpos[0, 0] = x
+        qpos[1, 0] = y
+        if typ == APPLE:
+            self.green_ball_model.data.qpos = qpos
+            self.green_ball_model.forward()
+            self.green_ball_renderer.render()
+
+        rect = self.get_rect()
+        arr = (ctypes.c_double * 3)(0, 0, 0)
+
+        mjlib.mjv_makeGeoms(self.model.ptr, self.data.ptr, byref(self.objects), byref(self.vopt), mjCAT_ALL, 0, None,
+                            None, ctypes.cast(arr, ctypes.POINTER(ctypes.c_double)))
+        # mjlib.mjv_makeLights(self.model.ptr, self.data.ptr, byref(self.objects))
+        #
+        # mjlib.mjv_setCamera(self.model.ptr, self.data.ptr, byref(self.cam))
+        #
+        # mjlib.mjv_updateCameraPose(byref(self.cam), rect.width*1.0/rect.height)
+        #
+        # mjlib.mjr_render(0, rect, byref(self.objects), byref(self.ropt), byref(self.cam.pose), byref(self.con))
+
+
+
         tmpobjects = mjcore.MJVOBJECTS()
         mjlib.mjv_makeObjects(byref(tmpobjects), 1000)
-        for obj in self.env.objects:
-            x, y, typ = obj
-            # print x, y
-            qpos = np.zeros_like(self.green_ball_model.data.qpos)
-            qpos[0, 0] = x
-            qpos[1, 0] = y
-            if typ == APPLE:
-                self.green_ball_model.data.qpos = qpos
-                self.green_ball_model.forward()
-                self.green_ball_renderer.render()
-                mjextra.append_objects(
-                    tmpobjects, self.green_ball_renderer.objects)
-            else:
-                self.red_ball_model.data.qpos = qpos
-                self.red_ball_model.forward()
-                self.red_ball_renderer.render()
-                mjextra.append_objects(
-                    tmpobjects, self.red_ball_renderer.objects)
+        mjextra.append_objects(
+            tmpobjects, self.green_ball_renderer.objects)
         mjextra.append_objects(tmpobjects, self.objects)
         mjlib.mjv_makeLights(
             self.model.ptr, self.data.ptr, byref(tmpobjects))
+        mjlib.mjv_setCamera(self.model.ptr, self.data.ptr, byref(self.cam))
+
+        mjlib.mjv_updateCameraPose(byref(self.cam), rect.width * 1.0 / rect.height)
         mjlib.mjr_render(0, self.get_rect(), byref(tmpobjects), byref(
             self.ropt), byref(self.cam.pose), byref(self.con))
+
+        self.gui_lock.release()
+        mjlib.mjv_freeObjects(byref(tmpobjects))
 
 
 def x_forward_obj():
