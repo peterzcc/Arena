@@ -237,10 +237,14 @@ class MultiTrpoModel(ModelWithCritic):
         # is_enabled = False
         # st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
         # img_enabled = 1.0 - is_enabled
-
-        all_st_enabled = True
-        st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
-        img_enabled = np.array((1.0 - all_st_enabled,))
+        if self.comb_method == concat_feature:
+            all_st_enabled = True
+            st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
+            img_enabled = np.array((1.0,))
+        else:
+            all_st_enabled = True
+            st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
+            img_enabled = np.array((1.0 - all_st_enabled,))
         return st_enabled, img_enabled
 
     def predict(self, observation, pid=0):
