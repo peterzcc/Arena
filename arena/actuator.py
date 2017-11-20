@@ -8,8 +8,8 @@ import logging
 
 class Actuator(object):
     def __init__(self, func_get_env, stats_tx, acts_rx,
-                 cmd_signal: mp.Queue, episode_data_q: mp.Queue,
-                                                       global_t, act_id = 0, render_option = RenderOption.off):
+                 cmd_signal, episode_data_q,
+                 global_t, act_id=0, render_option=RenderOption.off):
         self.env = func_get_env()
         self.stats_tx = stats_tx
         self.acts_rx = acts_rx

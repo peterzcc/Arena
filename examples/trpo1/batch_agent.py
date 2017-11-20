@@ -7,6 +7,7 @@ import logging
 from dict_memory import DictMemory
 import time
 import gc
+from ram_util import resident
 
 class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,
@@ -122,11 +123,13 @@ class BatchUpdateAgent(Agent):
                 train_after = time.time()
                 train_time = (train_after - train_before) / extracted_result["time_count"]
                 fps = 1.0 / train_time
+                res_ram = resident() / (1024 * 1024)
                 logging.info(
-                    '\nfps:%f\ntt:%f\n' \
+                    '\nfps:%f\ntt:%f\nram:%f\n' \
                     % (
-                       fps,
-                       train_time,
+                        fps,
+                        train_time,
+                        res_ram
                        ))
             if is_episode_clipped:
                 self.model.batch_barrier.wait()

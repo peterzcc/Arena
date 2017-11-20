@@ -73,6 +73,12 @@ class Experiment(object):
 
         # 1. Store variables
         env = f_create_env()
+        if single_process_mode:
+            self.process_type = thd.Thread
+            self.queue_type = queue.Queue
+        else:
+            self.process_type = mp.Process
+            self.queue_type = mp.Queue
         self.observation_space = env.observation_space
         self.action_space = env.action_space
         self.info_sample = {}
@@ -90,7 +96,7 @@ class Experiment(object):
         self.actuator_processes = []
         self.actuator_channels = []
         self.agent_threads = []
-        self.episode_q = mp.Queue(maxsize=1000)
+        self.episode_q = self.queue_type(maxsize=1000)
         self.num_actor = None
         self.render_option = render_option
         self.log_episodes = log_episodes
@@ -104,10 +110,7 @@ class Experiment(object):
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
         self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
 
-        if single_process_mode:
-            self.process_type = thd.Thread
-        else:
-            self.process_type = mp.Process
+
 
     def terminate_all_actuators(self):
         force_map(lambda x: x.put(ProcessState.stop), self.actuator_channels)
@@ -127,7 +130,7 @@ class Experiment(object):
 
     def create_actor_learner_processes(self, num_actor):
         def actuator_thread(func_get_env, stats_tx, acts_rx,
-                            cmd_signal: mp.Queue, episode_data_q: mp.Queue,
+                            cmd_signal, episode_data_q,
                             global_t, act_id=0):
             this_actuator = Actuator(func_get_env, stats_tx, acts_rx,
                                      cmd_signal, episode_data_q,
@@ -148,7 +151,7 @@ class Experiment(object):
         action_sample = space_to_np(self.action_space)
 
         for process_id in range(num_actor):
-            self.actuator_channels.append(mp.Queue())
+            self.actuator_channels.append(self.queue_type())
             obs_pipe = obs_type({"observation": observation_sample})
             action_pipe = FastPipe({"action": action_sample})
             feedback_sample = {"reward": 0.0, "done": False}
