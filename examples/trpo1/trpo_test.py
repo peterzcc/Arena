@@ -49,7 +49,7 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=7e7,
+    parser.add_argument('--num-steps', required=False, type=int, default=15e7,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     args = parser.parse_args()

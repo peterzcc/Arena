@@ -254,19 +254,19 @@ class Experiment(object):
                             )) + "\n"
                     log_train_file.write(train_log)
 
-                    # if self.global_t.value > (epoch_num+1)*epoch_length:
-                    #     if with_testing_length > 0:
-                    #         self.terminate_all_actuators()
-                    #         self.is_learning.value = False
-                    #         self.run_testing_on_sub_process(with_testing_length)
-                    #         self.is_learning.value = True
-                    #         force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
-                    #         start_times = np.repeat(time(), num_actor)
-
-                epoch_num += 1
+                    if self.global_t.value > (epoch_num + 1) * epoch_length:
+                        if with_testing_length > 0:
+                            logging.error("testing not implemented")
+                            # self.terminate_all_actuators()
+                            # self.is_learning.value = False
+                            # self.run_testing_on_sub_process(with_testing_length)
+                            # self.is_learning.value = True
+                            # force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
+                        epoch_num += 1
                 # logging.debug("exp: Epoch {} Finished.\n".format(epoch_num))
                 if self.render_option == "once_per_epoch":
                     self.actuator_channels[0].put(RenderOption.one_episode)
+        logging.info("training finished")
 
     def run_testing_on_sub_process(self, test_length, process_id=0):
         if not os.path.exists(self.log_test_path):
