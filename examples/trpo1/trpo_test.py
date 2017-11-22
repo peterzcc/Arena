@@ -132,10 +132,12 @@ def main():
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
         # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
-        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=True,
+        append_image = True
+        with_state_task = not append_image
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                               f_gen_obj=random_direction)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=True, new_img_size=(64, 64), rgb_to_gray=True,
+                                   append_image=append_image, new_img_size=(64, 64), rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=1)
