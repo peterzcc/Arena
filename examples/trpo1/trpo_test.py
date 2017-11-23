@@ -16,7 +16,7 @@ from custom_pend import CustomPend
 from single_gather_env import SingleGatherEnv
 import sys
 import os
-
+from tf_utils import aggregate_feature
 BATH_SIZE = 10000
 
 
@@ -137,10 +137,10 @@ def main():
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                               f_gen_obj=random_direction)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=append_image, new_img_size=(64, 64), rgb_to_gray=True,
+                                   append_image=append_image, rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
-                                   num_frame=1)
+                                   num_frame=3)
         return final_env
         # env = CustomPend()
         # return ComplexWrapper(env, max_episode_length=T,
@@ -202,7 +202,8 @@ def main():
                                n_imgfeat=None,
                                mode="ADA_KL",
                                update_per_epoch=4,
-                               kl_history_length=1)
+                               kl_history_length=1,
+                               comb_method=aggregate_feature)
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,

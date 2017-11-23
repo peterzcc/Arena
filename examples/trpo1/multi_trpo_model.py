@@ -39,7 +39,8 @@ class MultiTrpoModel(ModelWithCritic):
                  batch_mode="episode",
                  recompute_old_dist=False,
                  update_per_epoch=4,
-                 kl_history_length=1):
+                 kl_history_length=1,
+                 comb_method=aggregate_feature):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -90,7 +91,7 @@ class MultiTrpoModel(ModelWithCritic):
                                                             log_device_placement=False))
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
-        self.comb_method = concat_feature  # aggregate_feature#
+        self.comb_method = comb_method  # aggregate_feature#
 
         hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
@@ -144,7 +145,7 @@ class MultiTrpoModel(ModelWithCritic):
                                     n_imgfeat=self.n_imgfeat,
                                     extra_feaatures=[],
                                     # [],  #[np.zeros((4,), dtype=np.float32)],  #
-                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  # (((3, 3), 2, 2),),  #
+                                    conv_sizes=(((4, 4), 32, 2), ((3, 3), 32, 1)),  # (((3, 3), 2, 2),),  #
                                     comb_method=self.comb_method,
                                     min_std=min_std,
                                     distibution=self.distribution,
@@ -242,7 +243,7 @@ class MultiTrpoModel(ModelWithCritic):
             st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
             img_enabled = np.array((1.0,))
         else:
-            all_st_enabled = True
+            all_st_enabled = False
             st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
             img_enabled = np.array((1.0 - all_st_enabled,))
         return st_enabled, img_enabled
