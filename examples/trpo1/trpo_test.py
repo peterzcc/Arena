@@ -16,7 +16,7 @@ from custom_pend import CustomPend
 from single_gather_env import SingleGatherEnv
 import sys
 import os
-from tf_utils import aggregate_feature
+from tf_utils import aggregate_feature, concat_feature
 BATH_SIZE = 10000
 
 
@@ -120,6 +120,8 @@ def main():
     cwd = os.getcwd()
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
 
+    def x_forward_obj():
+        return np.array((1, 0))
     def random_direction():
         choice = int(4 * np.random.rand())
         return DIRECTIONS[choice, :]
@@ -140,7 +142,7 @@ def main():
                                    append_image=append_image, rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
-                                   num_frame=3)
+                                   num_frame=1)
         return final_env
         # env = CustomPend()
         # return ComplexWrapper(env, max_episode_length=T,
@@ -169,7 +171,7 @@ def main():
         return args.batch_size
 
     def const_target_kl(n_update):
-        return 0.003 * args.batch_size / 10000
+        return 0.003 * args.batch_size / 20000
 
     start_t = 0
     end_t = args.num_steps / 10000
@@ -199,11 +201,11 @@ def main():
                                batch_mode="timestep",
                                f_target_kl=const_target_kl,
                                recompute_old_dist=False,
-                               n_imgfeat=None,
+                               n_imgfeat=2,
                                mode="ADA_KL",
                                update_per_epoch=4,
                                kl_history_length=1,
-                               comb_method=aggregate_feature)
+                               comb_method=concat_feature)
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,
