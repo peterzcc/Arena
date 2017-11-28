@@ -406,3 +406,19 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def viewer_setup(self):
         self.viewer.cam.distance = self.model.stat.extent * 0.6
+
+
+class SimpleSingleGatherEnv(SingleGatherEnv):
+    slc_dict = [((0, 32), (0, 32)),
+                ((32, 64), (0, 32)),
+                ((0, 32), (32, 64)),
+                ((32, 64), (32, 64)), ]
+    cord_to_id = {1: {0: 0}, 0: {1: 1, -1: 3}, -1: {0: 2}}
+
+    def render(self, mode='human', close=False):
+        assert mode == "rgb_array" or close == True
+        blank = np.zeros((64, 64, 1), dtype='uint8')
+        task_id = self.cord_to_id[self.dir[0]][self.dir[1]]
+        slc = self.slc_dict[task_id]
+        blank[slc[0][0]:slc[0][1], slc[1][0]:slc[1][1], :] = 255
+        return blank

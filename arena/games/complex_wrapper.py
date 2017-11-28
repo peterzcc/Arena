@@ -41,27 +41,25 @@ class ComplexWrapper(object):
             logging.info("original size: {}".format(image_shape))
             img_min = 0
             img_max = 255
-            if rgb_to_gray or new_img_size is not None:
-                assert len(image_shape) == 3
-                assert image_shape[2] == 3
-                if rgb_to_gray:
-                    num_channel = 1 * num_frame
-                else:
-                    num_channel = 3
-                if new_img_size is None:
-                    image_size = image_shape[0:2]
-                else:
-                    image_size = new_img_size
-                if rgb_to_gray:
-                    self.img_space = Box(low=img_min,
-                                         high=img_max,
-                                         shape=image_size + (num_channel,)
-                                         )
-                else:
-                    self.img_space = Box(low=img_min,
-                                         high=img_max,
-                                         shape=image_size + (num_channel,)
-                                         )
+            assert len(image_shape) == 3
+            if rgb_to_gray:
+                num_channel = 1 * num_frame
+            else:
+                num_channel = sample_image.shape[2]
+            if new_img_size is None:
+                image_size = image_shape[0:2]
+            else:
+                image_size = new_img_size
+            if rgb_to_gray:
+                self.img_space = Box(low=img_min,
+                                     high=img_max,
+                                     shape=image_size + (num_channel,)
+                                     )
+            else:
+                self.img_space = Box(low=img_min,
+                                     high=img_max,
+                                     shape=image_size + (num_channel,)
+                                     )
             self.observation_space += [self.img_space]
             self.rgb_to_gray = rgb_to_gray
             self.new_img_size = new_img_size
@@ -97,6 +95,8 @@ class ComplexWrapper(object):
                                interpolation=cv2.INTER_LINEAR)
         if self.rgb_to_gray:
             final = cv2.cvtColor(final, cv2.COLOR_RGB2GRAY)
+        if final.shape[2] == 1:
+            final = np.squeeze(final)
         return final
 
     def env_step(self, a):

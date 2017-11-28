@@ -13,7 +13,7 @@ from custom_ant import CustomAnt
 from gather_env import GatherEnv
 from maze_env import MazeEnv
 from custom_pend import CustomPend
-from single_gather_env import SingleGatherEnv
+from single_gather_env import SingleGatherEnv, SimpleSingleGatherEnv
 import sys
 import os
 from tf_utils import aggregate_feature, concat_feature
@@ -123,7 +123,11 @@ def main():
     def x_forward_obj():
         return np.array((1, 0))
     def random_direction():
-        choice = int(4 * np.random.rand())
+        choice = np.random.randint(0, 4)
+        return DIRECTIONS[choice, :]
+
+    def forward_backward():
+        choice = 2 * np.random.randint(0, 2)
         return DIRECTIONS[choice, :]
     def f_create_env():
         # env = GatherEnv()
@@ -136,10 +140,12 @@ def main():
         # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
         append_image = True
         with_state_task = not append_image
-        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                              f_gen_obj=random_direction)
+        # env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+        #                       f_gen_obj=random_direction)
+        env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                    f_gen_obj=forward_backward)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=append_image, rgb_to_gray=True,
+                                   append_image=append_image, rgb_to_gray=False,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=1)
@@ -209,7 +215,7 @@ def main():
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=True, render_option="false",
+                            f_create_shared_params, single_process_mode=False, render_option="false",
                             log_episodes=True)
 
     if should_profile:

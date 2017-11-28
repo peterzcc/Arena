@@ -145,7 +145,7 @@ class MultiTrpoModel(ModelWithCritic):
                                     n_imgfeat=self.n_imgfeat,
                                     extra_feaatures=[],
                                     # [],  #[np.zeros((4,), dtype=np.float32)],  #
-                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 8, 1)),  # (((3, 3), 2, 2),),  #
+                                    conv_sizes=(((4, 4), 8, 2), ((3, 3), 4, 1)),  # (((3, 3), 2, 2),),  #
                                     comb_method=self.comb_method,
                                     min_std=min_std,
                                     distibution=self.distribution,
