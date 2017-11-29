@@ -67,12 +67,15 @@ if __name__ == '__main__':
     episode_count = 1000
     reward = 0
     done = False
-
+    import cv2
     for i in range(episode_count):
         ob = env.reset()
         while True:
             action = agent.act(ob, reward, done)
-            env.render()
+            image = env.render(mode='rgb_array')
+            cv2.imwrite("image.jpg", image)
+
+            input("Press Enter to continue...")
             ob, reward, done, _ = env.step(action)
             if done:
                 break
