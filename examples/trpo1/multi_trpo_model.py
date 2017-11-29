@@ -101,7 +101,7 @@ class MultiTrpoModel(ModelWithCritic):
                                     timestep_limit=timestep_limit,
                                     activation=tf.tanh,
                                     n_imgfeat=self.n_imgfeat, hidden_sizes=hidden_sizes,
-                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 8, 1)),
+                                    conv_sizes=(((4, 4), 8, 2), ((3, 3), 4, 1)),
                                     comb_method=self.comb_method)
 
         # conv_sizes=(((3, 3), 32, 1), ((3, 3), 64, 1)))

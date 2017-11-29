@@ -95,7 +95,7 @@ class ComplexWrapper(object):
                                interpolation=cv2.INTER_LINEAR)
         if self.rgb_to_gray:
             final = cv2.cvtColor(final, cv2.COLOR_RGB2GRAY)
-        if final.shape[2] == 1:
+        if len(final.shape) == 3 and final.shape[2] == 1:
             final = np.squeeze(final)
         return final
 

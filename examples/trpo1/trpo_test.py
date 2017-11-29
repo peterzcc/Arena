@@ -126,6 +126,12 @@ def main():
         choice = np.random.randint(0, 4)
         return DIRECTIONS[choice, :]
 
+    ANGLES3 = [0, np.pi / 4, - np.pi / 4]
+    DIRECTIONS3 = np.array([(np.cos(a), np.sin(a)) for a in ANGLES3])
+
+    def random_3direction():
+        choice = np.random.randint(0, 3)
+        return DIRECTIONS3[choice, :]
     def forward_backward():
         choice = 2 * np.random.randint(0, 2)
         return DIRECTIONS[choice, :]
@@ -140,12 +146,12 @@ def main():
         # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
         append_image = True
         with_state_task = not append_image
-        # env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-        #                       f_gen_obj=random_direction)
-        env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                                    f_gen_obj=forward_backward)
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                              f_gen_obj=random_3direction)
+        # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+        #                             f_gen_obj=forward_backward)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=append_image, rgb_to_gray=False,
+                                   append_image=append_image, rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=1)
@@ -215,7 +221,7 @@ def main():
         return {"global_model": model}
 
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=False, render_option="false",
+                            f_create_shared_params, single_process_mode=True, render_option="false",
                             log_episodes=True)
 
     if should_profile:

@@ -38,9 +38,13 @@ if __name__ == '__main__':
     # You can set the level to logging.DEBUG or logging.WARN if you
     # want to change the amount of output.
     logger.setLevel(logging.INFO)
-    DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-    def random_direction():
-        choice = int(4 * np.random.rand())
+    # DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
+    ANGLES = [0, np.pi / 4, - np.pi / 4]
+    DIRECTIONS = np.array([(np.cos(a), np.sin(a)) for a in ANGLES])
+
+
+    def random_3direction():
+        choice = np.random.randint(0, 3)
         return DIRECTIONS[choice, :]
 
 
