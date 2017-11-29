@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     cwd = os.getcwd()
     env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml",
-                          f_gen_obj=random_direction)
+                          f_gen_obj=random_3direction)
 
     # You provide the directory to write to (can be an existing
     # directory, including one with existing data -- all monitor files
