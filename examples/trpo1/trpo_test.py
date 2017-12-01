@@ -151,7 +151,7 @@ def main():
         if render_lock is not None:
             render_lock.acquire()
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                              f_gen_obj=random_3direction)
+                              f_gen_obj=random_direction)
         if render_lock is not None:
             render_lock.release()
         # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
