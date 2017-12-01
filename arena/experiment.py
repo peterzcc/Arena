@@ -71,6 +71,11 @@ class Experiment(object):
         root.addHandler(fh)
         root.addHandler(ch)
 
+        if single_process_mode == False:
+            self.render_lock = mp.Lock()
+        else:
+            self.render_lock = None
+
         # 1. Store variables
         env = f_create_env()
         if single_process_mode:
@@ -134,7 +139,8 @@ class Experiment(object):
                             global_t, act_id=0):
             this_actuator = Actuator(func_get_env, stats_tx, acts_rx,
                                      cmd_signal, episode_data_q,
-                                     global_t, act_id)
+                                     global_t, act_id,
+                                     render_lock=self.render_lock)
             this_actuator.run_loop()
 
         agents = []

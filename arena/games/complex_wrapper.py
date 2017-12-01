@@ -13,7 +13,8 @@ class ComplexWrapper(object):
     def __init__(self, env: gym.Env, rgb_to_gray=False, new_img_size=None,
                  max_episode_length=100000, action_reduce=False,
                  append_image=False, visible_state_ids=None,
-                 s_transform=lambda x, t: x, num_frame=1):
+                 s_transform=lambda x, t: x, num_frame=1,
+                 render_lock=None):
         # args = locals()
         # logging.debug("Environment args:\n {}".format(args))
         self.env = env
@@ -35,6 +36,7 @@ class ComplexWrapper(object):
         self.append_image = append_image
         self.s_transform = s_transform
         self.num_frame = num_frame
+        self.render_lock = render_lock
         if append_image:
             sample_image = self.render(mode="rgb_array")
             image_shape = sample_image.shape
@@ -83,9 +85,11 @@ class ComplexWrapper(object):
         self.total_steps = 0
 
     def render(self, mode='human', close=False):
-        # self.render_lock.acquire()
+        if self.render_lock is not None:
+            self.render_lock.acquire()
         result = self.env.render(mode=mode, close=close)
-        # self.render_lock.release()
+        if self.render_lock is not None:
+            self.render_lock.release()
         return result
 
     def preprocess_observation(self, obs):
