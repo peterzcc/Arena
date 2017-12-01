@@ -119,6 +119,7 @@ def main():
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
+    append_image = False
 
     def x_forward_obj():
         return np.array((1, 0))
@@ -146,7 +147,6 @@ def main():
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
         # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
-        append_image = True
         with_state_task = not append_image
         if render_lock is not None:
             render_lock.acquire()
@@ -214,6 +214,8 @@ def main():
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
         sample_env.env.close()
+        n_imgfeat = 2 if append_image else 0
+        comb_methd = concat_feature if append_image else aggregate_feature
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,
                                num_actors=num_actors,
@@ -221,15 +223,16 @@ def main():
                                batch_mode="timestep",
                                f_target_kl=const_target_kl,
                                recompute_old_dist=False,
-                               n_imgfeat=2,
+                               n_imgfeat=n_imgfeat,
                                mode="ADA_KL",
                                update_per_epoch=4,
                                kl_history_length=1,
-                               comb_method=concat_feature)
+                               comb_method=comb_methd)
         return {"global_model": model}
 
+    single_process_mode = True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=True, render_option="false",
+                            f_create_shared_params, single_process_mode=single_process_mode, render_option="false",
                             log_episodes=True)
 
     if should_profile:

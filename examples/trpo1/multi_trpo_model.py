@@ -244,7 +244,7 @@ class MultiTrpoModel(ModelWithCritic):
             st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
             img_enabled = np.array((1.0,))
         else:
-            all_st_enabled = False
+            all_st_enabled = True
             st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
             img_enabled = np.array((1.0 - all_st_enabled,))
         return st_enabled, img_enabled
