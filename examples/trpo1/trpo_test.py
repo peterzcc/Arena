@@ -119,7 +119,7 @@ def main():
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-    append_image = False
+    append_image = True
 
     def x_forward_obj():
         return np.array((1, 0))

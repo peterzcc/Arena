@@ -165,7 +165,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
         self.a_eta_value = 50
-        self.a_ent_k = 0.0001
+        self.a_ent_k = -0.00001
         self.a_rl_loss = -tf.reduce_mean(self.net.raw_surr)
         self.a_kl_loss = self.a_beta * self.net.kl + \
                          self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl_sym))
