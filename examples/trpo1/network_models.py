@@ -55,15 +55,11 @@ class MultiNetwork(object):
                     for conv_size in conv_sizes:
                         img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
                                             stride=conv_size[2],
-                                            weights=variance_scaling_initializer(factor=0.1,
-                                                                                 mode='FAN_AVG',
-                                                                                 uniform=True)
+                                            weights=tf.orthogonal_initializer()
                                             )
                     img_features.flatten()
                     img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                                                 weights=variance_scaling_initializer(factor=0.1,
-                                                                                      mode='FAN_AVG',
-                                                                                      uniform=True)
+                                                 weights=tf.orthogonal_initializer()
                                                  )
                     self.image_features = img_features.as_layer()
                     self.full_feature = self.comb_method(self.st_enabled * self.state_input,
@@ -79,25 +75,17 @@ class MultiNetwork(object):
 
             self.action_dist_means_n = (pt.wrap(self.full_feature).
                                         fully_connected(hid1_size, activation_fn=tf.tanh,
-                                                        weights=variance_scaling_initializer(factor=0.1,
-                                                                                             mode='FAN_AVG',
-                                                                                             uniform=True),
+                                                        weights=tf.orthogonal_initializer(),
                                                         name="%s_fc1" % scope).
                                         fully_connected(hid2_size, activation_fn=tf.tanh,
-                                                        weights=variance_scaling_initializer(factor=0.1,
-                                                                                             mode='FAN_AVG',
-                                                                                             uniform=True),
+                                                        weights=tf.orthogonal_initializer(),
                                                         name="%s_fc1" % scope).
                                         fully_connected(hid3_size, activation_fn=tf.tanh,
-                                                        weights=variance_scaling_initializer(factor=0.1,
-                                                                                             mode='FAN_AVG',
-                                                                                             uniform=True),
+                                                        weights=tf.orthogonal_initializer(gain=0.1),
                                                         name="%s_fc2" % scope).
                                         fully_connected(np.prod(action_shape),
                                                         activation_fn=None,
-                                                        weights=variance_scaling_initializer(factor=0.1,
-                                                                                             mode='FAN_AVG',
-                                                                                             uniform=True),
+                                                        weights=tf.orthogonal_initializer(gain=0.1),
                                                         name="%s_fc3" % scope))
             logvar_speed = (10 * hid3_size) // 48
             log_vars = self.log_vars = tf.get_variable("%s_logvars" % scope, (logvar_speed, action_shape[0]),

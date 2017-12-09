@@ -46,20 +46,14 @@ class MultiBaseline(object):
                 for conv_size in conv_sizes:
                     img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
                                         stride=conv_size[2],
-                                        weights=variance_scaling_initializer(factor=1.0,
-                                                                             mode='FAN_AVG',
-                                                                             uniform=True)
+                                        weights=tf.orthogonal_initializer()
                                         )
                 img_features.flatten()
                 img_features.fully_connected(16, activation_fn=lrelu,
-                                             weights=variance_scaling_initializer(factor=1.0,
-                                                                                  mode='FAN_AVG',
-                                                                                  uniform=True)
+                                             weights=tf.orthogonal_initializer()
                                              )
                 img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                                             weights=variance_scaling_initializer(factor=1.0,
-                                                                                  mode='FAN_AVG',
-                                                                                  uniform=True)
+                                             weights=tf.orthogonal_initializer()
                                              )
 
                 # img_features.flatten()
@@ -84,9 +78,7 @@ class MultiBaseline(object):
             hidden_units = pt.wrap(self.full_feature).sequential()
             for hidden_size in hidden_sizes:
                 hidden_units.fully_connected(hidden_size, activation_fn=activation,
-                                             weights=variance_scaling_initializer(factor=1.0,
-                                                                                  mode='FAN_AVG',
-                                                                                  uniform=True)
+                                             weights=tf.orthogonal_initializer()
                                              )
 
             self.net = tf.reshape(hidden_units.fully_connected(1).as_layer(), (-1,))  # why reshape?

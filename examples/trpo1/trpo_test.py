@@ -191,7 +191,7 @@ def main():
         return args.batch_size
 
     def const_target_kl(n_update):
-        return 0.003 * args.batch_size / 20000
+        return 0.001 * args.batch_size / 20000
 
     start_t = 0
     end_t = args.num_steps / 10000
@@ -228,7 +228,7 @@ def main():
                                update_per_epoch=4,
                                kl_history_length=1,
                                comb_method=comb_methd,
-                               ent_k=-1.0)
+                               ent_k=0)
         return {"global_model": model}
 
     single_process_mode = True if append_image else False
