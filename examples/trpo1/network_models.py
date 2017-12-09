@@ -12,7 +12,6 @@ dtype = tf.float32
 
 
 
-
 class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_shape,
                  conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
