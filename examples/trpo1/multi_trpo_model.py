@@ -40,6 +40,7 @@ class MultiTrpoModel(ModelWithCritic):
                  recompute_old_dist=False,
                  update_per_epoch=4,
                  kl_history_length=1,
+                 ent_k=-0.00001,
                  comb_method=aggregate_feature):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -165,11 +166,12 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
         self.a_eta_value = 50
-        self.a_ent_k = -0.00001
+        self.a_ent_k = ent_k
         self.a_rl_loss = -tf.reduce_mean(self.net.raw_surr)
+        self.a_ent_loss = 0 if self.a_ent_k == 0 else self.a_ent_k * self.net.ent
         self.a_kl_loss = self.a_beta * self.net.kl + \
                          self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl_sym))
-        self.a_surr = self.a_rl_loss + self.a_kl_loss + self.a_ent_k * self.net.ent
+        self.a_surr = self.a_rl_loss + self.a_kl_loss + self.a_ent_loss
         self.a_step_size = 0.0001
         self.a_max_step_size = 0.1
         self.a_min_step_size = 1e-7
