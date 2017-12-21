@@ -6,7 +6,7 @@ import numpy as np
 import prettytensor as pt
 import logging
 from tf_utils import LbfgsOptimizer, run_batched, aggregate_feature, lrelu
-
+from cnn import cnn_network
 concat = np.concatenate
 
 
@@ -41,17 +41,17 @@ class MultiBaseline(object):
             with tf.variable_scope(scope):
                 self.img_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[1].shape, name="img")
             with tf.variable_scope(img_scope):
-                expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
-                img_features = pt.wrap(expanded_img).sequential()
-                for conv_size in conv_sizes:
-                    img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
-                                        stride=conv_size[2],
-                                        weights=tf.orthogonal_initializer()
-                                        )
+                # expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
+                # img_features = pt.wrap(expanded_img).sequential()
+                # for conv_size in conv_sizes:
+                #     img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
+                #                         stride=conv_size[2],
+                #                         weights=tf.orthogonal_initializer()
+                #                         )
+                img_feature_tensor, cnn_weights = cnn_network(self.img_input, conv_sizes)
+                self.cnn_weights = cnn_weights
+                img_features = pt.wrap(img_feature_tensor[-1]).sequential()
                 img_features.flatten()
-                img_features.fully_connected(16, activation_fn=lrelu,
-                                             weights=tf.orthogonal_initializer()
-                                             )
                 img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
                                              weights=tf.orthogonal_initializer()
                                              )

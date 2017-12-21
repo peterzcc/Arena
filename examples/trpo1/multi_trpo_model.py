@@ -13,6 +13,7 @@ import threading as thd
 import logging
 from dict_memory import DictMemory
 from read_write_lock import ReadWriteLock
+from cnn import ConvAutoencorder
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -40,7 +41,7 @@ class MultiTrpoModel(ModelWithCritic):
                  recompute_old_dist=False,
                  update_per_epoch=4,
                  kl_history_length=1,
-                 ent_k=-0.00001,
+                 ent_k=0,
                  comb_method=aggregate_feature):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -93,6 +94,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
         self.comb_method = comb_method  # aggregate_feature#
+        conv_sizes = (((3, 3), 32, 2), ((3, 3), 32, 2))
 
         hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
@@ -102,7 +104,7 @@ class MultiTrpoModel(ModelWithCritic):
                                     timestep_limit=timestep_limit,
                                     activation=tf.tanh,
                                     n_imgfeat=self.n_imgfeat, hidden_sizes=hidden_sizes,
-                                    conv_sizes=(((3, 3), 16, 2),),
+                                    conv_sizes=conv_sizes,
                                     comb_method=self.comb_method)
 
         # conv_sizes=(((3, 3), 32, 1), ((3, 3), 64, 1)))
@@ -146,7 +148,7 @@ class MultiTrpoModel(ModelWithCritic):
                                     n_imgfeat=self.n_imgfeat,
                                     extra_feaatures=[],
                                     # [],  #[np.zeros((4,), dtype=np.float32)],  #
-                                    conv_sizes=(((3, 3), 16, 2),),  # (((3, 3), 2, 2),),  #
+                                    conv_sizes=conv_sizes,  # (((3, 3), 2, 2),),  #
                                     comb_method=self.comb_method,
                                     min_std=min_std,
                                     distibution=self.distribution,
@@ -196,6 +198,8 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta_min = 1.0 / 35.0
         self.update_per_epoch = update_per_epoch
 
+        self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
+                                                conv_sizes=conv_sizes)
 
         self.saved_paths = []
 
@@ -227,20 +231,7 @@ class MultiTrpoModel(ModelWithCritic):
                 self.session.run(tf.assign(self.target_net.log_vars, self.net.log_vars), feed_dict={})
 
     def get_state_activation(self, t_batch):
-        # start_ratio = 1.0
-        # end_ratio = 0.0
-        # start_n_batch = 90
-        # final_n_batch = 140
-        # noise_k = 0.0 if t_batch < start_n_batch else \
-        #     ((t_batch-start_n_batch)/(final_n_batch-start_n_batch) if t_batch < final_n_batch else 1.0)
-        # ratio = noise_k * end_ratio + (1 - noise_k)*start_ratio
-        # is_enabled = (np.random.random_sample(size=None) < ratio)
 
-        # is_enabled = t_batch < self.n_pretrain
-        #
-        # is_enabled = False
-        # st_enabled = np.array([1.0, 1.0, 1.0, 1.0]) if is_enabled else np.array([0.0, 0.0, 0.0, 0.0])
-        # img_enabled = 1.0 - is_enabled
         if self.comb_method == concat_feature:
             all_st_enabled = True
             st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
