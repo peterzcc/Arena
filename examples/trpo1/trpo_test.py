@@ -232,7 +232,8 @@ def main():
                                update_per_epoch=4,
                                kl_history_length=1,
                                comb_method=comb_methd,
-                               ent_k=0)
+                               ent_k=0,
+                               n_ae_train=1)
         return {"global_model": model}
 
     single_process_mode = True if append_image else False

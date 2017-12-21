@@ -42,7 +42,8 @@ class MultiTrpoModel(ModelWithCritic):
                  update_per_epoch=4,
                  kl_history_length=1,
                  ent_k=0,
-                 comb_method=aggregate_feature):
+                 comb_method=aggregate_feature,
+                 n_ae_train=1):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
@@ -198,9 +199,18 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta_min = 1.0 / 35.0
         self.update_per_epoch = update_per_epoch
 
+
         self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
                                                 conv_sizes=conv_sizes)
-
+        self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
+        self.ae_train_op = self.ae_opt.minimize(self.autoencoder_net.reg_loss)
+        self.cnn_sync_op = []
+        self.cnn_sync_op += [tf.assign(self.net.cnn_weights[i],
+                                       self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+        self.cnn_sync_op += [tf.assign(self.critic.cnn_weights[i],
+                                       self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+        self.n_ae_train = n_ae_train
+        self.cnn_saver = tf.train.Saver(var_list=self.autoencoder_net.total_var_list)
         self.saved_paths = []
 
         # self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
@@ -474,6 +484,41 @@ class MultiTrpoModel(ModelWithCritic):
             return None, None
         feed, path_dict, hist_feed = self.concat_paths(paths)
 
+        advant_n = feed[self.net.advant]
+        state_input = feed[self.net.state_input]
+        action_dist_logstds_n = feed[self.net.old_dist_logstds_n]
+        batch_size = advant_n.shape[0]
+
+        if self.n_update < self.n_ae_train:
+            ae_feed = {self.net.img_input: feed[self.net.img_input]}
+            ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
+                                  feed=ae_feed, N=batch_size,
+                                  minibatch_size=self.minibatch_size)
+            logging.debug("\nae loss before: {}".format(ae_loss))
+            for n_pass in range(2):
+                training_inds = np.random.permutation(batch_size)
+                for start in range(0, batch_size, self.minibatch_size):  # TODO: verify this
+                    if start > batch_size - 2 * self.minibatch_size:
+                        end = batch_size
+                    else:
+                        end = start + self.minibatch_size
+                    slc = training_inds[range(start, end)]
+                    this_feed = {k: v[slc] for (k, v) in list(ae_feed.items())}
+                    self.session.run(self.ae_train_op, feed_dict=this_feed)
+                    if end == batch_size:
+                        break
+            ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
+                                  feed=ae_feed, N=batch_size,
+                                  minibatch_size=self.minibatch_size)
+            logging.debug("\nae loss after: {}".format(ae_loss))
+
+            self.increment_n_update()
+            return None, None
+        elif self.n_update == self.n_ae_train:
+            self.cnn_saver.save(self.session, "cnn_model")
+            self.cnn_saver.restore(self.session, "cnn_model")
+            self.session.run(self.cnn_sync_op)
+
         if self.n_update < self.n_pretrain:
             pass
             # self.saved_paths = [*self.saved_paths, *paths]
@@ -504,10 +549,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.critic_lock.release_write()
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
-        advant_n = feed[self.net.advant]
-        state_input = feed[self.net.state_input]
-        action_dist_logstds_n = feed[self.net.old_dist_logstds_n]
-        batch_size = advant_n.shape[0]
+
 
         if self.debug:
             # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
