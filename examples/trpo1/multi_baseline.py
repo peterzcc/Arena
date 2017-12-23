@@ -104,11 +104,11 @@ class MultiBaseline(object):
                 self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
                                                var_list=self.var_list)
                 # self.train = None
-                # self.upper_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
-                # self.upper_opt = tf.train.AdagradOptimizer(learning_rate=0.0005,initial_accumulator_value=0.1)
-                # self.upper_train = self.upper_opt.minimize(self.final_loss,
-                #                                            aggregation_method=tf.AggregationMethod.DEFAULT,
-                #                                            var_list=self.st_var_list)
+                self.upper_opt = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8)
+                self.upper_opt = tf.train.AdagradOptimizer(learning_rate=0.0005, initial_accumulator_value=0.1)
+                self.upper_train = self.upper_opt.minimize(self.final_loss,
+                                                           aggregation_method=tf.AggregationMethod.DEFAULT,
+                                                           var_list=self.st_var_list)
         self.session.run(tf.global_variables_initializer())
         self.debug_mode = True
 

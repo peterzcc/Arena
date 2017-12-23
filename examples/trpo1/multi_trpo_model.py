@@ -213,7 +213,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.n_ae_train = n_ae_train
 
         # MARK: supervised image feature
-        self.n_imgsup = 50
+        self.n_imgsup = 100
         self.img_state_map_loss = \
             tf.reduce_mean(tf.square(self.critic.image_features[0][:, 0:2] - self.critic.state_input[:, 0:2]))
         self.imgsup_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
