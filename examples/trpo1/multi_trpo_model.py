@@ -95,7 +95,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
         self.comb_method = comb_method  # aggregate_feature#
-        conv_sizes = (((3, 3), 32, 2), ((3, 3), 32, 2))
+        conv_sizes = (((3, 3), 32, 2), ((3, 3), 16, 2), ((3, 3), 4, 2))
 
         hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
@@ -147,7 +147,7 @@ class MultiTrpoModel(ModelWithCritic):
                                     observation_space=self.ob_space,
                                     action_shape=self.act_space.shape,
                                     n_imgfeat=self.n_imgfeat,
-                                    extra_feaatures=[],
+                                    extra_feaatures=self.critic.image_features,
                                     # [],  #[np.zeros((4,), dtype=np.float32)],  #
                                     conv_sizes=conv_sizes,  # (((3, 3), 2, 2),),  #
                                     comb_method=self.comb_method,
@@ -199,22 +199,28 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta_min = 1.0 / 35.0
         self.update_per_epoch = update_per_epoch
 
-
-        self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
-                                                conv_sizes=conv_sizes)
-        self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
-        self.ae_train_op = self.ae_opt.minimize(self.autoencoder_net.reg_loss)
-        self.cnn_sync_op = []
-        self.cnn_sync_op += [tf.assign(self.net.cnn_weights[i],
-                                       self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
-        self.cnn_sync_op += [tf.assign(self.critic.cnn_weights[i],
-                                       self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+        # MARK: autoencoder related
+        # self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
+        #                                         conv_sizes=conv_sizes)
+        # self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
+        # self.ae_train_op = self.ae_opt.minimize(self.autoencoder_net.reg_loss)
+        # self.cnn_sync_op = []
+        # self.cnn_sync_op += [tf.assign(self.net.cnn_weights[i],
+        #                                self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+        # self.cnn_sync_op += [tf.assign(self.critic.cnn_weights[i],
+        #                                self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+        # self.cnn_saver = tf.train.Saver(var_list=self.autoencoder_net.total_var_list)
         self.n_ae_train = n_ae_train
-        self.cnn_saver = tf.train.Saver(var_list=self.autoencoder_net.total_var_list)
+
+        # MARK: supervised image feature
+        self.n_imgsup = 50
+        self.img_state_map_loss = \
+            tf.reduce_mean(tf.square(self.critic.image_features[0][:, 0:2] - self.critic.state_input[:, 0:2]))
+        self.imgsup_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
+        self.imgsup_train_op = self.imgsup_opt.minimize(self.img_state_map_loss)
+
         self.saved_paths = []
-
         # self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
-
         if len(self.critic.img_var_list) > 0:
             self.feat_saver = tf.train.Saver(var_list=self.critic.img_var_list)
         self.saver = tf.train.Saver(var_list=self.net.var_list)
@@ -242,7 +248,7 @@ class MultiTrpoModel(ModelWithCritic):
 
     def get_state_activation(self, t_batch):
 
-        if self.comb_method == concat_feature:
+        if self.comb_method != aggregate_feature:
             all_st_enabled = True
             st_enabled = np.ones(self.ob_space[0].shape) if all_st_enabled else np.zeros(self.ob_space[0].shape)
             img_enabled = np.array((1.0,))
@@ -321,14 +327,15 @@ class MultiTrpoModel(ModelWithCritic):
         advant_n = concat([path["advantage"] for path in paths])
 
         feed = {self.net.state_input: state_input,
-                self.net.advant: advant_n,
+                self.net.st_enabled: st_enabled,
+                self.net.img_enabled: img_enabled,
 
+                self.net.advant: advant_n,
                 self.net.action_n: action_n,
 
                 self.critic.st_enabled: st_enabled,
                 self.critic.img_enabled: img_enabled,
-                self.net.st_enabled: st_enabled,
-                self.net.img_enabled: img_enabled,
+                self.critic.state_input: state_input,
                 }
 
         path_dict = {"state_input": state_input,
@@ -513,11 +520,12 @@ class MultiTrpoModel(ModelWithCritic):
             logging.debug("\nae loss after: {}".format(ae_loss))
 
             self.increment_n_update()
+            if self.n_update == self.n_ae_train - 1:
+                # self.cnn_saver.save(self.session, "cnn_model")
+                # self.cnn_saver.restore(self.session, "cnn_model")
+                self.session.run(self.cnn_sync_op)
             return None, None
-        elif self.n_update == self.n_ae_train:
-            self.cnn_saver.save(self.session, "cnn_model")
-            self.cnn_saver.restore(self.session, "cnn_model")
-            self.session.run(self.cnn_sync_op)
+
 
         if self.n_update < self.n_pretrain:
             pass
@@ -540,12 +548,36 @@ class MultiTrpoModel(ModelWithCritic):
         # if self.n_update % 20 == 0:
         #     self.saver.save(self.session,'policy_parameter')
         self.critic_lock.acquire_write()
-        if self.n_update < self.n_pretrain:
-            self.critic.fit(path_dict, update_mode="img", num_pass=2)
+        if self.n_update < self.n_imgsup:
+            map_loss = run_batched(self.img_state_map_loss, session=self.session,
+                                   feed=feed, N=batch_size,
+                                   minibatch_size=self.minibatch_size)
+            logging.debug("\nmap loss before: {}".format(map_loss))
+            for n_pass in range(2):
+                training_inds = np.random.permutation(batch_size)
+                for start in range(0, batch_size, self.minibatch_size):  # TODO: verify this
+                    if start > batch_size - 2 * self.minibatch_size:
+                        end = batch_size
+                    else:
+                        end = start + self.minibatch_size
+                    slc = training_inds[range(start, end)]
+                    this_feed = {k: v[slc] for (k, v) in list(feed.items())}
+                    self.session.run(self.imgsup_train_op, feed_dict=this_feed)
+                    if end == batch_size:
+                        break
+            map_loss = run_batched(self.img_state_map_loss, session=self.session,
+                                   feed=feed, N=batch_size,
+                                   minibatch_size=self.minibatch_size)
+            logging.debug("\nmap loss after: {}".format(map_loss))
+
+            self.increment_n_update()
+
+            return None, None
+
 
 
         if self.update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=4)
+            self.critic.fit(path_dict, update_mode="st", num_pass=4)  #TODO: set correct value
         self.critic_lock.release_write()
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))

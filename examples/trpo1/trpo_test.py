@@ -18,7 +18,7 @@ import sys
 import os
 from tf_utils import aggregate_feature, concat_feature
 BATH_SIZE = 10000
-
+import tensorflow as tf
 
 def linear_moving_value(x1, x2, t1, t2, t):
     if t < t1:
@@ -34,6 +34,12 @@ def exp_moving_value(x1, x2, t1, t2, t):
     if t > t2:
         return x2
     return x1 * (x2 / x1) ** ((t - t1) / (t2 - t1))
+
+
+def replace_first2_feature(st, img):
+    return tf.concat(
+        axis=1,
+        values=[img, st[:, 2:]])
 
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
@@ -151,7 +157,7 @@ def main():
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
         # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
-        with_state_task = not append_image
+        with_state_task = True  # not append_image
         if render_lock is not None:
             render_lock.acquire()
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
@@ -219,7 +225,7 @@ def main():
         action_space = sample_env.action_space
         sample_env.env.close()
         n_imgfeat = 2 if append_image else 0
-        comb_methd = concat_feature if append_image else aggregate_feature
+        comb_methd = replace_first2_feature if append_image else aggregate_feature
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,
                                num_actors=num_actors,
@@ -233,7 +239,7 @@ def main():
                                kl_history_length=1,
                                comb_method=comb_methd,
                                ent_k=0,
-                               n_ae_train=1)
+                               n_ae_train=0)
         return {"global_model": model}
 
     single_process_mode = True if append_image else False
