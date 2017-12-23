@@ -547,7 +547,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         # if self.n_update % 20 == 0:
         #     self.saver.save(self.session,'policy_parameter')
-        self.critic_lock.acquire_write()
+
         if self.n_update < self.n_imgsup:
             map_loss = run_batched(self.img_state_map_loss, session=self.session,
                                    feed=feed, N=batch_size,
@@ -562,7 +562,9 @@ class MultiTrpoModel(ModelWithCritic):
                         end = start + self.minibatch_size
                     slc = training_inds[range(start, end)]
                     this_feed = {k: v[slc] for (k, v) in list(feed.items())}
+                    self.critic_lock.acquire_write()
                     self.session.run(self.imgsup_train_op, feed_dict=this_feed)
+                    self.critic_lock.release_write()
                     if end == batch_size:
                         break
             map_loss = run_batched(self.img_state_map_loss, session=self.session,
@@ -577,8 +579,9 @@ class MultiTrpoModel(ModelWithCritic):
 
 
         if self.update_critic:
+            self.critic_lock.acquire_write()
             self.critic.fit(path_dict, update_mode="st", num_pass=4)  #TODO: set correct value
-        self.critic_lock.release_write()
+            self.critic_lock.release_write()
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
 
