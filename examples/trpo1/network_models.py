@@ -107,7 +107,7 @@ class MultiNetwork(object):
         # self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
         self.old_dist_info_vars = dict(mean=self.old_dist_means_n, log_std=self.old_dist_logstds_n)
         self.new_dist_info_vars = dict(mean=self.action_dist_means_n, log_std=self.action_dist_logstds_n)
-        self.likehood_action_dist = self.distribution.log_likelihood_sym(self.action_n, self.new_dist_info_vars)
+        # self.likehood_action_dist = self.distribution.log_likelihood_sym(self.action_n, self.new_dist_info_vars)
         self.new_likelihood_sym = self.distribution.log_likelihood_sym(self.action_n, self.new_dist_info_vars)
         self.old_likelihood = self.distribution.log_likelihood_sym(self.action_n, self.old_dist_info_vars)
 
@@ -121,8 +121,9 @@ class MultiNetwork(object):
                                                       self.clipped_surr))  # Surrogate loss
 
         kl = self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
-        ents = self.distribution.entropy(self.old_dist_info_vars)
-        ent = self.ent = tf.reduce_sum(ents) / self.batch_size_float
+        ents_fixed = self.distribution.entropy(self.old_dist_info_vars)
+        ents_sym = - self.new_likelihood_sym
+        ent = self.ent = tf.reduce_sum(ents_sym) / self.batch_size_float
         self.losses = [surr, kl, ent]
         self.get_flat_params = GetFlat(self.var_list, session=self.session)  # get theta from var_list
         self.set_params_with_flat_data = SetFromFlat(self.var_list, session=self.session)  # set theta from var_List

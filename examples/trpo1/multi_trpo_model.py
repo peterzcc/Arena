@@ -95,7 +95,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
         self.comb_method = comb_method  # aggregate_feature#
-        conv_sizes = (((3, 3), 32, 2), ((3, 3), 32, 2))
+        conv_sizes = (((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2))
 
         hid1_size = observation_space[0].shape[0] * 10
         hid3_size = 5
@@ -171,7 +171,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_eta_value = 50
         self.a_ent_k = ent_k
         self.a_rl_loss = -tf.reduce_mean(self.net.raw_surr)
-        self.a_ent_loss = 0 if self.a_ent_k == 0 else self.a_ent_k * self.net.ent
+        self.a_ent_loss = 0 if self.a_ent_k == 0 else -self.a_ent_k * self.net.ent
         self.a_kl_loss = self.a_beta * self.net.kl + \
                          self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl_sym))
         self.a_surr = self.a_rl_loss + self.a_kl_loss + self.a_ent_loss
@@ -194,7 +194,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_backup_op = [tf.assign(old_v, v) for (old_v, v) in zip(self.a_old_parameters, var_list)]
         self.a_rollback_op = [[tf.assign(v, old_v) for (old_v, v) in zip(self.a_old_parameters, var_list)]]
         self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
-        self.a_losses = [self.a_surr, self.net.kl, self.net.ent]
+        self.a_losses = [self.a_rl_loss, self.net.kl, self.net.ent]
         self.a_beta_max = 35.0
         self.a_beta_min = 1.0 / 35.0
         self.update_per_epoch = update_per_epoch
@@ -488,7 +488,9 @@ class MultiTrpoModel(ModelWithCritic):
         state_input = feed[self.net.state_input]
         action_dist_logstds_n = feed[self.net.old_dist_logstds_n]
         batch_size = advant_n.shape[0]
-
+        if self.n_update == 0 and self.n_ae_train == -1:
+            self.cnn_saver.restore(self.session, "./cnn_model")
+            self.session.run(self.cnn_sync_op)
         if self.n_update < self.n_ae_train:
             ae_feed = {self.net.img_input: feed[self.net.img_input]}
             ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
@@ -511,14 +513,13 @@ class MultiTrpoModel(ModelWithCritic):
                                   feed=ae_feed, N=batch_size,
                                   minibatch_size=self.minibatch_size)
             logging.debug("\nae loss after: {}".format(ae_loss))
+            if self.n_update == self.n_ae_train - 1:
+                self.cnn_saver.save(self.session, "./cnn_model")
+                self.cnn_saver.restore(self.session, "./cnn_model")
+                self.session.run(self.cnn_sync_op)
 
             self.increment_n_update()
             return None, None
-        elif self.n_update == self.n_ae_train:
-            self.cnn_saver.save(self.session, "cnn_model")
-            self.cnn_saver.restore(self.session, "cnn_model")
-            self.session.run(self.cnn_sync_op)
-
         if self.n_update < self.n_pretrain:
             pass
             # self.saved_paths = [*self.saved_paths, *paths]
