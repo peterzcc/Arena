@@ -148,6 +148,11 @@ class Experiment(object):
         def agent_run_thread(agent, pid):
             agent.run_loop()
 
+        from multiprocessing import process
+        if not os.path.exists("./tmp"):
+            os.mkdir("./tmp")
+        process.current_process()._config['tempdir'] = "./tmp"
+
         if isinstance(self.observation_space, list):
             observation_sample = list(map(space_to_np, self.observation_space))
             obs_type = MultiFastPipe
