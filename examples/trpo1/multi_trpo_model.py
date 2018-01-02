@@ -14,6 +14,11 @@ import logging
 from dict_memory import DictMemory
 from read_write_lock import ReadWriteLock
 from cnn import ConvAutoencorder
+from baselines import common
+from baselines.common import tf_util as U
+from baselines.acktr import kfac
+
+
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -199,18 +204,34 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta_min = 1.0 / 35.0
         self.update_per_epoch = update_per_epoch
 
+        self.k_stepsize = tf.Variable(initial_value=np.float32(0.03), name='stepsize')
+        self.k_momentum = 0.9
+        self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
+                                          cold_lr=self.k_stepsize * (1 - self.k_momentum), momentum=self.k_momentum,
+                                          kfac_update=2,
+                                          epsilon=1e-2, stats_decay=0.99, async=1, cold_iter=1,
+                                          weight_decay_dict={}, max_grad_norm=None)
+        self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.net.trad_surr_loss,
+                                                                  self.net.mean_loglike, var_list=self.net.var_list)
+        self.k_enqueue_threads = []
+        self.k_coord = tf.train.Coordinator()
+        for qr in [self.k_q_runner]:
+            assert (qr != None)
+            self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
 
-        self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
-                                                conv_sizes=conv_sizes)
-        self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
-        self.ae_train_op = self.ae_opt.minimize(self.autoencoder_net.reg_loss)
-        self.cnn_sync_op = []
-        self.cnn_sync_op += [tf.assign(self.net.cnn_weights[i],
-                                       self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
-        self.cnn_sync_op += [tf.assign(self.critic.cnn_weights[i],
-                                       self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+        if self.n_imgfeat > 0:
+            self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
+                                                    conv_sizes=conv_sizes)
+            self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
+            self.ae_train_op = self.ae_opt.minimize(self.autoencoder_net.reg_loss)
+            self.cnn_sync_op = []
+            self.cnn_sync_op += [tf.assign(self.net.cnn_weights[i],
+                                           self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+            self.cnn_sync_op += [tf.assign(self.critic.cnn_weights[i],
+                                           self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+            self.cnn_saver = tf.train.Saver(var_list=self.autoencoder_net.total_var_list)
         self.n_ae_train = n_ae_train
-        self.cnn_saver = tf.train.Saver(var_list=self.autoencoder_net.total_var_list)
+
         self.saved_paths = []
 
         # self.summary_writer = tf.summary.FileWriter('./summary', self.session.graph)
@@ -643,7 +664,48 @@ class MultiTrpoModel(ModelWithCritic):
 
             return None, None
 
+        if self.mode == "ACKTR":
+
+            self.policy_lock.acquire_write()
+            target_kl_value = self.f_target_kl(self.n_update)
+            logging.debug("\nbatch_size: {}\nkl_target: {}\n".format(self.batch_size, target_kl_value))
+            surr_o, kl_o, ent_o = run_batched(self.a_losses, feed, batch_size, self.session,
+                                              minibatch_size=self.minibatch_size,
+                                              extra_input={self.a_beta: self.a_beta_value,
+                                                           self.target_kl_sym: target_kl_value})
+            logging.debug("\nold surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+            _ = self.session.run(self.k_update_op, feed_dict=feed)
+            min_stepsize = np.float32(1e-8)
+            max_stepsize = np.float32(1e0)
+            # Adjust stepsize
+            kl_new = kl = run_batched(self.a_losses[1], feed, batch_size, self.session,
+                                      minibatch_size=self.minibatch_size,
+                                      extra_input={self.a_beta: self.a_beta_value,
+                                                   self.target_kl_sym: target_kl_value})
+            if kl > target_kl_value * 2:
+                logging.debug("kl too high")
+                self.session.run(tf.assign(self.k_stepsize, tf.maximum(min_stepsize, self.k_stepsize / 1.5)))
+            elif kl < target_kl_value / 2:
+                logging.debug("kl too low")
+                self.session.run(tf.assign(self.k_stepsize, tf.minimum(max_stepsize, self.k_stepsize * 1.5)))
+            else:
+                logging.debug("kl just right!")
+
+            surr_new, ent_new = run_batched([self.a_losses[0], self.a_losses[2]], feed, batch_size, self.session,
+                                            minibatch_size=self.minibatch_size,
+                                            extra_input={self.a_beta: self.a_beta_value,
+                                                         self.target_kl_sym: target_kl_value})
+            logging.debug("\nnew surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
+
+            self.increment_n_update()
+            self.policy_lock.release_write()
+
+            return None, None
+
     def update(self, diff, new=None):
         pass
         # self.set_params_with_flat_data(new)
 
+        # def __del__(self): TODO: handle destruction
+        # self.k_coord.request_stop()
+        # self.k_coord.join(self.k_enqueue_threads)

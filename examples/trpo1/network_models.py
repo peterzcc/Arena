@@ -86,18 +86,20 @@ class MultiNetwork(object):
                                                         activation_fn=None,
                                                         weights=tf.orthogonal_initializer(gain=0.1),
                                                         name="%s_fc3" % scope))
-            logvar_speed = (10 * hid3_size) // 48
-            log_vars = self.log_vars = tf.get_variable("%s_logvars" % scope, (logvar_speed, action_shape[0]),
-                                                       tf.float32,
-                                                       tf.constant_initializer(0.0))
-            self.action_dist_logstds_n = tf.reduce_sum(log_vars, axis=0) + np.log(0.5)
+            # logvar_speed = (10 * hid3_size) // 48
+            # log_vars = self.log_vars = tf.get_variable("%s_logvars" % scope, (logvar_speed, action_shape[0]),
+            #                                            tf.float32,
+            #                                            tf.constant_initializer(0.0))
+            # self.action_dist_logstds_n = tf.reduce_sum(log_vars, axis=0) + np.log(0.5)
 
-            # self.action_dist_logstd_param = tf.Variable(
-            #     initial_value=(np.log(0.7) + 0.001 * np.random.randn(1, *action_shape)).astype(np.float32),
-            #     trainable=True, name="%spolicy_logstd" % scope)
 
-            # self.action_dist_logstds_n = tf.tile(self.action_dist_logstd_param,
+            self.action_dist_logstd_param = tf.Variable(
+                initial_value=(np.log(1.0) + 0.001 * np.random.randn(*action_shape)).astype(np.float32),
+                trainable=True, name="%spolicy_logstd" % scope)
+            # self.action_dist_logstds_n = tf.tile(tf.expand_dims(self.action_dist_logstd_param, 0),
             #                                      tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))
+            self.action_dist_logstds_n = self.action_dist_logstd_param
+
             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
 
         log_std_var = tf.maximum(self.action_dist_logstds_n, np.log(self.min_std))
@@ -119,6 +121,8 @@ class MultiNetwork(object):
         self.clipped_surr = self.clipped_ratio * self.advant
         surr = self.surr = -tf.reduce_mean(tf.minimum(self.raw_surr,
                                                       self.clipped_surr))  # Surrogate loss
+        self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
+        self.mean_loglike = - tf.reduce_mean(self.new_likelihood_sym)
 
         kl = self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ents_fixed = self.distribution.entropy(self.old_dist_info_vars)
