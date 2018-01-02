@@ -209,15 +209,14 @@ class MultiTrpoModel(ModelWithCritic):
         self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
                                           cold_lr=self.k_stepsize * (1 - self.k_momentum), momentum=self.k_momentum,
                                           kfac_update=2,
-                                          epsilon=1e-2, stats_decay=0.99, async=1, cold_iter=1,
+                                          epsilon=1e-2, stats_decay=0.99,
+                                          async=False, cold_iter=1,
                                           weight_decay_dict={}, max_grad_norm=None)
         self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.net.trad_surr_loss,
                                                                   self.net.mean_loglike, var_list=self.net.var_list)
         self.k_enqueue_threads = []
         self.k_coord = tf.train.Coordinator()
-        for qr in [self.k_q_runner]:
-            assert (qr != None)
-            self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
+
 
         if self.n_imgfeat > 0:
             self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
@@ -254,6 +253,9 @@ class MultiTrpoModel(ModelWithCritic):
         self.debug = True
         self.recompute_old_dist = recompute_old_dist
         self.session.run(tf.global_variables_initializer())
+        for qr in [self.k_q_runner]:
+            if (qr != None):
+                self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
         if self.mode == "SURP":
             self.restore_from_pretrained_policy = True
             self.update_critic = False
@@ -310,7 +312,7 @@ class MultiTrpoModel(ModelWithCritic):
                 feed[self.executer_net.img_input] = obs[1]
             self.policy_lock.acquire_read()
             action_dist_means_n, action_dist_log_stds_n = \
-                self.session.run([self.executer_net.action_dist_means_n, self.executer_net.action_dist_log_stds_n],
+                self.session.run([self.executer_net.action_dist_means_n, self.executer_net.action_dist_logstds_n],
                                  feed)
             self.act_means = action_dist_means_n
             self.act_logstds = action_dist_log_stds_n
@@ -319,7 +321,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         # logging.debug("am:{},\nastd:{}".format(action_dist_means_n[0],action_dist_stds_n[0]))
 
-        agent_info = dict(mean=self.act_means[pid, :], log_std=self.act_logstds,
+        agent_info = dict(mean=self.act_means[pid, :], log_std=self.act_logstds[pid, :],
                           st_enabled=self.exp_st_enabled[pid, :], img_enabled=self.exp_img_enabled[pid])
         action = self.distribution.sample(agent_info)
         if self.debug:
@@ -669,7 +671,8 @@ class MultiTrpoModel(ModelWithCritic):
             self.policy_lock.acquire_write()
             target_kl_value = self.f_target_kl(self.n_update)
             logging.debug("\nbatch_size: {}\nkl_target: {}\n".format(self.batch_size, target_kl_value))
-            surr_o, kl_o, ent_o = run_batched(self.a_losses, feed, batch_size, self.session,
+            surr_o, kl_o, ent_o = run_batched([self.net.trad_surr_loss, self.net.kl, self.net.ent], feed, batch_size,
+                                              self.session,
                                               minibatch_size=self.minibatch_size,
                                               extra_input={self.a_beta: self.a_beta_value,
                                                            self.target_kl_sym: target_kl_value})
@@ -691,7 +694,7 @@ class MultiTrpoModel(ModelWithCritic):
             else:
                 logging.debug("kl just right!")
 
-            surr_new, ent_new = run_batched([self.a_losses[0], self.a_losses[2]], feed, batch_size, self.session,
+            surr_new, ent_new = run_batched([self.net.trad_surr_loss, self.net.ent], feed, batch_size, self.session,
                                             minibatch_size=self.minibatch_size,
                                             extra_input={self.a_beta: self.a_beta_value,
                                                          self.target_kl_sym: target_kl_value})

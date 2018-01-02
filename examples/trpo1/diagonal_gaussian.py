@@ -53,7 +53,7 @@ class DiagonalGaussian(object):
         """
         means = dist_info_vars["mean"]
         log_stds = dist_info_vars["log_std"]
-        zs = (x_var - means) / tf.exp(log_stds)
+        zs = (x_var - means) * tf.exp(-log_stds)
         return - tf.reduce_sum(log_stds, -1) - \
                0.5 * tf.reduce_sum(tf.square(zs), -1) - \
                0.5 * means.get_shape()[-1].value * np.log(2 * np.pi)

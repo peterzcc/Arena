@@ -7,6 +7,8 @@ import numpy as np
 from tf_utils import aggregate_feature, lrelu
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
     aggregate_feature, select_st
+from baselines.acktr.utils import conv, fc, dense, conv_to_fc, sample, kl_div
+import baselines.common.tf_util as U
 from cnn import cnn_network
 dtype = tf.float32
 
@@ -68,24 +70,34 @@ class MultiNetwork(object):
                     # self.full_feature = self.image_features
                 else:
                     self.full_feature = self.state_input
-            hid1_size = observation_space[0].shape[0] * 10
-            hid3_size = action_shape[0] * 10
-            hid2_size = int(np.sqrt(hid1_size * hid3_size))
 
-            self.action_dist_means_n = (pt.wrap(self.full_feature).
-                                        fully_connected(hid1_size, activation_fn=tf.tanh,
-                                                        weights=tf.orthogonal_initializer(),
-                                                        name="%s_fc1" % scope).
-                                        fully_connected(hid2_size, activation_fn=tf.tanh,
-                                                        weights=tf.orthogonal_initializer(),
-                                                        name="%s_fc1" % scope).
-                                        fully_connected(hid3_size, activation_fn=tf.tanh,
-                                                        weights=tf.orthogonal_initializer(gain=0.1),
-                                                        name="%s_fc2" % scope).
-                                        fully_connected(np.prod(action_shape),
-                                                        activation_fn=None,
-                                                        weights=tf.orthogonal_initializer(gain=0.1),
-                                                        name="%s_fc3" % scope))
+            wd_dict = {}
+            h1 = tf.nn.tanh(
+                dense(self.full_feature, 64, "h1", weight_init=U.normc_initializer(1.0), bias_init=0.0,
+                      weight_loss_dict=wd_dict))
+            h2 = tf.nn.tanh(
+                dense(h1, 64, "h2", weight_init=U.normc_initializer(1.0), bias_init=0.0, weight_loss_dict=wd_dict))
+            self.action_dist_means_n = dense(h2, np.prod(action_shape), "mean", weight_init=U.normc_initializer(0.1),
+                                             bias_init=0.0,
+                                             weight_loss_dict=wd_dict)  # Mean control output
+
+            # hid1_size = observation_space[0].shape[0] * 10
+            # hid3_size = action_shape[0] * 10
+            # hid2_size = int(np.sqrt(hid1_size * hid3_size))
+            # self.action_dist_means_n = (pt.wrap(self.full_feature).
+            #                             fully_connected(hid1_size, activation_fn=tf.tanh,
+            #                                             weights=tf.orthogonal_initializer(),
+            #                                             name="%s_fc1" % scope).
+            #                             fully_connected(hid2_size, activation_fn=tf.tanh,
+            #                                             weights=tf.orthogonal_initializer(),
+            #                                             name="%s_fc1" % scope).
+            #                             fully_connected(hid3_size, activation_fn=tf.tanh,
+            #                                             weights=tf.orthogonal_initializer(gain=0.1),
+            #                                             name="%s_fc2" % scope).
+            #                             fully_connected(np.prod(action_shape),
+            #                                             activation_fn=None,
+            #                                             weights=tf.orthogonal_initializer(gain=0.1),
+            #                                             name="%s_fc3" % scope))
             # logvar_speed = (10 * hid3_size) // 48
             # log_vars = self.log_vars = tf.get_variable("%s_logvars" % scope, (logvar_speed, action_shape[0]),
             #                                            tf.float32,
@@ -93,19 +105,27 @@ class MultiNetwork(object):
             # self.action_dist_logstds_n = tf.reduce_sum(log_vars, axis=0) + np.log(0.5)
 
 
-            self.action_dist_logstd_param = tf.Variable(
-                initial_value=(np.log(1.0) + 0.001 * np.random.randn(*action_shape)).astype(np.float32),
-                trainable=True, name="%spolicy_logstd" % scope)
+            # self.action_dist_logstd_param = tf.Variable(
+            #     initial_value=(np.log(1.0) + 0.001 * np.random.randn(*action_shape)).astype(np.float32),
+            #     trainable=True, name="%spolicy_logstd" % scope)
             # self.action_dist_logstds_n = tf.tile(tf.expand_dims(self.action_dist_logstd_param, 0),
-            #                                      tf.stack((tf.shape(self.action_dist_means_n)[0], 1)))
-            self.action_dist_logstds_n = self.action_dist_logstd_param
+            #                                      [tf.shape(self.action_dist_means_n)[0], 1])
+            # self.action_dist_logstds_n = self.action_dist_logstd_param
+
+
+            self.action_dist_logstd_param = logstd_1a = tf.get_variable("logstd", action_shape, tf.float32,
+                                                                        tf.zeros_initializer())  # Variance on outputs
+            logstd_1a = tf.expand_dims(logstd_1a, 0)
+            self.action_dist_logstds_n = tf.tile(logstd_1a, [tf.shape(self.action_dist_means_n)[0], 1])
+            std_1a = tf.exp(logstd_1a)
+            std_na = tf.tile(std_1a, [tf.shape(self.action_dist_means_n)[0], 1])
 
             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
 
-        log_std_var = tf.maximum(self.action_dist_logstds_n, np.log(self.min_std))
+        # log_std_var = tf.maximum(self.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.state_input)[0]
         self.batch_size_float = tf.cast(batch_size, tf.float32)
-        self.action_dist_log_stds_n = log_std_var  # self.net.action_dist_logstds_n  #
+        # self.action_dist_log_stds_n = log_std_var  # self.net.action_dist_logstds_n  #
         # self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
         self.old_dist_info_vars = dict(mean=self.old_dist_means_n, log_std=self.old_dist_logstds_n)
         self.new_dist_info_vars = dict(mean=self.action_dist_means_n, log_std=self.action_dist_logstds_n)
@@ -121,8 +141,19 @@ class MultiNetwork(object):
         self.clipped_surr = self.clipped_ratio * self.advant
         surr = self.surr = -tf.reduce_mean(tf.minimum(self.raw_surr,
                                                       self.clipped_surr))  # Surrogate loss
-        self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
-        self.mean_loglike = - tf.reduce_mean(self.new_likelihood_sym)
+        ac_dim = action_shape[0]
+        ac_dist = tf.concat([tf.reshape(self.action_dist_means_n, [-1, ac_dim]), tf.reshape(std_na, [-1, ac_dim])], 1)
+        logprob_n = - U.sum(tf.log(ac_dist[:, ac_dim:]), axis=1) - 0.5 * tf.log(2.0 * np.pi) * ac_dim - 0.5 * U.sum(
+            tf.square(ac_dist[:, :ac_dim] - self.action_n) / (tf.square(ac_dist[:, ac_dim:])),
+            axis=1)  # Logprob of previous actions under CURRENT policy (whereas oldlogprob_n is under OLD policy)
+
+        # kl = .5 * U.mean(tf.square(logprob_n - oldlogprob_n)) # Approximation of KL divergence between old policy used to generate actions, and new policy used to compute logprob_n
+        self.trad_surr_loss = - U.mean(
+            self.advant * logprob_n)  # Loss function that we'll differentiate to get the policy gradient
+        self.mean_loglike = - U.mean(logprob_n)  # Sampled loss of the policy
+
+        # self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
+        # self.mean_loglike = - tf.reduce_mean(self.new_likelihood_sym)
 
         kl = self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ents_fixed = self.distribution.entropy(self.old_dist_info_vars)
