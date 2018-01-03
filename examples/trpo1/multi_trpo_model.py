@@ -76,6 +76,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.exp_st_enabled = None
         self.exp_img_enabled = None
         self.batch_mode = batch_mode  # "episode" #"timestep"
+        self.min_batch_length = 2500
         self.f_batch_size = f_batch_size
         self.batch_size = self.f_batch_size(0)
         self.f_target_kl = f_target_kl
@@ -436,8 +437,7 @@ class MultiTrpoModel(ModelWithCritic):
 
     def check_batch_finished(self, time, epis):
         if self.batch_mode == "episode":
-            assert epis <= self.batch_size
-            return epis == self.batch_size
+            return epis >= self.batch_size and time >= self.min_batch_length
         if self.batch_mode == "timestep":
             if not time <= self.batch_size:
                 logging.debug("time: {} \nbatchsize: {}".format(time, self.batch_size))
