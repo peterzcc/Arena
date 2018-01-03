@@ -39,8 +39,6 @@ def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
                         help='learning rate of the choosen optimizer')
-    parser.add_argument('--optimizer', required=False, type=str, default='sgd',
-                        help='choice of the optimizer, adam or sgd')
     parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
     parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
@@ -52,6 +50,8 @@ def main():
     parser.add_argument('--num-steps', required=False, type=int, default=15e7,
                         help='Total number of steps')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
+    parser.add_argument('--batch-mode', required=False, type=str, default='timestep',
+                        help='timestep or episode')
     args = parser.parse_args()
 
     should_profile = False
@@ -224,7 +224,7 @@ def main():
                                timestep_limit=T,
                                num_actors=num_actors,
                                f_batch_size=const_batch_size,
-                               batch_mode="timestep",
+                               batch_mode=args.batch_mode,
                                f_target_kl=const_target_kl,
                                recompute_old_dist=False,
                                n_imgfeat=n_imgfeat,

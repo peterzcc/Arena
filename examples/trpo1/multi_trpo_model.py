@@ -210,7 +210,7 @@ class MultiTrpoModel(ModelWithCritic):
                                           cold_lr=self.k_stepsize * (1 - self.k_momentum), momentum=self.k_momentum,
                                           kfac_update=2,
                                           epsilon=1e-2, stats_decay=0.99,
-                                          async=False, cold_iter=1,
+                                          async=True, cold_iter=1,
                                           weight_decay_dict={}, max_grad_norm=None)
         self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.net.trad_surr_loss,
                                                                   self.net.mean_loglike, var_list=self.net.var_list)
@@ -375,10 +375,10 @@ class MultiTrpoModel(ModelWithCritic):
             if self.n_imgfeat > 0:
                 feed_forw[self.critic.img_input] = img_input
                 feed_forw[self.net.img_input] = img_input
-            action_dist_means_n, action_dist_logstds = \
-                self.session.run([self.net.action_dist_means_n, self.net.action_dist_log_stds_n],
+            action_dist_means_n, action_dist_logstds_n = \
+                self.session.run([self.net.action_dist_means_n, self.net.action_dist_logstds_n],
                                  feed_forw)
-            action_dist_logstds_n = np.tile(action_dist_logstds, (state_input.shape[0], 1))
+            # action_dist_logstds_n = np.tile(action_dist_logstds, (state_input.shape[0], 1))
             feed.update(
                 {
                     self.net.old_dist_means_n: action_dist_means_n,

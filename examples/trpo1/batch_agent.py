@@ -74,6 +74,7 @@ class BatchUpdateAgent(Agent):
         #     self.thread_batch_size = np.inf
         self.num_episodes = 0
         self.train_data = None
+        self.should_clip_episodes = (self.model.batch_mode == "timestep")
 
     def act(self, observation):
         # logging.debug("rx obs: {}".format(observation))
@@ -105,7 +106,7 @@ class BatchUpdateAgent(Agent):
         self.time_count += 1
         # assert self.time_count <= self.thread_batch_size
         is_episode_clipped = self.time_count * self.model.num_actors == self.model.batch_size
-        if done or is_episode_clipped:
+        if done or (self.should_clip_episodes and is_episode_clipped):
             # self.counter -= self.episode_step
             # self.global_t += self.episode_step
             terminated = False
