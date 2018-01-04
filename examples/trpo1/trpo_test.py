@@ -54,6 +54,8 @@ def main():
                         help='timestep or episode')
     parser.add_argument('--kl', required=False, default=0.002, type=float,
                         help='target kl')
+    parser.add_argument('--ent-k', required=False, default=0, type=float,
+                        help='entropy loss weight')
     args = parser.parse_args()
 
     should_profile = False
@@ -234,7 +236,7 @@ def main():
                                update_per_epoch=4,
                                kl_history_length=1,
                                comb_method=comb_methd,
-                               ent_k=4.0,
+                               ent_k=args.ent_k,
                                n_ae_train=-1)
         return {"global_model": model}
 
