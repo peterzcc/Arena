@@ -55,7 +55,7 @@ def main():
     parser.add_argument('--kl', required=False, default=0.002, type=float,
                         help='target kl')
     args = parser.parse_args()
-    logging.info("arges: {}".format(args))
+
     should_profile = False
     if should_profile:
         import yappi
@@ -242,6 +242,7 @@ def main():
     experiment = Experiment(f_create_env, f_create_agent,
                             f_create_shared_params, single_process_mode=single_process_mode, render_option="false",
                             log_episodes=True)
+    logging.info("run arges: {}".format(args))
 
     if should_profile:
         yappi.start(builtins=True, profile_threads=True)
