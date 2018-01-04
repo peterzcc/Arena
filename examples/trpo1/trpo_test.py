@@ -52,8 +52,10 @@ def main():
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     parser.add_argument('--batch-mode', required=False, type=str, default='timestep',
                         help='timestep or episode')
+    parser.add_argument('--kl', required=False, default=0.002, type=float,
+                        help='target kl')
     args = parser.parse_args()
-
+    logging.info("arges: {}".format(args))
     should_profile = False
     if should_profile:
         import yappi
@@ -119,7 +121,7 @@ def main():
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-    append_image = False
+    append_image = True
 
     def x_forward_obj():
         return np.array((1, 0))
@@ -150,12 +152,12 @@ def main():
 
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
-        env = CustomAnt(file_path=cwd + "/cust_ant.xml")
+        # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
         with_state_task = not append_image
         if render_lock is not None:
             render_lock.acquire()
-        # env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-        #                       f_gen_obj=x_for_back)
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                              f_gen_obj=x_for_back)
         if render_lock is not None:
             render_lock.release()
         # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
@@ -195,7 +197,7 @@ def main():
         return args.batch_size
 
     def const_target_kl(n_update):
-        return 0.002
+        return args.kl
 
     start_t = 0
     end_t = args.num_steps / 10000
@@ -232,8 +234,8 @@ def main():
                                update_per_epoch=4,
                                kl_history_length=1,
                                comb_method=comb_methd,
-                               ent_k=0,
-                               n_ae_train=0)
+                               ent_k=4.0,
+                               n_ae_train=-1)
         return {"global_model": model}
 
     single_process_mode = True if append_image else False

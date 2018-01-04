@@ -175,12 +175,12 @@ class MultiTrpoModel(ModelWithCritic):
         self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
         self.a_beta_value = 3
         self.a_eta_value = 50
-        self.a_ent_k = ent_k
+        self.ent_k = ent_k
         self.a_rl_loss = -tf.reduce_mean(self.net.raw_surr)
-        self.a_ent_loss = 0 if self.a_ent_k == 0 else -self.a_ent_k * self.net.ent
+        self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.net.ent
         self.a_kl_loss = self.a_beta * self.net.kl + \
                          self.a_eta_value * tf.square(tf.maximum(0.0, self.net.kl - 2.0 * self.target_kl_sym))
-        self.a_surr = self.a_rl_loss + self.a_kl_loss + self.a_ent_loss
+        self.a_surr = self.a_rl_loss + self.a_kl_loss + self.ent_loss
         self.a_step_size = 0.0001
         self.a_max_step_size = 0.1
         self.a_min_step_size = 1e-7
@@ -213,7 +213,8 @@ class MultiTrpoModel(ModelWithCritic):
                                           epsilon=1e-2, stats_decay=0.99,
                                           async=True, cold_iter=1,
                                           weight_decay_dict={}, max_grad_norm=None)
-        self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.net.trad_surr_loss,
+        self.k_final_loss = self.net.trad_surr_loss + self.ent_loss
+        self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
                                                                   self.net.mean_loglike, var_list=self.net.var_list)
         self.k_enqueue_threads = []
         self.k_coord = tf.train.Coordinator()
