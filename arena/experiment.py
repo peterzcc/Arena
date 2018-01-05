@@ -13,6 +13,11 @@ import datetime
 import queue
 
 from gym.spaces import Discrete, Box
+import signal
+import sys
+
+
+
 
 
 def space_to_np(space):
@@ -115,6 +120,9 @@ class Experiment(object):
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
         self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
 
+        signal.signal(signal.SIGINT, self.interrupt)
+        self.is_terminated = False
+
 
 
     def terminate_all_actuators(self):
@@ -200,6 +208,13 @@ class Experiment(object):
             this_agent_thread.daemon = True
             self.agent_threads.append(this_agent_thread)
 
+    def interrupt(self, signal, frame):
+        force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
+        print('You pressed Ctrl+C!')
+
+        self.is_terminated = True
+        sys.exit()
+
     def run_parallel_training(self, num_actor, num_epoch, epoch_length,
                               with_testing_length=0):
 
@@ -229,7 +244,7 @@ class Experiment(object):
         if self.render_option == "once_per_epoch":
             self.actuator_channels[0].put(RenderOption.one_episode)
 
-        while epoch_num < num_epoch:
+        while epoch_num < num_epoch and not self.is_terminated:
             try:
                 rx_msg = self.episode_q.get(block=True, timeout=15 * 60)
             except queue.Empty:
@@ -278,6 +293,11 @@ class Experiment(object):
                 if self.render_option == "once_per_epoch":
                     self.actuator_channels[0].put(RenderOption.one_episode)
         logging.info("training finished")
+        for actuator in self.actuator_processes:
+            actuator.join()
+        for agent in self.agent_threads:
+            agent.join()
+
 
     def run_testing_on_sub_process(self, test_length, process_id=0):
         if not os.path.exists(self.log_test_path):

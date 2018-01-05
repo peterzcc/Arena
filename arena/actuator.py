@@ -73,6 +73,7 @@ class Actuator(object):
         while not self.is_terminated:
             self.receive_cmd()
             if self.is_terminated:
+                logging.debug("Actuator: {} terminated".format(self.id))
                 break
             self.stats_tx[0].send({"observation": self.current_obs})
             # logging.debug("tx obs: {}".format(self.current_obs))

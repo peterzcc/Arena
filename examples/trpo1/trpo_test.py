@@ -20,6 +20,7 @@ from tf_utils import aggregate_feature, concat_feature
 BATH_SIZE = 10000
 
 
+
 def linear_moving_value(x1, x2, t1, t2, t):
     if t < t1:
         return x1
@@ -222,7 +223,7 @@ def main():
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
         sample_env.env.close()
-        n_imgfeat = 20 if append_image else 0
+        n_imgfeat = -1 if append_image else 0
         comb_methd = concat_feature if append_image else aggregate_feature
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,

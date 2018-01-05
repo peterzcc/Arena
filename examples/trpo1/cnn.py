@@ -4,7 +4,8 @@ from tf_utils import lrelu
 
 def cnn_network(input,
                 conv_sizes,
-                activation_fn=lrelu, initializer_fn=tf.orthogonal_initializer):
+                activation_fn=lrelu, initializer_fn=tf.orthogonal_initializer,
+                trainable=True):
     local_scope = "cnn"
     layers = [input]
     with tf.variable_scope(local_scope) as current_scope:
@@ -15,7 +16,8 @@ def cnn_network(input,
             #                     )
             this_layer = tf.layers.conv2d(layers[-1], depth, kernel, stride, activation=activation_fn,
                                           kernel_initializer=initializer_fn(),
-                                          padding="same")
+                                          padding="same",
+                                          trainable=trainable)
             layers.append(this_layer)
         net_weights = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=current_scope.name)
     return layers, net_weights

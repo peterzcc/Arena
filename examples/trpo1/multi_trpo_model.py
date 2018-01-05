@@ -103,18 +103,15 @@ class MultiTrpoModel(ModelWithCritic):
         self.comb_method = comb_method  # aggregate_feature#
         conv_sizes = (((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2))
 
-        hid1_size = observation_space[0].shape[0] * 10
-        hid3_size = 5
-        hid2_size = int(np.sqrt(hid1_size * hid3_size))
-        hidden_sizes = (hid1_size, hid2_size, hid3_size)
+        cnn_trainable = False
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
                                     activation=tf.tanh,
-                                    n_imgfeat=self.n_imgfeat, hidden_sizes=hidden_sizes,
+                                    n_imgfeat=self.n_imgfeat,
                                     conv_sizes=conv_sizes,
-                                    comb_method=self.comb_method)
+                                    comb_method=self.comb_method,
+                                    cnn_trainable=cnn_trainable)
 
-        # conv_sizes=(((3, 3), 32, 1), ((3, 3), 64, 1)))
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
         self.theta = None
@@ -159,7 +156,8 @@ class MultiTrpoModel(ModelWithCritic):
                                     comb_method=self.comb_method,
                                     min_std=min_std,
                                     distibution=self.distribution,
-                                    session=self.session
+                                    session=self.session,
+                                    cnn_trainable=cnn_trainable
                                     )
             self.executer_net = self.net
 
@@ -219,8 +217,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.k_enqueue_threads = []
         self.k_coord = tf.train.Coordinator()
 
-
-        if self.n_imgfeat > 0:
+        if self.n_imgfeat != 0:
             self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
                                                     conv_sizes=conv_sizes)
             self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
@@ -282,7 +279,7 @@ class MultiTrpoModel(ModelWithCritic):
         if self.num_actors == 1:
             if len(observation[0].shape) == len(self.ob_space[0].shape):
                 obs = [np.expand_dims(observation[0], 0)]
-                if self.n_imgfeat > 0:
+                if self.n_imgfeat != 0:
                     obs.append(np.expand_dims(observation[1], 0))
             else:
                 obs = observation
@@ -294,7 +291,7 @@ class MultiTrpoModel(ModelWithCritic):
             self.execution_barrier.wait()
             if pid == 0:
                 obs = [np.stack([ob[0] for ob in self.obs_list])]
-                if self.n_imgfeat > 0:
+                if self.n_imgfeat != 0:
                     obs.append(np.stack([o[1] for o in self.obs_list]))
                 st_enabled, img_enabled = self.get_state_activation(self.n_update)
                 st_enabled = np.tile(st_enabled, (self.num_actors, 1))
@@ -309,7 +306,7 @@ class MultiTrpoModel(ModelWithCritic):
                     self.executer_net.st_enabled: self.exp_st_enabled,
                     self.executer_net.img_enabled: self.exp_img_enabled,
                     }
-            if self.n_imgfeat > 0:
+            if self.n_imgfeat != 0:
                 feed[self.critic.img_input] = obs[1]
                 feed[self.executer_net.img_input] = obs[1]
             self.policy_lock.acquire_read()
@@ -362,7 +359,7 @@ class MultiTrpoModel(ModelWithCritic):
                      "img_enabled": img_enabled,
                      "st_enabled": st_enabled}
         img_input = None
-        if self.n_imgfeat > 0:
+        if self.n_imgfeat != 0:
             img_input = concat([path["observation"][1] for path in paths])
             feed[self.net.img_input] = img_input
             feed[self.critic.img_input] = img_input
@@ -374,7 +371,7 @@ class MultiTrpoModel(ModelWithCritic):
                          self.net.st_enabled: st_enabled,
                          self.net.img_enabled: img_enabled,
                          }
-            if self.n_imgfeat > 0:
+            if self.n_imgfeat != 0:
                 feed_forw[self.critic.img_input] = img_input
                 feed_forw[self.net.img_input] = img_input
             action_dist_means_n, action_dist_logstds_n = \
@@ -403,18 +400,18 @@ class MultiTrpoModel(ModelWithCritic):
                 del self.hist_obs0[0]
                 del self.hist_img_en[0]
                 del self.hist_st_en[0]
-                if self.n_imgfeat > 0:
+                if self.n_imgfeat != 0:
                     del self.hist_obs1[0]
             self.hist_obs0.append(state_input)
             self.hist_st_en.append(st_enabled)
             self.hist_img_en.append(img_enabled)
-            if self.n_imgfeat > 0:
+            if self.n_imgfeat != 0:
                 self.hist_obs1.append(img_input)
             hist_feed = {self.net.state_input: np.concatenate(self.hist_obs0),
                          self.net.st_enabled: np.concatenate(self.hist_st_en),
                          self.net.img_enabled: np.concatenate(self.hist_img_en),
                          }
-            if self.n_imgfeat > 0:
+            if self.n_imgfeat != 0:
                 hist_feed[self.net.img_input] = np.concatenate(self.hist_obs1)
 
             action_dist_means_n, action_dist_logstds = \
@@ -467,7 +464,7 @@ class MultiTrpoModel(ModelWithCritic):
 
         img_input = None
         action_dist_logstds_n = concat([path["log_std"] for path in paths])
-        if self.n_imgfeat > 0:
+        if self.n_imgfeat != 0:
             img_input = concat([path["observation"][1] for path in paths])
             feed[self.target_net.img_input] = img_input
         batch_size = advant_n.shape[0]
@@ -566,11 +563,11 @@ class MultiTrpoModel(ModelWithCritic):
         #     self.saver.save(self.session,'policy_parameter')
         self.critic_lock.acquire_write()
         if self.n_update < self.n_pretrain:
-            self.critic.fit(path_dict, update_mode="img", num_pass=2)
+            self.critic.fit(path_dict, update_mode="img", num_pass=1)
 
 
         if self.update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=4)
+            self.critic.fit(path_dict, update_mode="full", num_pass=1)
         self.critic_lock.release_write()
 
         # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))

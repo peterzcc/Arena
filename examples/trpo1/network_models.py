@@ -2,16 +2,17 @@ from __future__ import absolute_import
 import tensorflow as tf
 # from tensorflow.contrib.layers import initializers as tf_init
 from tensorflow.contrib.layers import variance_scaling_initializer
-import prettytensor as pt
+# import prettytensor as pt
 import numpy as np
 from tf_utils import aggregate_feature, lrelu
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
     aggregate_feature, select_st
 from baselines.acktr.utils import conv, fc, dense, conv_to_fc, sample, kl_div
 import baselines.common.tf_util as U
+import logging
 from cnn import cnn_network
 dtype = tf.float32
-
+from diagonal_gaussian import DiagonalGaussian
 
 
 
@@ -20,8 +21,9 @@ class MultiNetwork(object):
                  conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
                  n_imgfeat=1, extra_feaatures=[], st_enabled=None, img_enabled=None,
                  comb_method=aggregate_feature,
+                 cnn_trainable=True,
                  min_std=1e-6,
-                 distibution=None,
+                 distibution=DiagonalGaussian,
                  session=None):
         self.comb_method = comb_method
         self.min_std = min_std
@@ -31,7 +33,7 @@ class MultiNetwork(object):
         with tf.variable_scope(local_scope):
             self.state_input = tf.placeholder(
                 dtype, shape=(None,) + observation_space[0].shape, name="%s_state" % scope)
-            if n_imgfeat > 0:
+            if n_imgfeat != 0:
                 self.img_input = \
                     tf.placeholder(tf.float32, shape=(None,) + observation_space[1].shape, name="%s_img" % scope)
             # else:
@@ -53,16 +55,23 @@ class MultiNetwork(object):
                 # self.full_feature = tf.concat(axis=1, values=[self.st_enabled * self.state_input. *extra_feaatures])
                 self.full_feature = self.comb_method(self.st_enabled * self.state_input, extra_feaatures[0])
             else:
-                if n_imgfeat > 0:
+                if n_imgfeat != 0:
 
                     img_feature_tensor, cnn_weights = cnn_network(self.img_input, conv_sizes)
                     self.cnn_weights = cnn_weights
-                    img_features = pt.wrap(img_feature_tensor[-1]).sequential()
-                    img_features.flatten()
-                    img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                                                 weights=tf.orthogonal_initializer()
-                                                 )
-                    self.image_features = img_features.as_layer()
+                    # img_features = pt.wrap(img_feature_tensor[-1]).sequential()
+                    # img_features.flatten()
+                    # img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
+                    #                              weights=tf.orthogonal_initializer()
+                    #                              )
+                    cnn_flatten = tf.layers.flatten(img_feature_tensor[-1])
+                    if n_imgfeat < 0:
+                        self.image_features = cnn_flatten
+                    else:
+                        self.image_features = tf.layers.dense(cnn_flatten,
+                                                              n_imgfeat,
+                                                              activation=tf.tanh,
+                                                              kernel_initializer=tf.orthogonal_initializer())
                     self.full_feature = self.comb_method(self.st_enabled * self.state_input,
                                                          self.img_enabled[:, tf.newaxis] * self.image_features)
                     # self.full_feature = self.st_enabled * self.state_input + \
@@ -70,20 +79,33 @@ class MultiNetwork(object):
                     # self.full_feature = self.image_features
                 else:
                     self.full_feature = self.state_input
+            hid1_size = (self.full_feature.shape[1].value) * 2
+            hid3_size = action_shape[0] * 10
+            hid2_size = int(np.sqrt(hid1_size * hid3_size))
+            hidden_sizes = (hid1_size, hid2_size, hid3_size)
+            logging.info("policy hidden sizes: {}".format(hidden_sizes))
 
-            wd_dict = {}
-            h1 = tf.nn.tanh(
-                dense(self.full_feature, 64, "h1", weight_init=U.normc_initializer(1.0), bias_init=0.0,
-                      weight_loss_dict=wd_dict))
-            h2 = tf.nn.tanh(
-                dense(h1, 64, "h2", weight_init=U.normc_initializer(1.0), bias_init=0.0, weight_loss_dict=wd_dict))
-            self.action_dist_means_n = dense(h2, np.prod(action_shape), "mean", weight_init=U.normc_initializer(0.1),
-                                             bias_init=0.0,
-                                             weight_loss_dict=wd_dict)  # Mean control output
+            h1 = tf.layers.dense(self.full_feature, hidden_sizes[0], activation=tf.tanh,
+                                 kernel_initializer=tf.orthogonal_initializer())
+            h2 = tf.layers.dense(h1, hidden_sizes[1], activation=tf.tanh,
+                                 kernel_initializer=tf.orthogonal_initializer())
+            h3 = tf.layers.dense(h2, hidden_sizes[2], activation=tf.tanh,
+                                 kernel_initializer=tf.orthogonal_initializer())
+            self.action_dist_means_n = tf.layers.dense(h3, np.prod(action_shape), activation=tf.tanh,
+                                                       kernel_initializer=tf.orthogonal_initializer(gain=0.1))
 
-            # hid1_size = observation_space[0].shape[0] * 10
-            # hid3_size = action_shape[0] * 10
-            # hid2_size = int(np.sqrt(hid1_size * hid3_size))
+            # wd_dict = {}
+            # h1 = tf.nn.tanh(
+            #     dense(self.full_feature, 64, "h1", weight_init=U.normc_initializer(1.0), bias_init=0.0,
+            #           weight_loss_dict=wd_dict))
+            # h2 = tf.nn.tanh(
+            #     dense(h1, 64, "h2", weight_init=U.normc_initializer(1.0), bias_init=0.0, weight_loss_dict=wd_dict))
+            # self.action_dist_means_n = dense(h2, np.prod(action_shape), "mean", weight_init=U.normc_initializer(0.1),
+            #                                  bias_init=0.0,
+            #                                  weight_loss_dict=wd_dict)  # Mean control output
+
+
+
             # self.action_dist_means_n = (pt.wrap(self.full_feature).
             #                             fully_connected(hid1_size, activation_fn=tf.tanh,
             #                                             weights=tf.orthogonal_initializer(),
@@ -121,6 +143,8 @@ class MultiNetwork(object):
             std_na = tf.tile(std_1a, [tf.shape(self.action_dist_means_n)[0], 1])
 
             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
+            if not cnn_trainable:
+                self.var_list = [v for v in self.var_list if not (v in self.cnn_weights)]
 
         # log_std_var = tf.maximum(self.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.state_input)[0]
@@ -157,7 +181,7 @@ class MultiNetwork(object):
 
         kl = self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
         ents_fixed = self.distribution.entropy(self.old_dist_info_vars)
-        ents_sym = - self.new_likelihood_sym
+        ents_sym = self.distribution.entropy(self.new_dist_info_vars)  # - self.new_likelihood_sym
         ent = self.ent = tf.reduce_sum(ents_sym) / self.batch_size_float
         self.losses = [surr, kl, ent]
         self.get_flat_params = GetFlat(self.var_list, session=self.session)  # get theta from var_list
