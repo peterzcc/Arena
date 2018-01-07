@@ -16,7 +16,7 @@ from custom_pend import CustomPend
 from single_gather_env import SingleGatherEnv, SimpleSingleGatherEnv
 import sys
 import os
-from tf_utils import aggregate_feature, concat_feature
+from tf_utils import aggregate_feature, concat_feature, concat_without_task
 BATH_SIZE = 10000
 
 
@@ -146,6 +146,7 @@ def main():
         choice = 2 * np.random.randint(0, 2)
         return DIRECTIONS[choice, :]
 
+    feat_sup = True
     def f_create_env(render_lock=None):
 
         # env = GatherEnv()
@@ -156,7 +157,7 @@ def main():
         # return GymWrapper(env,
         #                   max_null_op=0, max_episode_length=T)
         # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
-        with_state_task = not append_image
+        with_state_task = not (append_image and not feat_sup)
         if render_lock is not None:
             render_lock.acquire()
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
@@ -223,8 +224,10 @@ def main():
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
         sample_env.env.close()
-        n_imgfeat = -1 if append_image else 0
+        n_imgfeat = 2 if append_image else 0
         comb_methd = concat_feature if append_image else aggregate_feature
+
+        comb_methd = concat_without_task if feat_sup else comb_methd
         model = MultiTrpoModel(observation_space, action_space,
                                timestep_limit=T,
                                num_actors=num_actors,
@@ -238,7 +241,8 @@ def main():
                                kl_history_length=1,
                                comb_method=comb_methd,
                                ent_k=args.ent_k,
-                               n_ae_train=-1)
+                               n_ae_train=400,
+                               train_feat=feat_sup)
         return {"global_model": model}
 
     single_process_mode = True if append_image else False

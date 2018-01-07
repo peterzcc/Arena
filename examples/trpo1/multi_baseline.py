@@ -42,29 +42,21 @@ class MultiBaseline(object):
             with tf.variable_scope(scope):
                 self.img_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[1].shape, name="img")
             with tf.variable_scope(img_scope):
-                # expanded_img = self.img_input  # tf.expand_dims(self.img_input, -1)
-                # img_features = pt.wrap(expanded_img).sequential()
-                # for conv_size in conv_sizes:
-                #     img_features.conv2d(conv_size[0], depth=conv_size[1], activation_fn=lrelu,
-                #                         stride=conv_size[2],
-                #                         weights=tf.orthogonal_initializer()
-                #                         )
-                img_feature_tensor, cnn_weights = cnn_network(self.img_input, conv_sizes)
-                self.cnn_weights = cnn_weights
-                cnn_flatten = tf.layers.flatten(img_feature_tensor[-1])
+
                 if n_imgfeat < 0:
-                    self.cnn_image_features = cnn_flatten
+                    cnn_fc_feat = (0,)
                 else:
-                    self.cnn_image_features = tf.layers.dense(cnn_flatten,
-                                                              n_imgfeat,
-                                                              activation=tf.tanh,
-                                                              kernel_initializer=tf.orthogonal_initializer())
-                # img_features = tf.layers.flatten(img_feature_tensor[-1])
-                # img_features = tf.layers.dense(img_features,
-                #                                n_imgfeat,
-                #                                activation=tf.tanh, kernel_initializer=tf.orthogonal_initializer())
-                self.pre_image_features = [self.cnn_image_features]
-                self.final_image_features = [self.img_enabled[:, tf.newaxis] * self.pre_image_features[0]]
+                    cnn_fc_feat = (n_imgfeat,)
+                img_feature_tensor, cnn_weights, img_fc_weights = cnn_network(self.img_input, conv_sizes,
+                                                                              num_fc=cnn_fc_feat)
+                self.cnn_weights = cnn_weights
+                self.img_fc_weights = img_fc_weights
+
+                if n_imgfeat < 0:
+                    self.image_features = tf.layers.flatten(img_feature_tensor[len(conv_sizes)])
+                else:
+                    self.image_features = img_feature_tensor[-1]
+
                 self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
                 self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
                 # self.img_loss = tf.reduce_mean(tf.square(self.pre_image_features[0] - self.state_input[:, :]))
@@ -77,7 +69,7 @@ class MultiBaseline(object):
             self.final_image_features = [tf.constant(0.0)]
         with tf.variable_scope(scope):
             self.aggregated_feature = \
-                self.comb_method(self.final_state, self.final_image_features[0])
+                self.comb_method(self.final_state, self.img_enabled[:, tf.newaxis] * self.image_features)
             self.full_feature = tf.concat(
                 axis=1,
                 values=[self.aggregated_feature, self.time_input])
@@ -104,7 +96,7 @@ class MultiBaseline(object):
             self.st_var_list = [i for i in self.st_var_list if i not in self.img_var_list]
             self.var_list = [*self.img_var_list, *self.st_var_list]
             if not cnn_trainable:
-                self.var_list = [v for v in self.var_list if not (v in self.cnn_weights)]
+                self.var_list = [v for v in self.var_list if not (v in self.cnn_weights or v in self.img_fc_weights)]
             self.st_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.st_var_list])
             self.l2 = self.st_l2  #+ self.img_l2
             self.final_loss = self.mse  # S+ (self.l2) * self.l2_k

@@ -52,31 +52,25 @@ class MultiNetwork(object):
             self.img_enabled = tf.placeholder(tf.float32, shape=(None,), name='img_enabled')
 
             if len(extra_feaatures) > 0:
-                # self.full_feature = tf.concat(axis=1, values=[self.st_enabled * self.state_input. *extra_feaatures])
                 self.full_feature = self.comb_method(self.st_enabled * self.state_input, extra_feaatures[0])
             else:
                 if n_imgfeat != 0:
-
-                    img_feature_tensor, cnn_weights = cnn_network(self.img_input, conv_sizes)
-                    self.cnn_weights = cnn_weights
-                    # img_features = pt.wrap(img_feature_tensor[-1]).sequential()
-                    # img_features.flatten()
-                    # img_features.fully_connected(n_imgfeat, activation_fn=tf.nn.tanh,
-                    #                              weights=tf.orthogonal_initializer()
-                    #                              )
-                    cnn_flatten = tf.layers.flatten(img_feature_tensor[-1])
                     if n_imgfeat < 0:
-                        self.image_features = cnn_flatten
+                        cnn_fc_feat = (0,)
                     else:
-                        self.image_features = tf.layers.dense(cnn_flatten,
-                                                              n_imgfeat,
-                                                              activation=tf.tanh,
-                                                              kernel_initializer=tf.orthogonal_initializer())
+                        cnn_fc_feat = (n_imgfeat,)
+                    img_feature_tensor, cnn_weights, img_fc_weights = cnn_network(self.img_input, conv_sizes,
+                                                                                  num_fc=cnn_fc_feat)
+                    self.cnn_weights = cnn_weights
+                    self.img_fc_weights = img_fc_weights
+
+                    if n_imgfeat < 0:
+                        self.image_features = tf.layers.flatten(img_feature_tensor[len(conv_sizes)])
+                    else:
+                        self.image_features = img_feature_tensor[-1]
                     self.full_feature = self.comb_method(self.st_enabled * self.state_input,
                                                          self.img_enabled[:, tf.newaxis] * self.image_features)
-                    # self.full_feature = self.st_enabled * self.state_input + \
-                    #                     self.img_enabled[:, tf.newaxis] * self.image_features
-                    # self.full_feature = self.image_features
+
                 else:
                     self.full_feature = self.state_input
             hid1_size = (self.full_feature.shape[1].value) * 2
@@ -106,20 +100,6 @@ class MultiNetwork(object):
 
 
 
-            # self.action_dist_means_n = (pt.wrap(self.full_feature).
-            #                             fully_connected(hid1_size, activation_fn=tf.tanh,
-            #                                             weights=tf.orthogonal_initializer(),
-            #                                             name="%s_fc1" % scope).
-            #                             fully_connected(hid2_size, activation_fn=tf.tanh,
-            #                                             weights=tf.orthogonal_initializer(),
-            #                                             name="%s_fc1" % scope).
-            #                             fully_connected(hid3_size, activation_fn=tf.tanh,
-            #                                             weights=tf.orthogonal_initializer(gain=0.1),
-            #                                             name="%s_fc2" % scope).
-            #                             fully_connected(np.prod(action_shape),
-            #                                             activation_fn=None,
-            #                                             weights=tf.orthogonal_initializer(gain=0.1),
-            #                                             name="%s_fc3" % scope))
             # logvar_speed = (10 * hid3_size) // 48
             # log_vars = self.log_vars = tf.get_variable("%s_logvars" % scope, (logvar_speed, action_shape[0]),
             #                                            tf.float32,
@@ -144,7 +124,7 @@ class MultiNetwork(object):
 
             self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
             if not cnn_trainable:
-                self.var_list = [v for v in self.var_list if not (v in self.cnn_weights)]
+                self.var_list = [v for v in self.var_list if not (v in self.cnn_weights or v in self.img_fc_weights)]
 
         # log_std_var = tf.maximum(self.action_dist_logstds_n, np.log(self.min_std))
         batch_size = tf.shape(self.state_input)[0]
