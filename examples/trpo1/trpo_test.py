@@ -241,7 +241,7 @@ def main():
                                kl_history_length=1,
                                comb_method=comb_methd,
                                ent_k=args.ent_k,
-                               n_ae_train=400,
+                               n_ae_train=200,
                                train_feat=feat_sup)
         return {"global_model": model}
 

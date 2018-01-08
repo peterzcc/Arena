@@ -46,7 +46,7 @@ class MultiBaseline(object):
                 if n_imgfeat < 0:
                     cnn_fc_feat = (0,)
                 else:
-                    cnn_fc_feat = (n_imgfeat,)
+                    cnn_fc_feat = (64, n_imgfeat,)
                 img_feature_tensor, cnn_weights, img_fc_weights = cnn_network(self.img_input, conv_sizes,
                                                                               num_fc=cnn_fc_feat)
                 self.cnn_weights = cnn_weights

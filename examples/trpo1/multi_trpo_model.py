@@ -222,7 +222,7 @@ class MultiTrpoModel(ModelWithCritic):
             if n_imgfeat < 0:
                 cnn_fc_feat = (0,)
             else:
-                cnn_fc_feat = (n_imgfeat,)
+                cnn_fc_feat = (64, n_imgfeat,)
             self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
                                                     conv_sizes=conv_sizes,
                                                     num_fc=cnn_fc_feat)
@@ -247,6 +247,7 @@ class MultiTrpoModel(ModelWithCritic):
                                      range(len(self.autoencoder_net.fc_weights))]
             self.cnn_saver = tf.train.Saver(var_list=self.autoencoder_net.total_var_list)
         self.n_ae_train = n_ae_train
+        self.n_feat_train = self.n_ae_train
 
         self.saved_paths = []
 
@@ -530,32 +531,31 @@ class MultiTrpoModel(ModelWithCritic):
         if self.n_update == 0 and self.n_ae_train == -1:
             self.cnn_saver.restore(self.session, "./cnn_model")
             self.session.run(self.cnn_sync_op)
-        if self.n_update < self.n_ae_train:
+        if self.n_update < self.n_ae_train + self.n_feat_train:
             ae_feed = {self.net.img_input: feed[self.net.img_input],
                        self.net.state_input: feed[self.net.state_input]}
-
-            ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
-                                  feed=ae_feed, N=batch_size,
-                                  minibatch_size=self.minibatch_size)
-            logging.debug("\nae loss before: {}".format(ae_loss))
-
             training_inds = np.random.permutation(batch_size)
-            for start in range(0, batch_size, self.minibatch_size):  # TODO: verify this
-                if start > batch_size - 2 * self.minibatch_size:
-                    end = batch_size
-                else:
-                    end = start + self.minibatch_size
-                slc = training_inds[range(start, end)]
-                this_feed = {k: v[slc] for (k, v) in list(ae_feed.items())}
-                self.session.run(self.ae_train_op, feed_dict=this_feed)
-                if end == batch_size:
-                    break
-            ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
-                                  feed=ae_feed, N=batch_size,
-                                  minibatch_size=self.minibatch_size)
-            logging.debug("\nae loss after: {}".format(ae_loss))
+            if self.n_update < self.n_ae_train:
+                ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
+                                      feed=ae_feed, N=batch_size,
+                                      minibatch_size=self.minibatch_size)
+                logging.debug("\nae loss before: {}".format(ae_loss))
+                for start in range(0, batch_size, self.minibatch_size):  # TODO: verify this
+                    if start > batch_size - 2 * self.minibatch_size:
+                        end = batch_size
+                    else:
+                        end = start + self.minibatch_size
+                    slc = training_inds[range(start, end)]
+                    this_feed = {k: v[slc] for (k, v) in list(ae_feed.items())}
+                    self.session.run(self.ae_train_op, feed_dict=this_feed)
+                    if end == batch_size:
+                        break
+                ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
+                                      feed=ae_feed, N=batch_size,
+                                      minibatch_size=self.minibatch_size)
+                logging.debug("\nae loss after: {}".format(ae_loss))
 
-            if self.train_feat:
+            elif self.train_feat:
                 ae_loss = run_batched(self.feat_loss, session=self.session,
                                       feed=ae_feed, N=batch_size,
                                       minibatch_size=self.minibatch_size)
@@ -575,7 +575,7 @@ class MultiTrpoModel(ModelWithCritic):
                                       minibatch_size=self.minibatch_size)
                 logging.debug("\nfeat loss after: {}".format(ae_loss))
 
-            if self.n_update == self.n_ae_train - 1:
+            if self.n_update == self.n_ae_train + self.n_feat_train - 1:
                 self.cnn_saver.save(self.session, "./cnn_model")
                 self.cnn_saver.restore(self.session, "./cnn_model")
                 self.session.run(self.cnn_sync_op)

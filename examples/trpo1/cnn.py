@@ -45,12 +45,13 @@ class ConvAutoencorder(object):
                                                                                  num_fc=num_fc,
                                                                                  fc_activation=fc_activation)
         cnn_final_layer_num = len(conv_sizes)
-        self.decoder_layers = [self.encoder_layers[cnn_final_layer_num]]
+        self.cnn_layers = self.encoder_layers[0:(cnn_final_layer_num + 1)]
+        self.decoder_layers = [self.cnn_layers[-1]]
         local_scope = "dec_cnn"
         with tf.variable_scope(local_scope) as current_scope:
             for (i, (kernel, depth, stride)) in enumerate(reversed(conv_sizes)):
                 this_layer = tf.layers.conv2d_transpose(self.decoder_layers[-1],
-                                                        filters=self.encoder_layers[-2 - i].shape[3],
+                                                        filters=self.cnn_layers[-2 - i].shape[3],
                                                         kernel_size=kernel,
                                                         strides=stride,
                                                         activation=activation_fn,
