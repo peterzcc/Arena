@@ -77,21 +77,23 @@ class MultiBaseline(object):
                 axis=1,
                 values=[self.aggregated_feature, self.time_input])
 
-            hid1_size = (self.full_feature.shape[1].value) * 2
-            hid3_size = 5
-            hid2_size = int(np.sqrt(hid1_size * hid3_size))
-            hidden_sizes = (hid1_size, hid2_size, hid3_size)
+            # hid1_size = (self.full_feature.shape[1].value) * 2
+            # hid3_size = 5
+            # hid2_size = int(np.sqrt(hid1_size * hid3_size))
+            # hidden_sizes = (hid1_size, hid2_size, hid3_size)
+            hidden_sizes = (64, 64)
             logging.info("critic hidden sizes: {}".format(hidden_sizes))
-            h = self.full_feature
+            self.fc_layers = [self.full_feature]
             for hidden_size in hidden_sizes:
-                h = tf.layers.dense(h, hidden_size,
+                h = tf.layers.dense(self.fc_layers[-1], hidden_size,
                                     activation=activation, kernel_initializer=tf.orthogonal_initializer())
+                self.fc_layers.append(h)
             # hidden_units = pt.wrap(self.full_feature).sequential()
             # for hidden_size in hidden_sizes:
             #     hidden_units.fully_connected(hidden_size, activation_fn=activation,
             #                                  weights=tf.orthogonal_initializer()
             #                                  )
-            y = tf.layers.dense(h, 1, activation=None, kernel_initializer=tf.orthogonal_initializer())
+            y = tf.layers.dense(self.fc_layers[-1], 1, activation=None, kernel_initializer=tf.orthogonal_initializer())
 
             self.net = tf.reshape(y, (-1,))  # why reshape?
             self.mse = tf.reduce_mean(tf.square(self.net - self.y))
@@ -126,6 +128,11 @@ class MultiBaseline(object):
         self.session.run(tf.global_variables_initializer())
         self.debug_mode = True
 
+    def explained_var(self, ypred, y):
+        assert y.ndim == 1 and ypred.ndim == 1
+        vary = np.var(y)
+        return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
+
     # def _features(self, path):
     #     obs = path["observations"]
     #     # l = (path["observations"].shape[0])
@@ -144,7 +151,9 @@ class MultiBaseline(object):
                         feed=feed, N=feed[self.y].shape[0],
                         session=self.session,
                         minibatch_size=self.minibatch_size)[0]
-        logging.debug("vf:\n mse:{}\n".format(mse))
+        ypred = self.session.run(self.net, feed_dict=feed)
+        ex_var = self.explained_var(ypred, feed[self.y])
+        logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
 
     def fit(self, path_dict, update_mode="full", num_pass=1):
         # featmat = self._features(paths)

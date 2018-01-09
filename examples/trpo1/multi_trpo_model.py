@@ -107,7 +107,7 @@ class MultiTrpoModel(ModelWithCritic):
         cnn_trainable = False
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
-                                    activation=tf.tanh,
+                                    activation=tf.nn.elu,
                                     n_imgfeat=self.n_imgfeat,
                                     conv_sizes=conv_sizes,
                                     comb_method=self.comb_method,

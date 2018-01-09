@@ -75,19 +75,18 @@ class MultiNetwork(object):
                     self.full_feature = self.state_input
                     self.cnn_weights = []
                     self.img_fc_weights = []
-            hid1_size = (self.full_feature.shape[1].value) * 2
-            hid3_size = action_shape[0] * 10
-            hid2_size = int(np.sqrt(hid1_size * hid3_size))
-            hidden_sizes = (hid1_size, hid2_size, hid3_size)
+            # hid1_size = (self.full_feature.shape[1].value) * 2
+            # hid3_size = action_shape[0] * 10
+            # hid2_size = int(np.sqrt(hid1_size * hid3_size))
+            # hidden_sizes = (hid1_size, hid2_size, hid3_size)
+            hidden_sizes = (64, 64)
             logging.info("policy hidden sizes: {}".format(hidden_sizes))
-
-            h1 = tf.layers.dense(self.full_feature, hidden_sizes[0], activation=tf.tanh,
+            self.fc_layers = [self.full_feature]
+            for hid in hidden_sizes:
+                current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=tf.tanh,
                                  kernel_initializer=tf.orthogonal_initializer())
-            h2 = tf.layers.dense(h1, hidden_sizes[1], activation=tf.tanh,
-                                 kernel_initializer=tf.orthogonal_initializer())
-            h3 = tf.layers.dense(h2, hidden_sizes[2], activation=tf.tanh,
-                                 kernel_initializer=tf.orthogonal_initializer())
-            self.action_dist_means_n = tf.layers.dense(h3, np.prod(action_shape), activation=tf.tanh,
+                self.fc_layers.append(current_fc)
+            self.action_dist_means_n = tf.layers.dense(self.fc_layers[-1], np.prod(action_shape), activation=tf.tanh,
                                                        kernel_initializer=tf.orthogonal_initializer(gain=0.1))
 
             # wd_dict = {}

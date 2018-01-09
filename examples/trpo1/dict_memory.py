@@ -127,7 +127,7 @@ class DictMemory(object):
                     path["observation"] = \
                         [np.array([o[0] for o in path["observation"]])]
                 path["times"] = np.arange(len(path["reward"])).reshape(-1, 1) / float(self.timestep_limit)
-                if self.gamma < 0.999:  # don't scale for gamma ~= 1
+                if False:  # self.gamma < 0.999:  # don't scale for gamma ~= 1
                     scaled_rewards = path['reward'] * (1 - self.gamma)
                 else:
                     scaled_rewards = path['reward']
