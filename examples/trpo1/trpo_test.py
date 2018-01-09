@@ -124,7 +124,7 @@ def main():
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-    append_image = False
+    append_image = True
     feat_sup = False
 
     def x_forward_obj():
@@ -151,7 +151,7 @@ def main():
     def f_create_env(render_lock=None):
 
         # env = GatherEnv()
-        env = gym.make('Ant-v1')
+        # env = gym.make('Ant-v1')
         # env = MazeEnv()
         # env = gym.make('InvertedPendulum-v1')
 
@@ -161,8 +161,8 @@ def main():
         with_state_task = not (append_image and not feat_sup)
         if render_lock is not None:
             render_lock.acquire()
-        # env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-        #                       f_gen_obj=x_for_back)
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                              f_gen_obj=x_for_back)
         if render_lock is not None:
             render_lock.release()
         # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
@@ -242,7 +242,7 @@ def main():
                                kl_history_length=1,
                                comb_method=comb_methd,
                                ent_k=args.ent_k,
-                               n_ae_train=0,
+                               n_ae_train=-1,
                                train_feat=feat_sup)
         return {"global_model": model}
 
