@@ -124,7 +124,8 @@ def main():
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-    append_image = True
+    append_image = False
+    feat_sup = False
 
     def x_forward_obj():
         return np.array((1, 0))
@@ -146,7 +147,7 @@ def main():
         choice = 2 * np.random.randint(0, 2)
         return DIRECTIONS[choice, :]
 
-    feat_sup = True
+
     def f_create_env(render_lock=None):
 
         # env = GatherEnv()
@@ -241,7 +242,7 @@ def main():
                                kl_history_length=1,
                                comb_method=comb_methd,
                                ent_k=args.ent_k,
-                               n_ae_train=200,
+                               n_ae_train=0,
                                train_feat=feat_sup)
         return {"global_model": model}
 

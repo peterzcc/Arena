@@ -56,6 +56,7 @@ class MultiBaseline(object):
                     self.image_features = tf.layers.flatten(img_feature_tensor[len(conv_sizes)])
                 else:
                     self.image_features = img_feature_tensor[-1]
+                self.final_image_features = self.image_features
 
                 self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
                 self.img_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.img_var_list])
@@ -66,10 +67,10 @@ class MultiBaseline(object):
                 #                                        var_list=self.img_var_list)
         else:
             self.img_var_list = []
-            self.final_image_features = [tf.constant(0.0)]
+            self.final_image_features = tf.constant(0.0)
         with tf.variable_scope(scope):
             self.aggregated_feature = \
-                self.comb_method(self.final_state, self.img_enabled[:, tf.newaxis] * self.image_features)
+                self.comb_method(self.final_state, self.img_enabled[:, tf.newaxis] * self.final_image_features)
             self.full_feature = tf.concat(
                 axis=1,
                 values=[self.aggregated_feature, self.time_input])
