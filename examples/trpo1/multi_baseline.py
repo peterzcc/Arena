@@ -67,6 +67,8 @@ class MultiBaseline(object):
                 #                                        var_list=self.img_var_list)
         else:
             self.img_var_list = []
+            self.cnn_weights = []
+            self.img_fc_weights = []
             self.final_image_features = tf.constant(0.0)
         with tf.variable_scope(scope):
             self.aggregated_feature = \

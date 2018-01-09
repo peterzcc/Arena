@@ -73,6 +73,8 @@ class MultiNetwork(object):
 
                 else:
                     self.full_feature = self.state_input
+                    self.cnn_weights = []
+                    self.img_fc_weights = []
             hid1_size = (self.full_feature.shape[1].value) * 2
             hid3_size = action_shape[0] * 10
             hid2_size = int(np.sqrt(hid1_size * hid3_size))

@@ -104,7 +104,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.comb_method = comb_method  # aggregate_feature#
         conv_sizes = (((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2))
 
-        cnn_trainable = True
+        cnn_trainable = False
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
                                     activation=tf.tanh,

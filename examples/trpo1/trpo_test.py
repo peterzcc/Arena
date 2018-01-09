@@ -124,7 +124,7 @@ def main():
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
     DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-    append_image = False
+    append_image = True
     feat_sup = False
 
     def x_forward_obj():
@@ -242,7 +242,7 @@ def main():
                                kl_history_length=1,
                                comb_method=comb_methd,
                                ent_k=args.ent_k,
-                               n_ae_train=0,
+                               n_ae_train=-1,
                                train_feat=feat_sup)
         return {"global_model": model}
 
