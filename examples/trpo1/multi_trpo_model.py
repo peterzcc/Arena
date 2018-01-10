@@ -43,7 +43,6 @@ class MultiTrpoModel(ModelWithCritic):
                  num_actors=1,
                  f_batch_size=None,
                  batch_mode="episode",
-                 recompute_old_dist=False,
                  update_per_epoch=4,
                  kl_history_length=1,
                  ent_k=0,
@@ -223,7 +222,7 @@ class MultiTrpoModel(ModelWithCritic):
                 cnn_fc_feat = (0,)
             else:
                 cnn_fc_feat = (64, n_imgfeat,)
-            self.autoencoder_net = ConvAutoencorder(input=self.net.img_input,
+            self.autoencoder_net = ConvAutoencorder(input=self.net.img_float,
                                                     conv_sizes=conv_sizes,
                                                     num_fc=cnn_fc_feat)
             self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
@@ -269,7 +268,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.update_critic = True
         self.update_policy = True
         self.debug = True
-        self.recompute_old_dist = recompute_old_dist
+        self.recompute_old_dist = False  # True if self.batch_mode == "episode" and self.num_actors > 1 else False
         self.session.run(tf.global_variables_initializer())
         for qr in [self.k_q_runner]:
             if (qr != None):

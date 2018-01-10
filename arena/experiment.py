@@ -61,6 +61,7 @@ class Experiment(object):
             os.mkdir(self.stats_file_dir)
         root = logging.getLogger()
         root.setLevel(logging.DEBUG)
+        Experiment.EXP_NAME = self.stats_file_dir
 
         # create file handler which logs even debug messages
         fh = logging.FileHandler(self.stats_file_dir + '/log.txt', mode='w')
@@ -123,7 +124,7 @@ class Experiment(object):
         signal.signal(signal.SIGINT, self.interrupt)
         self.is_terminated = False
 
-
+    EXP_NAME = "exp_unknown"
 
     def terminate_all_actuators(self):
         force_map(lambda x: x.put(ProcessState.stop), self.actuator_channels)
@@ -210,7 +211,7 @@ class Experiment(object):
 
     def interrupt(self, signal, frame):
         force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
-        print('You pressed Ctrl+C!')
+        print('You pressed Ctrl+C. Terminating..')
 
         self.is_terminated = True
         sys.exit()

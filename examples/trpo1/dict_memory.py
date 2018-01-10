@@ -8,6 +8,7 @@ import logging
 from read_write_lock import ReadWriteLock
 from  functools import reduce
 import operator
+from arena.experiment import Experiment
 def discount(x, gamma):
     """
     computes discounted sums along 0th dimension of x.
@@ -92,6 +93,7 @@ class DictMemory(object):
             self.run_start_time = None
             epoch_reward = np.asscalar(np.sum(np.concatenate([p["reward"] for p in paths])))
             self.num_epoch += 1
+            logging.info("experiment: {}".format(Experiment.EXP_NAME))
             logging.info(
                 'Epoch:%d \nt: %d\nAverage Return:%f, \nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
                 % (self.num_epoch,
@@ -122,7 +124,7 @@ class DictMemory(object):
                 if len(path["observation"][0]) == 2:
                     path["observation"] = \
                         [np.array([o[0] for o in path["observation"]]),
-                         np.array([o[1] for o in path["observation"]]).astype(np.float32) / 255.0]
+                         np.array([o[1] for o in path["observation"]])]
                 else:
                     path["observation"] = \
                         [np.array([o[0] for o in path["observation"]])]

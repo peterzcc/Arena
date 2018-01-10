@@ -40,14 +40,15 @@ class MultiBaseline(object):
         self.n_imgfeat = n_imgfeat
         if n_imgfeat != 0:
             with tf.variable_scope(scope):
-                self.img_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[1].shape, name="img")
+                self.img_input = tf.placeholder(tf.uint8, shape=(None,) + obs_space[1].shape, name="img")
+                self.img_float = tf.cast(self.img_input, tf.float32) / 255
             with tf.variable_scope(img_scope):
 
                 if n_imgfeat < 0:
                     cnn_fc_feat = (0,)
                 else:
                     cnn_fc_feat = (64, n_imgfeat,)
-                img_feature_tensor, cnn_weights, img_fc_weights = cnn_network(self.img_input, conv_sizes,
+                img_feature_tensor, cnn_weights, img_fc_weights = cnn_network(self.img_float, conv_sizes,
                                                                               num_fc=cnn_fc_feat)
                 self.cnn_weights = cnn_weights
                 self.img_fc_weights = img_fc_weights

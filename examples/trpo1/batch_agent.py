@@ -85,7 +85,7 @@ class BatchUpdateAgent(Agent):
             self.batch_start_time = time.time()
         processed_observation = [observation[0]]
         if len(observation) == 2:
-            processed_observation.append(observation[1].astype(np.float32) / 255.0)
+            processed_observation.append(observation[1])
         action, agent_info = self.model.predict(processed_observation, pid=self.id)
         # action = self.action_space.sample()
         # agent_info = {}
