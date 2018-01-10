@@ -61,6 +61,8 @@ def main():
                         help='gae lambda')
     parser.add_argument('--withimg', default=False, type=bool, help='append image input')
     parser.add_argument('--env', default="ant", type=str, help='env')
+    parser.add_argument('--nae', required=False, type=int, default=0,
+                        help='num ae train')
     args = parser.parse_args()
 
     should_profile = False
@@ -249,7 +251,7 @@ def main():
                                kl_history_length=1,
                                comb_method=comb_methd,
                                ent_k=args.ent_k,
-                               n_ae_train=-1,
+                               n_ae_train=args.nae,
                                train_feat=feat_sup,
                                gae_lam=args.lam)
         return {"global_model": model}
