@@ -211,7 +211,9 @@ class MultiTrpoModel(ModelWithCritic):
                                           epsilon=1e-2, stats_decay=0.99,
                                           async=True, cold_iter=1,
                                           weight_decay_dict={}, max_grad_norm=None)
-        self.k_final_loss = self.net.trad_surr_loss + self.ent_loss
+        self.loss_type = "PPO"
+        self.k_surr_loss = self.net.surr if self.loss_type == "PPO" else self.net.trad_surr_loss
+        self.k_final_loss = self.k_surr_loss + self.ent_loss
         self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
                                                                   self.net.mean_loglike, var_list=self.net.var_list)
         self.k_enqueue_threads = []
@@ -268,7 +270,7 @@ class MultiTrpoModel(ModelWithCritic):
         self.update_critic = True
         self.update_policy = True
         self.debug = True
-        self.recompute_old_dist = False  # True if self.batch_mode == "episode" and self.num_actors > 1 else False
+        self.recompute_old_dist = True if self.batch_mode == "episode" and self.num_actors > 1 else False
         self.session.run(tf.global_variables_initializer())
         for qr in [self.k_q_runner]:
             if (qr != None):

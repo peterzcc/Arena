@@ -93,7 +93,7 @@ class DictMemory(object):
             self.run_start_time = None
             epoch_reward = np.asscalar(np.sum(np.concatenate([p["reward"] for p in paths])))
             self.num_epoch += 1
-            logging.info("experiment: {}".format(Experiment.EXP_NAME))
+            logging.info("Name: {}".format(Experiment.EXP_NAME))
             logging.info(
                 'Epoch:%d \nt: %d\nAverage Return:%f, \nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
                 % (self.num_epoch,
