@@ -18,13 +18,13 @@ from diagonal_gaussian import DiagonalGaussian
 
 class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_shape,
-                 conv_sizes=(((4, 4), 16, 2), ((4, 4), 16, 1)),
                  n_imgfeat=1, extra_feaatures=[], st_enabled=None, img_enabled=None,
                  comb_method=aggregate_feature,
                  cnn_trainable=True,
                  min_std=1e-6,
                  distibution=DiagonalGaussian,
-                 session=None):
+                 session=None,
+                 f_build_cnn=None):
         self.comb_method = comb_method
         self.min_std = min_std
         self.distribution = distibution
@@ -56,19 +56,15 @@ class MultiNetwork(object):
                 self.full_feature = self.comb_method(self.st_enabled * self.state_input, extra_feaatures[0])
             else:
                 if n_imgfeat != 0:
-                    if n_imgfeat < 0:
-                        cnn_fc_feat = (0,)
-                    else:
-                        cnn_fc_feat = (64, n_imgfeat,)
-                    img_feature_tensor, cnn_weights, img_fc_weights = cnn_network(self.img_float, conv_sizes,
-                                                                                  num_fc=cnn_fc_feat)
+                    assert f_build_cnn is not None
+                    img_net_layers, cnn_weights, img_fc_weights = f_build_cnn(self.img_float)
                     self.cnn_weights = cnn_weights
                     self.img_fc_weights = img_fc_weights
 
                     if n_imgfeat < 0:
-                        self.image_features = tf.layers.flatten(img_feature_tensor[len(conv_sizes)])
+                        self.image_features = tf.layers.flatten(img_net_layers[-1])
                     else:
-                        self.image_features = img_feature_tensor[-1]
+                        self.image_features = img_net_layers[-1]
                     self.full_feature = self.comb_method(self.st_enabled * self.state_input,
                                                          self.img_enabled[:, tf.newaxis] * self.image_features)
 
@@ -90,15 +86,6 @@ class MultiNetwork(object):
             self.action_dist_means_n = tf.layers.dense(self.fc_layers[-1], np.prod(action_shape), activation=tf.tanh,
                                                        kernel_initializer=tf.orthogonal_initializer(gain=0.1))
 
-            # wd_dict = {}
-            # h1 = tf.nn.tanh(
-            #     dense(self.full_feature, 64, "h1", weight_init=U.normc_initializer(1.0), bias_init=0.0,
-            #           weight_loss_dict=wd_dict))
-            # h2 = tf.nn.tanh(
-            #     dense(h1, 64, "h2", weight_init=U.normc_initializer(1.0), bias_init=0.0, weight_loss_dict=wd_dict))
-            # self.action_dist_means_n = dense(h2, np.prod(action_shape), "mean", weight_init=U.normc_initializer(0.1),
-            #                                  bias_init=0.0,
-            #                                  weight_loss_dict=wd_dict)  # Mean control output
 
 
 

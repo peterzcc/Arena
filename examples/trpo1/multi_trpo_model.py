@@ -13,7 +13,7 @@ import threading as thd
 import logging
 from dict_memory import DictMemory
 from read_write_lock import ReadWriteLock
-from cnn import ConvAutoencorder
+from cnn import ConvAutoencorder, cnn_network
 from baselines import common
 from baselines.common import tf_util as U
 from baselines.acktr import kfac
@@ -104,13 +104,20 @@ class MultiTrpoModel(ModelWithCritic):
         conv_sizes = (((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2))
 
         cnn_trainable = False
+        if n_imgfeat < 0:
+            cnn_fc_feat = (0,)
+        else:
+            cnn_fc_feat = (64, n_imgfeat,)
+
+        def f_build_img_net(t_input):
+            return cnn_network(t_input, conv_sizes, fc_sizes=cnn_fc_feat)
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
                                     activation=tf.nn.elu,
                                     n_imgfeat=self.n_imgfeat,
-                                    conv_sizes=conv_sizes,
                                     comb_method=self.comb_method,
-                                    cnn_trainable=cnn_trainable)
+                                    cnn_trainable=cnn_trainable,
+                                    f_build_cnn=f_build_img_net)
 
         self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
 
@@ -122,28 +129,9 @@ class MultiTrpoModel(ModelWithCritic):
                                st_enabled=self.ob_space[0].low.shape)
 
         if self.mode == "SURP":
-            self.net = MultiNetwork(scope="state_agent",
-                                    observation_space=self.ob_space,
-                                    action_shape=self.act_space.shape,
-                                    n_imgfeat=0,
-                                    extra_feaatures=[],
-                                    conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)),  # (((3, 3), 2, 2),),  #
-                                    comb_method=self.comb_method,
-                                    min_std=min_std,
-                                    distibution=self.distribution,
-                                    session=self.session
-                                    )
-            self.target_net = MultiNetwork(scope="target_agent",
-                                           observation_space=self.ob_space,
-                                           action_shape=self.act_space.shape,
-                                           n_imgfeat=self.n_imgfeat,
-                                           extra_feaatures=[],
-                                           conv_sizes=(((4, 4), 64, 2), ((3, 3), 64, 1)),
-                                           comb_method=self.comb_method,
-                                           min_std=min_std,
-                                           distibution=self.distribution,
-                                           session=self.session
-                                           )
+            assert ValueError("not developed")
+            self.net = None
+            self.target_net = None
             self.executer_net = self.target_net
         else:
             self.net = MultiNetwork(scope="state_agent",
@@ -151,13 +139,12 @@ class MultiTrpoModel(ModelWithCritic):
                                     action_shape=self.act_space.shape,
                                     n_imgfeat=self.n_imgfeat,
                                     extra_feaatures=[],
-                                    # [],  #[np.zeros((4,), dtype=np.float32)],  #
-                                    conv_sizes=conv_sizes,  # (((3, 3), 2, 2),),  #
                                     comb_method=self.comb_method,
                                     min_std=min_std,
                                     distibution=self.distribution,
                                     session=self.session,
-                                    cnn_trainable=cnn_trainable
+                                    cnn_trainable=cnn_trainable,
+                                    f_build_cnn=f_build_img_net
                                     )
             self.executer_net = self.net
 

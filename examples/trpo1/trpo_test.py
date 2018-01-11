@@ -235,7 +235,7 @@ def main():
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
         sample_env.env.close()
-        n_imgfeat = 2 if append_image else 0
+        n_imgfeat = -1 if append_image else 0
         comb_methd = concat_feature if append_image else aggregate_feature
 
         comb_methd = concat_without_task if feat_sup else comb_methd

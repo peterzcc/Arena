@@ -15,10 +15,10 @@ class MultiBaseline(object):
     coeffs = None
 
     def __init__(self, session=None, scope="value_f",
-                 obs_space=None,
-                 conv_sizes=(((4, 4), 16, 2), ((3, 3), 16, 1)), n_imgfeat=1, activation=tf.nn.tanh,
+                 obs_space=None, n_imgfeat=1, activation=tf.nn.tanh,
                  max_iter=25, timestep_limit=1000, comb_method=aggregate_feature,
-                 cnn_trainable=True):
+                 cnn_trainable=True,
+                 f_build_cnn=None):
         self.session = session
         self.max_iter = max_iter
         self.use_lbfgs_b = False  # not with_image
@@ -44,19 +44,15 @@ class MultiBaseline(object):
                 self.img_float = tf.cast(self.img_input, tf.float32) / 255
             with tf.variable_scope(img_scope):
 
-                if n_imgfeat < 0:
-                    cnn_fc_feat = (0,)
-                else:
-                    cnn_fc_feat = (64, n_imgfeat,)
-                img_feature_tensor, cnn_weights, img_fc_weights = cnn_network(self.img_float, conv_sizes,
-                                                                              num_fc=cnn_fc_feat)
+                assert f_build_cnn is not None
+                img_net_layers, cnn_weights, img_fc_weights = f_build_cnn(self.img_float)
                 self.cnn_weights = cnn_weights
                 self.img_fc_weights = img_fc_weights
 
                 if n_imgfeat < 0:
-                    self.image_features = tf.layers.flatten(img_feature_tensor[len(conv_sizes)])
+                    self.image_features = tf.layers.flatten(img_net_layers[-1])
                 else:
-                    self.image_features = img_feature_tensor[-1]
+                    self.image_features = img_net_layers[-1]
                 self.final_image_features = self.image_features
 
                 self.img_var_list = tf.get_collection(key=tf.GraphKeys.TRAINABLE_VARIABLES, scope=img_scope)
