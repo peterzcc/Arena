@@ -213,6 +213,45 @@ def run_batched(func, feed, N, session, minibatch_size=64, extra_input={}):
     return result
 
 
+def variance_batched(y, feed, N, session, minibatch_size=64, extra_input={}):
+    y_mean = run_batched(tf.reduce_mean(y), session=session,
+                         feed=feed, N=N,
+                         minibatch_size=minibatch_size, extra_input=extra_input)
+    y_var = run_batched(tf.reduce_mean(tf.square(y - y_mean)), session=session,
+                        feed=feed, N=N,
+                        minibatch_size=minibatch_size, extra_input=extra_input)
+    return y_var
+
+
+def explained_variance_batched(x, y, feed, N, session, minibatch_size=64, extra_input={}):
+    y_var = variance_batched(y, session=session,
+                             feed=feed, N=N,
+                             minibatch_size=minibatch_size, extra_input=extra_input)
+    diff_var = variance_batched(y - x, session=session,
+                                feed=feed, N=N,
+                                minibatch_size=minibatch_size, extra_input=extra_input)
+    exp_var = 1 - diff_var / (y_var + 1e-6)
+    return exp_var
+
+
+def reduce_var(x, axis=None, keepdims=False):
+    """Variance of a tensor, alongside the specified axis.
+
+    # Arguments
+        x: A tensor or variable.
+        axis: An integer, the axis to compute the variance.
+        keepdims: A boolean, whether to keep the dimensions or not.
+            If `keepdims` is `False`, the rank of the tensor is reduced
+            by 1. If `keepdims` is `True`,
+            the reduced dimension is retained with length 1.
+
+    # Returns
+        A tensor with the variance of elements of `x`.
+    """
+    m = tf.reduce_mean(x, axis=axis, keep_dims=True)
+    devs_squared = tf.square(x - m)
+    return tf.reduce_mean(devs_squared, axis=axis, keep_dims=keepdims)
+
 def lrelu(x, leak=0.2, name="lrelu"):
     with tf.variable_scope(name):
         f1 = 0.5 * (1 + leak)

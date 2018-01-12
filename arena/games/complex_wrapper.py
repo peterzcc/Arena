@@ -110,10 +110,14 @@ class ComplexWrapper(object):
             image_observation = self.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
             self.x_buffer = (self.x_buffer + 1) % self.num_frame
-            self.frame_buffer[:, :, self.x_buffer] = image_observation
-            stacked_obs = np.take(self.frame_buffer, np.arange(self.x_buffer + 1 - self.num_frame, self.x_buffer + 1),
-                                  axis=2,
-                                  mode='wrap')
+            if self.num_frame > 1:
+                self.frame_buffer[:, :, self.x_buffer] = image_observation
+                stacked_obs = np.take(self.frame_buffer,
+                                      np.arange(self.x_buffer + 1 - self.num_frame, self.x_buffer + 1),
+                                      axis=2,
+                                      mode='wrap')
+            else:
+                stacked_obs = image_observation
             return [state_observation[self.vs_id], stacked_obs], reward, done, info
         else:
             return [state_observation[self.vs_id]], reward, done, info
@@ -126,10 +130,14 @@ class ComplexWrapper(object):
             self.x_buffer = self.num_frame - 1
             image_observation = self.render(mode="rgb_array")
             image_observation = self.preprocess_observation(image_observation)
-            self.frame_buffer[:, :, self.x_buffer] = image_observation
-            stacked_obs = np.take(self.frame_buffer, np.arange(self.x_buffer + 1 - self.num_frame, self.x_buffer + 1),
-                                  axis=2,
-                                  mode='wrap')
+            if self.num_frame > 1:
+                self.frame_buffer[:, :, self.x_buffer] = image_observation
+                stacked_obs = np.take(self.frame_buffer,
+                                      np.arange(self.x_buffer + 1 - self.num_frame, self.x_buffer + 1),
+                                      axis=2,
+                                      mode='wrap')
+            else:
+                stacked_obs = image_observation
             return [state_observation[self.vs_id], stacked_obs]
         else:
             return [state_observation[self.vs_id]]

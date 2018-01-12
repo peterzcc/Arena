@@ -63,6 +63,8 @@ def main():
     parser.add_argument('--env', default="ant", type=str, help='env')
     parser.add_argument('--nae', required=False, type=int, default=0,
                         help='num ae train')
+    parser.add_argument('--nfeat', required=False, type=int, default=0,
+                        help='num img feat')
     args = parser.parse_args()
 
     should_profile = False
@@ -178,7 +180,7 @@ def main():
         # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
         #                             f_gen_obj=forward_backward)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=append_image, rgb_to_gray=True,
+                                   append_image=append_image, rgb_to_gray=False,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=1,
@@ -235,7 +237,7 @@ def main():
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
         sample_env.env.close()
-        n_imgfeat = -1 if append_image else 0
+        n_imgfeat = args.nfeat if append_image else 0
         comb_methd = concat_feature if append_image else aggregate_feature
 
         comb_methd = concat_without_task if feat_sup else comb_methd

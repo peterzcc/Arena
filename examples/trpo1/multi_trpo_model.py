@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
-    aggregate_feature, select_st
+    aggregate_feature, select_st, explained_variance_batched
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
 from diagonal_gaussian import DiagonalGaussian
@@ -13,7 +13,7 @@ import threading as thd
 import logging
 from dict_memory import DictMemory
 from read_write_lock import ReadWriteLock
-from cnn import ConvAutoencorder, cnn_network
+from cnn import ConvAutoencorder, cnn_network, ConvFcAutoencorder
 from baselines import common
 from baselines.common import tf_util as U
 from baselines.acktr import kfac
@@ -105,12 +105,13 @@ class MultiTrpoModel(ModelWithCritic):
 
         cnn_trainable = False
         if n_imgfeat < 0:
-            cnn_fc_feat = (0,)
+            cnn_fc_feat = None
         else:
-            cnn_fc_feat = (64, n_imgfeat,)
+            cnn_fc_feat = (128, n_imgfeat,)
 
         def f_build_img_net(t_input):
-            return cnn_network(t_input, conv_sizes, fc_sizes=cnn_fc_feat)
+            return cnn_network(t_input, conv_sizes, cnn_activation=tf.nn.leaky_relu,
+                               fc_sizes=cnn_fc_feat, fc_activation=tf.nn.leaky_relu)
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
                                     timestep_limit=timestep_limit,
                                     activation=tf.nn.elu,
@@ -207,35 +208,36 @@ class MultiTrpoModel(ModelWithCritic):
         self.k_coord = tf.train.Coordinator()
         self.train_feat = train_feat
         if self.n_imgfeat != 0:
-            if n_imgfeat < 0:
-                cnn_fc_feat = (0,)
-            else:
-                cnn_fc_feat = (64, n_imgfeat,)
-            self.autoencoder_net = ConvAutoencorder(input=self.net.img_float,
-                                                    conv_sizes=conv_sizes,
-                                                    num_fc=cnn_fc_feat)
+            self.autoencoder_net = ConvFcAutoencorder(img_input=self.net.img_float,
+                                                      conv_sizes=conv_sizes,
+                                                      fc_sizes=cnn_fc_feat,
+                                                      cnn_activation=tf.nn.leaky_relu,
+                                                      fc_activation=tf.nn.leaky_relu,
+                                                      # state_features=self.net.state_input
+                                                      )
             self.ae_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
             self.ae_train_op = self.ae_opt.minimize(self.autoencoder_net.reg_loss)
             if self.train_feat:
                 self.feat_loss = \
                     tf.reduce_mean(tf.square(self.autoencoder_net.encoder_layers[-1] - self.net.state_input[:, 0:2]))
                 self.feat_opt = tf.train.AdamOptimizer(learning_rate=0.0001)
-                self.feat_train_op = self.feat_opt.minimize(self.feat_loss, var_list=self.autoencoder_net.fc_weights)
+                self.feat_train_op = self.feat_opt.minimize(self.feat_loss, var_list=self.autoencoder_net.en_fc_weights)
             self.cnn_sync_op = []
             self.cnn_sync_op += [tf.assign(self.net.cnn_weights[i],
-                                           self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+                                           self.autoencoder_net.en_cnn_weights[i]) for i in range(len(conv_sizes))]
             self.cnn_sync_op += [tf.assign(self.critic.cnn_weights[i],
-                                           self.autoencoder_net.encoder_weights[i]) for i in range(len(conv_sizes))]
+                                           self.autoencoder_net.en_cnn_weights[i]) for i in range(len(conv_sizes))]
             if self.n_imgfeat > 0:
                 self.cnn_sync_op += [tf.assign(self.net.img_fc_weights[i],
-                                               self.autoencoder_net.fc_weights[i]) for i in
-                                     range(len(self.autoencoder_net.fc_weights))]
+                                               self.autoencoder_net.en_fc_weights[i]) for i in
+                                     range(len(self.autoencoder_net.en_fc_weights))]
                 self.cnn_sync_op += [tf.assign(self.critic.img_fc_weights[i],
-                                               self.autoencoder_net.fc_weights[i]) for i in
-                                     range(len(self.autoencoder_net.fc_weights))]
+                                               self.autoencoder_net.en_fc_weights[i]) for i in
+                                     range(len(self.autoencoder_net.en_fc_weights))]
             self.cnn_saver = tf.train.Saver(var_list=self.autoencoder_net.total_var_list)
+            self.ae_model_path = "./cnnfc_model"
         self.n_ae_train = n_ae_train
-        self.n_feat_train = self.n_ae_train
+        self.n_feat_train = 0
 
         self.saved_paths = []
 
@@ -517,7 +519,7 @@ class MultiTrpoModel(ModelWithCritic):
         action_dist_logstds_n = feed[self.net.old_dist_logstds_n]
         batch_size = advant_n.shape[0]
         if self.n_update == 0 and self.n_ae_train == -1:
-            self.cnn_saver.restore(self.session, "./cnn_model")
+            self.cnn_saver.restore(self.session, self.ae_model_path)
             self.session.run(self.cnn_sync_op)
         if self.n_update < self.n_ae_train + self.n_feat_train:
             ae_feed = {self.net.img_input: feed[self.net.img_input],
@@ -527,7 +529,8 @@ class MultiTrpoModel(ModelWithCritic):
                 ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
                                       feed=ae_feed, N=batch_size,
                                       minibatch_size=self.minibatch_size)
-                logging.debug("\nae loss before: {}".format(ae_loss))
+                exp_var = self.session.run(self.autoencoder_net.exp_var, feed_dict=ae_feed)
+                logging.debug("\nae loss before: {}\t ae expvar: {}".format(ae_loss, exp_var))
                 for start in range(0, batch_size, self.minibatch_size):  # TODO: verify this
                     if start > batch_size - 2 * self.minibatch_size:
                         end = batch_size
@@ -541,7 +544,8 @@ class MultiTrpoModel(ModelWithCritic):
                 ae_loss = run_batched(self.autoencoder_net.reg_loss, session=self.session,
                                       feed=ae_feed, N=batch_size,
                                       minibatch_size=self.minibatch_size)
-                logging.debug("\nae loss after: {}".format(ae_loss))
+                exp_var = self.session.run(self.autoencoder_net.exp_var, feed_dict=ae_feed)
+                logging.debug("\nae loss after: {}\t ae expvar: {}".format(ae_loss, exp_var))
 
             elif self.train_feat:
                 ae_loss = run_batched(self.feat_loss, session=self.session,
@@ -564,8 +568,8 @@ class MultiTrpoModel(ModelWithCritic):
                 logging.debug("\nfeat loss after: {}".format(ae_loss))
 
             if self.n_update == self.n_ae_train + self.n_feat_train - 1:
-                self.cnn_saver.save(self.session, "./cnn_model")
-                self.cnn_saver.restore(self.session, "./cnn_model")
+                self.cnn_saver.save(self.session, self.ae_model_path)
+                self.cnn_saver.restore(self.session, self.ae_model_path)
                 self.session.run(self.cnn_sync_op)
 
             self.increment_n_update()

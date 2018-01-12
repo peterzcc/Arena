@@ -28,8 +28,10 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
                   'img_loss=([+-]?[0-9]*[.]?[0-9]+)',
                   'act_clips: ([+-]?[0-9]*[.]?[0-9]+)',
                   'new kl: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
-                  'Average Return:([+-]?[0-9]*[.]?[0-9]+)']
-    name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance']
+                  'Average Return:([+-]?[0-9]*[.]?[0-9]+)',
+                  'ae loss after: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
+                  'ae expvar: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)']
+    name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar']
     timestep_list = []
     for line in loss_file:
         m = re.search(regex_list[mode], line)
@@ -42,7 +44,7 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
             num_steps = t.group(1)
             out_file.write("@" + str(num_steps) + "\n")
             timestep_list.append(num_steps)
-    t_array = np.array(timestep_list, dtype=np.float32) / 1000
+    t_array = np.array(timestep_list, dtype=np.float32) / 1000000
     loss_list = np.array(loss_list, dtype=np.float32)
     if mode == 0:
         plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.', markersize=1.0)
