@@ -144,6 +144,10 @@ def main():
         choice = np.random.randint(0, 4)
         return DIRECTIONS[choice, :]
 
+    def random_cont_direction():
+        a = np.random.rand() * 2 * np.pi
+        return np.array([np.cos(a), np.sin(a)])
+
     def x_for_back():
         choice = np.random.randint(0, 2) * 2
         return DIRECTIONS[choice, :]
@@ -168,7 +172,7 @@ def main():
             if render_lock is not None:
                 render_lock.acquire()
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                                  f_gen_obj=random_direction,
+                                  f_gen_obj=random_cont_direction,
                                   use_internal_reward=False)
             if render_lock is not None:
                 render_lock.release()
