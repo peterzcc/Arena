@@ -173,7 +173,7 @@ def main():
                 render_lock.acquire()
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=random_cont_direction,
-                                  use_internal_reward=False)
+                                  use_internal_reward=True)
             if render_lock is not None:
                 render_lock.release()
         elif args.env == "custant":
