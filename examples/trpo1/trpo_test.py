@@ -137,6 +137,9 @@ def main():
 
     def x_forward_obj():
         return np.array((1, 0))
+
+    def x_backward_obj():
+        return np.array((-1, 0))
     def random_direction():
         choice = np.random.randint(0, 4)
         return DIRECTIONS[choice, :]
@@ -155,8 +158,7 @@ def main():
         choice = 2 * np.random.randint(0, 2)
         return DIRECTIONS[choice, :]
 
-
-    def f_create_env(render_lock=None):
+    def f_create_env(render_lock=None, pid=0):
 
         # env = GatherEnv()
         if args.env == "ant":
@@ -166,9 +168,18 @@ def main():
             if render_lock is not None:
                 render_lock.acquire()
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                                  f_gen_obj=x_for_back)
+                                  f_gen_obj=random_direction,
+                                  use_internal_reward=False)
             if render_lock is not None:
                 render_lock.release()
+        elif args.env == "custant":
+            env = CustomAnt(file_path=cwd + "/cust_ant.xml")
+        elif args.env == "forward_and_backward":
+            with_state_task = not (append_image and not feat_sup)
+            f_direction = x_forward_obj if pid % 2 == 0 else x_backward_obj
+            logging.info("actuator[{}], direction: {}".format(pid, f_direction))
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                  f_gen_obj=f_direction)
         else:
             env = gym.make('InvertedPendulum-v1')
         # env = MazeEnv()
@@ -180,7 +191,7 @@ def main():
         # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
         #                             f_gen_obj=forward_backward)
         final_env = ComplexWrapper(env, max_episode_length=T,
-                                   append_image=append_image, rgb_to_gray=False,
+                                   append_image=append_image, rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=1,

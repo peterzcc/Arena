@@ -52,15 +52,15 @@ class ComplexWrapper(object):
                 image_size = image_shape[0:2]
             else:
                 image_size = new_img_size
+            final_img_shape = image_size + (num_channel,)
+            zero_img = np.zeros(final_img_shape, np.uint8)
             if rgb_to_gray:
-                self.img_space = Box(low=img_min,
-                                     high=img_max,
-                                     shape=image_size + (num_channel,)
+                self.img_space = Box(low=img_min + zero_img,
+                                     high=img_max + zero_img,
                                      )
             else:
-                self.img_space = Box(low=img_min,
-                                     high=img_max,
-                                     shape=image_size + (num_channel,)
+                self.img_space = Box(low=img_min + zero_img,
+                                     high=img_max + zero_img,
                                      )
             self.observation_space += [self.img_space]
             self.rgb_to_gray = rgb_to_gray
@@ -99,8 +99,8 @@ class ComplexWrapper(object):
                                interpolation=cv2.INTER_LINEAR)
         if self.rgb_to_gray:
             final = cv2.cvtColor(final, cv2.COLOR_RGB2GRAY)
-        if len(final.shape) == 3 and final.shape[2] == 1:
-            final = np.squeeze(final)
+        # if len(final.shape) == 3 and final.shape[2] == 1:
+        #     final = np.squeeze(final)
         return final
 
     def env_step(self, a):
@@ -118,6 +118,8 @@ class ComplexWrapper(object):
                                       mode='wrap')
             else:
                 stacked_obs = image_observation
+            if len(stacked_obs.shape) == 2:
+                stacked_obs = stacked_obs[:, :, np.newaxis]
             return [state_observation[self.vs_id], stacked_obs], reward, done, info
         else:
             return [state_observation[self.vs_id]], reward, done, info
@@ -138,6 +140,8 @@ class ComplexWrapper(object):
                                       mode='wrap')
             else:
                 stacked_obs = image_observation
+            if len(stacked_obs.shape) == 2:
+                stacked_obs = stacked_obs[:, :, np.newaxis]
             return [state_observation[self.vs_id], stacked_obs]
         else:
             return [state_observation[self.vs_id]]

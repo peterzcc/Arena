@@ -314,6 +314,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             frame_skip=5,
             file_path='ant.xml',
             with_state_task=True,
+            use_internal_reward=True,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -323,6 +324,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.dir = None
         self.objects = []
         self.with_state_task = with_state_task
+        self.use_internal_reward = use_internal_reward
 
         self._reset_objects()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
@@ -362,7 +364,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         contact_cost = 0.5 * 1e-3 * np.sum(
             np.square(np.clip(self.model.data.cfrc_ext, -1, 1)))
         survive_reward = 1.0
-        reward = forward_reward - ctrl_cost - contact_cost + survive_reward
+        internal_reward = - ctrl_cost - contact_cost if self.use_internal_reward else 0
+        reward = 10.0 * forward_reward + survive_reward + internal_reward
         state = self.state_vector()
         rot_angle = self.data.xmat[1, 8]
         notdone = np.isfinite(state).all() \

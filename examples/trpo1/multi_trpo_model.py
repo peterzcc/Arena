@@ -103,11 +103,11 @@ class MultiTrpoModel(ModelWithCritic):
         self.comb_method = comb_method  # aggregate_feature#
         conv_sizes = (((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2))
 
-        cnn_trainable = False
+        cnn_trainable = True
         if n_imgfeat < 0:
             cnn_fc_feat = None
         else:
-            cnn_fc_feat = (128, n_imgfeat,)
+            cnn_fc_feat = (64, n_imgfeat,)
 
         def f_build_img_net(t_input):
             return cnn_network(t_input, conv_sizes, cnn_activation=tf.nn.leaky_relu,
@@ -567,9 +567,9 @@ class MultiTrpoModel(ModelWithCritic):
                                       minibatch_size=self.minibatch_size)
                 logging.debug("\nfeat loss after: {}".format(ae_loss))
 
-            if self.n_update == self.n_ae_train + self.n_feat_train - 1:
+            if self.n_update == self.n_ae_train + self.n_feat_train - 1 or self.n_update % 20 == 19:
                 self.cnn_saver.save(self.session, self.ae_model_path)
-                self.cnn_saver.restore(self.session, self.ae_model_path)
+                # self.cnn_saver.restore(self.session, self.ae_model_path)
                 self.session.run(self.cnn_sync_op)
 
             self.increment_n_update()

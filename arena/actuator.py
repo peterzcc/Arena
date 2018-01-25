@@ -11,7 +11,7 @@ class Actuator(object):
                  cmd_signal, episode_data_q,
                  global_t, act_id=0, render_option=RenderOption.off,
                  render_lock=None):
-        self.env = func_get_env(render_lock=render_lock)
+        self.env = func_get_env(render_lock=render_lock, pid=act_id)
         self.stats_tx = stats_tx
         self.acts_rx = acts_rx
         self.signal = cmd_signal
