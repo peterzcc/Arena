@@ -315,6 +315,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             file_path='ant.xml',
             with_state_task=True,
             use_internal_reward=True,
+            reset_goal_prob=0,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -325,6 +326,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.objects = []
         self.with_state_task = with_state_task
         self.use_internal_reward = use_internal_reward
+        self.reset_goal_prob = reset_goal_prob
 
         self._reset_objects()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
@@ -352,6 +354,9 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         x, y = com[:2]
         obj_pos = com[:2] + self.OBJ_DIST * self.dir
         self.objects[0] = np.concatenate([obj_pos, (0,)])
+        if self.reset_goal_prob != 0:
+            if np.random.rand() < self.reset_goal_prob:
+                self._reset_objects()
         return obs, in_rw, done, info
 
     def _ant_step(self, a):
