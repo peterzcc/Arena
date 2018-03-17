@@ -147,8 +147,6 @@ class ComplexWrapper(object):
             return [state_observation[self.vs_id]]
 
     def step(self, a):
-        a = np.append(a, (0,))
-        # logging.debug("rx a:{}".format(a))
         final_done = False
         final_reward = 0
         info_terminated = {"terminated": False}

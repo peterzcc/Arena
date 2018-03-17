@@ -48,7 +48,7 @@ class PpoLbfgsUpdater(EzFlat, EzPickle):
         g = flatgrad(pensurr, params)
 
         losses = [surr, kl, ent]
-        self.loss_names = ["surr", "kl", "ent"]
+        self.loss_names = ["ppo_surr", "kl", "ent"]
 
         args = [ob_no, act_na, adv_n, oldprob_np]
 
@@ -143,7 +143,7 @@ class PpoSgdUpdater(EzPickle):
         kl_coeff = T.scalar("kl_coeff")
 
         # Probability distribution:
-        self.loss_names = ["surr", "kl", "ent"]
+        self.loss_names = ["ppo_surr", "kl", "ent"]
 
         prob_np = stochpol.get_output()
         oldprob_np = theano.clone(stochpol.get_output(), replace=dict(zipsame(params, old_params)))

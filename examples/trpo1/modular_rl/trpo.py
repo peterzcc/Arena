@@ -62,7 +62,7 @@ class TrpoUpdater(EzFlat, EzPickle):
         kl = probtype.kl(oldprob_np, prob_np).mean()
 
         losses = [surr, kl, ent]
-        self.loss_names = ["surr", "kl", "ent"]
+        self.loss_names = ["ppo_surr", "kl", "ent"]
 
         args = [ob_no, act_na, adv_n, oldprob_np]
 

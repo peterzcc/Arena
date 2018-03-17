@@ -82,6 +82,8 @@ class Actuator(object):
             #     break
             received_dict = self.acts_rx.recv()
             current_action = received_dict["action"]
+            if current_action.size == 1:
+                current_action = np.asscalar(current_action)
             # logging.debug("rx a: {}".format(current_action))
             self.current_obs, self.reward, self.episode_ends, info_env = \
                 self.env.step(current_action)

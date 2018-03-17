@@ -19,11 +19,9 @@ class ModelWithCritic(object):
     def predict(self, observation):
         raise NotImplementedError
 
-    def compute_update(self, train_data):
+    def train(self, train_data):
         raise NotImplementedError
 
     def compute_critic(self, states):
         raise NotImplementedError
 
-    def update(self, diff, new=None):
-        raise NotImplementedError

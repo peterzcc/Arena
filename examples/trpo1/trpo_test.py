@@ -68,8 +68,6 @@ def main():
     args = parser.parse_args()
 
     should_profile = False
-    if should_profile:
-        import yappi
 
     # Each trajectory will have at most 1000 time steps
     T = 1000
@@ -165,9 +163,7 @@ def main():
     def f_create_env(render_lock=None, pid=0):
 
         # env = GatherEnv()
-        if args.env == "ant":
-            env = gym.make('Ant-v1')
-        elif args.env == "single":
+        if args.env == "single":
             with_state_task = not (append_image and not feat_sup)
             if render_lock is not None:
                 render_lock.acquire()
@@ -186,7 +182,7 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=f_direction)
         else:
-            env = gym.make('InvertedPendulum-v1')
+            env = gym.make(args.env)
         # env = MazeEnv()
 
         # return GymWrapper(env,
@@ -248,7 +244,7 @@ def main():
         return k
 
     def f_create_shared_params():
-        from multi_trpo_model import MultiTrpoModel
+        from policy_gradient_model import PolicyGradientModel
         sample_env = f_create_env()
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
@@ -257,21 +253,19 @@ def main():
         comb_methd = concat_feature if append_image else aggregate_feature
 
         comb_methd = concat_without_task if feat_sup else comb_methd
-        model = MultiTrpoModel(observation_space, action_space,
-                               timestep_limit=T,
-                               num_actors=num_actors,
-                               f_batch_size=const_batch_size,
-                               batch_mode=args.batch_mode,
-                               f_target_kl=const_target_kl,
-                               n_imgfeat=n_imgfeat,
-                               mode="ACKTR",
-                               update_per_epoch=4,
-                               kl_history_length=1,
-                               comb_method=comb_methd,
-                               ent_k=args.ent_k,
-                               n_ae_train=args.nae,
-                               train_feat=feat_sup,
-                               gae_lam=args.lam)
+        model = PolicyGradientModel(observation_space, action_space,
+                                    timestep_limit=T,
+                                    num_actors=num_actors,
+                                    f_batch_size=const_batch_size,
+                                    batch_mode=args.batch_mode,
+                                    f_target_kl=const_target_kl,
+                                    n_imgfeat=n_imgfeat,
+                                    mode="ACKTR",
+                                    update_per_epoch=4,
+                                    kl_history_length=1,
+                                    comb_method=comb_methd,
+                                    ent_k=args.ent_k,
+                                    gae_lam=args.lam)
         return {"global_model": model}
 
     single_process_mode = True if append_image else False
@@ -280,16 +274,8 @@ def main():
                             log_episodes=True)
     logging.info("run arges: {}".format(args))
 
-    if should_profile:
-        yappi.start(builtins=True, profile_threads=True)
-
     experiment.run_parallel_training(num_actors, num_epoch, steps_per_epoch,
                                      with_testing_length=test_length)
-    if should_profile:
-        yappi.stop()
-        pstat = yappi.convert2pstats(yappi.get_func_stats())
-        pstat.dump_stats("profile.out")
-
 
 if __name__ == '__main__':
     main()

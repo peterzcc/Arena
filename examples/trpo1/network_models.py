@@ -1,36 +1,36 @@
 from __future__ import absolute_import
 import tensorflow as tf
-# from tensorflow.contrib.layers import initializers as tf_init
-from tensorflow.contrib.layers import variance_scaling_initializer
-# import prettytensor as pt
 import numpy as np
-from tf_utils import aggregate_feature, lrelu
+
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
     aggregate_feature, select_st
-from baselines.acktr.utils import conv, fc, dense, conv_to_fc, sample, kl_div
-import baselines.common.tf_util as U
 import logging
-from cnn import cnn_network
+from prob_types import DiagonalGaussian
 dtype = tf.float32
-from diagonal_gaussian import DiagonalGaussian
 
+
+# from cnn import cnn_network
+# from baselines.acktr.utils import conv, fc, dense, conv_to_fc, sample, kl_div
+# import baselines.common.tf_util as U
+# from tf_utils import aggregate_feature, lrelu
+# import prettytensor as pt
 
 
 class MultiNetwork(object):
-    def __init__(self, scope, observation_space, action_shape,
+    def __init__(self, scope, observation_space, action_space,
                  n_imgfeat=1, extra_feaatures=[], st_enabled=None, img_enabled=None,
                  comb_method=aggregate_feature,
                  cnn_trainable=True,
                  min_std=1e-6,
-                 distibution=DiagonalGaussian,
+                 distibution=DiagonalGaussian(1),
                  session=None,
                  f_build_cnn=None):
         self.comb_method = comb_method
         self.min_std = min_std
-        self.distribution = distibution
+
         self.session = session
-        local_scope = "%s_shared" % scope
-        with tf.variable_scope(local_scope):
+        local_scope = scope
+        with tf.variable_scope(local_scope) as this_scope:
             self.state_input = tf.placeholder(
                 dtype, shape=(None,) + observation_space[0].shape, name="%s_state" % scope)
             if n_imgfeat != 0:
@@ -39,14 +39,12 @@ class MultiNetwork(object):
                 self.img_float = tf.cast(self.img_input, tf.float32) / 255
             # else:
             #     self.img_input = 0
-
-            self.action_n = tf.placeholder(dtype, shape=(None,) + action_shape, name="%s_action" % scope)
+            if hasattr(action_space, 'low'):
+                self.action_n = tf.placeholder(dtype, shape=(None,) + action_space.shape, name="%s_action" % scope)
+            else:
+                self.action_n = tf.placeholder(tf.int32, shape=(None,), name="%s_action" % scope)
             self.advant = tf.placeholder(dtype, shape=[None], name="%s_advant" % scope)
 
-            self.old_dist_means_n = tf.placeholder(dtype, shape=(None,) + action_shape,
-                                                   name="%s_oldaction_dist_means" % scope)
-            self.old_dist_logstds_n = tf.placeholder(dtype, shape=(None,) + action_shape,
-                                                     name="%s_oldaction_dist_logstds" % scope)
             # self.st_enabled = st_enabled
             # self.img_enabled = img_enabled
             self.st_enabled = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name='st_enabled')
@@ -72,98 +70,54 @@ class MultiNetwork(object):
                     self.full_feature = self.state_input
                     self.cnn_weights = []
                     self.img_fc_weights = []
-            # hid1_size = (self.full_feature.shape[1].value) * 2
-            # hid3_size = action_shape[0] * 10
-            # hid2_size = int(np.sqrt(hid1_size * hid3_size))
-            # hidden_sizes = (hid1_size, hid2_size, hid3_size)
+
             hidden_sizes = (64, 64)
             logging.info("policy hidden sizes: {}".format(hidden_sizes))
             self.fc_layers = [self.full_feature]
             for hid in hidden_sizes:
                 current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=tf.tanh,
-                                 kernel_initializer=tf.orthogonal_initializer())
+                                             kernel_initializer=
+                                             tf.variance_scaling_initializer(
+                                                 scale=1.0, mode="fan_avg", distribution="normal", dtype=dtype)
+                                             )
                 self.fc_layers.append(current_fc)
-            self.action_dist_means_n = tf.layers.dense(self.fc_layers[-1], np.prod(action_shape), activation=tf.tanh,
-                                                       kernel_initializer=tf.orthogonal_initializer(gain=0.1))
+            batch_size = tf.shape(self.state_input)[0]
+            self.batch_size_float = tf.cast(batch_size, tf.float32)
 
+            self.distribution = distibution
 
+            self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
+                self.distribution.create_dist_vars(self.fc_layers[-1])
+            self.mean_loglike = - tf.reduce_mean(
+                self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
 
+            self.new_likelihood_sym = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
+            self.old_likelihood = self.distribution.log_likelihood_sym(self.action_n, self.old_vars)
 
-            # logvar_speed = (10 * hid3_size) // 48
-            # log_vars = self.log_vars = tf.get_variable("%s_logvars" % scope, (logvar_speed, action_shape[0]),
-            #                                            tf.float32,
-            #                                            tf.constant_initializer(0.0))
-            # self.action_dist_logstds_n = tf.reduce_sum(log_vars, axis=0) + np.log(0.5)
-
-
-            # self.action_dist_logstd_param = tf.Variable(
-            #     initial_value=(np.log(1.0) + 0.001 * np.random.randn(*action_shape)).astype(np.float32),
-            #     trainable=True, name="%spolicy_logstd" % scope)
-            # self.action_dist_logstds_n = tf.tile(tf.expand_dims(self.action_dist_logstd_param, 0),
-            #                                      [tf.shape(self.action_dist_means_n)[0], 1])
-            # self.action_dist_logstds_n = self.action_dist_logstd_param
-
-
-            self.action_dist_logstd_param = logstd_1a = tf.get_variable("logstd", action_shape, tf.float32,
-                                                                        tf.zeros_initializer())  # Variance on outputs
-            logstd_1a = tf.expand_dims(logstd_1a, 0)
-            self.action_dist_logstds_n = tf.tile(logstd_1a, [tf.shape(self.action_dist_means_n)[0], 1])
-            std_1a = tf.exp(logstd_1a)
-            std_na = tf.tile(std_1a, [tf.shape(self.action_dist_means_n)[0], 1])
-
-            self.var_list = [v for v in tf.trainable_variables() if v.name.startswith(scope)]
+            self.ratio_n = tf.exp(self.new_likelihood_sym - self.old_likelihood)
+            self.var_list = tf.trainable_variables(this_scope.name)
             if not cnn_trainable:
                 self.var_list = [v for v in self.var_list if not (v in self.cnn_weights or v in self.img_fc_weights)]
+            self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
+            self.PPO_eps = 0.2
+            self.clipped_ratio = tf.clip_by_value(self.ratio_n, 1.0 - self.PPO_eps, 1.0 + self.PPO_eps)
+            self.surr_n = self.ratio_n * self.advant
+            self.clipped_surr = self.clipped_ratio * self.advant
+            self.ppo_surr = -tf.reduce_mean(tf.minimum(self.surr_n, self.clipped_surr))  # Surrogate loss
 
-        # log_std_var = tf.maximum(self.action_dist_logstds_n, np.log(self.min_std))
-        batch_size = tf.shape(self.state_input)[0]
-        self.batch_size_float = tf.cast(batch_size, tf.float32)
-        # self.action_dist_log_stds_n = log_std_var  # self.net.action_dist_logstds_n  #
-        # self.action_dist_std_n = tf.exp(self.action_dist_log_stds_n)
-        self.old_dist_info_vars = dict(mean=self.old_dist_means_n, log_std=self.old_dist_logstds_n)
-        self.new_dist_info_vars = dict(mean=self.action_dist_means_n, log_std=self.action_dist_logstds_n)
-        # self.likehood_action_dist = self.distribution.log_likelihood_sym(self.action_n, self.new_dist_info_vars)
-        self.new_likelihood_sym = self.distribution.log_likelihood_sym(self.action_n, self.new_dist_info_vars)
-        self.old_likelihood = self.distribution.log_likelihood_sym(self.action_n, self.old_dist_info_vars)
+            # Sampled loss of the policy
 
-        self.ratio_n = tf.exp(self.new_likelihood_sym - self.old_likelihood)
-        self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
-        self.PPO_eps = 0.2
-        self.clipped_ratio = tf.clip_by_value(self.ratio_n, 1.0 - self.PPO_eps, 1.0 + self.PPO_eps)
-        self.raw_surr = self.ratio_n * self.advant
-        self.clipped_surr = self.clipped_ratio * self.advant
-        surr = self.surr = -tf.reduce_mean(tf.minimum(self.raw_surr,
-                                                      self.clipped_surr))  # Surrogate loss
-        ac_dim = action_shape[0]
-        ac_dist = tf.concat([tf.reshape(self.action_dist_means_n, [-1, ac_dim]), tf.reshape(std_na, [-1, ac_dim])], 1)
-        logprob_n = - U.sum(tf.log(ac_dist[:, ac_dim:]), axis=1) - 0.5 * tf.log(2.0 * np.pi) * ac_dim - 0.5 * U.sum(
-            tf.square(ac_dist[:, :ac_dim] - self.action_n) / (tf.square(ac_dist[:, ac_dim:])),
-            axis=1)  # Logprob of previous actions under CURRENT policy (whereas oldlogprob_n is under OLD policy)
+            self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
 
-        # kl = .5 * U.mean(tf.square(logprob_n - oldlogprob_n)) # Approximation of KL divergence between old policy used to generate actions, and new policy used to compute logprob_n
-        self.trad_surr_loss = - U.mean(
-            self.advant * logprob_n)  # Loss function that we'll differentiate to get the policy gradient
-        self.mean_loglike = - U.mean(logprob_n)  # Sampled loss of the policy
+            self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_vars, self.dist_vars))
+            ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
+            self.ent = tf.reduce_sum(ent_n) / self.batch_size_float
+            self.losses = [self.ppo_surr, self.kl, self.ent]
 
-        # self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
-        # self.mean_loglike = - tf.reduce_mean(self.new_likelihood_sym)
 
-        kl = self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_dist_info_vars, self.new_dist_info_vars))
-        ents_fixed = self.distribution.entropy(self.old_dist_info_vars)
-        ents_sym = self.distribution.entropy(self.new_dist_info_vars)  # - self.new_likelihood_sym
-        ent = self.ent = tf.reduce_sum(ents_sym) / self.batch_size_float
-        self.losses = [surr, kl, ent]
-        self.get_flat_params = GetFlat(self.var_list, session=self.session)  # get theta from var_list
-        self.set_params_with_flat_data = SetFromFlat(self.var_list, session=self.session)  # set theta from var_List
-        # get g
-        self.pg = flatgrad(surr, self.var_list)
-        # get A
-        # KL divergence where first arg is fixed
-        # replace old->tf.stop_gradient from previous kl
-        kl_firstfixed = self.distribution.kl_sym_firstfixed(self.new_dist_info_vars) / self.batch_size_float
-        grads = tf.gradients(kl_firstfixed, self.var_list)
 
-    def get_action_dist_means_n(self, session, obs):
-        return session.run(self.action_dist_means_n,
-                           {self.state_input: obs[0],
-                            self.img_input: obs[1]})
+
+            # def get_action_dist_means_n(self, session, obs):
+            #     return session.run(self.mean_n,
+            #                        {self.state_input: obs[0],
+            #                         self.img_input: obs[1]})
