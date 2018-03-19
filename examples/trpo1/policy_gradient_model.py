@@ -423,8 +423,8 @@ class PolicyGradientModel(ModelWithCritic):
         if self.batch_mode == "episode":
             return epis >= self.batch_size and time >= self.min_batch_length
         if self.batch_mode == "timestep":
-            if not time <= self.batch_size:
-                logging.debug("time: {} \nbatchsize: {}".format(time, self.batch_size))
+            # if not time <= self.batch_size:
+                # logging.debug("time: {} \nbatchsize: {}".format(time, self.batch_size))
                 # assert time <= self.batch_size
             return time >= self.batch_size
 
