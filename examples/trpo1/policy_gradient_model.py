@@ -433,7 +433,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.batch_size = self.f_batch_size(self.n_update)
         if self.n_update % 10 == 0:
             logging.debug("Saving {}".format(self.model_path))
-            self.full_model_saver.save(self.session, self.model_path)
+            self.full_model_saver.save(self.session, self.model_path, write_state=False)
 
     def fit_adakl(self, feed, num_samples):
         target_kl_value = self.f_target_kl(self.n_update)

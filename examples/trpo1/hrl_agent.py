@@ -67,7 +67,6 @@ class HrlAgent(Agent):
 
         should_return_root = self.acting_policy != self.root_policy and \
                              self.f_should_return_root(self.acting_policy, self.sub_pol_act_t, self.root_policy)
-        batch_ends = False
 
         # reset the agent in control if necessary
         if should_return_root:
