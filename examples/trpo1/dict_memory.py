@@ -191,9 +191,10 @@ class DictMemory(object):
                 semi_mdp_r = np.zeros(path["action"].shape)
 
                 # TODO: improve this performence
-                for i in range(len(path["pos"])):
+                path["pos"].append(len(path["reward"]))
+                for i in range(len(path["pos"]) - 1):
                     start = path["pos"][i]
-                    end = len(path["reward"]) if start == len(path["pos"]) - 1 else path["pos"][i + 1]
+                    end = path["pos"][i + 1]
                     rewards = path["reward"][start:end]
                     semi_mdp_r[i] = np.dot(rewards, self.gpow[0:len(rewards)])
 
@@ -221,10 +222,6 @@ class DictMemory(object):
             mean = alladv.mean()
             for path in self.aggre_paths:
                 path["advantage"] = (path["advantage"] - mean) / (std + 1e-6)
-        if "pos" in self.aggre_paths[0]:
-            for path in self.aggre_paths:
-                for k in ("advantage", "return",):
-                    path[k] = path[k][path["pos"]]
         paths = self.aggre_paths.copy()
         self.aggre_paths = []
         self.time_count = 0

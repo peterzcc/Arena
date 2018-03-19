@@ -166,11 +166,12 @@ def main():
         return DIRECTIONS[choice, :]
 
     hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
-    hrl_root_tasks = dict(move1d=hrl0)
+
     hrl1 = OrderedDict(move2d=random_cont_direction,
                        move0=x_forward_obj, move1=x_backward_obj,
                        move2=x_up_obj, move3=x_down_obj
                        )
+    hrl_root_tasks = dict(move1d=hrl0, move2d=hrl1)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
