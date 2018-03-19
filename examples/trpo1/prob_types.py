@@ -50,7 +50,7 @@ class Categorical(ProbType):
 
     def log_likelihood_sym(self, x_var, dist_info_vars):
         one_hot_actions = tf.one_hot(x_var, self.n)
-        logp = -tf.nn.softmax_cross_entropy_with_logits_v2(logits=dist_info_vars["logits"], labels=one_hot_actions)
+        logp = -tf.nn.softmax_cross_entropy_with_logits(logits=dist_info_vars["logits"], labels=one_hot_actions)
         return logp
 
     def kl_sym(self, old_dist_info_vars, new_dist_info_vars):

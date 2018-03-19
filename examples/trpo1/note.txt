@@ -99,6 +99,13 @@ python3.6 pg_train.py --nactor 10 --batch-size 2000 --kl 0.0001 --env CartPole-v
 
 python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move0 --nfeat 30 --load-model 0
 
+CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move1 --nfeat 30 --load-model 0
+
+CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move2 --nfeat 30 --load-model 0
+
+CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 800 --kl 0.0001 --withimg 1 --env move3 --nfeat 30 --load-model 0
+
+CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 800 --kl 0.0001 --withimg 1 --env move2d --nfeat 30 --load-model 0
 
 
 CUDA_VISIBLE_DEVICES="" python3.6 ./project2.py --task train_cnn
