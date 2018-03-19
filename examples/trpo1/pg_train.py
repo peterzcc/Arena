@@ -4,7 +4,6 @@ import numpy as np
 from arena.games.gym_wrapper import GymWrapper
 from arena.games.complex_wrapper import ComplexWrapper
 from arena.experiment import Experiment
-from arena.agents.test_mp_agent import TestMpAgent
 import gym
 import argparse
 from batch_agent import BatchUpdateAgent
@@ -59,6 +58,8 @@ def main():
     parser.add_argument('--ent-k', required=False, default=0, type=float,
                         help='entropy loss weight')
     parser.add_argument('--lam', required=False, default=0.97, type=float,
+                        help='gae lambda')
+    parser.add_argument('--gamma', required=False, default=0.995, type=float,
                         help='gae lambda')
     parser.add_argument('--withimg', default=False, type=bool, help='append image input')
     parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
@@ -153,29 +154,18 @@ def main():
         choice = np.random.randint(0, 2) * 2
         return DIRECTIONS[choice, :]
 
-    ANGLES3 = [0, np.pi / 4, - np.pi / 4]
-    DIRECTIONS3 = np.array([(np.cos(a), np.sin(a)) for a in ANGLES3])
+    hrl0 = {"move-0-1": x_for_back, "move0": x_forward_obj, "move1": x_backward_obj}
 
-    def random_3direction():
-        choice = np.random.randint(0, 3)
-        return DIRECTIONS3[choice, :]
-    def forward_backward():
-        choice = 2 * np.random.randint(0, 2)
-        return DIRECTIONS[choice, :]
+
 
     def f_create_env(render_lock=None, pid=0):
-
         # env = GatherEnv()
         if args.env == "single":
-            with_state_task = not (append_image and not feat_sup)
-            if render_lock is not None:
-                render_lock.acquire()
+            with_state_task = False
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=random_cont_direction,
                                   reset_goal_prob=0,
                                   use_internal_reward=True)
-            if render_lock is not None:
-                render_lock.release()
         elif args.env == "custant":
             env = CustomAnt(file_path=cwd + "/cust_ant.xml")
         elif args.env == "forward_and_backward":
@@ -184,6 +174,12 @@ def main():
             logging.info("actuator[{}], direction: {}".format(pid, f_direction))
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=f_direction)
+        elif args.env in hrl0:
+            with_state_task = False
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                  f_gen_obj=hrl0[args.env],
+                                  reset_goal_prob=0,
+                                  use_internal_reward=True)
         else:
             env = gym.make(args.env)
         # env = MazeEnv()
@@ -242,6 +238,7 @@ def main():
 
     def f_create_shared_params():
         from policy_gradient_model import PolicyGradientModel
+        from dict_memory import DictMemory
         sample_env = f_create_env()
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
@@ -250,6 +247,7 @@ def main():
         comb_methd = concat_feature if append_image else aggregate_feature
 
         comb_methd = concat_without_task if feat_sup else comb_methd
+
         model = PolicyGradientModel(observation_space, action_space,
                                     name=args.env,
                                     timestep_limit=T,
@@ -263,9 +261,16 @@ def main():
                                     kl_history_length=1,
                                     comb_method=comb_methd,
                                     ent_k=args.ent_k,
+                                    gamma=args.gamma,
                                     gae_lam=args.lam,
-                                    load_old_model=args.load_model)  # TODO
-        return {"root": model}
+                                    load_old_model=args.load_model,
+                                    should_train=not args.load_model)  # TODO
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, use_gae=True, normalize=True,
+                            timestep_limit=T,
+                            f_critic=model.compute_critic,
+                            num_actors=num_actors,
+                            f_check_batch=model.check_batch_finished)
+        return {"models": {"root": model}, "memory": memory}
 
     single_process_mode = True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,
@@ -273,8 +278,8 @@ def main():
                             log_episodes=True)
     logging.info("run arges: {}".format(args))
 
-    experiment.run_parallel_training(num_actors, num_epoch, steps_per_epoch,
-                                     with_testing_length=test_length)
+    experiment.run_parallelly(num_actors, num_epoch, steps_per_epoch,
+                              with_testing_length=test_length)
 
 if __name__ == '__main__':
     main()

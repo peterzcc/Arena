@@ -99,8 +99,8 @@ def main():
     steps_per_epoch = 250000
     test_length = 0
 
-    experiment.run_parallel_training(num_actors, num_epoch, steps_per_epoch,
-                                     with_testing_length=test_length)
+    experiment.run_parallelly(num_actors, num_epoch, steps_per_epoch,
+                              with_testing_length=test_length)
 
 if __name__ == '__main__':
     main()

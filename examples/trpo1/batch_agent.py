@@ -9,6 +9,7 @@ import time
 import gc
 from ram_util import resident
 
+
 class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx, acts_tx,
@@ -22,11 +23,10 @@ class BatchUpdateAgent(Agent):
             is_learning, global_t, pid
         )
 
-        if shared_params is None:
-            raise NotImplementedError
-        else:
-            # self.param_lock = shared_params["lock"]
-            self.model = shared_params["root"]
+        assert shared_params is not None
+        # self.param_lock = shared_params["lock"]
+        self.model: PolicyGradientModel = shared_params["models"]["root"]
+        self.memory: DictMemory = shared_params["memory"]
 
         self.num_epoch = 0
         self.global_t = 0
@@ -48,13 +48,13 @@ class BatchUpdateAgent(Agent):
             processed_observation.append(observation[1])
         action, agent_info = self.model.predict(processed_observation, pid=self.id)
 
-        self.model.memory.append_state(observation, action, info=agent_info, pid=self.id)
+        self.memory.append_state(observation, action, info=agent_info, pid=self.id)
 
         return action
 
     def receive_feedback(self, reward, done, info={}):
 
-        self.model.memory.append_feedback(reward, pid=self.id)
+        self.memory.append_feedback(reward, pid=self.id)
         self.time_count += 1
         is_episode_clipped = self.time_count * self.model.num_actors == self.model.batch_size
         if done or (self.should_clip_episodes and is_episode_clipped):
@@ -66,7 +66,7 @@ class BatchUpdateAgent(Agent):
                 except KeyError:
                     logging.debug("warning: no info about real termination ")
                     terminated = done
-            extracted_result = self.model.memory.add_path(terminated, pid=self.id)
+            extracted_result = self.memory.add_path(terminated, pid=self.id)
             if extracted_result is not None:
                 train_before = time.time()
                 self.model.train(extracted_result["paths"])

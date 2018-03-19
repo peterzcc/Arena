@@ -316,6 +316,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             with_state_task=True,
             use_internal_reward=True,
             reset_goal_prob=0,
+            freward_scale=1.0,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -327,6 +328,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.with_state_task = with_state_task
         self.use_internal_reward = use_internal_reward
         self.reset_goal_prob = reset_goal_prob
+        self.freward_scale = freward_scale
 
         self._reset_objects()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
@@ -370,7 +372,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             np.square(np.clip(self.model.data.cfrc_ext, -1, 1)))
         survive_reward = 1.0
         internal_reward = - ctrl_cost - contact_cost if self.use_internal_reward else 0
-        reward = 10.0 * forward_reward + survive_reward + internal_reward
+        reward = self.freward_scale * forward_reward + survive_reward + internal_reward
         state = self.state_vector()
         rot_angle = self.data.xmat[1, 8]
         notdone = np.isfinite(state).all() \

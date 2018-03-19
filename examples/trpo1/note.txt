@@ -95,9 +95,10 @@ python3.6 trpo_test.py --nactor 20 --batch-size 5000 --kl 0.0001 --withimg 1 --e
 
 python3.6 trpo_test.py --nactor 20 --batch-size 5000 --kl 0.0001 --env ant --nfeat 0
 
-python3.6 pg_train.py --nactor 20 --batch-size 5000 --kl 0.0001 --env CartPole-v0 --nfeat 0
-
 python3.6 pg_train.py --nactor 10 --batch-size 2000 --kl 0.0001 --env CartPole-v0 --nfeat 0
+
+python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0002 --withimg 1 --env move0 --nfeat 30 --load-model 0
+
 
 
 CUDA_VISIBLE_DEVICES="" python3.6 ./project2.py --task train_cnn

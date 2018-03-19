@@ -50,8 +50,8 @@ class PolicyGradientModel(ModelWithCritic):
                  kl_history_length=1,
                  ent_k=0,
                  comb_method=aggregate_feature,
-                 memory: DictMemory = None,
-                 load_old_model=False
+                 load_old_model=False,
+                 should_train=True
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -91,14 +91,6 @@ class PolicyGradientModel(ModelWithCritic):
             self.batch_barrier = thd.Barrier(num_actors)
         else:
             self.batch_barrier = None
-        if memory is None:
-            self.memory = DictMemory(gamma=gamma, lam=gae_lam, use_gae=True, normalize=True,
-                                     timestep_limit=timestep_limit,
-                                     f_critic=self.compute_critic,
-                                     num_actors=num_actors,
-                                     f_check_batch=self.check_batch_finished)
-        else:
-            self.memory = memory
 
         gpu_options = tf.GPUOptions(allow_growth=True)  # False,per_process_gpu_memory_fraction=0.75)
         self.session = session if session is not None else tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
@@ -227,8 +219,9 @@ class PolicyGradientModel(ModelWithCritic):
         self.n_update = 0
         self.n_pretrain = 0
         self.separate_update = True
-        self.update_critic = True
+        self.should_update_critic = True
         self.should_update_policy = True
+        self.should_train = should_train
         self.debug = True
         self.recompute_old_dist = True if self.batch_mode == "episode" and self.num_actors > 1 else False
         self.session.run(tf.global_variables_initializer())
@@ -488,12 +481,14 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
     def train(self, paths):
+        if not self.should_train:
+            return
         feed, path_dict, hist_feed = self.concat_paths(paths)
 
         batch_size = feed[self.policy.action_n].shape[0]
 
         self.critic_lock.acquire_write()
-        if self.update_critic:
+        if self.should_update_critic:
             self.critic.fit(path_dict, update_mode="full", num_pass=1)
         self.critic_lock.release_write()
 

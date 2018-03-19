@@ -216,8 +216,8 @@ class Experiment(object):
         self.is_terminated = True
         sys.exit()
 
-    def run_parallel_training(self, num_actor, num_epoch, epoch_length,
-                              with_testing_length=0):
+    def run_parallelly(self, num_actor, num_epoch, epoch_length,
+                       with_testing_length=0):
 
         self.num_actor = num_actor
         # Where should we put the creation of actor/learners?
@@ -298,7 +298,6 @@ class Experiment(object):
             actuator.join()
         for agent in self.agent_threads:
             agent.join()
-
 
     def run_testing_on_sub_process(self, test_length, process_id=0):
         if not os.path.exists(self.log_test_path):
