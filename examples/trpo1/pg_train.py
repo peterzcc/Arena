@@ -5,8 +5,10 @@ from arena.games.gym_wrapper import GymWrapper
 from arena.games.complex_wrapper import ComplexWrapper
 from arena.experiment import Experiment
 import gym
+from gym.spaces import Discrete
 import argparse
 from batch_agent import BatchUpdateAgent
+from hrl_agent import HrlAgent
 import logging
 from custom_ant import CustomAnt
 from gather_env import GatherEnv
@@ -15,7 +17,9 @@ from custom_pend import CustomPend
 from single_gather_env import SingleGatherEnv, SimpleSingleGatherEnv
 import sys
 import os
+from collections import OrderedDict
 from tf_utils import aggregate_feature, concat_feature, concat_without_task, str2bool
+
 BATH_SIZE = 10000
 
 
@@ -61,7 +65,7 @@ def main():
                         help='gae lambda')
     parser.add_argument('--gamma', required=False, default=0.995, type=float,
                         help='gae lambda')
-    parser.add_argument('--withimg', default=False, type=bool, help='append image input')
+    parser.add_argument('--withimg', default=True, type=bool, help='append image input')
     parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--env', default="ant", type=str, help='env')
@@ -142,6 +146,13 @@ def main():
 
     def x_backward_obj():
         return np.array((-1, 0))
+
+    def x_up_obj():
+        return np.array((0, 1))
+
+    def x_down_obj():
+        return np.array((0, -1))
+
     def random_direction():
         choice = np.random.randint(0, 4)
         return DIRECTIONS[choice, :]
@@ -154,9 +165,16 @@ def main():
         choice = np.random.randint(0, 2) * 2
         return DIRECTIONS[choice, :]
 
-    hrl0 = {"move-0-1": x_for_back, "move0": x_forward_obj, "move1": x_backward_obj}
+    hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
+    hrl_root_tasks = dict(move1d=hrl0)
+    hrl1 = OrderedDict(move2d=random_cont_direction,
+                       move0=x_forward_obj, move1=x_backward_obj,
+                       move2=x_up_obj, move3=x_down_obj
+                       )
 
-
+    full_tasks = [args.env]
+    if args.env in hrl_root_tasks:
+        full_tasks = hrl_root_tasks[args.env]
 
     def f_create_env(render_lock=None, pid=0):
         # env = GatherEnv()
@@ -178,6 +196,12 @@ def main():
             with_state_task = False
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=hrl0[args.env],
+                                  reset_goal_prob=0,
+                                  use_internal_reward=True)
+        elif args.env in hrl1:
+            with_state_task = False
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                  f_gen_obj=hrl1[args.env],
                                   reset_goal_prob=0,
                                   use_internal_reward=True)
         else:
@@ -208,12 +232,19 @@ def main():
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
                        is_learning, global_t, pid):
-        return BatchUpdateAgent(
-            observation_space, action_space,
-            shared_params, stats_rx, acts_tx,
-            is_learning, global_t, pid,
-            timestep_limit=T
-        )
+        if len(full_tasks) == 1:
+            return BatchUpdateAgent(
+                observation_space, action_space,
+                shared_params, stats_rx, acts_tx,
+                is_learning, global_t, pid,
+            )
+        else:
+            return HrlAgent(
+                observation_space, action_space,
+                shared_params, stats_rx, acts_tx,
+                is_learning, global_t, pid,
+                full_tasks=full_tasks
+            )
 
     def const_batch_size(n_update):
         return args.batch_size
@@ -236,7 +267,12 @@ def main():
         k = exp_moving_value(k1, k2, start_t, end_t, n_update)
         return k
 
-    def f_create_shared_params():
+    def create_session():
+        import tensorflow as tf
+        gpu_options = tf.GPUOptions(allow_growth=True)
+        return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+
+    def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
         sample_env = f_create_env()
@@ -247,6 +283,7 @@ def main():
         comb_methd = concat_feature if append_image else aggregate_feature
 
         comb_methd = concat_without_task if feat_sup else comb_methd
+        session = create_session()
 
         model = PolicyGradientModel(observation_space, action_space,
                                     name=args.env,
@@ -261,20 +298,81 @@ def main():
                                     kl_history_length=1,
                                     comb_method=comb_methd,
                                     ent_k=args.ent_k,
-                                    gamma=args.gamma,
-                                    gae_lam=args.lam,
+                                    session=session,
                                     load_old_model=args.load_model,
-                                    should_train=not args.load_model)  # TODO
-        memory = DictMemory(gamma=args.gamma, lam=args.lam, use_gae=True, normalize=True,
+                                    should_train=not args.load_model)
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
                             f_critic=model.compute_critic,
                             num_actors=num_actors,
                             f_check_batch=model.check_batch_finished)
-        return {"models": {"root": model}, "memory": memory}
+        return {"models": [model], "memory": memory}
+
+    def f_should_return_root(source, t, target=None):
+        return t >= 5
+
+    def hrl_shared_params():
+        # TODO: hrl
+        from policy_gradient_model import PolicyGradientModel
+        from dict_memory import DictMemory
+        sample_env = f_create_env()
+        observation_space = sample_env.observation_space
+        action_space = sample_env.action_space
+        sample_env.env.close()
+        n_imgfeat = args.nfeat if append_image else 0
+        comb_methd = concat_feature if append_image else aggregate_feature
+
+        comb_methd = concat_without_task if feat_sup else comb_methd
+        session = create_session()
+
+        root_action_space = Discrete(len(full_tasks) - 1)
+        root_model = PolicyGradientModel(observation_space, root_action_space,
+                                         name=args.env,
+                                         timestep_limit=T,
+                                         num_actors=num_actors,
+                                         f_batch_size=const_batch_size,
+                                         batch_mode=args.batch_mode,
+                                         f_target_kl=const_target_kl,
+                                         n_imgfeat=n_imgfeat,
+                                         mode="ACKTR",
+                                         kl_history_length=1,
+                                         comb_method=comb_methd,
+                                         ent_k=args.ent_k,
+                                         session=session,
+                                         load_old_model=args.load_model,
+                                         should_train=not args.load_model,
+                                         parallel_predict=False)
+        models = [root_model]
+        for env_name, _ in list(full_tasks.items())[1:]:
+            p = PolicyGradientModel(observation_space, action_space,
+                                    name=env_name,
+                                    timestep_limit=T,
+                                    num_actors=num_actors,
+                                    n_imgfeat=n_imgfeat,
+                                    mode="ACKTR",
+                                    comb_method=comb_methd,
+                                    ent_k=args.ent_k,
+                                    session=session,
+                                    load_old_model=True,
+                                    should_train=False,
+                                    parallel_predict=False)
+            models.append(p)
+        for p in models[1:]:
+            p.restore_parameters()
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
+                            timestep_limit=T,
+                            f_critic=root_model.compute_critic,
+                            num_actors=num_actors,
+                            f_check_batch=root_model.check_batch_finished,
+                            async=True)
+
+        return {"models": models, "memory": memory, "f_should_return_root": f_should_return_root}
+
+    f_create_params = pg_shared_params if len(full_tasks) == 1 else hrl_shared_params
 
     single_process_mode = True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_shared_params, single_process_mode=single_process_mode, render_option="false",
+                            f_create_params, single_process_mode=single_process_mode, render_option="false",
                             log_episodes=True)
     logging.info("run arges: {}".format(args))
 

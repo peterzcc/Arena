@@ -14,7 +14,6 @@ class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx, acts_tx,
                  is_learning, global_t, pid=0,
-                 timestep_limit=1000,
                  ):
         Agent.__init__(
             self,
@@ -25,7 +24,7 @@ class BatchUpdateAgent(Agent):
 
         assert shared_params is not None
         # self.param_lock = shared_params["lock"]
-        self.model: PolicyGradientModel = shared_params["models"]["root"]
+        self.model: PolicyGradientModel = shared_params["models"][0]
         self.memory: DictMemory = shared_params["memory"]
 
         self.num_epoch = 0

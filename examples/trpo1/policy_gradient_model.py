@@ -40,8 +40,6 @@ class PolicyGradientModel(ModelWithCritic):
                  n_imgfeat=0,
                  f_target_kl=None,
                  minibatch_size=128,
-                 gamma=0.995,
-                 gae_lam=0.97,
                  mode="ADA_KL",
                  num_actors=1,
                  f_batch_size=None,
@@ -51,7 +49,8 @@ class PolicyGradientModel(ModelWithCritic):
                  ent_k=0,
                  comb_method=aggregate_feature,
                  load_old_model=False,
-                 should_train=True
+                 should_train=True,
+                 parallel_predict=True
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -84,7 +83,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.batch_mode = batch_mode  # "episode" #"timestep"
         self.min_batch_length = 2500
         self.f_batch_size = f_batch_size
-        self.batch_size = self.f_batch_size(0)
+        self.batch_size = None if self.f_batch_size is None else self.f_batch_size(0)
         self.f_target_kl = f_target_kl
         self.kl_history_length = kl_history_length
         if self.batch_mode == "timestep":
@@ -150,65 +149,68 @@ class PolicyGradientModel(ModelWithCritic):
         self.losses = self.policy.losses
         var_list = self.policy.var_list
 
-        self.target_kl_initial = f_target_kl(0)
+        self.target_kl_initial = None if f_target_kl is None else f_target_kl(0)
         self.target_kl_sym = tf.placeholder(shape=[], dtype=tf.float32, name="a_target_kl")
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         self.fit_policy = None
-        if self.mode == "ADA_KL":
-            # adaptive kl
-            self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
-            self.a_beta_value = 3
-            self.a_eta_value = 50
-            self.a_rl_loss = -tf.reduce_mean(self.policy.surr_n)
-            self.a_kl_loss = self.a_beta * self.policy.kl + \
-                             self.a_eta_value * tf.square(tf.maximum(0.0, self.policy.kl - 2.0 * self.target_kl_sym))
-            self.a_surr = self.a_rl_loss + self.a_kl_loss + self.ent_loss
-            self.a_step_size = 0.0001
-            self.a_max_step_size = 0.1
-            self.a_min_step_size = 1e-7
-            self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
-            self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size)
-            self.a_grad_list = tf.gradients(self.a_surr, var_list)
-            self.a_rl_grad = tf.gradients(self.a_rl_loss, var_list)
-            self.a_kl_grad = tf.gradients(self.a_kl_loss, var_list)
+        if should_train:
+            if self.mode == "ADA_KL":
+                # adaptive kl
+                self.a_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
+                self.a_beta_value = 3
+                self.a_eta_value = 50
+                self.a_rl_loss = -tf.reduce_mean(self.policy.surr_n)
+                self.a_kl_loss = self.a_beta * self.policy.kl + \
+                                 self.a_eta_value * tf.square(
+                                     tf.maximum(0.0, self.policy.kl - 2.0 * self.target_kl_sym))
+                self.a_surr = self.a_rl_loss + self.a_kl_loss + self.ent_loss
+                self.a_step_size = 0.0001
+                self.a_max_step_size = 0.1
+                self.a_min_step_size = 1e-7
+                self.a_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="a_step_size")
+                self.a_opt = tf.train.AdamOptimizer(learning_rate=self.a_sym_step_size)
+                self.a_grad_list = tf.gradients(self.a_surr, var_list)
+                self.a_rl_grad = tf.gradients(self.a_rl_loss, var_list)
+                self.a_kl_grad = tf.gradients(self.a_kl_loss, var_list)
 
-            self.hist_obs0 = []
-            self.hist_obs1 = []
-            self.hist_st_en = []
-            self.hist_img_en = []
-            self.a_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="a_grad_sym")
-                                        for g in self.a_grad_list]
-            self.a_old_parameters = [tf.Variable(tf.zeros(v.shape, dtype=tf.float32), name="a_old_param") for v in
-                                     var_list]
-            self.a_backup_op = [tf.assign(old_v, v) for (old_v, v) in zip(self.a_old_parameters, var_list)]
-            self.a_rollback_op = [[tf.assign(v, old_v) for (old_v, v) in zip(self.a_old_parameters, var_list)]]
-            self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
-            self.a_losses = [self.a_rl_loss, self.policy.kl, self.policy.ent]
-            self.a_beta_max = 35.0
-            self.a_beta_min = 1.0 / 35.0
-            self.update_per_epoch = update_per_epoch
-            self.fit_policy = self.fit_adakl
-        elif self.mode == "ACKTR":
-            self.k_stepsize = tf.Variable(initial_value=np.float32(0.03), name='stepsize')
-            self.k_momentum = 0.9
-            self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
-                                              cold_lr=self.k_stepsize * (1 - self.k_momentum), momentum=self.k_momentum,
-                                              kfac_update=2,
-                                              epsilon=1e-2, stats_decay=0.99,
-                                              async=True, cold_iter=1,
-                                              weight_decay_dict={}, max_grad_norm=None)
-            self.loss_type = "PPO"
-            self.k_surr_loss = self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss
-            self.k_final_loss = self.k_surr_loss + self.ent_loss
-            self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
-                                                                      self.policy.mean_loglike,
-                                                                      var_list=self.policy.var_list)
-            self.k_enqueue_threads = []
-            self.k_coord = tf.train.Coordinator()
-            self.fit_policy = self.fit_acktr
-        else:
-            raise NotImplementedError
+                self.hist_obs0 = []
+                self.hist_obs1 = []
+                self.hist_st_en = []
+                self.hist_img_en = []
+                self.a_grad_placeholders = [tf.placeholder(tf.float32, shape=g.shape, name="a_grad_sym")
+                                            for g in self.a_grad_list]
+                self.a_old_parameters = [tf.Variable(tf.zeros(v.shape, dtype=tf.float32), name="a_old_param") for v in
+                                         var_list]
+                self.a_backup_op = [tf.assign(old_v, v) for (old_v, v) in zip(self.a_old_parameters, var_list)]
+                self.a_rollback_op = [[tf.assign(v, old_v) for (old_v, v) in zip(self.a_old_parameters, var_list)]]
+                self.a_apply_grad = self.a_opt.apply_gradients(grads_and_vars=zip(self.a_grad_placeholders, var_list))
+                self.a_losses = [self.a_rl_loss, self.policy.kl, self.policy.ent]
+                self.a_beta_max = 35.0
+                self.a_beta_min = 1.0 / 35.0
+                self.update_per_epoch = update_per_epoch
+                self.fit_policy = self.fit_adakl
+            elif self.mode == "ACKTR":
+                self.k_stepsize = tf.Variable(initial_value=np.float32(0.03), name='stepsize')
+                self.k_momentum = 0.9
+                self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
+                                                  cold_lr=self.k_stepsize * (1 - self.k_momentum),
+                                                  momentum=self.k_momentum,
+                                                  kfac_update=2,
+                                                  epsilon=1e-2, stats_decay=0.99,
+                                                  async=True, cold_iter=1,
+                                                  weight_decay_dict={}, max_grad_norm=None)
+                self.loss_type = "PPO"
+                self.k_surr_loss = self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss
+                self.k_final_loss = self.k_surr_loss + self.ent_loss
+                self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
+                                                                          self.policy.mean_loglike,
+                                                                          var_list=self.policy.var_list)
+                self.k_enqueue_threads = []
+                self.k_coord = tf.train.Coordinator()
+                self.fit_policy = self.fit_acktr
+            else:
+                raise NotImplementedError
 
         # self.saved_paths = []
 
@@ -225,14 +227,16 @@ class PolicyGradientModel(ModelWithCritic):
         self.debug = True
         self.recompute_old_dist = True if self.batch_mode == "episode" and self.num_actors > 1 else False
         self.session.run(tf.global_variables_initializer())
-        for qr in [self.k_q_runner]:
-            if (qr != None):
-                self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
+        if self.mode == "ACKTR" and self.should_train:
+            for qr in [self.k_q_runner]:
+                if (qr != None):
+                    self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
         self.model_path = "./models/" + self.name
         self.full_model_saver = tf.train.Saver(var_list=[*self.critic.var_list, *self.policy.var_list])
-        if load_old_model:
-            logging.debug("Restoring {}".format(self.model_path))
-            self.full_model_saver.restore(self.session, self.model_path)
+        self.has_loaded_model = False
+        self.load_old_model = load_old_model
+        self.parallel_predict = False
+
 
     def get_state_activation(self, t_batch):
         if self.comb_method != aggregate_feature:
@@ -245,32 +249,70 @@ class PolicyGradientModel(ModelWithCritic):
             img_enabled = np.array((1.0 - all_st_enabled,))
         return st_enabled, img_enabled
 
-    def predict(self, observation, pid=0):
+    def restore_parameters(self):
+        if not self.has_loaded_model:
+            if self.load_old_model:
+                logging.debug("Restoring {}".format(self.model_path))
+                self.full_model_saver.restore(self.session, self.model_path)
+                self.has_loaded_model = True
 
-        if self.num_actors == 1:
+    def predict(self, observation, pid=0):
+        if self.parallel_predict:
+            if self.num_actors == 1:
+                if len(observation[0].shape) == len(self.ob_space[0].shape):
+                    obs = [np.expand_dims(observation[0], 0)]
+                else:
+                    obs = observation
+                st_enabled, img_enabled = self.get_state_activation(self.n_update)
+                self.exp_st_enabled = np.expand_dims(st_enabled, 0)
+                self.exp_img_enabled = img_enabled
+            else:
+                self.obs_list[pid] = observation
+                self.execution_barrier.wait()
+                if pid == 0:
+                    obs = [np.stack([ob[0] for ob in self.obs_list])]
+                    if self.n_imgfeat != 0:
+                        obs.append(np.stack([o[1] for o in self.obs_list]))
+                    st_enabled, img_enabled = self.get_state_activation(self.n_update)
+                    st_enabled = np.tile(st_enabled, (self.num_actors, 1))
+                    img_enabled = np.repeat(img_enabled, self.num_actors, axis=0)
+                    self.exp_st_enabled = st_enabled
+                    self.exp_img_enabled = img_enabled
+
+            if pid == 0:
+                feed = {self.executer_net.state_input: obs[0],
+                        self.critic.st_enabled: self.exp_st_enabled,
+                        self.critic.img_enabled: self.exp_img_enabled,
+                        self.executer_net.st_enabled: self.exp_st_enabled,
+                        self.executer_net.img_enabled: self.exp_img_enabled,
+                        }
+                if self.n_imgfeat != 0:
+                    feed[self.critic.img_input] = obs[1]
+                    feed[self.executer_net.img_input] = obs[1]
+                self.policy_lock.acquire_read()
+                # self.dist_infos = \
+                #     self.session.run(self.executer_net.new_dist_info_vars,
+                #                      feed)
+                self.dist_infos, self.stored_actions = self.session.run(
+                    [self.executer_net.dist_vars, self.executer_net.sampled_action],
+                    feed)
+                self.policy_lock.release_read()
+            self.execution_barrier.wait()
+            info_this_thread = {k: v[pid, :] for k, v in self.dist_infos.items()}
+            agent_info = {**info_this_thread,
+                          **dict(st_enabled=self.exp_st_enabled[pid, :], img_enabled=self.exp_img_enabled[pid])}
+            action = np.take(self.stored_actions, pid, axis=0)
+        else:
             if len(observation[0].shape) == len(self.ob_space[0].shape):
                 obs = [np.expand_dims(observation[0], 0)]
-                if self.n_imgfeat != 0:
-                    obs.append(np.expand_dims(observation[1], 0))
             else:
                 obs = observation
+            if self.n_imgfeat != 0:
+                obs.append(np.expand_dims(observation[1], 0))
             st_enabled, img_enabled = self.get_state_activation(self.n_update)
             self.exp_st_enabled = np.expand_dims(st_enabled, 0)
             self.exp_img_enabled = img_enabled
-        else:
-            self.obs_list[pid] = observation
-            self.execution_barrier.wait()
-            if pid == 0:
-                obs = [np.stack([ob[0] for ob in self.obs_list])]
-                if self.n_imgfeat != 0:
-                    obs.append(np.stack([o[1] for o in self.obs_list]))
-                st_enabled, img_enabled = self.get_state_activation(self.n_update)
-                st_enabled = np.tile(st_enabled, (self.num_actors, 1))
-                img_enabled = np.repeat(img_enabled, self.num_actors, axis=0)
-                self.exp_st_enabled = st_enabled
-                self.exp_img_enabled = img_enabled
 
-        if pid == 0:
             feed = {self.executer_net.state_input: obs[0],
                     self.critic.st_enabled: self.exp_st_enabled,
                     self.critic.img_enabled: self.exp_img_enabled,
@@ -280,19 +322,18 @@ class PolicyGradientModel(ModelWithCritic):
             if self.n_imgfeat != 0:
                 feed[self.critic.img_input] = obs[1]
                 feed[self.executer_net.img_input] = obs[1]
+
             self.policy_lock.acquire_read()
-            # self.dist_infos = \
-            #     self.session.run(self.executer_net.new_dist_info_vars,
-            #                      feed)
             self.dist_infos, self.stored_actions = self.session.run(
                 [self.executer_net.dist_vars, self.executer_net.sampled_action],
                 feed)
             self.policy_lock.release_read()
-        self.execution_barrier.wait()
-        info_this_thread = {k: v[pid, :] for k, v in self.dist_infos.items()}
-        agent_info = {**info_this_thread,
-                      **dict(st_enabled=self.exp_st_enabled[pid, :], img_enabled=self.exp_img_enabled[pid])}
-        action = np.take(self.stored_actions, pid, axis=0)
+
+            info_this_thread = {k: v[0, :] for k, v in self.dist_infos.items()}
+            agent_info = {**info_this_thread,
+                          **dict(st_enabled=self.exp_st_enabled[0, :], img_enabled=self.exp_img_enabled[0])}
+            action = np.take(self.stored_actions, 0, axis=0)
+
         if self.debug:
             if hasattr(self.act_space, 'low'):
                 is_clipped = np.logical_or((action <= self.act_space.low), (action >= self.act_space.high))
@@ -331,8 +372,8 @@ class PolicyGradientModel(ModelWithCritic):
             feed[self.policy.img_input] = img_input
             feed[self.critic.img_input] = img_input
             path_dict["img_input"] = img_input
-        # action_dist_means_n = concat([path["mean"] for path in paths])
-        # action_dist_logstds_n = concat([path["log_std"] for path in paths])
+        # action_dist_means_n = concat([path["mean"] for path in aggre_paths])
+        # action_dist_logstds_n = concat([path["log_std"] for path in aggre_paths])
         dist_vars = {}
         for k in self.policy.dist_vars.keys():
             dist_vars[self.policy.old_vars[k]] = concat([path[k] for path in paths])
@@ -384,8 +425,8 @@ class PolicyGradientModel(ModelWithCritic):
         if self.batch_mode == "timestep":
             if not time <= self.batch_size:
                 logging.debug("time: {} \nbatchsize: {}".format(time, self.batch_size))
-                assert time <= self.batch_size
-            return time == self.batch_size
+                # assert time <= self.batch_size
+            return time >= self.batch_size
 
     def increment_n_update(self):
         self.n_update += 1
