@@ -1,0 +1,119 @@
+xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" -- bash
+
+CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3 trpo_test.py --nactor 20 --batch-size 20000
+
+tmux kill-window -t 9
+
+sshfs dy2:/home/data/czeng/ ~/dy2
+
+LD_LIBRARY_PATH=$HOME/.mujoco/mjpro150/bin pip3 install --user --upgrade .
+
+CUDA_VISIBLE_DEVICES=3 python3 trpo_test.py --nactor 20
+
+pip3 freeze | grep -v "^-e" | xargs pip3 uninstall -y
+
+from pympler import muppy, summary
+all_objects = muppy.get_objects()
+len(all_objects)
+sum1 = summary.summarize(all_objects)
+summary.print_(sum1)
+
+summary.print_(summary.summarize(muppy.get_objects()))
+
+pip3.6 --no-cache-dir install --user --force-reinstall https://github.com/mind/wheels/releases/download/tf1.4-gpu/tensorflow-1.4.0-cp36-cp36m-linux_x86_64.whl
+tmu
+
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON3=ON
+
+import cv2;cv2.imshow('ob',obs[1]);cv2.waitKey(0);cv2.destroyAllWindows()
+
+from matplotlib import pyplot as plt;plt.figure(1);plt.imshow(obs[1][0,:,:,0], cmap='gray', interpolation='bicubic');plt.xticks([]), plt.yticks([]);plt.draw()
+
+
+CUDA_VISIBLE_DEVICES=1 python3 trpo_test.py --nactor 20 --batch-size 10000
+
+python3.6 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())"
+
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON3=ON \
+-DPYTHON_INCLUDE_DIRS=$(python3.6 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())")  \
+-DPYTHON_LIBRARIES=$(python3.6 -c "import distutils.sysconfig as sysconfig; import os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))")
+
+python3 -c "import distutils.sysconfig as sysconfig; import os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))"
+
+python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())"
+
+python3 train-vizdoom.py --env FireEpisodeEnv --gpu 0 --name fire_episode_flat_0.2 --frame-skip 3 --bots 8 --reward-func 0 --episode-length 1000 --config config/flatmap_fire_0.2.wad
+关注
+
+top -p `pgrep -d "," vizdoom`
+
+
+CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 trpo_test.py --nactor 10 --batch-size 5000 --kl 0.0005 --ent-k 0.0001
+
+CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3 trpo_test.py --nactor 10 --batch-size 5000 --kl 0.0005 --ent-k 0.0005
+
+from multiprocessing import process;process.current_process()._config['tempdir'] = "./tmp"
+import multiprocessing;import ctypes;shared_data = multiprocessing.Array(ctypes.c_uint8,64*64*3*40)
+
+ENV="flat.rvg.sp0.8.vul.ammo50" python3.5 train-vizdoom.py --env FireEpisodeEnv --gpu 0 --name $ENV --frame-skip 3 --bots 8 --reward-func 0 --episode-length 1000 --config config/$ENV.wad --dir .
+ENV="flat.rvg.sp0.8.vul.ammo50" python3.5 train-vizdoom.py --env FireEpisodeEnv --gpu 0 --name $ENV --frame-skip 3 --bots 8 --reward-func 0 --episode-length 1000 --config config/$ENV.wad --load ./train-vizdoom/$ENV/model-6000 --task play --episode 5
+
+CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3 trpo_test.py --nactor 10 --batch-size 5000 --kl 0.001 --ent-k 8.0
+
+
+export MAP="flat.class2"
+
+python3.5 train-vizdoom.py --env FireEpisodeEnv --gpu 0 --name ${MAP}_1 --frame-skip 3 --bots 8 --reward-func 0 --episode-length 1400 --config config/${MAP}.wad --dir /mnt/truenas/scratch/sliay/czeng --load /mnt/truenas/scratch/sliay/czeng/flat.class0_0/model-1194000
+
+python3.5 train-vizdoom.py --env FireEpisodeEnv --gpu 0 --name ${MAP}_0 --frame-skip 3 --bots 8 --reward-func 0 --episode-length 1400 --config config/${MAP}.wad --dir /mnt/truenas/scratch/sliay/czeng
+
+python3.5 train-vizdoom.py --env FireEpisodeEnv --gpu 0 --name ${MAP}_1 --frame-skip 3 --bots 8 --reward-func 0 --episode-length 1400 --config config/${MAP}.wad --dir /mnt/truenas/scratch/sliay/czeng --load /mnt/truenas/scratch/sliay/czeng/flat.class1_1/model-2310000
+
+
+git remote add zcc https://github.com/peterzcc/hrl-vizdoom.git
+git fetch zcc rebase
+git checkout rebase
+
+sshfs root@rnd-zcc.sd.tusimple.ai:/mnt/truenas/scratch/sliay/czeng ~/vizdocker
+
+CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 trpo_test.py --nactor 20 --batch-size 5000 --batch-mode timestep --ent-k 0.004 --kl 0.0005 --env single --withimg 1 --nae -1
+
+CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 trpo_test.py --nactor 20 --batch-size 5000 --kl 0.0001 --withimg 1 --env single --nae 0 --nfeat 30
+
+ssh root@rnd-zcc.sd.tusimple.ai
+
+ssh root@rnd-zcc2.sd.tusimple.ai
+
+
+sd.tusimple.ai
+
+CUDA_VISIBLE_DEVICES=3 python3.6 trpo_test.py --nactor 20 --batch-size 5000 --kl 0.0001  --env single --nae 0 --nfeat 0
+
+CUDA_VISIBLE_DEVICES="" python3.6 ./cnn_mnist.py
+
+python3.6 trpo_test.py --nactor 20 --batch-size 5000 --kl 0.0001 --withimg 1 --env single --nfeat 30
+
+python3.6 trpo_test.py --nactor 20 --batch-size 5000 --kl 0.0001 --env ant --nfeat 0
+
+python3.6 pg_train.py --nactor 20 --batch-size 5000 --kl 0.0001 --env CartPole-v0 --nfeat 0
+
+python3.6 pg_train.py --nactor 10 --batch-size 2000 --kl 0.0001 --env CartPole-v0 --nfeat 0
+
+
+CUDA_VISIBLE_DEVICES="" python3.6 ./project2.py --task train_cnn
+python3.6 ./project2.py --task train_ae && python3.6 ./project2.py --task evaluate_ae
+
+import matplotlib.pyplot as plt
+
+i +=0
+
+i +=1;plt.figure(0);plt.imshow(x[i,:,:],cmap="gray");plt.figure(1);plt.imshow(recon[i,:,:,0],cmap="gray");plt.figure(2);plt.imshow(np.reshape(features[i,:,:,:],(7,7,1)),cmap="gray")
+
+
+CUDA_VISIBLE_DEVICES="" python3.6 ./project2.py --task train_ae
+
+i += 1;visualize_ae(i,x,features,recon)
+
+hist = np.histogram(sampled_y_test,bins=47)[0]
+
+

@@ -13,7 +13,6 @@ class BatchUpdateAgent(Agent):
     def __init__(self, observation_space, action_space,
                  shared_params, stats_rx, acts_tx,
                  is_learning, global_t, pid=0,
-                 model=None,
                  timestep_limit=1000,
                  ):
         Agent.__init__(
@@ -23,13 +22,11 @@ class BatchUpdateAgent(Agent):
             is_learning, global_t, pid
         )
 
-        self.model = model
         if shared_params is None:
-            pass
+            raise NotImplementedError
         else:
             # self.param_lock = shared_params["lock"]
-            self.global_model = shared_params["global_model"]
-            self.model = self.global_model
+            self.model = shared_params["root"]
 
         self.num_epoch = 0
         self.global_t = 0
@@ -51,13 +48,13 @@ class BatchUpdateAgent(Agent):
             processed_observation.append(observation[1])
         action, agent_info = self.model.predict(processed_observation, pid=self.id)
 
-        self.model.has_received_state(observation, action, info=agent_info, pid=self.id)
+        self.model.memory.append_state(observation, action, info=agent_info, pid=self.id)
 
         return action
 
     def receive_feedback(self, reward, done, info={}):
 
-        self.model.has_received_feedback(reward, pid=self.id)
+        self.model.memory.append_feedback(reward, pid=self.id)
         self.time_count += 1
         is_episode_clipped = self.time_count * self.model.num_actors == self.model.batch_size
         if done or (self.should_clip_episodes and is_episode_clipped):

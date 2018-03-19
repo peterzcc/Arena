@@ -16,7 +16,7 @@ from custom_pend import CustomPend
 from single_gather_env import SingleGatherEnv, SimpleSingleGatherEnv
 import sys
 import os
-from tf_utils import aggregate_feature, concat_feature, concat_without_task
+from tf_utils import aggregate_feature, concat_feature, concat_without_task, str2bool
 BATH_SIZE = 10000
 
 
@@ -35,6 +35,7 @@ def exp_moving_value(x1, x2, t1, t2, t):
     if t > t2:
         return x2
     return x1 * (x2 / x1) ** ((t - t1) / (t2 - t1))
+
 
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
@@ -60,6 +61,8 @@ def main():
     parser.add_argument('--lam', required=False, default=0.97, type=float,
                         help='gae lambda')
     parser.add_argument('--withimg', default=False, type=bool, help='append image input')
+    parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
+                        const=True, )
     parser.add_argument('--env', default="ant", type=str, help='env')
     parser.add_argument('--nae', required=False, type=int, default=0,
                         help='num ae train')
@@ -216,12 +219,6 @@ def main():
             timestep_limit=T
         )
 
-        # return TestMpAgent(
-        #     observation_space, action_space,
-        #     shared_params, stats_rx, acts_tx,
-        #     is_learning, global_t, pid
-        # )
-
     def const_batch_size(n_update):
         return args.batch_size
 
@@ -254,6 +251,7 @@ def main():
 
         comb_methd = concat_without_task if feat_sup else comb_methd
         model = PolicyGradientModel(observation_space, action_space,
+                                    name=args.env,
                                     timestep_limit=T,
                                     num_actors=num_actors,
                                     f_batch_size=const_batch_size,
@@ -265,8 +263,9 @@ def main():
                                     kl_history_length=1,
                                     comb_method=comb_methd,
                                     ent_k=args.ent_k,
-                                    gae_lam=args.lam)
-        return {"global_model": model}
+                                    gae_lam=args.lam,
+                                    load_old_model=args.load_model)  # TODO
+        return {"root": model}
 
     single_process_mode = True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,

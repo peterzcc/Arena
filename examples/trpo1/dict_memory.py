@@ -66,7 +66,6 @@ class DictMemory(object):
     def append_feedback(self, reward, pid=0):
         self.current_path[pid]["reward"].append(reward)
 
-
     def add_path(self, done, pid=0):
         if done:
             self.current_path[pid]["terminated"] = True
