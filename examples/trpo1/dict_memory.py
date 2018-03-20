@@ -188,15 +188,19 @@ class DictMemory(object):
                 path["times"] = \
                     (np.arange(len(path["reward"])).reshape(-1, 1) / float(self.timestep_limit))[path["pos"], :]
 
-                semi_mdp_r = np.zeros(path["action"].shape)
+                # semi_mdp_r = np.zeros(path["action"].shape)
 
-                # TODO: improve this performence
-                path["pos"].append(len(path["reward"]))
-                for i in range(len(path["pos"]) - 1):
-                    start = path["pos"][i]
-                    end = path["pos"][i + 1]
-                    rewards = path["reward"][start:end]
-                    semi_mdp_r[i] = np.dot(rewards, self.gpow[0:len(rewards)])
+                grouped_rewards = np.split(path["reward"], path["pos"][1:])
+                group_lens = list(map(len, grouped_rewards))
+                grouped_gpow = [self.gpow[0:glen] for glen in group_lens]
+                semi_mdp_r = np.array([np.inner(r, p) for r, p in zip(grouped_rewards, grouped_gpow)])
+
+                # path["pos"].append(len(path["reward"]))
+                # for i in range(len(path["pos"]) - 1):
+                #     start = path["pos"][i]
+                #     end = path["pos"][i + 1]
+                #     rewards = path["reward"][start:end]
+                #     semi_mdp_r[i] = np.dot(rewards, self.gpow[0:len(rewards)])
 
                 path["return"] = discount(semi_mdp_r, self.gamma)
                 b = path["baseline"] = self.f_critic(path)

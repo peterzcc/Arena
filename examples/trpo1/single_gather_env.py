@@ -305,7 +305,6 @@ def x_forward_obj():
 
 class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     ORI_IND = 6
-    OBJ_DIST = 1.25
 
     def __init__(
             self,
@@ -314,9 +313,11 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             frame_skip=5,
             file_path='ant.xml',
             with_state_task=True,
-            use_internal_reward=True,
+            use_sparse_reward=False,
             reset_goal_prob=0,
             freward_scale=1.0,
+            catch_range=0.5,
+            obj_dist=1.25,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -326,9 +327,12 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.dir = None
         self.objects = []
         self.with_state_task = with_state_task
-        self.use_internal_reward = use_internal_reward
+        self.use_sparse_reward = use_sparse_reward
+        self.fix_goal = use_sparse_reward
         self.reset_goal_prob = reset_goal_prob
         self.freward_scale = freward_scale
+        self.catch_range = catch_range
+        self.obj_dist = obj_dist
 
         self._reset_objects()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
@@ -341,7 +345,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def _reset_objects(self):
         self.dir = self.f_gen_obj()
-        self.objects = [np.concatenate([self.OBJ_DIST * self.dir, (0,)])]
+        self.objects = [np.concatenate([self.obj_dist * self.dir, (0,)])]
 
     def _get_obs(self):
         # return sensor data along with data about itself
@@ -352,14 +356,21 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         obs, in_rw, done, info = self._ant_step(action)
         if done:
             return self._get_obs(), -10, done, info
+
         com = self.get_body_com("torso")
-        x, y = com[:2]
-        obj_pos = com[:2] + self.OBJ_DIST * self.dir
-        self.objects[0] = np.concatenate([obj_pos, (0,)])
+        if not self.fix_goal:
+            obj_pos = com[:2] + self.obj_dist * self.dir
+            self.objects[0] = np.concatenate([obj_pos, (0,)])
+        if np.sum((com[:2] - self.objects[0][:2]) ** 2) < self.catch_range ** 2:
+            reward = 1
+            done = True
+        else:
+            reward = -0.01
         if self.reset_goal_prob != 0:
+            assert not self.fix_goal
             if np.random.rand() < self.reset_goal_prob:
                 self._reset_objects()
-        return obs, in_rw, done, info
+        return obs, reward, done, info
 
     def _ant_step(self, a):
         pos_t = self.get_body_com("torso")
@@ -371,7 +382,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         contact_cost = 0.5 * 1e-3 * np.sum(
             np.square(np.clip(self.model.data.cfrc_ext, -1, 1)))
         survive_reward = 1.0
-        internal_reward = - ctrl_cost - contact_cost if self.use_internal_reward else 0
+        internal_reward = - ctrl_cost - contact_cost
         reward = self.freward_scale * forward_reward + survive_reward + internal_reward
         state = self.state_vector()
         rot_angle = self.data.xmat[1, 8]
@@ -415,7 +426,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return self.viewer
 
     def viewer_setup(self):
-        self.viewer.cam.distance = self.model.stat.extent * 0.6
+        distance = self.model.stat.extent * 0.6 * 1.5
+        self.viewer.cam.distance = distance
 
 
 class SimpleSingleGatherEnv(SingleGatherEnv):

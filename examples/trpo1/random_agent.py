@@ -8,8 +8,9 @@ from gym import wrappers
 from custom_ant import CustomAnt
 from arena.games.complex_wrapper import ComplexWrapper
 from single_gather_env import SingleGatherEnv
-
-
+from gather_env import GatherEnv
+from pg_train import random_cont_direction
+from gym.monitoring import VideoRecorder
 class RandomAgent(object):
     """The world's simplest agent!"""
 
@@ -50,13 +51,17 @@ if __name__ == '__main__':
 
     cwd = os.getcwd()
     env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml",
-                          f_gen_obj=random_3direction)
+                          f_gen_obj=random_cont_direction,
+                          use_sparse_reward=True)
+    outdir = './random-agent-results'
+
+    # env = GatherEnv()
 
     # You provide the directory to write to (can be an existing
     # directory, including one with existing data -- all monitor files
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
-    outdir = './random-agent-results'
+
     # env = wrappers.Monitor(env, directory=outdir, force=True)
     # env = ComplexWrapper(env, max_episode_length=1000,
     #                            append_image=False, new_img_size=(64, 64), rgb_to_gray=True,
@@ -68,23 +73,26 @@ if __name__ == '__main__':
     reward = 0
     done = False
     import cv2
-    for i in range(episode_count):
+
+    while True:
         ob = env.reset()
+        recorder = VideoRecorder(env, path=outdir + ".mp4")
         while True:
             action = agent.act(ob, reward, done)
-            image = env.render(mode='rgb_array')
-            cv2.imwrite("image.jpg", image)
-
-            input("Press Enter to continue...")
+            # image = env.render(mode='rgb_array')
+            recorder.capture_frame()
+            # cv2.imwrite("image.jpg", image)
             ob, reward, done, _ = env.step(action)
             if done:
+                recorder.close()
+                input("Press Enter to continue...")
                 break
                 # Note there's no env.render() here. But the environment still can open window and
                 # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
                 # Video is not recorded every episode, see capped_cubic_video_schedule for details.
 
     # Close the env and write monitor result info to disk
-    env.close()
+    # env.close()
 
     # Upload to the scoreboard. We could also do this from another
     # process if we wanted.

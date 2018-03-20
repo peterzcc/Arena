@@ -40,6 +40,38 @@ def exp_moving_value(x1, x2, t1, t2, t):
     return x1 * (x2 / x1) ** ((t - t1) / (t2 - t1))
 
 
+DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
+
+
+def x_forward_obj():
+    return np.array((1, 0))
+
+
+def x_backward_obj():
+    return np.array((-1, 0))
+
+
+def x_up_obj():
+    return np.array((0, 1))
+
+
+def x_down_obj():
+    return np.array((0, -1))
+
+
+def random_direction():
+    choice = np.random.randint(0, 4)
+    return DIRECTIONS[choice, :]
+
+
+def random_cont_direction():
+    a = np.random.rand() * 2 * np.pi
+    return np.array([np.cos(a), np.sin(a)])
+
+
+def x_for_back():
+    choice = np.random.randint(0, 2) * 2
+    return DIRECTIONS[choice, :]
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
@@ -137,33 +169,11 @@ def main():
     render_lock = multiprocessing.Lock()
     barrier = multiprocessing.Barrier(num_actors)
     cwd = os.getcwd()
-    DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
+
     append_image = args.withimg
     feat_sup = False
 
-    def x_forward_obj():
-        return np.array((1, 0))
 
-    def x_backward_obj():
-        return np.array((-1, 0))
-
-    def x_up_obj():
-        return np.array((0, 1))
-
-    def x_down_obj():
-        return np.array((0, -1))
-
-    def random_direction():
-        choice = np.random.randint(0, 4)
-        return DIRECTIONS[choice, :]
-
-    def random_cont_direction():
-        a = np.random.rand() * 2 * np.pi
-        return np.array([np.cos(a), np.sin(a)])
-
-    def x_for_back():
-        choice = np.random.randint(0, 2) * 2
-        return DIRECTIONS[choice, :]
 
     hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
 
@@ -183,8 +193,7 @@ def main():
             with_state_task = False
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=random_cont_direction,
-                                  reset_goal_prob=0,
-                                  use_internal_reward=True)
+                                  reset_goal_prob=0, )
         elif args.env == "custant":
             env = CustomAnt(file_path=cwd + "/cust_ant.xml")
         elif args.env == "forward_and_backward":
@@ -197,14 +206,17 @@ def main():
             with_state_task = False
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=hrl0[args.env],
-                                  reset_goal_prob=0,
-                                  use_internal_reward=True)
+                                  reset_goal_prob=0, )
         elif args.env in hrl1:
             with_state_task = False
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=hrl1[args.env],
-                                  reset_goal_prob=0,
-                                  use_internal_reward=True)
+                                  reset_goal_prob=0, )
+        elif args.env == "reach_test":
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=random_cont_direction,
+                                  use_sparse_reward=True,
+                                  obj_dist=1.25)
         else:
             env = gym.make(args.env)
         # env = MazeEnv()
