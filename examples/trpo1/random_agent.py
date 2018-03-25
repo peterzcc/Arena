@@ -11,6 +11,7 @@ from single_gather_env import SingleGatherEnv
 from gather_env import GatherEnv
 from pg_train import random_cont_direction
 from gym.monitoring import VideoRecorder
+from arena.video_encoder import VideoEncoder
 class RandomAgent(object):
     """The world's simplest agent!"""
 

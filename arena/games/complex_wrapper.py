@@ -18,6 +18,7 @@ class ComplexWrapper(object):
         # args = locals()
         # logging.debug("Environment args:\n {}".format(args))
         self.env = env
+        self.metadata = env.metadata
         self.action_reduce = action_reduce
         self.env = env
         self.action_space = env.action_space

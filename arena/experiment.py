@@ -40,7 +40,7 @@ class Experiment(object):
                  f_create_shared_params,
                  stats_file_dir=None,
                  single_process_mode=False,
-                 render_option="false",
+                 render_option="off",
                  log_episodes=False):
         """
         Parameters
@@ -149,6 +149,7 @@ class Experiment(object):
             this_actuator = Actuator(func_get_env, stats_tx, acts_rx,
                                      cmd_signal, episode_data_q,
                                      global_t, act_id,
+                                     render_option=RenderOption.lookup(self.render_option),
                                      render_lock=self.render_lock)
             this_actuator.run_loop()
 
@@ -242,8 +243,6 @@ class Experiment(object):
 
         start_times = np.repeat(time(), num_actor)
         force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
-        if self.render_option == "once_per_epoch":
-            self.actuator_channels[0].put(RenderOption.one_episode)
 
         while epoch_num < num_epoch and not self.is_terminated:
             try:
@@ -291,9 +290,8 @@ class Experiment(object):
                             # force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
                         epoch_num += 1
                 # logging.debug("exp: Epoch {} Finished.\n".format(epoch_num))
-                if self.render_option == "once_per_epoch":
-                    self.actuator_channels[0].put(RenderOption.one_episode)
         logging.info("training finished")
+        force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
         for actuator in self.actuator_processes:
             actuator.join()
         for agent in self.agent_threads:

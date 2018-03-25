@@ -59,6 +59,21 @@ def x_down_obj():
     return np.array((0, -1))
 
 
+def v_11():
+    return np.sqrt(1 / 2) * np.array((1, 1))
+
+
+def v_1n1():
+    return np.sqrt(1 / 2) * np.array((1, -1))
+
+
+def v_n11():
+    return np.sqrt(1 / 2) * np.array((-1, 1))
+
+
+def v_n1n1():
+    return np.sqrt(1 / 2) * np.array((-1, -1))
+
 def random_direction():
     choice = np.random.randint(0, 4)
     return DIRECTIONS[choice, :]
@@ -108,6 +123,7 @@ def main():
                         help='num ae train')
     parser.add_argument('--nfeat', required=False, type=int, default=0,
                         help='num img feat')
+    parser.add_argument('--render', default="off", type=str, help='rendoer option')
     args = parser.parse_args()
 
     should_profile = False
@@ -193,6 +209,7 @@ def main():
                                     move2=x_up_obj, move3=x_down_obj
                                     )
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl1, reach2d=hrl2, dynamic2d=hrl_changing_goal)
+    hrl_8d = dict(move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -223,11 +240,15 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=hrl1[args.env],
                                   reset_goal_prob=0, )
+        elif args.env in hrl_8d:
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_8d[args.env],
+                                  reset_goal_prob=0, )
         elif args.env == "dynamic2d":
             with_state_task = False
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=random_direction,
-                                  reset_goal_prob=0.05, )
+                                  reset_goal_prob=0.01, )
         elif args.env == "reach_test":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=random_direction,
@@ -403,7 +424,7 @@ def main():
 
     single_process_mode = True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,
-                            f_create_params, single_process_mode=single_process_mode, render_option="false",
+                            f_create_params, single_process_mode=single_process_mode, render_option=args.render,
                             log_episodes=True)
     logging.info("run arges: {}".format(args))
 

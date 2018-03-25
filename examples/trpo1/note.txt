@@ -99,17 +99,21 @@ python3.6 pg_train.py --nactor 10 --batch-size 2000 --kl 0.0001 --env CartPole-v
 
 python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env reach_test --nfeat 30 --load-model 0
 
-CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move1 --nfeat 30 --load-model 0
+CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move4 --nfeat 30 --load-model 0
 
-CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move2 --nfeat 30 --load-model 0
+CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move5 --nfeat 30 --load-model 0
 
-CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move3 --nfeat 30 --load-model 0
+CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move6 --nfeat 30 --load-model 0
 
-CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move0 --nfeat 30 --load-model 0
+CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move7 --nfeat 30 --load-model 0
 
 python3.6 pg_train.py --nactor 20 --batch-size 250 --withimg 1 --env reach2d --nfeat 30 --load-model 0 --rl-method PG
 
 python3.6 pg_train.py --nactor 20 --batch-size 250 --withimg 1 --env dynamic2d --nfeat 30 --load-model 0 --rl-method PG
+
+
+
+python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env dynamic2d --nfeat 30 --load-model 1 --no-train 1 --render record
 
 echo 'deb http://deb.torproject.org/torproject.org jessie main'>> /etc/apt/sources.list.d/tor.list
 reach_test

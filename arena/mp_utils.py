@@ -15,7 +15,12 @@ class ProcessState(Enum):
 class RenderOption(Enum):
     off = 0
     on = 1
-    one_episode = 2
+    record = 3
+
+    @staticmethod
+    def lookup(key):
+        valuedicts = {"off": RenderOption.off, "on": RenderOption.on, "record": RenderOption.record}
+        return valuedicts[key]
 
 def force_map(func, x):
     return list(map(func, x))
