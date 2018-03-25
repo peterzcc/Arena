@@ -52,7 +52,8 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml",
                           f_gen_obj=random_cont_direction,
-                          use_sparse_reward=True)
+                          use_sparse_reward=True,
+                          obj_dist=1.0)
     outdir = './random-agent-results'
 
     # env = GatherEnv()

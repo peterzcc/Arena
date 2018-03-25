@@ -100,7 +100,10 @@ def main():
     parser.add_argument('--withimg', default=True, type=bool, help='append image input')
     parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
                         const=True, )
+    parser.add_argument('--no-train', default=False, type=str2bool, nargs='?',
+                        const=True, )
     parser.add_argument('--env', default="ant", type=str, help='env')
+    parser.add_argument('--rl-method', default="ACKTR", type=str, help='rl method')
     parser.add_argument('--nae', required=False, type=int, default=0,
                         help='num ae train')
     parser.add_argument('--nfeat', required=False, type=int, default=0,
@@ -177,11 +180,19 @@ def main():
 
     hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
 
-    hrl1 = OrderedDict(move2d=random_cont_direction,
+    hrl1 = OrderedDict(move2d=random_direction,
                        move0=x_forward_obj, move1=x_backward_obj,
                        move2=x_up_obj, move3=x_down_obj
                        )
-    hrl_root_tasks = dict(move1d=hrl0, move2d=hrl1)
+    hrl2 = OrderedDict(reach2d=random_direction,
+                       move0=x_forward_obj, move1=x_backward_obj,
+                       move2=x_up_obj, move3=x_down_obj
+                       )
+    hrl_changing_goal = OrderedDict(dynamic2d=random_direction,
+                                    move0=x_forward_obj, move1=x_backward_obj,
+                                    move2=x_up_obj, move3=x_down_obj
+                                    )
+    hrl_root_tasks = dict(move1d=hrl0, move2d=hrl1, reach2d=hrl2, dynamic2d=hrl_changing_goal)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -212,11 +223,19 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=hrl1[args.env],
                                   reset_goal_prob=0, )
+        elif args.env == "dynamic2d":
+            with_state_task = False
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                  f_gen_obj=random_direction,
+                                  reset_goal_prob=0.05, )
         elif args.env == "reach_test":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
-                                  f_gen_obj=random_cont_direction,
-                                  use_sparse_reward=True,
-                                  obj_dist=1.25)
+                                  f_gen_obj=random_direction,
+                                  use_sparse_reward=True)
+        elif args.env == "reach2d":
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=random_direction,
+                                  use_sparse_reward=True, )
         else:
             env = gym.make(args.env)
         # env = MazeEnv()
@@ -306,14 +325,14 @@ def main():
                                     batch_mode=args.batch_mode,
                                     f_target_kl=const_target_kl,
                                     n_imgfeat=n_imgfeat,
-                                    mode="ACKTR",
+                                    mode=args.rl_method,
                                     update_per_epoch=4,
                                     kl_history_length=1,
                                     comb_method=comb_methd,
                                     ent_k=args.ent_k,
                                     session=session,
                                     load_old_model=args.load_model,
-                                    should_train=not args.load_model)
+                                    should_train=not args.no_train)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
                             f_critic=model.compute_critic,
@@ -347,13 +366,13 @@ def main():
                                          batch_mode=args.batch_mode,
                                          f_target_kl=const_target_kl,
                                          n_imgfeat=n_imgfeat,
-                                         mode="ACKTR",
+                                         mode=args.rl_method,
                                          kl_history_length=1,
                                          comb_method=comb_methd,
                                          ent_k=args.ent_k,
                                          session=session,
                                          load_old_model=args.load_model,
-                                         should_train=not args.load_model,
+                                         should_train=not args.no_train,
                                          parallel_predict=False)
         models = [root_model]
         for env_name, _ in list(full_tasks.items())[1:]:
@@ -362,7 +381,6 @@ def main():
                                     timestep_limit=T,
                                     num_actors=num_actors,
                                     n_imgfeat=n_imgfeat,
-                                    mode="ACKTR",
                                     comb_method=comb_methd,
                                     ent_k=args.ent_k,
                                     session=session,

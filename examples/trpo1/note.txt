@@ -107,7 +107,14 @@ CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" p
 
 CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move0 --nfeat 30 --load-model 0
 
+python3.6 pg_train.py --nactor 20 --batch-size 250 --withimg 1 --env reach2d --nfeat 30 --load-model 0 --rl-method PG
+
+python3.6 pg_train.py --nactor 20 --batch-size 250 --withimg 1 --env dynamic2d --nfeat 30 --load-model 0 --rl-method PG
+
+echo 'deb http://deb.torproject.org/torproject.org jessie main'>> /etc/apt/sources.list.d/tor.list
 reach_test
+
+LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 
 CUDA_VISIBLE_DEVICES="" python3.6 ./project2.py --task train_cnn
 python3.6 ./project2.py --task train_ae && python3.6 ./project2.py --task evaluate_ae

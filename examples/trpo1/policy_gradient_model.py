@@ -32,6 +32,7 @@ class PolicyGradientModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,
                  name="agent",
                  session=None,
+                 conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
                  min_std=1e-6,
                  cg_damping=0.1,
                  cg_iters=10,
@@ -40,7 +41,7 @@ class PolicyGradientModel(ModelWithCritic):
                  n_imgfeat=0,
                  f_target_kl=None,
                  minibatch_size=128,
-                 mode="ADA_KL",
+                 mode="ACKTR",
                  num_actors=1,
                  f_batch_size=None,
                  batch_mode="episode",
@@ -55,8 +56,8 @@ class PolicyGradientModel(ModelWithCritic):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
-        logging.debug("\naction space:".format(action_space))
-        logging.debug("\nstate space: {} to {}".format(observation_space[0].low, observation_space[0].high))
+        # logging.debug("\naction space:".format(action_space))
+        # logging.debug("\nstate space: {} to {}".format(observation_space[0].low, observation_space[0].high))
         args = locals()
         logging.debug("model args:\n {}".format(args))
 
@@ -98,7 +99,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
         self.comb_method = comb_method  # aggregate_feature#
 
-        conv_sizes = (((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2))
+
 
         cnn_trainable = True
         if n_imgfeat < 0:
@@ -209,6 +210,11 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_enqueue_threads = []
                 self.k_coord = tf.train.Coordinator()
                 self.fit_policy = self.fit_acktr
+            elif self.mode == "PG":
+                self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.0001)
+                self.pg_loss = self.policy.trad_surr_loss + self.ent_loss
+                self.pg_update = self.pg_optim.minimize(self.pg_loss, var_list=self.policy.var_list)
+                self.fit_policy = self.fit_pg
             else:
                 raise NotImplementedError
 
@@ -519,6 +525,23 @@ class PolicyGradientModel(ModelWithCritic):
                                             minibatch_size=self.minibatch_size,
                                             extra_input={
                                                 self.target_kl_sym: target_kl_value})
+            logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
+
+    def fit_pg(self, feed, num_samples):
+        if self.debug:
+            logging.debug("\nbatch_size: {}\n".format(self.batch_size))
+            surr_o, kl_o, ent_o = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
+                                              num_samples,
+                                              self.session,
+                                              minibatch_size=self.minibatch_size,
+                                              extra_input={})
+            logging.debug("\nold ppo_surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+        _ = self.session.run(self.pg_update, feed_dict=feed)
+        if self.debug:
+            surr_new, kl_new, ent_new = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
+                                                    num_samples,
+                                                    self.session,
+                                                    minibatch_size=self.minibatch_size, )
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
     def train(self, paths):
