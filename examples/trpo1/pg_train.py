@@ -112,7 +112,7 @@ def main():
                         help='gae lambda')
     parser.add_argument('--gamma', required=False, default=0.995, type=float,
                         help='gae lambda')
-    parser.add_argument('--withimg', default=True, type=bool, help='append image input')
+    parser.add_argument('--withimg', default=False, type=bool, help='append image input')
     parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--no-train', default=False, type=str2bool, nargs='?',
