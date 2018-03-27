@@ -41,6 +41,7 @@ class PolicyGradientModel(ModelWithCritic):
                  f_target_kl=None,
                  minibatch_size=128,
                  mode="ACKTR",
+                 surr_loss="PPO",
                  num_actors=1,
                  f_batch_size=None,
                  batch_mode="episode",

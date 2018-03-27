@@ -118,6 +118,7 @@ def main():
     parser.add_argument('--no-train', default=False, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--env', default="ant", type=str, help='env')
+    parser.add_argument('--loss', default="PPO", type=str, help='loss')
     parser.add_argument('--rl-method', default="ACKTR", type=str, help='rl method')
     parser.add_argument('--nae', required=False, type=int, default=0,
                         help='num ae train')
@@ -384,6 +385,7 @@ def main():
                                     update_per_epoch=4,
                                     kl_history_length=1,
                                     comb_method=comb_methd,
+                                    surr_loss=args.loss,
                                     ent_k=args.ent_k,
                                     session=session,
                                     load_old_model=args.load_model,
@@ -425,6 +427,7 @@ def main():
                                          mode=args.rl_method,
                                          kl_history_length=1,
                                          comb_method=comb_methd,
+                                         surr_loss=args.loss,
                                          ent_k=args.ent_k,
                                          session=session,
                                          load_old_model=args.load_model,
@@ -446,7 +449,7 @@ def main():
             models.append(p)
         for p in models[1:]:
             p.restore_parameters()
-        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=False,
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
                             f_critic=root_model.compute_critic,
                             num_actors=num_actors,
