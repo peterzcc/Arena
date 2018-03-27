@@ -204,11 +204,24 @@ def main():
                        move0=x_forward_obj, move1=x_backward_obj,
                        move2=x_up_obj, move3=x_down_obj
                        )
+    hrl_dimage = OrderedDict(moves2d=random_direction,
+                             moves0=x_forward_obj, moves1=x_backward_obj,
+                             moves2=x_up_obj, moves3=x_down_obj
+                             )
     hrl_changing_goal = OrderedDict(dynamic2d=random_direction,
                                     move0=x_forward_obj, move1=x_backward_obj,
                                     move2=x_up_obj, move3=x_down_obj
                                     )
-    hrl_root_tasks = dict(move1d=hrl0, move2d=hrl1, reach2d=hrl2, dynamic2d=hrl_changing_goal)
+    hrl_c1 = OrderedDict(reachc1=random_direction,
+                         move0=x_forward_obj, move1=x_backward_obj,
+                         move2=x_up_obj, move3=x_down_obj
+                         )
+    hrl_c05 = OrderedDict(reachc05=random_direction,
+                          move0=x_forward_obj, move1=x_backward_obj,
+                          move2=x_up_obj, move3=x_down_obj
+                          )
+    hrl_root_tasks = dict(move1d=hrl0, move2d=hrl1, reach2d=hrl2, dynamic2d=hrl_changing_goal,
+                          reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage)
     hrl_8d = dict(move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
 
     full_tasks = [args.env]
@@ -257,6 +270,22 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=random_direction,
                                   use_sparse_reward=True, )
+        elif args.env == "reachc1":
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=random_direction,
+                                  catch_range=1,
+                                  obj_dist=1.25,
+                                  use_sparse_reward=True, )
+        elif args.env == "reachc05":
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=random_direction,
+                                  catch_range=0.5,
+                                  obj_dist=1.25,
+                                  use_sparse_reward=True, )
+        elif args.env in hrl_dimage:
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_dimage[args.env],
+                                  reset_goal_prob=0, )
         else:
             env = gym.make(args.env)
         # env = MazeEnv()
@@ -267,11 +296,16 @@ def main():
 
         # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
         #                             f_gen_obj=forward_backward)
+        if args.env in hrl_dimage and args.env not in hrl_root_tasks:
+            dummy_image = True
+        else:
+            dummy_image = False
         final_env = ComplexWrapper(env, max_episode_length=T,
                                    append_image=append_image, rgb_to_gray=True,
                                    s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=1,
+                                   dummy_image=dummy_image,
                                    render_lock=render_lock)
         logging.info("created env")
         return final_env
@@ -353,6 +387,7 @@ def main():
                                     ent_k=args.ent_k,
                                     session=session,
                                     load_old_model=args.load_model,
+                                    parallel_predict=True,
                                     should_train=not args.no_train)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
@@ -362,7 +397,7 @@ def main():
         return {"models": [model], "memory": memory}
 
     def f_should_return_root(source, t, target=None):
-        return t >= 5
+        return t >= 10  # TODO
 
     def hrl_shared_params():
         # TODO: hrl
@@ -411,7 +446,7 @@ def main():
             models.append(p)
         for p in models[1:]:
             p.restore_parameters()
-        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=False,
                             timestep_limit=T,
                             f_critic=root_model.compute_critic,
                             num_actors=num_actors,

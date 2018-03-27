@@ -18,7 +18,6 @@ from cnn import ConvAutoencorder, cnn_network, ConvFcAutoencorder
 # from baselines.common import tf_util as U
 from baselines.acktr import kfac
 
-
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -213,7 +212,10 @@ class PolicyGradientModel(ModelWithCritic):
             elif self.mode == "PG":
                 self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.0001)
                 self.pg_loss = self.policy.trad_surr_loss + self.ent_loss
+                # g = gradients_memory(self.pg_loss,self.policy.var_list)
+                # self.pg_update = self.pg_optim.apply_gradients([(tf.zeros(v.shape), v) for v in self.policy.var_list])
                 self.pg_update = self.pg_optim.minimize(self.pg_loss, var_list=self.policy.var_list)
+
                 self.fit_policy = self.fit_pg
             else:
                 raise NotImplementedError

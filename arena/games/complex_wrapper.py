@@ -14,6 +14,7 @@ class ComplexWrapper(object):
                  max_episode_length=100000, action_reduce=False,
                  append_image=False, visible_state_ids=None,
                  s_transform=lambda x, t: x, num_frame=1,
+                 dummy_image=False,
                  render_lock=None):
         # args = locals()
         # logging.debug("Environment args:\n {}".format(args))
@@ -35,6 +36,7 @@ class ComplexWrapper(object):
                                high=env.observation_space.high[self.vs_id])
         self.observation_space = [self.state_space]
         self.append_image = append_image
+        self.dummy_imagge = dummy_image
         self.s_transform = s_transform
         self.num_frame = num_frame
         self.render_lock = render_lock
@@ -108,8 +110,11 @@ class ComplexWrapper(object):
         state_observation, reward, done, info = self.env.step(a)
         state_observation = self.s_transform(state_observation,self.total_steps)
         if self.append_image:
-            image_observation = self.render(mode="rgb_array")
-            image_observation = self.preprocess_observation(image_observation)
+            if self.dummy_imagge:
+                image_observation = np.random.randint(0, 255, self.img_space.shape, dtype=np.uint8)
+            else:
+                image_observation = self.render(mode="rgb_array")
+                image_observation = self.preprocess_observation(image_observation)
             self.x_buffer = (self.x_buffer + 1) % self.num_frame
             if self.num_frame > 1:
                 self.frame_buffer[:, :, self.x_buffer] = image_observation
@@ -131,8 +136,11 @@ class ComplexWrapper(object):
         if self.append_image:
             self.frame_buffer[:] = 0
             self.x_buffer = self.num_frame - 1
-            image_observation = self.render(mode="rgb_array")
-            image_observation = self.preprocess_observation(image_observation)
+            if self.dummy_imagge:
+                image_observation = np.random.randint(0, 255, self.img_space.shape, dtype=np.uint8)
+            else:
+                image_observation = self.render(mode="rgb_array")
+                image_observation = self.preprocess_observation(image_observation)
             if self.num_frame > 1:
                 self.frame_buffer[:, :, self.x_buffer] = image_observation
                 stacked_obs = np.take(self.frame_buffer,

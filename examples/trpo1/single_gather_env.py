@@ -366,6 +366,9 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             if np.sum((com[:2] - self.objects[0][:2]) ** 2) < self.catch_range ** 2:
                 reward = 1
                 done = True
+            elif np.max(np.abs(com[:2])) > 5:
+                reward = -10
+                done = True
             else:
                 reward = -0.01
         if self.reset_goal_prob != 0:
