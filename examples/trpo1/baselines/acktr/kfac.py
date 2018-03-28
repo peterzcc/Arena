@@ -3,7 +3,6 @@ import numpy as np
 import re
 from baselines.acktr.kfac_utils import *
 from functools import reduce
-from .memory_saving_gradients import gradients_memory
 
 KFAC_OPS = ['MatMul', 'Conv2D', 'BiasAdd']
 KFAC_DEBUG = False
