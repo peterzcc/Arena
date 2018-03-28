@@ -11,7 +11,6 @@ from scaling_orth import ScalingOrth
 concat = np.concatenate
 
 
-# TODO: l_bfgs optimizer
 class MultiBaseline(object):
     coeffs = None
 
@@ -140,7 +139,7 @@ class MultiBaseline(object):
 
         for n_pass in range(num_pass):
             training_inds = np.random.permutation(batch_N)
-            for start in range(0, batch_N, self.minibatch_size):  # TODO: verify this
+            for start in range(0, batch_N, self.minibatch_size):
                 if start > batch_N - 2 * self.minibatch_size:
                     end = batch_N
                 else:

@@ -45,7 +45,6 @@ class HrlAgent(Agent):
         self.full_tasks = full_tasks
 
     def act(self, observation):
-        # TODO: hrl
 
         if self.batch_start_time is None:
             self.batch_start_time = time.time()
@@ -61,7 +60,6 @@ class HrlAgent(Agent):
         return action
 
     def receive_feedback(self, reward, done, info={}):
-        # TODO: HRL
 
         self.memory.append_feedback(reward, pid=self.id)
 

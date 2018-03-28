@@ -30,7 +30,6 @@ def discount(x, gamma):
     return signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
 
-# TODO: add agent info,important
 class DictMemory(object):
     def __init__(self, gamma=0.995,
                  lam=0.96, normalize=True, timestep_limit=1000,
@@ -169,7 +168,6 @@ class DictMemory(object):
         return result
 
     def extract_all(self):
-        # TODO: handle hierachical case
         self.aggre_paths = reduce(operator.add, self.dist_paths)
         self.dist_paths = [[] for i in range(self.num_actors)]
         for path in self.aggre_paths:

@@ -402,7 +402,6 @@ def main():
         return t >= 10  # TODO
 
     def hrl_shared_params():
-        # TODO: hrl
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
         sample_env = f_create_env()

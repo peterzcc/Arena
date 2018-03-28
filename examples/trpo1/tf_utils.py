@@ -5,7 +5,6 @@ import logging
 from collections import OrderedDict
 import scipy.optimize
 import argparse
-# TODO: review
 seed = 1
 random.seed(seed)
 np.random.seed(seed)
@@ -134,7 +133,6 @@ class LbfgsOptimizer(EzFlat):
         return info
 
 
-# TODO: revise this
 # def linesearch(f, x, fullstep, expected_improve_rate):
 #     accept_ratio = .1
 #     max_backtracks = 10
@@ -206,7 +204,7 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
 def run_batched(func, feed, N, session, minibatch_size=64, extra_input={}):
     assert N > 0
     result = None
-    for start in range(0, N, minibatch_size):  # TODO: verify this
+    for start in range(0, N, minibatch_size):
         end = min(start + minibatch_size, N)
         this_size = end - start
         assert this_size > 0

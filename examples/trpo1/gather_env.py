@@ -473,7 +473,6 @@ class GatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             half_span = self.sensor_span * 0.5
             if abs(angle) > half_span:
                 continue
-            # TODO: Need to know why I need to substract 1
             bin_number = int((angle + half_span) / bin_res) - 1
             #    ((angle + half_span) +
             #     ori) % (2 * math.pi) / bin_res)
