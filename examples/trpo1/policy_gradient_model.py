@@ -31,7 +31,7 @@ class PolicyGradientModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,
                  name="agent",
                  session=None,
-                 conv_sizes=(((5, 5), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
+                 conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
                  min_std=1e-6,
                  cg_damping=0.1,
                  cg_iters=10,
@@ -257,7 +257,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.full_model_saver = tf.train.Saver(var_list=[*self.critic.var_list, *self.policy.var_list])
         self.has_loaded_model = False
         self.load_old_model = load_old_model
-        self.parallel_predict = False
+        self.parallel_predict = parallel_predict
 
 
     def get_state_activation(self, t_batch):
@@ -347,7 +347,7 @@ class PolicyGradientModel(ModelWithCritic):
 
             self.policy_lock.acquire_read()
             self.dist_infos, self.stored_actions = self.session.run(
-                [self.executer_net.dist_vars, self.executer_net.sampled_action],
+                [self.executer_net.dist_vars, self.executer_net.sampled_action, ],
                 feed)
             self.policy_lock.release_read()
 

@@ -61,21 +61,22 @@ class Experiment(object):
             os.mkdir(self.stats_file_dir)
         root = logging.getLogger()
         root.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         Experiment.EXP_NAME = self.stats_file_dir
 
         # create file handler which logs even debug messages
         fh = logging.FileHandler(self.stats_file_dir + '/log.txt', mode='w')
         fh.setLevel(logging.DEBUG)
-        # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
+
+        # # create console handler with a higher log level
+        # ch = logging.StreamHandler()
+        # ch.setLevel(logging.ERROR)
+        # ch.setFormatter(formatter)
+
         # add the handlers to the logger
         root.addHandler(fh)
-        root.addHandler(ch)
+        # root.addHandler(ch)
 
         if single_process_mode == False:
             self.render_lock = mp.Lock()
@@ -112,11 +113,7 @@ class Experiment(object):
         self.render_option = render_option
         self.log_episodes = log_episodes
 
-
-
-
-
-        logging.info("Saving data at: {}".format(self.stats_file_dir))
+        print("Saving data at: {}".format(self.stats_file_dir))
         self.log_train_path = os.path.join(self.stats_file_dir, "train_log.csv")
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
         self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
@@ -238,7 +235,7 @@ class Experiment(object):
         if not os.path.exists(self.log_train_path):
             log_train_file = open(self.log_train_path, 'w')
             log_train_file.write(
-                "date,pid,Epoch,t,Episode duration,Reward,fps\n")
+                "Reward,pid,t,Episode duration\n")
             log_train_file.close()
 
         start_times = np.repeat(time(), num_actor)
@@ -269,14 +266,13 @@ class Experiment(object):
             # current_time = time()
             # fps = episode_count / (current_time - start_times[pid])
             # start_times[pid] = current_time
-            fps = 0
+            # fps = 0
             if self.log_episodes:
                 with open(self.log_train_path, 'a') as log_train_file:
                     train_log = ",".join(
                         map(str,
-                            [datetime.datetime.now(), pid, epoch_num, self.global_t.value, episode_count,
-                             episode_reward,
-                             round(fps)]
+                            [episode_reward, pid, self.global_t.value, episode_count,
+                             ]
                             )) + "\n"
                     log_train_file.write(train_log)
 

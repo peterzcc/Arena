@@ -34,6 +34,7 @@ class MultiNetwork(object):
         with tf.variable_scope(local_scope) as this_scope:
             self.state_input = tf.placeholder(
                 dtype, shape=(None,) + observation_space[0].shape, name="%s_state" % scope)
+            self.checked_state_input = tf.check_numerics(self.state_input, "state is nan")
             if n_imgfeat != 0:
                 self.img_input = \
                     tf.placeholder(tf.uint8, shape=(None,) + observation_space[1].shape, name="%s_img" % scope)
@@ -45,6 +46,7 @@ class MultiNetwork(object):
             else:
                 self.action_n = tf.placeholder(tf.int32, shape=(None,), name="%s_action" % scope)
             self.advant = tf.placeholder(dtype, shape=[None], name="%s_advant" % scope)
+            self.checked_advant = tf.check_numerics(self.advant, "advant nan")
 
             # self.st_enabled = st_enabled
             # self.img_enabled = img_enabled
@@ -52,7 +54,7 @@ class MultiNetwork(object):
             self.img_enabled = tf.placeholder(tf.float32, shape=(None,), name='img_enabled')
 
             if len(extra_feaatures) > 0:
-                self.full_feature = self.comb_method(self.st_enabled * self.state_input, extra_feaatures[0])
+                self.full_feature = self.comb_method(self.st_enabled * self.checked_state_input, extra_feaatures[0])
             else:
                 if n_imgfeat != 0:
                     assert f_build_cnn is not None
@@ -64,11 +66,11 @@ class MultiNetwork(object):
                         self.image_features = tf.layers.flatten(img_net_layers[-1])
                     else:
                         self.image_features = img_net_layers[-1]
-                    self.full_feature = self.comb_method(self.st_enabled * self.state_input,
+                    self.full_feature = self.comb_method(self.st_enabled * self.checked_state_input,
                                                          self.img_enabled[:, tf.newaxis] * self.image_features)
 
                 else:
-                    self.full_feature = self.state_input
+                    self.full_feature = self.checked_state_input
                     self.cnn_weights = []
                     self.img_fc_weights = []
 
@@ -95,20 +97,21 @@ class MultiNetwork(object):
             self.new_likelihood_sym = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
             self.old_likelihood = self.distribution.log_likelihood_sym(self.action_n, self.old_vars)
 
-            self.ratio_n = tf.exp(self.new_likelihood_sym - self.old_likelihood)
+            self.ratio_n = tf.check_numerics(tf.exp(self.new_likelihood_sym - self.old_likelihood), "ratio is nan")
             self.var_list = tf.trainable_variables(this_scope.name)
             if not cnn_trainable:
                 self.var_list = [v for v in self.var_list if not (v in self.cnn_weights or v in self.img_fc_weights)]
             self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
             self.PPO_eps = 0.2
             self.clipped_ratio = tf.clip_by_value(self.ratio_n, 1.0 - self.PPO_eps, 1.0 + self.PPO_eps)
-            self.surr_n = self.ratio_n * self.advant
-            self.clipped_surr = self.clipped_ratio * self.advant
-            self.ppo_surr = -tf.reduce_mean(tf.minimum(self.surr_n, self.clipped_surr))  # Surrogate loss
+            self.surr_n = self.ratio_n * self.checked_advant
+            self.clipped_surr = self.clipped_ratio * self.checked_advant
+            self.ppo_surr = tf.check_numerics(-tf.reduce_mean(tf.minimum(self.surr_n, self.clipped_surr)),
+                                              "ppo loss is nan")  # Surrogate loss
 
             # Sampled loss of the policy
 
-            self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
+            self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.checked_advant)
 
             self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_vars, self.dist_vars))
             ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
@@ -118,7 +121,3 @@ class MultiNetwork(object):
 
 
 
-            # def get_action_dist_means_n(self, session, obs):
-            #     return session.run(self.mean_n,
-            #                        {self.state_input: obs[0],
-            #                         self.img_input: obs[1]})
