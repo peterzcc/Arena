@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import tensorflow as tf
+from scaling_orth import ScalingOrth
 import numpy as np
 
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
@@ -77,8 +78,8 @@ class MultiNetwork(object):
             for hid in hidden_sizes:
                 current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=tf.tanh,
                                              kernel_initializer=
-                                             tf.variance_scaling_initializer(
-                                                 scale=1.0, mode="fan_avg", distribution="normal", dtype=dtype)
+                                             ScalingOrth(
+                                                 scale=1.0, dtype=dtype)
                                              )
                 self.fc_layers.append(current_fc)
             batch_size = tf.shape(self.state_input)[0]

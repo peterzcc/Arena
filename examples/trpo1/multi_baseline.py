@@ -7,6 +7,7 @@ import numpy as np
 import logging
 from tf_utils import LbfgsOptimizer, run_batched, aggregate_feature, lrelu
 from cnn import cnn_network
+from scaling_orth import ScalingOrth
 concat = np.concatenate
 
 
@@ -70,10 +71,10 @@ class MultiBaseline(object):
                 self.fc_layers = [self.full_feature]
                 for hidden_size in hidden_sizes:
                     h = tf.layers.dense(self.fc_layers[-1], hidden_size,
-                                        activation=activation, kernel_initializer=tf.orthogonal_initializer())
+                                        activation=activation, kernel_initializer=ScalingOrth())
                     self.fc_layers.append(h)
                 y = tf.layers.dense(self.fc_layers[-1], 1, activation=None,
-                                    kernel_initializer=tf.orthogonal_initializer())
+                                    kernel_initializer=ScalingOrth())
 
                 self.net = tf.reshape(y, (-1,))  # why reshape?
                 self.mse = tf.reduce_mean(tf.square(self.net - self.y))
