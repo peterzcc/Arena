@@ -221,9 +221,9 @@ class DictMemory(object):
             alladv = np.concatenate([path["advantage"] for path in self.aggre_paths])
             # Standardize advantage
             std = alladv.std()
-            mean = alladv.mean()
+            # mean = alladv.mean()
             for path in self.aggre_paths:
-                path["advantage"] = (path["advantage"] - mean) / (std + 1e-6)
+                path["advantage"] = (path["advantage"]) / (std + 1e-6)
         paths = self.aggre_paths.copy()
         self.aggre_paths = []
         self.time_count = 0

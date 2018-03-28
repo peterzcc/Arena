@@ -31,7 +31,7 @@ class PolicyGradientModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,
                  name="agent",
                  session=None,
-                 conv_sizes=(((5, 5), 16, 2), ((5, 5), 16, 2), ((3, 3), 4, 2)),
+                 conv_sizes=(((5, 5), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
                  min_std=1e-6,
                  cg_damping=0.1,
                  cg_iters=10,
@@ -39,7 +39,7 @@ class PolicyGradientModel(ModelWithCritic):
                  timestep_limit=1000,
                  n_imgfeat=0,
                  f_target_kl=None,
-                 minibatch_size=128,
+                 minibatch_size=256,
                  mode="ACKTR",
                  surr_loss="PPO",
                  num_actors=1,
@@ -51,7 +51,8 @@ class PolicyGradientModel(ModelWithCritic):
                  comb_method=aggregate_feature,
                  load_old_model=False,
                  should_train=True,
-                 parallel_predict=True
+                 parallel_predict=True,
+                 save_model=True
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -69,6 +70,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.minibatch_size = minibatch_size
         self.use_empirical_fim = True
         self.mode = mode
+        self.save_model = save_model
         self.policy_lock = ReadWriteLock()
         self.critic_lock = ReadWriteLock()
         self.num_actors = num_actors
@@ -114,6 +116,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.name = name
 
         self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
+                                    minibatch_size=minibatch_size,
                                     main_scope=name + "_critic",
                                     timestep_limit=timestep_limit,
                                     activation=tf.nn.elu,
@@ -204,6 +207,16 @@ class PolicyGradientModel(ModelWithCritic):
                 self.loss_type = "PPO"
                 self.k_surr_loss = self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss
                 self.k_final_loss = self.k_surr_loss + self.ent_loss
+
+                # self.k_grads = tf.gradients(self.k_final_loss, var_list)
+                # self.k_grads_ph = [tf.placeholder(tf.float32, shape=v.shape, name="k_grad_sym")
+                #                    for v in self.policy.var_list]
+                # k_grads_ph_var = [ (g, v) for g,v in zip(self.k_grads_ph, self.policy.var_list) ]
+                # self.k_apply_grad, self.k_q_runner = self.k_optim.apply_stats_and_grads(
+                #     grads=k_grads_ph_var,
+                #     loss_sampled=self.policy.mean_loglike,
+                #     var_list=self.policy.var_list)
+
                 self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
                                                                           self.policy.mean_loglike,
                                                                           var_list=self.policy.var_list)
@@ -440,7 +453,7 @@ class PolicyGradientModel(ModelWithCritic):
     def increment_n_update(self):
         self.n_update += 1
         self.batch_size = self.f_batch_size(self.n_update)
-        if self.n_update % 10 == 0:
+        if self.save_model > 0 and self.n_update % self.save_model == 0:
             logging.debug("Saving {}".format(self.model_path))
             self.full_model_saver.save(self.session, self.model_path, write_state=False)
 
@@ -506,7 +519,17 @@ class PolicyGradientModel(ModelWithCritic):
                                               extra_input={
                                                   self.target_kl_sym: target_kl_value})
             logging.debug("\nold ppo_surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+
+        # grads = run_batched(self.k_grads, feed, num_samples, self.session,
+        #                     minibatch_size=self.minibatch_size,
+        #                     extra_input={self.target_kl_sym: target_kl_value},
+        #                     average=False
+        #                     )
+        # grad_dict = {p: v for (p, v) in zip(self.k_grads_ph, grads)}
+        # _ = self.session.run(self.k_apply_grad, feed_dict={**feed, **grad_dict})
+
         _ = self.session.run(self.k_update_op, feed_dict=feed)
+
         min_stepsize = np.float32(1e-8)
         max_stepsize = np.float32(1e0)
         # Adjust stepsize

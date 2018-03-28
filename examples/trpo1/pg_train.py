@@ -92,7 +92,6 @@ def main():
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
                         help='learning rate of the choosen optimizer')
     parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
-    parser.add_argument('--save-model', default=False, type=bool, help='whether to save the final model')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
     parser.add_argument('--nactor', required=False, type=int, default=20,
@@ -124,7 +123,10 @@ def main():
                         help='num ae train')
     parser.add_argument('--nfeat', required=False, type=int, default=0,
                         help='num img feat')
+    parser.add_argument('--save-model', required=False, type=int, default=10,
+                        help='save_model')
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
+    parser.add_argument("--debug", default=False, type=str2bool, nargs='?', const=True, help='debug')
     args = parser.parse_args()
 
     should_profile = False
@@ -358,7 +360,14 @@ def main():
     def create_session():
         import tensorflow as tf
         gpu_options = tf.GPUOptions(allow_growth=True)
-        return tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+        if args.debug:
+            from tensorflow.python import debug as tf_debug
+            sess_debug = tf_debug.LocalCLIDebugWrapperSession(sess)
+            return sess_debug
+        else:
+            return sess
+
 
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel
@@ -390,7 +399,8 @@ def main():
                                     session=session,
                                     load_old_model=args.load_model,
                                     parallel_predict=True,
-                                    should_train=not args.no_train)
+                                    should_train=not args.no_train,
+                                    save_model=args.save_model)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
                             f_critic=model.compute_critic,
@@ -431,7 +441,8 @@ def main():
                                          session=session,
                                          load_old_model=args.load_model,
                                          should_train=not args.no_train,
-                                         parallel_predict=False)
+                                         parallel_predict=False,
+                                         save_model=args.save_model)
         models = [root_model]
         for env_name, _ in list(full_tasks.items())[1:]:
             p = PolicyGradientModel(observation_space, action_space,

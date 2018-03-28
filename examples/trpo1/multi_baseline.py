@@ -17,6 +17,7 @@ class MultiBaseline(object):
     def __init__(self, session=None, main_scope="value_f",
                  obs_space=None, n_imgfeat=1, activation=tf.nn.tanh,
                  max_iter=25, timestep_limit=1000, comb_method=aggregate_feature,
+                 minibatch_size=256,
                  cnn_trainable=True,
                  f_build_cnn=None):
         self.session = session
@@ -25,8 +26,9 @@ class MultiBaseline(object):
         self.mix_frac = 1
         self.timestep_limit = timestep_limit
         self.scope = main_scope
-        self.minibatch_size = 256
+        self.minibatch_size = minibatch_size
         self.comb_method = comb_method
+        self.normalize = True
         with tf.variable_scope(main_scope):
             # add  timestep
             self.state_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name="x")
@@ -76,7 +78,11 @@ class MultiBaseline(object):
                                     kernel_initializer=ScalingOrth())
 
                 self.net = tf.reshape(y, (-1,))  # why reshape?
-                self.mse = tf.reduce_mean(tf.square(self.net - self.y))
+                err = self.y - self.net
+                _, err_var = tf.nn.moments(err, axes=[0])
+                self.real_mse = tf.reduce_mean(tf.square(err))
+                self.norm_mse = tf.reduce_mean(tf.square(err)) / (err_var + 1e-10)
+                self.mse = self.norm_mse if self.normalize else self.real_mse
                 self.st_var_list = tf.trainable_variables(this_scope.name)
                 self.st_var_list = [i for i in self.st_var_list if i not in self.img_var_list]
             self.var_list = [*self.img_var_list, *self.st_var_list]
@@ -100,13 +106,14 @@ class MultiBaseline(object):
 
     def print_loss(self, feed):
         mse = \
-            run_batched([self.mse],
+            run_batched([self.real_mse],
                         feed=feed, N=feed[self.y].shape[0],
                         session=self.session,
                         minibatch_size=self.minibatch_size)[0]
-        ypred = self.session.run(self.net, feed_dict=feed)
-        ex_var = self.explained_var(ypred, feed[self.y])
-        logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
+        # ypred = self.session.run(self.net, feed_dict=feed)
+        # ex_var = self.explained_var(ypred, feed[self.y])
+        # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
+        logging.debug("vf:\n mse:{}".format(mse))
 
     def fit(self, path_dict, update_mode="full", num_pass=1):
         returns = path_dict["returns"]

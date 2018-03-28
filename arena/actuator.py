@@ -28,6 +28,7 @@ class Actuator(object):
         self.episode_reward = 0
         self.id = act_id
         self.gb_t = global_t
+        self.video_encoder = None
         if self.render_option == RenderOption.record:
             self.video_encoder = VideoRecorder(self.env, path="./video_thd{}.mp4".format(self.id))
 
@@ -70,7 +71,8 @@ class Actuator(object):
                 raise ValueError("Unknown command from self.signal")
 
     def clean_up(self):
-        self.video_encoder.close()
+        if self.video_encoder is not None:
+            self.video_encoder.close()
         logging.debug("Actuator: {} terminated".format(self.id))
 
     def run_loop(self):
