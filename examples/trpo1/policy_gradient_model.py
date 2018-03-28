@@ -31,7 +31,7 @@ class PolicyGradientModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,
                  name="agent",
                  session=None,
-                 conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
+                 conv_sizes=(((5, 5), 16, 2), ((5, 5), 16, 2), ((3, 3), 4, 2)),
                  min_std=1e-6,
                  cg_damping=0.1,
                  cg_iters=10,
