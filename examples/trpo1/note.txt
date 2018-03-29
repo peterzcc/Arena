@@ -64,7 +64,7 @@ python3.6 pg_train.py --nactor 20 --batch-size 800 --withimg 1 --env reachc05 --
 python3.6 pg_train.py --nactor 20 --batch-size 8000 --kl 0.0002 --env movetest --nfeat 0 --load-model 0
 
 
-CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 40 --batch-size 16000 --kl 0.0003 --env custant --nfeat 0 --load-model 0 --save-model 0
+CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 20 --batch-size 8000 --kl 0.0007 --env custant --nfeat 0 --load-model 0 --save-model 0
 
 
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move4 --nfeat 30 --load-model 1 --no-train 1 --render record
