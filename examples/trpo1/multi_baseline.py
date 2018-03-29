@@ -79,9 +79,10 @@ class MultiBaseline(object):
 
                 self.net = tf.reshape(y, (-1,))  # why reshape?
                 err = self.y - self.net
-                _, err_var = tf.nn.moments(err, axes=[0])
-                self.real_mse = tf.reduce_mean(tf.square(err))
-                self.norm_mse = tf.reduce_mean(tf.square(err)) / (err_var + 1e-10)
+                squared_err = tf.square(err)
+
+                self.real_mse = tf.reduce_mean(squared_err)
+                self.norm_mse = tf.reduce_mean(squared_err) / tf.stop_gradient(tf.reduce_mean(squared_err))
                 self.mse = self.norm_mse if self.normalize else self.real_mse
                 self.st_var_list = tf.trainable_variables(this_scope.name)
                 self.st_var_list = [i for i in self.st_var_list if i not in self.img_var_list]

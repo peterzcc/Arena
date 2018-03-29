@@ -220,7 +220,7 @@ class DictMemory(object):
         if self.normalize:
             alladv = np.concatenate([path["advantage"] for path in self.aggre_paths])
             # Standardize advantage
-            std = alladv.std()
+            std = np.sqrt(np.mean(np.square(alladv)))
             # mean = alladv.mean()
             for path in self.aggre_paths:
                 path["advantage"] = (path["advantage"]) / (std + 1e-6)
