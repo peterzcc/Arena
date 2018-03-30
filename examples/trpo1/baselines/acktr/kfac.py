@@ -849,12 +849,14 @@ class KfacOptimizer():
 
         updateOps = []
         global_step_op = tf.assign_add(self.global_step, 1)
+        # update t
         updateOps.append(global_step_op)
 
         with tf.control_dependencies([global_step_op]):
 
             # compute updates
             assert self._update_stats_op != None
+            # Computed in self.apply_stats
             updateOps.append(self._update_stats_op)
             dependency_list = []
             if not self._async:
@@ -864,6 +866,7 @@ class KfacOptimizer():
                 def no_op_wrapper():
                     return tf.group(*[tf.assign_add(self.cold_step, 1)])
 
+                # compute and apply stats
                 if not self._async:
                     # synchronous eigen-decomp updates
                     updateFactorOps = tf.cond(tf.logical_and(tf.equal(tf.mod(self.stats_step, self._kfac_update),
@@ -885,10 +888,12 @@ class KfacOptimizer():
                 updateOps.append(updateFactorOps)
 
                 with tf.control_dependencies([updateFactorOps]):
+                    # Original gradient if too early
                     def gradOp():
                         return list(g)
 
                     def getKfacGradOp():
+                        # This is where the gradient is applied
                         return self.getKfacPrecondUpdates(g, varlist)
 
                     u = tf.cond(tf.greater(self.factor_step,
@@ -899,6 +904,7 @@ class KfacOptimizer():
 
                     # optim = tf.train.AdamOptimizer(self._lr, epsilon=0.01)
 
+                    #Apply natural gradient
                     def optimOp():
                         def updateOptimOp():
                             if self._full_stats_init:
@@ -907,6 +913,7 @@ class KfacOptimizer():
                             else:
                                 return optim.apply_gradients(list(zip(u, varlist)))
 
+                        #Check if if update should be performed, no option if too early
                         if self._full_stats_init:
                             return tf.cond(tf.greater_equal(self.stats_step, self._stats_accum_iter), updateOptimOp,
                                            tf.no_op)

@@ -77,15 +77,14 @@ class HrlAgent(Agent):
         if done or batch_ends:
             self.acting_policy = self.root_policy
             self.sub_pol_act_t = 0
-
+            terminated = False
             try:
                 terminated = np.asscalar(info["terminated"])
             except KeyError:
                 logging.debug("warning: no info about real termination ")
                 terminated = done
-            finally:
-                terminated = False
             self.memory.transfer_single_path(terminated, self.id)
+        self.root_policy.batch_ends[self.id] = batch_ends
         if batch_ends:
             self.root_policy.batch_barrier.wait()
             if self.id == 0:

@@ -6,6 +6,7 @@ import threading as thd
 import time
 import logging
 from read_write_lock import ReadWriteLock
+from multiprocessing import Lock
 from  functools import reduce
 import operator
 from arena.experiment import Experiment
@@ -36,24 +37,28 @@ class DictMemory(object):
                  f_critic=None,
                  num_actors=1,
                  f_check_batch=None,
-                 async=True):
+                 async=False):
         self.gamma = gamma
         self.lam = lam
         self.normalize = normalize
         self.dist_paths = [list() for i in range(num_actors)]
-        self.aggre_paths = []
-        self.num_episodes = 0
+
         self.current_path = [defaultdict(list) for i in range(num_actors)]
         self.timestep_limit = timestep_limit
         self.f_critic = f_critic
         self.num_actors = num_actors
-        self.paths_lock = ReadWriteLock()
+        self.paths_lock = Lock()
         self.global_t = 0
         self.num_epoch = 0
-        self.time_count = 0  # np.zeros((num_actors,),dtype=int)
+        self.time_count = 0
+        # self.time_counts = np.zeros((num_actors,), dtype=np.int)
+        self.num_episodes = 0
+        # self.pid_n_episodes = np.zeros((num_actors,), dtype=np.int)
+
         self.f_check_batch = f_check_batch
         self.run_start_time = None
-        self.async = async
+        # self.run_start_times = np.zeros((num_actors,), dtype=np.float32)
+
         self.gpow = self.gamma ** np.arange(0, timestep_limit)
 
     def append_state(self, observation, action, info, pid=0):
@@ -65,8 +70,6 @@ class DictMemory(object):
             self.current_path[pid][k].append(v)
 
     def append_observation(self, observation, pid=0):
-        if self.run_start_time is None:
-            self.run_start_time = time.time()
         self.current_path[pid]["observation"].append(observation)
 
     def append_action(self, action, info, pid=0):
@@ -77,77 +80,27 @@ class DictMemory(object):
 
     def append_feedback(self, reward, pid=0):
         self.current_path[pid]["reward"].append(reward)
-
-    def incre_count_and_check_done(self):
+        # self.time_counts[pid] += 1
         self.time_count += 1
-        batch_ends = self.f_check_batch(self.time_count, self.num_episodes)
+
+    def incre_count_and_check_done(self, pid=None):
+        if pid is None:
+            batch_ends = self.f_check_batch(self.time_count, self.num_episodes)
+        else:
+            batch_ends = self.f_check_batch(self.time_counts[pid], self.pid_n_episodes[pid])
+
         return batch_ends
 
-    def transfer_single_path(self, done, pid=0):
-        if done:
-            self.current_path[pid]["terminated"] = True
-        else:
-            self.current_path[pid]["terminated"] = False
-
-        self.paths_lock.acquire_write()
-        self.dist_paths[pid].append({k: v for (k, v) in list(self.current_path[pid].items())})
-        episode_len = len(self.current_path[pid]["action"])
-        self.global_t += episode_len
-        self.num_episodes += 1
-
-        self.paths_lock.release_write()
-        self.current_path[pid] = defaultdict(list)
-
-    def profile_extract_all(self):
-        self.paths_lock.acquire_write()
-
-        time_count = self.time_count
-        episode_count = self.num_episodes
-        run_end_time = time.time()
-        paths = self.extract_all()
-        extract_end_time = time.time()
-        run_time = (run_end_time - self.run_start_time) / time_count
-        extract_time = (extract_end_time - run_end_time) / time_count
-        self.run_start_time = None
-        self.num_epoch += 1
-        logging.info("Name: {}".format(Experiment.EXP_NAME))
-        logging.info(
-            'Epoch:%d \nt: %d\nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
-            % (self.num_epoch,
-               self.global_t,
-               time_count,
-               episode_count,
-               run_time,
-               extract_time
-               ))
-        result = {"paths": paths, "time_count": time_count}
-
-        self.paths_lock.release_write()
-        return result
-
-    def add_path(self, done, pid=0):
-        if done:
-            self.current_path[pid]["terminated"] = True
-        else:
-            self.current_path[pid]["terminated"] = False
-
-        self.paths_lock.acquire_write()
-        self.dist_paths[pid].append({k: v for (k, v) in list(self.current_path[pid].items())})
-        episode_len = len(self.current_path[pid]["action"])
-        self.time_count += episode_len
-        self.global_t += episode_len
-        time_count = self.time_count
-        self.num_episodes += 1
-        episode_count = self.num_episodes
-        if self.f_check_batch(time_count, episode_count):
+    def profile_extract_all(self, pid=None):
+        if pid is None:
+            time_count = self.time_count
+            episode_count = self.num_episodes
             run_end_time = time.time()
-            paths = self.extract_all()
-
+            paths = self.extract_all(pid)
             extract_end_time = time.time()
             run_time = (run_end_time - self.run_start_time) / time_count
             extract_time = (extract_end_time - run_end_time) / time_count
             self.run_start_time = None
-            # epoch_reward = np.asscalar(np.sum(np.concatenate([p["reward"] for p in aggre_paths])))
             self.num_epoch += 1
             logging.info("Name: {}".format(Experiment.EXP_NAME))
             logging.info(
@@ -161,16 +114,68 @@ class DictMemory(object):
                    ))
             result = {"paths": paths, "time_count": time_count}
         else:
-            result = None
-        self.paths_lock.release_write()
-        self.current_path[pid] = defaultdict(list)
+            time_count = self.time_counts[pid]
+            episode_count = self.pid_n_episodes[pid]
+            run_end_time = time.time()
+            paths = self.extract_all(pid)
+            extract_end_time = time.time()
+            run_time = (run_end_time - self.run_start_times[pid]) / time_count
+            extract_time = (extract_end_time - run_end_time) / time_count
+            self.run_start_times[pid] = 0
+            with self.paths_lock:
+                self.num_epoch += 1
+            if pid == 0:
+                logging.info("Name: {}".format(Experiment.EXP_NAME))
+                logging.info(
+                    'Epoch:%d \nt: %d\nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
+                    % (self.num_epoch,
+                       self.global_t,
+                       time_count,
+                       episode_count,
+                       run_time,
+                       extract_time
+                       ))
+            result = {"paths": paths, "time_count": time_count}
 
         return result
 
-    def extract_all(self):
-        self.aggre_paths = reduce(operator.add, self.dist_paths)
-        self.dist_paths = [[] for i in range(self.num_actors)]
-        for path in self.aggre_paths:
+    def transfer_single_path(self, done, pid=0):
+        if done:
+            self.current_path[pid]["terminated"] = True
+        else:
+            self.current_path[pid]["terminated"] = False
+        self.dist_paths[pid].append({k: v for (k, v) in list(self.current_path[pid].items())})
+        episode_len = len(self.current_path[pid]["action"])
+
+        with self.paths_lock:
+            self.global_t += episode_len
+            self.num_episodes += 1
+        # self.pid_n_episodes[pid] += 1
+        self.current_path[pid] = defaultdict(list)
+
+    def extract_paths(self, pid=None):
+        if pid is None:
+            with self.paths_lock:
+                result_paths = reduce(operator.add, self.dist_paths)
+                self.dist_paths = [[] for i in range(self.num_actors)]
+                self.time_count = 0
+                self.num_episodes = 0
+            # self.time_counts = np.zeros((self.num_actors,), dtype=np.int)
+            # self.pid_n_episodes = np.zeros((self.num_actors,), dtype=np.int)
+            return result_paths
+        else:
+            result_paths = self.dist_paths[pid].copy()
+            self.dist_paths[pid] = []
+            # with self.paths_lock:
+            #     self.time_count -= self.time_counts[pid]
+            #     self.num_episodes -= self.pid_n_episodes[pid]
+            # self.time_counts[pid] = 0
+            # self.pid_n_episodes[pid] = 0
+            return result_paths
+
+    def extract_all(self, pid=None):
+        paths = self.extract_paths(pid)
+        for path in paths:
             if len(path["observation"][0]) == 2:
                 path["observation"] = \
                     [np.array([o[0] for o in path["observation"]]),
@@ -178,8 +183,8 @@ class DictMemory(object):
             else:
                 path["observation"] = \
                     [np.array([o[0] for o in path["observation"]])]
-        if "pos" in self.aggre_paths[0]:
-            for path in self.aggre_paths:
+        if "pos" in paths[0]:
+            for path in paths:
                 path["reward"] = np.array(path["reward"])
                 path["action"] = np.array(path["action"])
 
@@ -193,12 +198,6 @@ class DictMemory(object):
                 grouped_gpow = [self.gpow[0:glen] for glen in group_lens]
                 semi_mdp_r = np.array([np.inner(r, p) for r, p in zip(grouped_rewards, grouped_gpow)])
 
-                # path["pos"].append(len(path["reward"]))
-                # for i in range(len(path["pos"]) - 1):
-                #     start = path["pos"][i]
-                #     end = path["pos"][i + 1]
-                #     rewards = path["reward"][start:end]
-                #     semi_mdp_r[i] = np.dot(rewards, self.gpow[0:len(rewards)])
 
                 path["return"] = discount(semi_mdp_r, self.gamma)
                 b = path["baseline"] = self.f_critic(path)
@@ -207,7 +206,7 @@ class DictMemory(object):
                 deltas = semi_mdp_r + self.gamma * b1[1:] - b1[:-1]
                 path["advantage"] = discount(deltas, self.gamma * self.lam)
         else:
-            for path in self.aggre_paths:
+            for path in paths:
                 path["reward"] = np.array(path["reward"])
                 path["action"] = np.array(path["action"])
                 path["times"] = np.arange(len(path["reward"])).reshape(-1, 1) / float(self.timestep_limit)
@@ -218,23 +217,16 @@ class DictMemory(object):
                 deltas = path['reward'] + self.gamma * b1[1:] - b1[:-1]
                 path["advantage"] = discount(deltas, self.gamma * self.lam)
         if self.normalize:
-            alladv = np.concatenate([path["advantage"] for path in self.aggre_paths])
+            alladv = np.concatenate([path["advantage"] for path in paths])
             # Standardize advantage
-            # std = np.sqrt(np.mean(np.square(alladv)))
             std = alladv.std()
             mean = alladv.mean()
-            for path in self.aggre_paths:
+            for path in paths:
                 path["advantage"] = (path["advantage"]-mean) / (std + 1e-6)
-        paths = self.aggre_paths.copy()
-        self.aggre_paths = []
-        self.time_count = 0
-        self.num_episodes = 0
         return paths
 
-    def reset(self):
-        with self.paths_lock:
-            self.aggre_paths = []
-        self.time_count = 0
-        self.current_path = [defaultdict(list) for i in range(self.num_actors)]
-        self.num_episodes = 0
-        self.dist_paths = [list() for i in range(self.num_actors)]
+        # def reset(self):
+        #     self.time_count = 0
+        #     self.current_path = [defaultdict(list) for i in range(self.num_actors)]
+        #     self.num_episodes = 0
+        #     self.dist_paths = [list() for i in range(self.num_actors)]

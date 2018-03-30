@@ -8,6 +8,7 @@ import gym
 from gym.spaces import Discrete
 import argparse
 from batch_agent import BatchUpdateAgent
+from async_agent import AsyncAgent
 from hrl_agent import HrlAgent
 import logging
 from custom_ant import CustomAnt
@@ -140,52 +141,6 @@ def main():
     # final_factor = 0.01
     test_length = 0
 
-    mean = np.array([0, 0, 0, 0])
-    final_std = np.array([0.5, 0.5, 0.5, 0.5])
-    final_n_batch = 25
-    noise_k = 1.0 / final_n_batch
-    def state_preprocess(x,t):
-        y = x.copy()
-        t_batch = t/BATH_SIZE
-        ratio = \
-            noise_k*t_batch if t_batch < final_n_batch else 1.0
-        #logging.debug("current_noise_std: {}".format(current_std))
-        noise = np.random.normal(loc=mean,scale=final_std)
-        y[0:2] = (1-ratio)*y[0:2] + noise*ratio
-        return y
-
-    def eliminated_state(x, t):
-        y = x.copy()
-        t_batch = t / BATH_SIZE
-        ratio = \
-            noise_k * t_batch if t_batch < final_n_batch else 1.0
-        # logging.debug("current_noise_std: {}".format(current_std))
-        noise = mean
-        y[0:2] = (1 - ratio) * y[0:2] + noise * ratio
-        return y
-
-    def dropout_state(x, t):
-        y = x.copy()
-        t_batch = t / BATH_SIZE
-        ratio = \
-            noise_k * t_batch if t_batch < final_n_batch else 1.0
-        # logging.debug("current_noise_std: {}".format(current_std))
-        is_removed = (np.random.random_sample(size=None) < ratio)
-        y[0:2] = mean if is_removed else y[0:2]
-        return y
-
-    def zeroed_state(x, t):
-        y = x.copy()
-        y[0:2] = mean
-        return y
-
-    def const_noise(x, t):
-        y = x.copy()
-        noise = np.random.normal(loc=mean, scale=final_std)
-        y += noise
-        return y
-    def ident(x,t):
-        return x
 
     import multiprocessing
     render_lock = multiprocessing.Lock()
@@ -309,7 +264,6 @@ def main():
             dummy_image = False
         final_env = ComplexWrapper(env, max_episode_length=T,
                                    append_image=append_image, rgb_to_gray=True,
-                                   s_transform=ident,
                                    visible_state_ids=range(env.observation_space.shape[0]),
                                    num_frame=1,
                                    dummy_image=dummy_image,
@@ -371,7 +325,6 @@ def main():
             return sess_debug
         else:
             return sess
-
 
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel
@@ -467,14 +420,13 @@ def main():
                             timestep_limit=T,
                             f_critic=root_model.compute_critic,
                             num_actors=num_actors,
-                            f_check_batch=root_model.check_batch_finished,
-                            async=True)
+                            f_check_batch=root_model.check_batch_finished, )
 
         return {"models": models, "memory": memory, "f_should_return_root": f_should_return_root}
 
     f_create_params = pg_shared_params if len(full_tasks) == 1 else hrl_shared_params
 
-    single_process_mode = True if append_image else False
+    single_process_mode = True  # True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,
                             f_create_params, single_process_mode=single_process_mode, render_option=args.render,
                             log_episodes=True)

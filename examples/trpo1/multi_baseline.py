@@ -38,8 +38,8 @@ class MultiBaseline(object):
 
             self.sigma = tf.get_variable("scale_sigma", initializer=tf.constant(1.0), trainable=False)
             self.mu = tf.get_variable("scale_mu", initializer=tf.constant(0.0), trainable=False)
-            self.new_sigma_ph = tf.placeholder(tf.float32, shape=[], name="scale_sgma")
-            self.new_mu_ph = tf.placeholder(tf.float32, shape=[], name="scale_mu")
+            self.new_std = tf.placeholder(tf.float32, shape=[], name="scale_sgma")
+            self.new_mean = tf.placeholder(tf.float32, shape=[], name="scale_mu")
 
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
             self.final_state = self.st_enabled * self.state_input
@@ -91,17 +91,18 @@ class MultiBaseline(object):
 
                 self.net = tf.reshape(y, (-1,))  # why reshape?
                 err = self.y - self.net
-                squared_err = tf.square(err)
 
-                self.real_mse = tf.reduce_mean(squared_err)
-                self.norm_mse = self.real_mse / tf.square(self.sigma)
+                self.real_mse = tf.reduce_mean(err ** 2)
+                self.norm_mse = self.real_mse / self.sigma ** 2
                 self.mse = self.norm_mse if self.normalize else self.real_mse
-                w_update = tf.assign(self.last_w, self.new_sigma_ph ** -1 * self.sigma * self.last_w)
-                b_update = tf.assign(self.last_b,
-                                     self.new_sigma_ph ** -1 * (self.sigma * self.last_b + self.mu - self.new_mu_ph))
+                alpha = 1.0
+                new_sigma = alpha * self.new_std + (1 - alpha) * self.sigma
+                new_mu = alpha * self.new_mean + (1 - alpha) * self.mu
+                w_update = tf.assign(self.last_w, new_sigma ** -1 * self.sigma * self.last_w)
+                b_update = tf.assign(self.last_b, new_sigma ** -1 * (self.sigma * self.last_b + self.mu - new_mu))
                 with tf.control_dependencies([w_update, b_update]):
-                    sigma_update = tf.assign(self.sigma, self.new_sigma_ph)
-                    mu_update = tf.assign(self.mu, self.new_mu_ph)
+                    sigma_update = tf.assign(self.sigma, self.new_std)
+                    mu_update = tf.assign(self.mu, self.new_mean)
                 self.scale_updates = [w_update, b_update, sigma_update, mu_update]
                 self.st_var_list = tf.trainable_variables(this_scope.name)
                 self.st_var_list = [i for i in self.st_var_list if i not in self.img_var_list]
@@ -135,7 +136,7 @@ class MultiBaseline(object):
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
         logging.debug("vf:\n mse:{}".format(mse))
 
-    def fit(self, path_dict, update_mode="full", num_pass=1):
+    def fit(self, path_dict, update_mode="full", num_pass=1, pid=None):
         returns = path_dict["returns"]
 
         obj = returns
@@ -160,13 +161,13 @@ class MultiBaseline(object):
             train_op = [self.img_train]
         elif update_mode == "st":
             train_op = [self.mse, self.upper_train]
-        if self.debug_mode:
+        if self.debug_mode and (pid is None or pid == 0):
             logging.debug("before vf optimization")
             self.print_loss(feed)
         new_mu = obj.mean()
         new_sigma = obj.std()
-        self.session.run(self.scale_updates, feed_dict={self.new_mu_ph: new_mu,
-                                                        self.new_sigma_ph: new_sigma})
+        self.session.run(self.scale_updates, feed_dict={self.new_mean: new_mu,
+                                                        self.new_std: new_sigma})
 
         for n_pass in range(num_pass):
             training_inds = np.random.permutation(batch_N)
@@ -181,7 +182,7 @@ class MultiBaseline(object):
                 if end == batch_N:
                     break
 
-        if self.debug_mode:
+        if self.debug_mode and (pid is None or pid == 0):
             logging.debug("after vf optimization")
             self.print_loss(feed)
 

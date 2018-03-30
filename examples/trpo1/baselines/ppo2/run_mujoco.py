@@ -12,7 +12,9 @@ def train(env_id, num_timesteps, seed):
     import tensorflow as tf
     from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
     ncpu = 1
+    gpu_options = tf.GPUOptions(allow_growth=True)
     config = tf.ConfigProto(allow_soft_placement=True,
+                            gpu_options=gpu_options,
                             intra_op_parallelism_threads=ncpu,
                             inter_op_parallelism_threads=ncpu)
     tf.Session(config=config).__enter__()

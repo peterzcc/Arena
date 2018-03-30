@@ -52,7 +52,9 @@ class PolicyGradientModel(ModelWithCritic):
                  load_old_model=False,
                  should_train=True,
                  parallel_predict=True,
-                 save_model=True
+                 save_model=True,
+                 loss_type="PPO",
+                 max_grad_norm=None
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -81,10 +83,11 @@ class PolicyGradientModel(ModelWithCritic):
         self.stored_actions = None
         self.obs_list = [None for i in range(num_actors)]
         self.act_list = [None for i in range(num_actors)]
+        self.batch_ends = np.zeros(shape=(num_actors,), dtype=np.bool)
         self.exp_st_enabled = None
         self.exp_img_enabled = None
         self.batch_mode = batch_mode  # "episode" #"timestep"
-        self.min_batch_length = 2500
+        self.min_batch_length = 1000
         self.f_batch_size = f_batch_size
         self.batch_size = None if self.f_batch_size is None else self.f_batch_size(0)
         self.f_target_kl = f_target_kl
@@ -92,7 +95,7 @@ class PolicyGradientModel(ModelWithCritic):
         if self.batch_mode == "timestep":
             self.batch_barrier = thd.Barrier(num_actors)
         else:
-            self.batch_barrier = None
+            self.batch_barrier = thd.Barrier(num_actors)
 
         gpu_options = tf.GPUOptions(allow_growth=True)  # False,per_process_gpu_memory_fraction=0.75)
         self.session = session if session is not None else tf.Session(config=tf.ConfigProto(gpu_options=gpu_options,
@@ -100,8 +103,6 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
         self.comb_method = comb_method  # aggregate_feature#
-
-
 
         cnn_trainable = True
         if n_imgfeat < 0:
@@ -158,6 +159,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         self.fit_policy = None
+        self.loss_type = loss_type
         if should_train:
             if self.mode == "ADA_KL":
                 # adaptive kl
@@ -204,7 +206,7 @@ class PolicyGradientModel(ModelWithCritic):
                                                   epsilon=1e-2, stats_decay=0.99,
                                                   async=True, cold_iter=1,
                                                   weight_decay_dict={}, max_grad_norm=None)
-                self.loss_type = "PPO"
+
                 self.k_surr_loss = self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss
                 self.k_final_loss = self.k_surr_loss + self.ent_loss
 
@@ -225,10 +227,14 @@ class PolicyGradientModel(ModelWithCritic):
                 self.fit_policy = self.fit_acktr
             elif self.mode == "PG":
                 self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.0001)
-                self.pg_loss = self.policy.trad_surr_loss + self.ent_loss
+                self.pg_loss = (
+                               self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss) + self.ent_loss
                 # g = gradients_memory(self.pg_loss,self.policy.var_list)
                 # self.pg_update = self.pg_optim.apply_gradients([(tf.zeros(v.shape), v) for v in self.policy.var_list])
-                self.pg_update = self.pg_optim.minimize(self.pg_loss, var_list=self.policy.var_list)
+                grads = tf.gradients(self.pg_loss, loss_type)
+                if max_grad_norm is not None:
+                    grads = tf.clip_by_global_norm(grads, max_grad_norm)
+                self.pg_update = self.pg_optim.apply_gradients(grads)
 
                 self.fit_policy = self.fit_pg
             else:
@@ -247,7 +253,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.should_update_policy = True
         self.should_train = should_train
         self.debug = True
-        self.recompute_old_dist = True if self.batch_mode == "episode" and self.num_actors > 1 else False
+        self.recompute_old_dist = False
         self.session.run(tf.global_variables_initializer())
         if self.mode == "ACKTR" and self.should_train:
             for qr in [self.k_q_runner]:
@@ -258,7 +264,6 @@ class PolicyGradientModel(ModelWithCritic):
         self.has_loaded_model = False
         self.load_old_model = load_old_model
         self.parallel_predict = parallel_predict
-
 
     def get_state_activation(self, t_batch):
         if self.comb_method != aggregate_feature:
@@ -457,7 +462,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("Saving {}".format(self.model_path))
             self.full_model_saver.save(self.session, self.model_path, write_state=False)
 
-    def fit_adakl(self, feed, num_samples):
+    def fit_adakl(self, feed, num_samples, pid=None):
         target_kl_value = self.f_target_kl(self.n_update)
         logging.debug("\nbatch_size: {}\nkl_target: {}\n".format(self.batch_size, target_kl_value))
         surr_o, kl_o, ent_o = run_batched(self.a_losses, feed, num_samples, self.session,
@@ -508,10 +513,11 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug('beta OK = %s' % self.a_beta_value)
             logging.debug('step_size OK = %s' % self.a_step_size)
 
-    def fit_acktr(self, feed, num_samples):
+    def fit_acktr(self, feed, num_samples, pid=None):
         target_kl_value = self.f_target_kl(self.n_update)
-        if self.debug:
-            logging.debug("\nbatch_size: {}\nkl_target: {}\n".format(self.batch_size, target_kl_value))
+        verbose = self.debug and (pid is None or pid == 0)
+        if verbose:
+            logging.debug("\nbatch_size: {}\nkl_target: {}\n".format(num_samples, target_kl_value))
             surr_o, kl_o, ent_o = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
                                               num_samples,
                                               self.session,
@@ -537,15 +543,16 @@ class PolicyGradientModel(ModelWithCritic):
                              minibatch_size=self.minibatch_size,
                              extra_input={
                                  self.target_kl_sym: target_kl_value})
+
         if kl_new > target_kl_value * 2:
-            logging.debug("kl too high")
+            if verbose: logging.debug("kl too high")
             self.session.run(tf.assign(self.k_stepsize, tf.maximum(min_stepsize, self.k_stepsize / 1.5)))
         elif kl_new < target_kl_value / 2:
-            logging.debug("kl too low")
+            if verbose: logging.debug("kl too low")
             self.session.run(tf.assign(self.k_stepsize, tf.minimum(max_stepsize, self.k_stepsize * 1.5)))
         else:
-            logging.debug("kl just right!")
-        if self.debug:
+            if verbose: logging.debug("kl just right!")
+        if verbose:
             surr_new, ent_new = run_batched([self.policy.trad_surr_loss, self.policy.ent], feed, num_samples,
                                             self.session,
                                             minibatch_size=self.minibatch_size,
@@ -553,7 +560,7 @@ class PolicyGradientModel(ModelWithCritic):
                                                 self.target_kl_sym: target_kl_value})
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
-    def fit_pg(self, feed, num_samples):
+    def fit_pg(self, feed, num_samples, pid=None):
         if self.debug:
             logging.debug("\nbatch_size: {}\n".format(self.batch_size))
             surr_o, kl_o, ent_o = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
@@ -570,7 +577,7 @@ class PolicyGradientModel(ModelWithCritic):
                                                     minibatch_size=self.minibatch_size, )
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
-    def train(self, paths):
+    def train(self, paths, pid=None):
         if not self.should_train:
             return
         feed, path_dict, hist_feed = self.concat_paths(paths)
@@ -579,22 +586,22 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.critic_lock.acquire_write()
         if self.should_update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=1)
+            self.critic.fit(path_dict, update_mode="full", num_pass=1, pid=pid)
         self.critic_lock.release_write()
 
-        if self.debug:
-            advant_n = feed[self.policy.advant]
-            # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
-            # action_dist_logstds_n = feed[self.net.dist_vars["logstd"]]
-            # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
-            if hasattr(self.act_space, "low"):
-                logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
-                # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
+        # if self.debug:
+        #     advant_n = feed[self.policy.advant]
+        #     # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
+        #     # action_dist_logstds_n = feed[self.net.dist_vars["logstd"]]
+        #     # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
+        #     if hasattr(self.act_space, "low"):
+        #         logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
+        #         # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
         if not self.should_update_policy:
             return None, None
         self.policy_lock.acquire_write()
         if self.should_update_policy:
-            self.fit_policy(feed, batch_size)
+            self.fit_policy(feed, batch_size, pid=pid)
         self.increment_n_update()
         self.policy_lock.release_write()
 
