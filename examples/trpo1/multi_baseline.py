@@ -35,6 +35,12 @@ class MultiBaseline(object):
             self.img_enabled = tf.placeholder(tf.float32, shape=(None,), name='img_enabled')
             self.st_enabled = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name='st_enabled')
             self.time_input = tf.placeholder(tf.float32, shape=(None, 1), name="t")
+
+            self.sigma = tf.get_variable("scale_sigma", initializer=tf.constant(1.0), trainable=False)
+            self.mu = tf.get_variable("scale_mu", initializer=tf.constant(0.0), trainable=False)
+            self.new_sigma_ph = tf.placeholder(tf.float32, shape=[], name="scale_sgma")
+            self.new_mu_ph = tf.placeholder(tf.float32, shape=[], name="scale_mu")
+
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
             self.final_state = self.st_enabled * self.state_input
             self.n_imgfeat = n_imgfeat
@@ -59,10 +65,13 @@ class MultiBaseline(object):
                 self.img_var_list = []
                 self.cnn_weights = []
                 self.img_fc_weights = []
-                self.final_image_features = tf.constant(0.0)
+                self.final_image_features = None
             with tf.variable_scope("nethigher") as this_scope:
-                self.aggregated_feature = \
-                    self.comb_method(self.final_state, self.img_enabled[:, tf.newaxis] * self.final_image_features)
+                if self.final_image_features is not None:
+                    self.aggregated_feature = \
+                        self.comb_method(self.final_state, self.img_enabled[:, tf.newaxis] * self.final_image_features)
+                else:
+                    self.aggregated_feature = self.final_state
                 self.full_feature = tf.concat(
                     axis=1,
                     values=[self.aggregated_feature, self.time_input])
@@ -74,16 +83,26 @@ class MultiBaseline(object):
                     h = tf.layers.dense(self.fc_layers[-1], hidden_size,
                                         activation=activation, kernel_initializer=ScalingOrth())
                     self.fc_layers.append(h)
-                y = tf.layers.dense(self.fc_layers[-1], 1, activation=None,
-                                    kernel_initializer=ScalingOrth())
+                with tf.variable_scope("final") as scope_last:
+                    pre_y = tf.layers.dense(self.fc_layers[-1], 1, activation=None,
+                                            kernel_initializer=ScalingOrth())
+                    self.last_w, self.last_b = tf.trainable_variables(scope=scope_last.name)
+                    y = pre_y * self.sigma + self.mu
 
                 self.net = tf.reshape(y, (-1,))  # why reshape?
                 err = self.y - self.net
                 squared_err = tf.square(err)
 
                 self.real_mse = tf.reduce_mean(squared_err)
-                self.norm_mse = tf.reduce_mean(squared_err) / tf.stop_gradient(tf.reduce_mean(squared_err))
+                self.norm_mse = self.real_mse / tf.square(self.sigma)
                 self.mse = self.norm_mse if self.normalize else self.real_mse
+                w_update = tf.assign(self.last_w, self.new_sigma_ph ** -1 * self.sigma * self.last_w)
+                b_update = tf.assign(self.last_b,
+                                     self.new_sigma_ph ** -1 * (self.sigma * self.last_b + self.mu - self.new_mu_ph))
+                with tf.control_dependencies([w_update, b_update]):
+                    sigma_update = tf.assign(self.sigma, self.new_sigma_ph)
+                    mu_update = tf.assign(self.mu, self.new_mu_ph)
+                self.scale_updates = [w_update, b_update, sigma_update, mu_update]
                 self.st_var_list = tf.trainable_variables(this_scope.name)
                 self.st_var_list = [i for i in self.st_var_list if i not in self.img_var_list]
             self.var_list = [*self.img_var_list, *self.st_var_list]
@@ -144,6 +163,10 @@ class MultiBaseline(object):
         if self.debug_mode:
             logging.debug("before vf optimization")
             self.print_loss(feed)
+        new_mu = obj.mean()
+        new_sigma = obj.std()
+        self.session.run(self.scale_updates, feed_dict={self.new_mu_ph: new_mu,
+                                                        self.new_sigma_ph: new_sigma})
 
         for n_pass in range(num_pass):
             training_inds = np.random.permutation(batch_N)

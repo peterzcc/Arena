@@ -50,7 +50,7 @@ CUDA_VISIBLE_DEVICES="" python3.6 ./cnn_mnist.py
 
 CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 8000 --kl 0.0001 --withimg 1 --env custant --nfeat 30 --load-model 0 --save-model 0
 
-CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 40 --batch-size 8000 --kl 0.0003 --withimg 1 --env custant --nfeat 30 --load-model 0 --save-model 0
+CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 40 --batch-size 8000 --kl 0.00005 --withimg 1 --env custant --nfeat 30 --load-model 0 --save-model 0
 
 CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 8000 --kl 0.0003 --withimg 1 --env custant --nfeat 30 --load-model 0
 
