@@ -469,6 +469,7 @@ class PolicyGradientModel(ModelWithCritic):
                 self.best_mean_reward = mean_t_reward
                 logging.debug("Saving {} with averew/step: {}".format(self.model_path, self.best_mean_reward))
                 self.full_model_saver.save(self.session, self.model_path, write_state=False)
+                self.last_save = self.n_update
 
     def fit_adakl(self, feed, num_samples, pid=None):
         target_kl_value = self.f_target_kl(self.n_update)
