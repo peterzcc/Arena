@@ -233,10 +233,10 @@ class PolicyGradientModel(ModelWithCritic):
                                self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss) + self.ent_loss
                 # g = gradients_memory(self.pg_loss,self.policy.var_list)
                 # self.pg_update = self.pg_optim.apply_gradients([(tf.zeros(v.shape), v) for v in self.policy.var_list])
-                grads = tf.gradients(self.pg_loss, loss_type)
+                grads = tf.gradients(self.pg_loss, self.policy.var_list)
                 if max_grad_norm is not None:
-                    grads = tf.clip_by_global_norm(grads, max_grad_norm)
-                self.pg_update = self.pg_optim.apply_gradients(list(zip(grads,self.policy.var_list)))
+                    grads,g_norm = tf.clip_by_global_norm(grads, max_grad_norm)
+                self.pg_update = self.pg_optim.apply_gradients(list(zip(grads, self.policy.var_list)))
 
                 self.fit_policy = self.fit_pg
             else:
