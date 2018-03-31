@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import mujoco_py as mj
 
-def get_loss(logfile, outpath, starting_point=1, mode=0):
+def get_loss(logfile, outpath, starting_point=1, mode=0,name=""):
     """
     Plot visualization graph
     Usage: - logfile: log file
@@ -24,6 +24,7 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
 
     print("Parsing log from %s" % (logfile))
     loss_list = []
+
     regex_list = ['Average Return:([+-]?[0-9]*[.]?[0-9]+)', ' std: ([+-]?[0-9]*[.]?[0-9]+)',
                   'img_loss=([+-]?[0-9]*[.]?[0-9]+)',
                   'act_clips: ([+-]?[0-9]*[.]?[0-9]+)',
@@ -32,9 +33,11 @@ def get_loss(logfile, outpath, starting_point=1, mode=0):
                   'ae loss after: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
                   'ae expvar: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)']
     name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar']
+    name_dict = {v:i for i,v in zip(np.arange(len(name_list)),name_list)}
     timestep_list = []
+    regex = regex_list[name_dict[name]] if name != "" else regex_list[mode]
     for line in loss_file:
-        m = re.search(regex_list[mode], line)
+        m = re.search(regex, line)
         t = re.search('^t: ([+-]?[0-9]*[.]?[0-9]+)', line)
         if m is not None:
             loss = m.group(1)
@@ -74,12 +77,15 @@ def main():
     parser.add_argument('-l', '--logfile', required=False, type=str, default="log.txt", help='Path of the log file.')
     parser.add_argument('-o', '--outpath', required=False, type=str, default="",
                         help='Path of output file.')
+    parser.add_argument('--name', required=False, type=str, default="",
+                        help='Path of output file.')
     parser.add_argument('-s', '--starting_point', required=False, type=int, default=1,
                         help='Starting point of curve.')
     parser.add_argument('-m', '--mode', required=False, type=int, default=0,
                         help='mode')
     args, unknown = parser.parse_known_args()
-    get_loss(args.logfile, args.outpath, args.starting_point, args.mode)
+    get_loss(args.logfile, args.outpath, args.starting_point, args.mode,args.name)
+
 
 if __name__ == '__main__':
     main()

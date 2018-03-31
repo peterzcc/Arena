@@ -106,14 +106,14 @@ class MultiBaseline(object):
                 self.scale_updates = [w_update, b_update, sigma_update, mu_update]
                 self.st_var_list = tf.trainable_variables(this_scope.name)
                 self.st_var_list = [i for i in self.st_var_list if i not in self.img_var_list]
-            self.var_list = [*self.img_var_list, *self.st_var_list]
+            self.var_list = [*self.img_var_list, *self.st_var_list, self.sigma, self.mu]
             if not cnn_trainable:
                 self.var_list = [v for v in self.var_list if not (v in self.cnn_weights or v in self.img_fc_weights)]
             self.st_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.st_var_list])
             self.l2 = self.st_l2  #+ self.img_l2
             self.final_loss = self.mse  # S+ (self.l2) * self.l2_k
 
-            self.lr = 1e-2 / np.sqrt(hidden_sizes[1])
+            self.lr = 0.0003
             self.opt = tf.train.AdamOptimizer(learning_rate=self.lr)
             self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
                                            var_list=self.var_list)

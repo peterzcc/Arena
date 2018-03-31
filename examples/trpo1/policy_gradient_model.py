@@ -54,7 +54,7 @@ class PolicyGradientModel(ModelWithCritic):
                  parallel_predict=True,
                  save_model=True,
                  loss_type="PPO",
-                 max_grad_norm=None
+                 max_grad_norm=0.5
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -73,6 +73,8 @@ class PolicyGradientModel(ModelWithCritic):
         self.use_empirical_fim = True
         self.mode = mode
         self.save_model = save_model
+        self.best_mean_reward = - np.inf
+        self.last_save = - np.inf
         self.policy_lock = ReadWriteLock()
         self.critic_lock = ReadWriteLock()
         self.num_actors = num_actors
@@ -200,7 +202,7 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_stepsize = tf.Variable(initial_value=np.float32(0.03), name='stepsize')
                 self.k_momentum = 0.9
                 self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
-                                                  cold_lr=self.k_stepsize * (1 - self.k_momentum),
+                                                  cold_lr= self.k_stepsize * (1 - self.k_momentum),
                                                   momentum=self.k_momentum,
                                                   kfac_update=2,
                                                   epsilon=1e-2, stats_decay=0.99,
@@ -378,6 +380,7 @@ class PolicyGradientModel(ModelWithCritic):
         st_enabled = concat([path["st_enabled"] for path in paths])
         action_n = concat([path["action"] for path in paths])
         advant_n = concat([path["advantage"] for path in paths])
+        rewards = concat([path["reward"] for path in paths])
 
         feed = {self.policy.state_input: state_input,
                 self.policy.advant: advant_n,
@@ -392,7 +395,8 @@ class PolicyGradientModel(ModelWithCritic):
                      "times": times,
                      "returns": returns,
                      "img_enabled": img_enabled,
-                     "st_enabled": st_enabled}
+                     "st_enabled": st_enabled,
+                     "reward": rewards}
         img_input = None
         if self.n_imgfeat != 0:
             img_input = concat([path["observation"][1] for path in paths])
@@ -458,9 +462,13 @@ class PolicyGradientModel(ModelWithCritic):
     def increment_n_update(self):
         self.n_update += 1
         self.batch_size = self.f_batch_size(self.n_update)
-        if self.save_model > 0 and self.n_update % self.save_model == 0:
-            logging.debug("Saving {}".format(self.model_path))
-            self.full_model_saver.save(self.session, self.model_path, write_state=False)
+
+    def handle_model_saving(self, mean_t_reward):
+        if self.save_model > 0 and self.n_update > self.last_save + self.save_model:
+            if mean_t_reward > self.best_mean_reward:
+                self.best_mean_reward = mean_t_reward
+                logging.debug("Saving {} with averew/step: {}".format(self.model_path, self.best_mean_reward))
+                self.full_model_saver.save(self.session, self.model_path, write_state=False)
 
     def fit_adakl(self, feed, num_samples, pid=None):
         target_kl_value = self.f_target_kl(self.n_update)
@@ -583,6 +591,8 @@ class PolicyGradientModel(ModelWithCritic):
         feed, path_dict, hist_feed = self.concat_paths(paths)
 
         batch_size = feed[self.policy.action_n].shape[0]
+        mean_t_reward = path_dict["reward"].mean()
+        self.handle_model_saving(mean_t_reward)
 
         self.critic_lock.acquire_write()
         if self.should_update_critic:
