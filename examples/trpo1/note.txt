@@ -58,7 +58,7 @@ CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" p
 
 python3.6 pg_train.py --nactor 20 --batch-size 8000 --kl 0.00015 --env movetest --nfeat 0 --load-model 0 --save-model 10
 
-python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --env custant --nfeat 0 --load-model 0 --batch-mode timestep --rl-method PG
+CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --env custant --nfeat 0 --load-model 0 --batch-mode timestep --rl-method PG
 
 python3.6 pg_train.py --nactor 8 --batch-size 8000 --kl 0.0002 --env custant --nfeat 30 --load-model 0 --batch-mode timestep --save-model 0 --withimg 1
 

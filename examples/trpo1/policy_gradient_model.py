@@ -236,7 +236,7 @@ class PolicyGradientModel(ModelWithCritic):
                 grads = tf.gradients(self.pg_loss, loss_type)
                 if max_grad_norm is not None:
                     grads = tf.clip_by_global_norm(grads, max_grad_norm)
-                self.pg_update = self.pg_optim.apply_gradients(grads)
+                self.pg_update = self.pg_optim.apply_gradients(list(zip(grads,self.policy.var_list)))
 
                 self.fit_policy = self.fit_pg
             else:
