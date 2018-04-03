@@ -6,7 +6,7 @@ import sys
 import numpy as np
 import mujoco_py as mj
 
-def get_loss(logfile, outpath, starting_point=1, mode=0,name=""):
+def get_loss(logfile, outpath, starting_point=1, mode=None,name=""):
     """
     Plot visualization graph
     Usage: - logfile: log file
@@ -35,7 +35,8 @@ def get_loss(logfile, outpath, starting_point=1, mode=0,name=""):
     name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar']
     name_dict = {v:i for i,v in zip(np.arange(len(name_list)),name_list)}
     timestep_list = []
-    regex = regex_list[name_dict[name]] if name != "" else regex_list[mode]
+    mode = name_dict[name] if name != "" else mode
+    regex = regex_list[mode]
     for line in loss_file:
         m = re.search(regex, line)
         t = re.search('^t: ([+-]?[0-9]*[.]?[0-9]+)', line)
@@ -56,11 +57,15 @@ def get_loss(logfile, outpath, starting_point=1, mode=0,name=""):
         l_data = np.minimum(t_array.shape[0], len(loss_list))
         plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)
     elif mode == 4:
-        kls = np.log10(np.array(loss_list[starting_point:]).astype(np.float32) + 1e-6)
+
+        kls = np.array(loss_list[starting_point:]).astype(np.float32) #np.log10(np.array(loss_list[starting_point:]).astype(np.float32) + 1e-6)
         plt.plot(
             np.array(list(range(len(loss_list) - starting_point))),
             kls,
-            '.')
+            '.', markersize=1.0)
+        x1, x2, y1, y2 = plt.axis()
+
+        plt.axis((x1, x2, y1, 0.005))
     elif mode == 5:
         l_data = np.minimum(t_array.shape[0], len(loss_list))
         plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)
@@ -81,7 +86,7 @@ def main():
                         help='Path of output file.')
     parser.add_argument('-s', '--starting_point', required=False, type=int, default=1,
                         help='Starting point of curve.')
-    parser.add_argument('-m', '--mode', required=False, type=int, default=0,
+    parser.add_argument('-m', '--mode', required=False, type=int, default=None,
                         help='mode')
     args, unknown = parser.parse_known_args()
     get_loss(args.logfile, args.outpath, args.starting_point, args.mode,args.name)
