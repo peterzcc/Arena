@@ -414,8 +414,8 @@ def main():
                                     should_train=False,
                                     parallel_predict=False)
             models.append(p)
-        for p in models[1:]:
-            p.restore_parameters()
+        # for p in models[1:]:
+        #     p.restore_parameters()
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
                             f_critic=root_model.compute_critic,

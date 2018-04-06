@@ -31,8 +31,10 @@ def get_loss(logfile, outpath, starting_point=1, mode=None,name=""):
                   'new kl: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
                   'Average Return:([+-]?[0-9]*[.]?[0-9]+)',
                   'ae loss after: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
-                  'ae expvar: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)']
-    name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar']
+                  'ae expvar: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
+                  'mse:([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)']
+    name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar',
+                 'mse']
     name_dict = {v:i for i,v in zip(np.arange(len(name_list)),name_list)}
     timestep_list = []
     mode = name_dict[name] if name != "" else mode
@@ -56,16 +58,21 @@ def get_loss(logfile, outpath, starting_point=1, mode=None,name=""):
         # plt.plot(1.0 * np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
         l_data = np.minimum(t_array.shape[0], len(loss_list))
         plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)
+
     elif mode == 4:
 
-        kls = np.array(loss_list[starting_point:]).astype(np.float32) #np.log10(np.array(loss_list[starting_point:]).astype(np.float32) + 1e-6)
+        kls = np.array(np.log10(np.array(loss_list[starting_point:]).astype(
+            np.float32) + 1e-6))  # loss_list[starting_point:]).astype(np.float32) #
         plt.plot(
             np.array(list(range(len(loss_list) - starting_point))),
             kls,
             '.', markersize=1.0)
+        # x1, x2, y1, y2 = plt.axis()
+        #
+        # plt.axis((x1, x2, y1, 0.005))
         x1, x2, y1, y2 = plt.axis()
 
-        plt.axis((x1, x2, y1, 0.005))
+        plt.axis((x1, x2, -5.5, -2.0))
     elif mode == 5:
         l_data = np.minimum(t_array.shape[0], len(loss_list))
         plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)

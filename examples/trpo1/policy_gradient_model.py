@@ -266,6 +266,8 @@ class PolicyGradientModel(ModelWithCritic):
         self.has_loaded_model = False
         self.load_old_model = load_old_model
         self.parallel_predict = parallel_predict
+        if self.load_old_model and not self.has_loaded_model:
+            self.restore_parameters()
 
     def get_state_activation(self, t_batch):
         if self.comb_method != aggregate_feature:
@@ -281,17 +283,21 @@ class PolicyGradientModel(ModelWithCritic):
     def restore_parameters(self):
         if not self.has_loaded_model:
             if self.load_old_model:
-                logging.debug("Restoring {}".format(self.model_path))
+                logging.debug("Loading {}".format(self.model_path))
                 self.full_model_saver.restore(self.session, self.model_path)
                 self.has_loaded_model = True
 
     def predict(self, observation, pid=0):
+        if not self.has_loaded_model:
+            self.restore_parameters()
         if self.parallel_predict:
             if self.num_actors == 1:
                 if len(observation[0].shape) == len(self.ob_space[0].shape):
                     obs = [np.expand_dims(observation[0], 0)]
                 else:
                     obs = observation
+                if self.n_imgfeat != 0:
+                    obs.append(np.expand_dims(observation[1], 0))
                 st_enabled, img_enabled = self.get_state_activation(self.n_update)
                 self.exp_st_enabled = np.expand_dims(st_enabled, 0)
                 self.exp_img_enabled = img_enabled

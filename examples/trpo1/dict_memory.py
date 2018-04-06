@@ -70,6 +70,8 @@ class DictMemory(object):
             self.current_path[pid][k].append(v)
 
     def append_observation(self, observation, pid=0):
+        if self.run_start_time is None:
+            self.run_start_time = time.time()
         self.current_path[pid]["observation"].append(observation)
 
     def append_action(self, action, info, pid=0):
