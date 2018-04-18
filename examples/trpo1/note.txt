@@ -42,13 +42,21 @@ python3 -c "import distutils.sysconfig as sysconfig; import os; print(os.path.jo
 
 python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())"
 
+java -jar ../pp2check/jplag.jar -l python3 -s . -r 0result -bc 0base -m 30%
 
+registeruser
+mail peterzengcc@gmail.com
 
+for d in */ ; do
+    mv $d/*/**/*(.D) $d
+done
+
+mv auguler/*/**/*(.D) auguler
 CUDA_VISIBLE_DEVICES=3 python3.6 trpo_test.py --nactor 20 --batch-size 5000 --kl 0.0001  --env single --nae 0 --nfeat 0
 
 CUDA_VISIBLE_DEVICES="" python3.6 ./cnn_mnist.py
 
-CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move0 --nfeat 30 --load-model 0
+CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env reachc1 --rl-method PG --nactor 20 --batch-size 800 --withimg 1 --nfeat 30 --load-model 0
 
 CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --nactor 20 --batch-size 4000 --kl 0.0001 --withimg 1 --env move1 --nfeat 30 --load-model 0
 
@@ -68,9 +76,9 @@ PYTHONPATH="/mnt/m2/mzcc/Arena/examples/trpo1" python3.6 ./run_mujoco.py --env A
 python3.6 pg_train.py --nactor 20 --batch-size 3 --kl 0.00003 --env movetest --nfeat 0 --load-model 0 --batch-mode episode --save-model 0
 
 
-CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move3 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
+CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env reachc1 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
 
-python3.6 pg_train.py --env reachc05 --rl-method PG --nactor 20 --batch-size 800 --withimg 1 --nfeat 30 --load-model 0
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env reachc1 --rl-method PG --nactor 20 --batch-size 800 --withimg 1 --nfeat 30 --load-model 0
 
 
 echo 'deb http://deb.torproject.org/torproject.org jessie main'>> /etc/apt/sources.list.d/tor.list

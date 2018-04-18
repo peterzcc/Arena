@@ -5,11 +5,12 @@ from arena.games.gym_wrapper import GymWrapper
 from arena.games.complex_wrapper import ComplexWrapper
 from arena.experiment import Experiment
 import gym
-from gym.spaces import Discrete
+from gym.spaces import Box, Discrete
 import argparse
 from batch_agent import BatchUpdateAgent
 from async_agent import AsyncAgent
 from hrl_agent import HrlAgent
+from flexible_hrl_agent import FlexibleHrlAgent
 import logging
 from custom_ant import CustomAnt
 from gather_env import GatherEnv
@@ -20,7 +21,6 @@ import sys
 import os
 from collections import OrderedDict
 from tf_utils import aggregate_feature, concat_feature, concat_without_task, str2bool
-
 BATH_SIZE = 10000
 
 
@@ -287,6 +287,12 @@ def main():
                 is_learning, global_t, pid,
             )
         else:
+            # return HrlAgent(
+            #     observation_space, action_space,
+            #     shared_params, stats_rx, acts_tx,
+            #     is_learning, global_t, pid,
+            #     full_tasks=full_tasks
+            # )
             return HrlAgent(
                 observation_space, action_space,
                 shared_params, stats_rx, acts_tx,
@@ -424,6 +430,66 @@ def main():
 
         return {"models": models, "memory": memory, "f_should_return_root": f_should_return_root}
 
+    def flexible_hrl_shared_params():
+        from policy_gradient_model import PolicyGradientModel
+        from dict_memory import DictMemory
+        sample_env = f_create_env()
+        observation_space = sample_env.observation_space
+        action_space = sample_env.action_space
+        sample_env.env.close()
+        n_imgfeat = args.nfeat if append_image else 0
+        comb_methd = concat_feature if append_image else aggregate_feature
+
+        comb_methd = concat_without_task if feat_sup else comb_methd
+        session = create_session()
+
+        root_action_space = Discrete(len(full_tasks))
+        # Data structure: [state, image, current policy, current execution time, is initial step
+        root_obseravation_space = [*observation_space,
+                                   Box(np.array([0, 0, 0]),
+                                       np.array([root_action_space.n, np.inf, 1.0])
+                                       )]
+        root_model = PolicyGradientModel(root_obseravation_space, root_action_space,
+                                         name=args.env,
+                                         timestep_limit=T,
+                                         num_actors=num_actors,
+                                         f_batch_size=const_batch_size,
+                                         batch_mode=args.batch_mode,
+                                         f_target_kl=const_target_kl,
+                                         n_imgfeat=n_imgfeat,
+                                         mode=args.rl_method,
+                                         kl_history_length=1,
+                                         comb_method=comb_methd,
+                                         surr_loss=args.loss,
+                                         ent_k=args.ent_k,
+                                         session=session,
+                                         load_old_model=args.load_model,
+                                         should_train=not args.no_train,
+                                         parallel_predict=False,
+                                         save_model=args.save_model)
+        models = [root_model]
+        for env_name, _ in list(full_tasks.items())[1:]:
+            p = PolicyGradientModel(observation_space, action_space,
+                                    name=env_name,
+                                    timestep_limit=T,
+                                    num_actors=num_actors,
+                                    n_imgfeat=n_imgfeat,
+                                    comb_method=comb_methd,
+                                    ent_k=args.ent_k,
+                                    session=session,
+                                    load_old_model=True,
+                                    should_train=False,
+                                    parallel_predict=False)
+            models.append(p)
+        # for p in models[1:]:
+        #     p.restore_parameters()
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
+                            timestep_limit=T,
+                            f_critic=root_model.compute_critic,
+                            num_actors=num_actors,
+                            f_check_batch=root_model.check_batch_finished, )
+
+        return {"models": models, "memory": memory}
     f_create_params = pg_shared_params if len(full_tasks) == 1 else hrl_shared_params
 
     single_process_mode = True  # True if append_image else False
