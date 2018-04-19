@@ -46,10 +46,10 @@ class FlexibleHrlAgent(Agent):
 
     def update_meta_status(self, root_decision):
         self.current_policy_id = root_decision - 1 if root_decision != 0 else self.current_policy_id
-        self.sub_pol_act_t = 0 if root_decision != 0 else self.sub_pol_act_t + 1
+        self.sub_pol_act_t = 1 if root_decision != 0 else self.sub_pol_act_t + 1
 
     def wrap_meta_obs(self, observation):
-        return [*observation, self.current_policy_id, self.sub_pol_act_t, self.is_initial_step]
+        return [*observation, np.array([self.current_policy_id, self.sub_pol_act_t, self.is_initial_step])]
 
     def act(self, observation):
 
@@ -60,8 +60,9 @@ class FlexibleHrlAgent(Agent):
         wrapped_obs = self.wrap_meta_obs(observation)
 
         root_decision, root_model_info = self.root_policy.predict(wrapped_obs, pid=self.id)
-        self.memory.append_observation(wrapped_obs, pid=self.id)
-        self.memory.append_action(root_decision, root_model_info, pid=self.id)
+        # self.memory.append_observation(wrapped_obs, pid=self.id)
+        # self.memory.append_action(root_decision, root_model_info, pid=self.id)
+        self.memory.append_state(wrapped_obs, root_decision, root_model_info, self.id)
 
         self.update_meta_status(root_decision)
 
@@ -76,7 +77,7 @@ class FlexibleHrlAgent(Agent):
         self.time_count += 1
         if done:
             self.time_count = 0
-            self.sub_pol_act_t = 0
+            self.sub_pol_act_t = 1
 
         batch_ends = self.memory.incre_count_and_check_done()
 

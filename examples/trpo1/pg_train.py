@@ -293,7 +293,7 @@ def main():
             #     is_learning, global_t, pid,
             #     full_tasks=full_tasks
             # )
-            return HrlAgent(
+            return FlexibleHrlAgent(
                 observation_space, action_space,
                 shared_params, stats_rx, acts_tx,
                 is_learning, global_t, pid,
@@ -466,7 +466,8 @@ def main():
                                          load_old_model=args.load_model,
                                          should_train=not args.no_train,
                                          parallel_predict=False,
-                                         save_model=args.save_model)
+                                         save_model=args.save_model,
+                                         is_flexible_hrl_model=True)
         models = [root_model]
         for env_name, _ in list(full_tasks.items())[1:]:
             p = PolicyGradientModel(observation_space, action_space,
@@ -490,7 +491,8 @@ def main():
                             f_check_batch=root_model.check_batch_finished, )
 
         return {"models": models, "memory": memory}
-    f_create_params = pg_shared_params if len(full_tasks) == 1 else hrl_shared_params
+
+    f_create_params = pg_shared_params if len(full_tasks) == 1 else flexible_hrl_shared_params
 
     single_process_mode = True  # True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,

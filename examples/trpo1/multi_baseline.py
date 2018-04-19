@@ -15,11 +15,12 @@ class MultiBaseline(object):
     coeffs = None
 
     def __init__(self, session=None, main_scope="value_f",
-                 obs_space=None, n_imgfeat=1, activation=tf.nn.tanh,
+                 observation_space=None, n_imgfeat=1, activation=tf.nn.tanh,
                  max_iter=25, timestep_limit=1000, comb_method=aggregate_feature,
                  minibatch_size=256,
                  cnn_trainable=True,
-                 f_build_cnn=None):
+                 f_build_cnn=None,
+                 is_flexible_hrl_model=False):
         self.session = session
         self.max_iter = max_iter
         self.l2_k = 1e-4
@@ -31,9 +32,9 @@ class MultiBaseline(object):
         self.normalize = True
         with tf.variable_scope(main_scope):
             # add  timestep
-            self.state_input = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name="x")
+            self.state_input = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name="x")
             self.img_enabled = tf.placeholder(tf.float32, shape=(None,), name='img_enabled')
-            self.st_enabled = tf.placeholder(tf.float32, shape=(None,) + obs_space[0].shape, name='st_enabled')
+            self.st_enabled = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name='st_enabled')
             self.time_input = tf.placeholder(tf.float32, shape=(None, 1), name="t")
 
             self.sigma = tf.get_variable("scale_sigma", initializer=tf.constant(1.0), trainable=False)
@@ -46,7 +47,7 @@ class MultiBaseline(object):
             self.n_imgfeat = n_imgfeat
             if n_imgfeat != 0:
                 with tf.variable_scope("img") as this_scope:
-                    self.img_input = tf.placeholder(tf.uint8, shape=(None,) + obs_space[1].shape, name="img")
+                    self.img_input = tf.placeholder(tf.uint8, shape=(None,) + observation_space[1].shape, name="img")
                     self.img_float = tf.cast(self.img_input, tf.float32) / 255
                     assert f_build_cnn is not None
                     img_net_layers, cnn_weights, img_fc_weights = f_build_cnn(self.img_float)
@@ -66,6 +67,11 @@ class MultiBaseline(object):
                 self.cnn_weights = []
                 self.img_fc_weights = []
                 self.final_image_features = None
+            self.is_flexible_hrl_model = is_flexible_hrl_model
+            if self.is_flexible_hrl_model:
+                self.hrl_meta_input = tf.placeholder(tf.float32,
+                                                     shape=(None, *observation_space[2].shape),
+                                                     name="meta_hrl_state")
             with tf.variable_scope("nethigher") as this_scope:
                 if self.final_image_features is not None:
                     self.aggregated_feature = \
@@ -75,6 +81,9 @@ class MultiBaseline(object):
                 self.full_feature = tf.concat(
                     axis=1,
                     values=[self.aggregated_feature, self.time_input])
+                if self.is_flexible_hrl_model:
+                    self.full_feature = tf.concat(axis=1,
+                                                  values=[self.full_feature, self.hrl_meta_input])
 
                 hidden_sizes = (64, 64)
                 logging.info("critic hidden sizes: {}".format(hidden_sizes))
@@ -136,22 +145,8 @@ class MultiBaseline(object):
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
         logging.debug("vf:\n mse:{}".format(mse))
 
-    def fit(self, path_dict, update_mode="full", num_pass=1, pid=None):
-        returns = path_dict["returns"]
+    def fit(self, feed, update_mode="full", num_pass=1, pid=None):
 
-        obj = returns
-        state_mat = path_dict["state_input"]
-
-        times = path_dict["times"]
-        st_enabled = path_dict["st_enabled"]
-        img_enabled = path_dict["img_enabled"]
-        feed = {self.state_input: state_mat,
-                self.time_input: times, self.y: obj,
-                self.st_enabled: st_enabled, self.img_enabled: img_enabled}
-        if self.n_imgfeat != 0:
-            img_mat = path_dict["img_input"]
-            feed[self.img_input] = img_mat
-        batch_N = returns.shape[0]
         train_op = []
         if update_mode == "full":
             train_op = [self.train]
@@ -164,10 +159,11 @@ class MultiBaseline(object):
         if self.debug_mode and (pid is None or pid == 0):
             logging.debug("before vf optimization")
             self.print_loss(feed)
-        new_mu = obj.mean()
-        new_sigma = obj.std()
+        new_mu = feed[self.y].mean()
+        new_sigma = feed[self.y].std()
         self.session.run(self.scale_updates, feed_dict={self.new_mean: new_mu,
                                                         self.new_std: new_sigma})
+        batch_N = feed[self.y].shape[0]
 
         for n_pass in range(num_pass):
             training_inds = np.random.permutation(batch_N)
@@ -195,5 +191,7 @@ class MultiBaseline(object):
                     self.st_enabled: path["st_enabled"], self.img_enabled: path["img_enabled"]}
             if self.n_imgfeat != 0:
                 feed[self.img_input] = path["observation"][1]
+            if self.is_flexible_hrl_model:
+                feed[self.hrl_meta_input] = path["observation"][2]
             ret = self.session.run(self.net, feed_dict=feed)
             return np.reshape(ret, (ret.shape[0],))

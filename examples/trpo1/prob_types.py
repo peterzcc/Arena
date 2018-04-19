@@ -33,16 +33,103 @@ class ProbType(object):
         pass
 
 
+_EPSILON = 1e-6
+
+
+def categorical_crossentropy(output, labels, from_logits=False):
+    """Categorical crossentropy with integer targets.
+    # Arguments
+        output: A tensor resulting from a softmax
+            (unless `from_logits` is True, in which
+            case `output` is expected to be the logits).
+        target: An integer tensor.
+        from_logits: Boolean, whether `output` is the
+            result of a softmax, or is a tensor of logits.
+    # Returns
+        Output tensor.
+    """
+    # Note: tf.nn.softmax_cross_entropy_with_logits
+    # expects logits, Keras expects probabilities.
+    if not from_logits:
+        epsilon = tf.constant(_EPSILON, output.dtype.base_dtype)
+        output = tf.clip_by_value(output, epsilon, 1 - epsilon)
+        logits = tf.log(output)
+    else:
+        logits = None
+
+    # output_shape = output.get_shape()
+    # logits = tf.reshape(output, [-1, int(output_shape[-1])])
+    res = tf.nn.softmax_cross_entropy_with_logits(
+        labels=labels,
+        logits=logits)
+    # if len(output_shape) == 3:
+    #     # if our output includes timesteps we need to reshape
+    #     return tf.reshape(res, tf.shape(output)[:-1])
+    # else:
+    #     return res
+    return res
+
+
+INF = 1e6
+
+
+def logits_from_cond_categorical(logits, p, is_initial_step):
+    scaled_logits = logits - tf.reduce_logsumexp(logits, axis=1, keepdims=True)
+    # bool_is_initial = tf.not_equal(is_initial_step, 0)
+    continue_logit = (1.0 - is_initial_step) * p + is_initial_step * -INF
+    full_logits = tf.concat([continue_logit, scaled_logits], axis=1)
+    return full_logits
+
+
+class CategoricalWithProb(ProbType):
+    def __init__(self, num_cat):
+        self.n = num_cat
+
+    def create_dist_vars(self, probs, dtype=tf.float32):
+        old_probs = tf.placeholder(dtype,
+                                   shape=(None, self.n), name="old_probs")
+        old_dist_vars = dict(probs=old_probs)
+        dist_vars = dict(probs=probs)
+        sample = tf.distributions.Categorical(probs=probs).sample()
+        return dist_vars, old_dist_vars, sample, {}
+
+    def log_likelihood_sym(self, x_var, dist_info_vars):
+        one_hot_actions = tf.one_hot(x_var, self.n)
+        logp = -categorical_crossentropy(output=dist_info_vars["probs"], labels=one_hot_actions)
+        return logp
+
+    def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
+        old_p = old_dist_info_vars["probs"]
+        new_p = new_dist_info_vars["probs"]
+        old_dist = tf.distributions.Categorical(probs=old_p)
+        new_dist = tf.distributions.Categorical(probs=new_p)
+        kl = old_dist.kl_divergence(new_dist)
+        return kl
+
+    def entropy(self, dist_info):
+        dist = tf.distributions.Categorical(probs=dist_info["probs"])
+        return dist.entropy()
+
+    def sample(self, dist_info):
+        dist = tf.distributions.Categorical(probs=dist_info["probs"])
+        return dist.sample()
+
+    def kf_loglike(self, action_n, dist_vars, interm_vars):
+        return self.log_likelihood_sym(action_n, dist_vars)
+
+
 class Categorical(ProbType):
     def __init__(self, num_cat):
         self.n = num_cat
 
-    def create_dist_vars(self, last_layer, dtype=tf.float32):
+    def create_dist_vars(self, last_layer=None, logits=None, dtype=tf.float32):
         old_logits = tf.placeholder(dtype,
                                     shape=(None, self.n), name="old_logits")
-        logits = tf.layers.dense(last_layer, self.n,
-                                 kernel_initializer=tf.variance_scaling_initializer(
-                                     scale=1.0, mode="fan_avg", distribution="normal", dtype=dtype))
+        if logits is None:
+            assert last_layer is not None
+            logits = tf.layers.dense(last_layer, self.n,
+                                     kernel_initializer=tf.variance_scaling_initializer(
+                                         scale=1.0, mode="fan_avg", distribution="normal", dtype=dtype))
         old_dist_vars = dict(logits=old_logits)
         dist_vars = dict(logits=logits)
         sample = tf.distributions.Categorical(logits=logits).sample()

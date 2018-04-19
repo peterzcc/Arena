@@ -2,10 +2,10 @@ from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
-    aggregate_feature, select_st, explained_variance_batched
+    aggregate_feature, select_st, explained_variance_batched, tf_run_batched
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
-from prob_types import DiagonalGaussian, Categorical
+from prob_types import DiagonalGaussian, Categorical, CategoricalWithProb
 from network_models import MultiNetwork
 import numpy as np
 import random
@@ -54,7 +54,8 @@ class PolicyGradientModel(ModelWithCritic):
                  parallel_predict=True,
                  save_model=True,
                  loss_type="PPO",
-                 max_grad_norm=0.5
+                 max_grad_norm=None,
+                 is_flexible_hrl_model=False
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -94,6 +95,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.batch_size = None if self.f_batch_size is None else self.f_batch_size(0)
         self.f_target_kl = f_target_kl
         self.kl_history_length = kl_history_length
+        self.is_flexible_hrl_model = is_flexible_hrl_model
         if self.batch_mode == "timestep":
             self.batch_barrier = thd.Barrier(num_actors)
         else:
@@ -118,7 +120,7 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.name = name
 
-        self.critic = MultiBaseline(session=self.session, obs_space=self.ob_space,
+        self.critic = MultiBaseline(session=self.session, observation_space=self.ob_space,
                                     minibatch_size=minibatch_size,
                                     main_scope=name + "_critic",
                                     timestep_limit=timestep_limit,
@@ -126,11 +128,15 @@ class PolicyGradientModel(ModelWithCritic):
                                     n_imgfeat=self.n_imgfeat,
                                     comb_method=self.comb_method,
                                     cnn_trainable=cnn_trainable,
-                                    f_build_cnn=f_build_img_net)
+                                    f_build_cnn=f_build_img_net,
+                                    is_flexible_hrl_model=is_flexible_hrl_model)
         if hasattr(self.act_space, "low"):
             self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
         else:
-            self.distribution = Categorical(num_cat=self.act_space.n)
+            if self.is_flexible_hrl_model:
+                self.distribution = Categorical(num_cat=self.act_space.n)
+            else:
+                self.distribution = Categorical(num_cat=self.act_space.n)
 
         self.theta = None
         # self.info_shape = dict(mean=self.act_space.shape,
@@ -149,7 +155,8 @@ class PolicyGradientModel(ModelWithCritic):
                                    distibution=self.distribution,
                                    session=self.session,
                                    cnn_trainable=cnn_trainable,
-                                   f_build_cnn=f_build_img_net
+                                   f_build_cnn=f_build_img_net,
+                                   is_flexible_hrl_model=is_flexible_hrl_model
                                    )
         self.executer_net = self.policy
 
@@ -228,15 +235,24 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_coord = tf.train.Coordinator()
                 self.fit_policy = self.fit_acktr
             elif self.mode == "PG":
-                self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.0001)
-                self.pg_loss = (
-                               self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss) + self.ent_loss
-                # g = gradients_memory(self.pg_loss,self.policy.var_list)
-                # self.pg_update = self.pg_optim.apply_gradients([(tf.zeros(v.shape), v) for v in self.policy.var_list])
-                grads = tf.gradients(self.pg_loss, self.policy.var_list)
-                if max_grad_norm is not None:
-                    grads,g_norm = tf.clip_by_global_norm(grads, max_grad_norm)
-                self.pg_update = self.pg_optim.apply_gradients(list(zip(grads, self.policy.var_list)))
+                with tf.variable_scope("pg") as scope:
+                    self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.0001)
+                    self.pg_loss = (
+                                       self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss) + self.ent_loss
+
+                    self.p_grads = tf.gradients(self.pg_loss, self.policy.var_list)
+
+                    self.p_grads_sum = [tf.Variable(tf.zeros(g.shape), dtype=g.dtype, trainable=False)
+                                        for g in self.p_grads]
+                    self.p_accum_reset = [tf.assign(p, tf.zeros(p.shape, dtype=p.dtype)) for p in self.p_grads_sum]
+                    self.p_accum_op = [tf.assign_add(p, g) for (p, g) in zip(self.p_grads_sum, self.p_grads)]
+
+                    if max_grad_norm is not None:
+                        self.p_final_grads, g_norm = tf.clip_by_global_norm(self.p_grads_sum, max_grad_norm)
+                    else:
+                        self.p_final_grads = self.p_grads_sum
+                    p_grads_var = [(g, v) for g, v in zip(self.p_grads_sum, self.policy.var_list)]
+                    self.p_apply_grad = self.pg_optim.apply_gradients(p_grads_var)
 
                 self.fit_policy = self.fit_pg
             else:
@@ -291,6 +307,7 @@ class PolicyGradientModel(ModelWithCritic):
         if not self.has_loaded_model:
             self.restore_parameters()
         if self.parallel_predict:
+            obs = None
             if self.num_actors == 1:
                 if len(observation[0].shape) == len(self.ob_space[0].shape):
                     obs = [np.expand_dims(observation[0], 0)]
@@ -298,6 +315,8 @@ class PolicyGradientModel(ModelWithCritic):
                     obs = observation
                 if self.n_imgfeat != 0:
                     obs.append(np.expand_dims(observation[1], 0))
+                if self.is_flexible_hrl_model:
+                    obs.append(np.expand_dims(observation[2], 0))
                 st_enabled, img_enabled = self.get_state_activation(self.n_update)
                 self.exp_st_enabled = np.expand_dims(st_enabled, 0)
                 self.exp_img_enabled = img_enabled
@@ -308,6 +327,8 @@ class PolicyGradientModel(ModelWithCritic):
                     obs = [np.stack([ob[0] for ob in self.obs_list])]
                     if self.n_imgfeat != 0:
                         obs.append(np.stack([o[1] for o in self.obs_list]))
+                    if self.is_flexible_hrl_model:
+                        obs.append(np.stack([o[2] for o in self.obs_list]))
                     st_enabled, img_enabled = self.get_state_activation(self.n_update)
                     st_enabled = np.tile(st_enabled, (self.num_actors, 1))
                     img_enabled = np.repeat(img_enabled, self.num_actors, axis=0)
@@ -324,6 +345,9 @@ class PolicyGradientModel(ModelWithCritic):
                 if self.n_imgfeat != 0:
                     feed[self.critic.img_input] = obs[1]
                     feed[self.executer_net.img_input] = obs[1]
+                if self.is_flexible_hrl_model:
+                    feed[self.critic.hrl_meta_input] = obs[2]
+                    feed[self.executer_net.hrl_meta_input] = obs[2]
                 self.policy_lock.acquire_read()
                 # self.dist_infos = \
                 #     self.session.run(self.executer_net.new_dist_info_vars,
@@ -342,8 +366,7 @@ class PolicyGradientModel(ModelWithCritic):
                 obs = [np.expand_dims(observation[0], 0)]
             else:
                 obs = observation
-            if self.n_imgfeat != 0:
-                obs.append(np.expand_dims(observation[1], 0))
+
             st_enabled, img_enabled = self.get_state_activation(self.n_update)
             self.exp_st_enabled = np.expand_dims(st_enabled, 0)
             self.exp_img_enabled = img_enabled
@@ -355,8 +378,13 @@ class PolicyGradientModel(ModelWithCritic):
                     self.executer_net.img_enabled: self.exp_img_enabled,
                     }
             if self.n_imgfeat != 0:
-                feed[self.critic.img_input] = obs[1]
-                feed[self.executer_net.img_input] = obs[1]
+                img_input = np.expand_dims(observation[1], 0)
+                feed[self.critic.img_input] = img_input
+                feed[self.executer_net.img_input] = img_input
+            if self.is_flexible_hrl_model:
+                meta_input = np.expand_dims(observation[2], 0)
+                feed[self.policy.hrl_meta_input] = meta_input
+                feed[self.critic.hrl_meta_input] = meta_input
 
             self.policy_lock.acquire_read()
             self.dist_infos, self.stored_actions = self.session.run(
@@ -397,58 +425,34 @@ class PolicyGradientModel(ModelWithCritic):
                 self.policy.img_enabled: img_enabled,
                 }
 
-        path_dict = {"state_input": state_input,
-                     "times": times,
-                     "returns": returns,
-                     "img_enabled": img_enabled,
-                     "st_enabled": st_enabled,
-                     "reward": rewards}
-        img_input = None
+        feed_critic = {self.critic.state_input: state_input,
+                       self.critic.time_input: times, self.critic.y: returns,
+                       self.critic.st_enabled: st_enabled, self.critic.img_enabled: img_enabled}
+
         if self.n_imgfeat != 0:
             img_input = concat([path["observation"][1] for path in paths])
             feed[self.policy.img_input] = img_input
             feed[self.critic.img_input] = img_input
-            path_dict["img_input"] = img_input
+            feed_critic[self.critic.img_input] = img_input
+        if self.is_flexible_hrl_model:
+            hrl_meta_input = concat([path["observation"][2] for path in paths])
+            feed[self.policy.hrl_meta_input] = hrl_meta_input
+            feed[self.critic.hrl_meta_input] = hrl_meta_input
+            feed_critic[self.critic.hrl_meta_input] = hrl_meta_input
         # action_dist_means_n = concat([path["mean"] for path in aggre_paths])
         # action_dist_logstds_n = concat([path["log_std"] for path in aggre_paths])
         dist_vars = {}
         for k in self.policy.dist_vars.keys():
             dist_vars[self.policy.old_vars[k]] = concat([path[k] for path in paths])
         feed.update({**dist_vars})
+        # if self.is_flexible_hrl_model:
+        #     is_root_decision = action_n != 0
+        #     feed = {k: v[is_root_decision] for (k,v) in feed.items()}
+        #     path_dict = {k: v[is_root_decision] for (k,v) in path_dict.items()}
 
-        hist_feed = {}
-        # TODO: modify this
-        # if self.kl_history_length > 1:
-        #     if len(self.hist_obs0) == self.kl_history_length:
-        #         del self.hist_obs0[0]
-        #         del self.hist_img_en[0]
-        #         del self.hist_st_en[0]
-        #         if self.n_imgfeat != 0:
-        #             del self.hist_obs1[0]
-        #     self.hist_obs0.append(state_input)
-        #     self.hist_st_en.append(st_enabled)
-        #     self.hist_img_en.append(img_enabled)
-        #     if self.n_imgfeat != 0:
-        #         self.hist_obs1.append(img_input)
-        #     hist_feed = {self.net.state_input: np.concatenate(self.hist_obs0),
-        #                  self.net.st_enabled: np.concatenate(self.hist_st_en),
-        #                  self.net.img_enabled: np.concatenate(self.hist_img_en),
-        #                  }
-        #     if self.n_imgfeat != 0:
-        #         hist_feed[self.net.img_input] = np.concatenate(self.hist_obs1)
-        #
-        #     action_dist_means_n, action_dist_logstds = \
-        #         self.session.run([self.net.mean_n, self.net.action_dist_log_stds_n],
-        #                          hist_feed)
-        #     action_dist_logstds_n = np.tile(action_dist_logstds, (hist_feed[self.net.st_enabled].shape[0], 1))
-        #     hist_feed.update(
-        #         {
-        #             self.net.old_mean_n: action_dist_means_n,
-        #             self.net.old_logstd_n: action_dist_logstds_n,
-        #         }
-        #     )
+        extra = {"rewards": rewards}
 
-        return feed, path_dict, hist_feed
+        return feed, feed_critic, extra
 
     def compute_critic(self, states):
         self.critic_lock.acquire_read()
@@ -577,14 +581,18 @@ class PolicyGradientModel(ModelWithCritic):
 
     def fit_pg(self, feed, num_samples, pid=None):
         if self.debug:
-            logging.debug("\nbatch_size: {}\n".format(self.batch_size))
+            logging.debug("\nbatch_size: {}\n".format(num_samples))
             surr_o, kl_o, ent_o = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
                                               num_samples,
                                               self.session,
                                               minibatch_size=self.minibatch_size,
                                               extra_input={})
             logging.debug("\nold ppo_surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
-        _ = self.session.run(self.pg_update, feed_dict=feed)
+        # _ = self.session.run(self.pg_update, feed_dict=feed)
+        _ = tf_run_batched(self.p_accum_op, self.p_accum_reset, feed, num_samples, self.session,
+                           minibatch_size=self.minibatch_size)
+        _ = self.session.run(self.p_apply_grad,
+                             feed_dict={})
         if self.debug:
             surr_new, kl_new, ent_new = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
                                                     num_samples,
@@ -595,15 +603,15 @@ class PolicyGradientModel(ModelWithCritic):
     def train(self, paths, pid=None):
         if not self.should_train:
             return
-        feed, path_dict, hist_feed = self.concat_paths(paths)
+        feed, feed_critic, extra_data = self.concat_paths(paths)
 
         batch_size = feed[self.policy.action_n].shape[0]
-        mean_t_reward = path_dict["reward"].mean()
+        mean_t_reward = extra_data["rewards"].mean()
         self.handle_model_saving(mean_t_reward)
 
         self.critic_lock.acquire_write()
         if self.should_update_critic:
-            self.critic.fit(path_dict, update_mode="full", num_pass=1, pid=pid)
+            self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
         self.critic_lock.release_write()
 
         # if self.debug:

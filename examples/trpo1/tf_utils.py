@@ -201,6 +201,19 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
     return x, 0
 
 
+def tf_run_batched(accum_op, reset_op, feed, N, session, minibatch_size=64, extra_input={}):
+    assert N > 0
+    session.run([reset_op], feed_dict={})
+
+    for start in range(0, N, minibatch_size):
+        end = min(start + minibatch_size, N)
+        this_size = end - start
+        assert this_size > 0
+        slc = range(start, end)
+        this_feed = {k: v[slc] for k, v in list(feed.items())}
+        session.run(accum_op, feed_dict={**this_feed, **extra_input})
+
+
 def run_batched(func, feed, N, session, minibatch_size=64, extra_input={}, average=True):
     assert N > 0
     result = None

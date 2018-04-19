@@ -116,28 +116,29 @@ class DictMemory(object):
                    ))
             result = {"paths": paths, "time_count": time_count}
         else:
-            time_count = self.time_counts[pid]
-            episode_count = self.pid_n_episodes[pid]
-            run_end_time = time.time()
-            paths = self.extract_all(pid)
-            extract_end_time = time.time()
-            run_time = (run_end_time - self.run_start_times[pid]) / time_count
-            extract_time = (extract_end_time - run_end_time) / time_count
-            self.run_start_times[pid] = 0
-            with self.paths_lock:
-                self.num_epoch += 1
-            if pid == 0:
-                logging.info("Name: {}".format(Experiment.EXP_NAME))
-                logging.info(
-                    'Epoch:%d \nt: %d\nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
-                    % (self.num_epoch,
-                       self.global_t,
-                       time_count,
-                       episode_count,
-                       run_time,
-                       extract_time
-                       ))
-            result = {"paths": paths, "time_count": time_count}
+            result = {}
+            # time_count = self.time_counts[pid]
+            # episode_count = self.pid_n_episodes[pid]
+            # run_end_time = time.time()
+            # paths = self.extract_all(pid)
+            # extract_end_time = time.time()
+            # run_time = (run_end_time - self.run_start_times[pid]) / time_count
+            # extract_time = (extract_end_time - run_end_time) / time_count
+            # self.run_start_times[pid] = 0
+            # with self.paths_lock:
+            #     self.num_epoch += 1
+            # if pid == 0:
+            #     logging.info("Name: {}".format(Experiment.EXP_NAME))
+            #     logging.info(
+            #         'Epoch:%d \nt: %d\nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
+            #         % (self.num_epoch,
+            #            self.global_t,
+            #            time_count,
+            #            episode_count,
+            #            run_time,
+            #            extract_time
+            #            ))
+            # result = {"paths": paths, "time_count": time_count}
 
         return result
 
@@ -178,13 +179,14 @@ class DictMemory(object):
     def extract_all(self, pid=None):
         paths = self.extract_paths(pid)
         for path in paths:
-            if len(path["observation"][0]) == 2:
-                path["observation"] = \
-                    [np.array([o[0] for o in path["observation"]]),
-                     np.array([o[1] for o in path["observation"]])]
-            else:
-                path["observation"] = \
-                    [np.array([o[0] for o in path["observation"]])]
+            path["observation"] = \
+                [np.array([o[i] for o in path["observation"]]) for i in range(len(path["observation"][0]))]
+            # if len(path["observation"][0]) >= 2:
+            #     path["observation"] = \
+            #         [np.array([o[i] for o in path["observation"]]) for i in range(len(path["observation"][0]))]
+            # else:
+            #     path["observation"] = \
+            #         [np.array([o[0] for o in path["observation"]])]
         if "pos" in paths[0]:
             for path in paths:
                 path["reward"] = np.array(path["reward"])

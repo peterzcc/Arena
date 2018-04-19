@@ -73,12 +73,12 @@ python3.6 pg_train.py --nactor 8 --batch-size 8000 --kl 0.0002 --env custant --n
 
 PYTHONPATH="/mnt/m2/mzcc/Arena/examples/trpo1" python3.6 ./run_mujoco.py --env Ant-v1
 
-python3.6 pg_train.py --nactor 20 --batch-size 3 --kl 0.00003 --env movetest --nfeat 0 --load-model 0 --batch-mode episode --save-model 0
 
+python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0
 
-CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env reachc1 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
+python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --save-model 0
 
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env reachc1 --rl-method PG --nactor 20 --batch-size 800 --withimg 1 --nfeat 30 --load-model 0
+CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move1 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
 
 
 echo 'deb http://deb.torproject.org/torproject.org jessie main'>> /etc/apt/sources.list.d/tor.list
