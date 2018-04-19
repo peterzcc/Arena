@@ -445,10 +445,9 @@ class PolicyGradientModel(ModelWithCritic):
         for k in self.policy.dist_vars.keys():
             dist_vars[self.policy.old_vars[k]] = concat([path[k] for path in paths])
         feed.update({**dist_vars})
-        # if self.is_flexible_hrl_model:
-        #     is_root_decision = action_n != 0
-        #     feed = {k: v[is_root_decision] for (k,v) in feed.items()}
-        #     path_dict = {k: v[is_root_decision] for (k,v) in path_dict.items()}
+        if self.is_flexible_hrl_model:
+            is_root_decision = action_n != 0
+            feed = {k: v[is_root_decision] for (k, v) in feed.items()}
 
         extra = {"rewards": rewards}
 
