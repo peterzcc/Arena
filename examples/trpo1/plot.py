@@ -15,9 +15,10 @@ def main():
 
     parser.add_argument('--n', '-n', required=False, type=int, default=None,
                         help='length')
+    parser.add_argument('--dataname', default="Reward", type=str, help='name')
     args = parser.parse_args()
     data = pd.read_csv('train_log.csv')
-    data["rs"] = data['Reward'].rolling(args.width, center=False, min_periods=args.width).mean()
+    data["rs"] = data[args.dataname].rolling(args.width, center=False, min_periods=args.width).mean()
     x = (1.0 / args.batch) * data['t'].values / 1000
     if args.n is not None:
         plt.plot(x[:args.n], data["rs"].values[:args.n], linewidth=0.5)
