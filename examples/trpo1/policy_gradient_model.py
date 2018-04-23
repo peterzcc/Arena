@@ -40,7 +40,7 @@ class PolicyGradientModel(ModelWithCritic):
                  timestep_limit=1000,
                  n_imgfeat=0,
                  f_target_kl=None,
-                 minibatch_size=256,
+                 minibatch_size=128,
                  mode="ACKTR",
                  surr_loss="PPO",
                  num_actors=1,
