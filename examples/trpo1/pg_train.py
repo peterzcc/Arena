@@ -21,9 +21,12 @@ import sys
 import os
 from collections import OrderedDict
 from tf_utils import aggregate_feature, concat_feature, concat_without_task, str2bool
+import subprocess
 BATH_SIZE = 10000
 
 
+def get_git_revision_short_hash():
+    return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
 
 def linear_moving_value(x1, x2, t1, t2, t):
     if t < t1:
@@ -120,8 +123,8 @@ def main():
     parser.add_argument('--env', default="ant", type=str, help='env')
     parser.add_argument('--loss', default="PPO", type=str, help='loss')
     parser.add_argument('--rl-method', default="ACKTR", type=str, help='rl method')
-    parser.add_argument('--nae', required=False, type=int, default=0,
-                        help='num ae train')
+    parser.add_argument('--npret', required=False, type=int, default=500,
+                        help='num pretrain')
     parser.add_argument('--nfeat', required=False, type=int, default=0,
                         help='num img feat')
     parser.add_argument('--save-model', required=False, type=int, default=10,
@@ -215,11 +218,14 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=hrl_8d[args.env],
                                   reset_goal_prob=0, )
-        elif args.env == "dynamic2d":
+        elif args.env in hrl_changing_goal:
             with_state_task = False
+
+            subtask_dirs = np.stack([v() for (k, v) in list(hrl_changing_goal.items())[1:]], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                                  f_gen_obj=random_direction,
-                                  reset_goal_prob=0.01, )
+                                  f_gen_obj=hrl_changing_goal[args.env],
+                                  reset_goal_prob=0.01,
+                                  subtask_dirs=subtask_dirs)
         elif args.env == "reach_test":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=random_direction,
@@ -366,7 +372,7 @@ def main():
                                     save_model=args.save_model)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
-                            f_critic=model.compute_critic,
+                            f_critic_root=model.compute_critic,
                             num_actors=num_actors,
                             f_check_batch=model.check_batch_finished)
         return {"models": [model], "memory": memory}
@@ -424,7 +430,7 @@ def main():
         #     p.restore_parameters()
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
-                            f_critic=root_model.compute_critic,
+                            f_critic_root=root_model.compute_critic,
                             num_actors=num_actors,
                             f_check_batch=root_model.check_batch_finished, )
 
@@ -449,6 +455,12 @@ def main():
                                    Box(np.array([0, 0, 0]),
                                        np.array([root_action_space.n, np.inf, 1.0])
                                        )]
+
+        def f_train_root(n):
+            return n > args.npret
+
+        def f_train_leaf(n):
+            return not f_train_root(n)
         root_model = PolicyGradientModel(root_obseravation_space, root_action_space,
                                          name=args.env,
                                          timestep_limit=T,
@@ -465,6 +477,7 @@ def main():
                                          session=session,
                                          load_old_model=args.load_model,
                                          should_train=not args.no_train,
+                                         f_train_this_epoch=f_train_root,
                                          parallel_predict=False,
                                          save_model=args.save_model,
                                          is_flexible_hrl_model=True)
@@ -479,14 +492,31 @@ def main():
                                     ent_k=args.ent_k,
                                     session=session,
                                     load_old_model=True,
-                                    should_train=False,
-                                    parallel_predict=False)
+                                    should_train=True,
+                                    f_train_this_epoch=f_train_leaf,
+                                    parallel_predict=False,
+                                    f_batch_size=const_batch_size,
+                                    batch_mode=args.batch_mode,
+                                    f_target_kl=const_target_kl,
+                                    mode=args.rl_method,
+                                    kl_history_length=1,
+                                    surr_loss=args.loss,
+                                    save_model=args.save_model,
+                                    is_flexible_hrl_model=False
+                                    )
             models.append(p)
         # for p in models[1:]:
         #     p.restore_parameters()
+        # memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
+        #                     timestep_limit=T,
+        #                     f_critic=root_model.compute_critic,
+        #                     num_actors=num_actors,
+        #                     f_check_batch=root_model.check_batch_finished, )
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
-                            f_critic=root_model.compute_critic,
+                            f_critic_root=root_model.compute_critic,
+                            f_critic_leafs=[m.compute_critic for m in models[1:]],
+                            num_leafs=len(models) - 1,
                             num_actors=num_actors,
                             f_check_batch=root_model.check_batch_finished, )
 
@@ -499,6 +529,7 @@ def main():
                             f_create_params, single_process_mode=single_process_mode, render_option=args.render,
                             log_episodes=True)
     logging.info("run arges: {}".format(args))
+    logging.info("version: {}".format(get_git_revision_short_hash()))
 
     experiment.run_parallelly(num_actors, num_epoch, steps_per_epoch,
                               with_testing_length=test_length)

@@ -79,7 +79,8 @@ class ComplexWrapper(object):
         #     self.observation_space += [self.img_space]
         self.max_episode_length = max_episode_length
         self.info_sample = {"terminated": False}
-
+        if hasattr(self.env, "info_sample"):
+            self.info_sample.update(self.env.info_sample)
 
 
 
@@ -158,22 +159,22 @@ class ComplexWrapper(object):
     def step(self, a):
         final_done = False
         final_reward = 0
-        info_terminated = {"terminated": False}
 
-        final_observation, reward, done, info = self.env_step(a)
+        final_observation, reward, done, env_info = self.env_step(a)
+        full_info = {"terminated": False, **env_info}
         final_done = final_done or done
         final_reward += reward
         if done:
-            info_terminated.update({"terminated": True})
+            full_info.update({"terminated": True})
 
         self.episode_steps += 1
 
 
         if self.episode_steps >= self.max_episode_length:
-            info_terminated.update({"terminated": True})  # let the clipped episode be terminated
+            full_info.update({"terminated": True})  # let the clipped episode be terminated
             final_done = True
 
-        return final_observation, final_reward, final_done, info_terminated
+        return final_observation, final_reward, final_done, full_info
 
     def close(self):
         self.env.close()

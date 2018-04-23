@@ -1,4 +1,3 @@
-from arena.memory import AcMemory
 from arena.agents import Agent
 # from trpo_model import TrpoModel
 from policy_gradient_model import PolicyGradientModel
@@ -15,6 +14,7 @@ class FlexibleHrlAgent(Agent):
                  shared_params, stats_rx, acts_tx,
                  is_learning, global_t, pid=0,
                  full_tasks=[],
+                 should_train_subpolicy=lambda i: False,
                  ):
         Agent.__init__(
             self,
@@ -62,17 +62,20 @@ class FlexibleHrlAgent(Agent):
         root_decision, root_model_info = self.root_policy.predict(wrapped_obs, pid=self.id)
         # self.memory.append_observation(wrapped_obs, pid=self.id)
         # self.memory.append_action(root_decision, root_model_info, pid=self.id)
-        self.memory.append_state(wrapped_obs, root_decision, root_model_info, self.id)
 
+        action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
         self.update_meta_status(root_decision)
+        self.memory.append_state(wrapped_obs, root_decision, root_model_info, self.id,
+                                 leaf_id=self.current_policy_id, leaf_action=action, leaf_model_info=leaf_model_info,
+                                 curr_time_step=self.time_count)
 
-        action, _ = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
+
 
         return action
 
     def receive_feedback(self, reward, done, info={}):
 
-        self.memory.append_feedback(reward, pid=self.id)
+        self.memory.append_feedback(reward, pid=self.id, info=info)
 
         self.time_count += 1
         if done:
@@ -86,16 +89,23 @@ class FlexibleHrlAgent(Agent):
             try:
                 terminated = np.asscalar(info["terminated"])
             except KeyError:
-                logging.debug("warning: no info about real termination ")
+                logging.warning(": no info about real termination ")
                 terminated = done
             self.memory.transfer_single_path(terminated, self.id)
         self.root_policy.batch_ends[self.id] = batch_ends
         if batch_ends:
             self.root_policy.batch_barrier.wait()
             if self.id == 0:
-                extracted_result = self.memory.profile_extract_all()
+                extracted_result = self.memory.profile_extract_all(with_subtasks=True)
                 train_before = time.time()
                 self.root_policy.train(extracted_result["paths"])
+
+                for p, train_paths in zip(self.sub_policies, extracted_result["leaf_paths"]):
+                    if train_paths is not None:
+                        p.train(train_paths)
+                    else:
+                        logging.debug("No training data for {}".format(p.name))
+
                 train_after = time.time()
                 train_time = (train_after - train_before) / extracted_result["time_count"]
                 fps = 1.0 / train_time
@@ -108,3 +118,4 @@ class FlexibleHrlAgent(Agent):
                         res_ram
                     ))
             self.root_policy.batch_barrier.wait()
+            self.num_epoch += 1

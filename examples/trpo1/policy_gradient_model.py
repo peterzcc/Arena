@@ -17,6 +17,7 @@ from cnn import ConvAutoencorder, cnn_network, ConvFcAutoencorder
 # from baselines import common
 # from baselines.common import tf_util as U
 from baselines.acktr import kfac
+from arena.experiment import Experiment
 
 concat = np.concatenate
 seed = 1
@@ -51,6 +52,7 @@ class PolicyGradientModel(ModelWithCritic):
                  comb_method=aggregate_feature,
                  load_old_model=False,
                  should_train=True,
+                 f_train_this_epoch=lambda x: True,
                  parallel_predict=True,
                  save_model=True,
                  loss_type="PPO",
@@ -236,7 +238,7 @@ class PolicyGradientModel(ModelWithCritic):
                 self.fit_policy = self.fit_acktr
             elif self.mode == "PG":
                 with tf.variable_scope("pg") as scope:
-                    self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.0001)
+                    self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.001)
                     self.pg_loss = (
                                        self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss) + self.ent_loss
 
@@ -270,6 +272,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.should_update_critic = True
         self.should_update_policy = True
         self.should_train = should_train
+        self.f_train_this_epoch = f_train_this_epoch
         self.debug = True
         self.recompute_old_dist = False
         self.session.run(tf.global_variables_initializer())
@@ -277,7 +280,8 @@ class PolicyGradientModel(ModelWithCritic):
             for qr in [self.k_q_runner]:
                 if (qr != None):
                     self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
-        self.model_path = "./models/" + self.name
+        self.model_load_path = "./models/" + self.name
+        self.model_save_path = "./" + Experiment.EXP_NAME + "/" + self.name
         self.full_model_saver = tf.train.Saver(var_list=[*self.critic.var_list, *self.policy.var_list])
         self.has_loaded_model = False
         self.load_old_model = load_old_model
@@ -299,8 +303,8 @@ class PolicyGradientModel(ModelWithCritic):
     def restore_parameters(self):
         if not self.has_loaded_model:
             if self.load_old_model:
-                logging.debug("Loading {}".format(self.model_path))
-                self.full_model_saver.restore(self.session, self.model_path)
+                logging.debug("Loading {}".format(self.model_load_path))
+                self.full_model_saver.restore(self.session, self.model_load_path)
                 self.has_loaded_model = True
 
     def predict(self, observation, pid=0):
@@ -406,15 +410,18 @@ class PolicyGradientModel(ModelWithCritic):
         return action, agent_info
 
     def concat_paths(self, paths):
-        state_input = concat([path["observation"][0] for path in paths])
+        state_input = paths["observation"][0]  # concat([path["observation"][0] for path in paths])
 
-        times = concat([path["times"] for path in paths], axis=0)
-        returns = concat([path["return"] for path in paths])
-        img_enabled = concat([path["img_enabled"] for path in paths])
-        st_enabled = concat([path["st_enabled"] for path in paths])
-        action_n = concat([path["action"] for path in paths])
-        advant_n = concat([path["advantage"] for path in paths])
-        rewards = concat([path["reward"] for path in paths])
+        times = paths["times"]
+        returns = paths["return"]  # concat([path["return"] for path in paths])
+        img_enabled = paths["img_enabled"]  # concat([path["img_enabled"] for path in paths])
+        st_enabled = paths["st_enabled"]  # concat([path["st_enabled"] for path in paths])
+        action_n = paths["action"]
+        advant_n = paths["advantage"]
+        rewards = paths["reward"]
+        dist_vars = {}
+        for k in self.policy.dist_vars.keys():
+            dist_vars[self.policy.old_vars[k]] = paths[k]  # concat([path[k] for path in paths])
 
         feed = {self.policy.state_input: state_input,
                 self.policy.advant: advant_n,
@@ -430,20 +437,18 @@ class PolicyGradientModel(ModelWithCritic):
                        self.critic.st_enabled: st_enabled, self.critic.img_enabled: img_enabled}
 
         if self.n_imgfeat != 0:
-            img_input = concat([path["observation"][1] for path in paths])
+            img_input = paths["observation"][1]  # concat([path["observation"][1] for path in paths])
             feed[self.policy.img_input] = img_input
             feed[self.critic.img_input] = img_input
             feed_critic[self.critic.img_input] = img_input
         if self.is_flexible_hrl_model:
-            hrl_meta_input = concat([path["observation"][2] for path in paths])
+            hrl_meta_input = paths["observation"][2]  #concat([path["observation"][2] for path in paths])
             feed[self.policy.hrl_meta_input] = hrl_meta_input
             feed[self.critic.hrl_meta_input] = hrl_meta_input
             feed_critic[self.critic.hrl_meta_input] = hrl_meta_input
         # action_dist_means_n = concat([path["mean"] for path in aggre_paths])
         # action_dist_logstds_n = concat([path["log_std"] for path in aggre_paths])
-        dist_vars = {}
-        for k in self.policy.dist_vars.keys():
-            dist_vars[self.policy.old_vars[k]] = concat([path[k] for path in paths])
+
         feed.update({**dist_vars})
         if self.is_flexible_hrl_model:
             is_root_decision = action_n != 0
@@ -476,8 +481,8 @@ class PolicyGradientModel(ModelWithCritic):
         if self.save_model > 0 and self.n_update > self.last_save + self.save_model:
             if mean_t_reward > self.best_mean_reward:
                 self.best_mean_reward = mean_t_reward
-                logging.debug("Saving {} with averew/step: {}".format(self.model_path, self.best_mean_reward))
-                self.full_model_saver.save(self.session, self.model_path, write_state=False)
+                logging.debug("Saving {} with averew/step: {}".format(self.model_save_path, self.best_mean_reward))
+                self.full_model_saver.save(self.session, self.model_save_path, write_state=False)
                 self.last_save = self.n_update
 
     def fit_adakl(self, feed, num_samples, pid=None):
@@ -600,33 +605,32 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
     def train(self, paths, pid=None):
-        if not self.should_train:
-            return
-        feed, feed_critic, extra_data = self.concat_paths(paths)
+        if self.should_train and self.f_train_this_epoch(self.n_update):
+            logging.debug("-------------------------------------------")
+            logging.debug("training model: {}".format(self.name))
+            feed, feed_critic, extra_data = self.concat_paths(paths)
 
-        batch_size = feed[self.policy.action_n].shape[0]
-        mean_t_reward = extra_data["rewards"].mean()
-        self.handle_model_saving(mean_t_reward)
+            batch_size = feed[self.policy.action_n].shape[0]
+            mean_t_reward = extra_data["rewards"].mean()
+            logging.info("mean_t reward for {}:\t{}".format(self.name, mean_t_reward))
+            self.handle_model_saving(mean_t_reward)
 
-        self.critic_lock.acquire_write()
-        if self.should_update_critic:
-            self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
-        self.critic_lock.release_write()
+            self.critic_lock.acquire_write()
+            if self.should_update_critic:
+                self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
+            self.critic_lock.release_write()
 
-        # if self.debug:
-        #     advant_n = feed[self.policy.advant]
-        #     # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
-        #     # action_dist_logstds_n = feed[self.net.dist_vars["logstd"]]
-        #     # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
-        #     if hasattr(self.act_space, "low"):
-        #         logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
-        #         # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
-        if not self.should_update_policy:
-            return None, None
-        self.policy_lock.acquire_write()
-        if self.should_update_policy:
-            self.fit_policy(feed, batch_size, pid=pid)
+            # if self.debug:
+            #     advant_n = feed[self.policy.advant]
+            #     # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
+            #     # action_dist_logstds_n = feed[self.net.dist_vars["logstd"]]
+            #     # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
+            #     if hasattr(self.act_space, "low"):
+            #         logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
+            #         # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
+            if self.should_update_policy:
+                self.policy_lock.acquire_write()
+                if self.should_update_policy:
+                    self.fit_policy(feed, batch_size, pid=pid)
+                self.policy_lock.release_write()
         self.increment_n_update()
-        self.policy_lock.release_write()
-
-

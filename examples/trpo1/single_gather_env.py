@@ -318,22 +318,32 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             freward_scale=1.0,
             catch_range=0.5,
             obj_dist=1.25,
+            subtask_dirs=None,
             *args, **kwargs
     ):
         self.n_apples = 1
         self.n_bombs = 0
         self.activity_range = activity_range
         self.f_gen_obj = f_gen_obj
-        self.dir = None
+        # self.dir = None
         self.objects = []
         self.with_state_task = with_state_task
         self.use_sparse_reward = use_sparse_reward
         self.fix_goal = use_sparse_reward
         self.reset_goal_prob = reset_goal_prob
-        self.freward_scale = freward_scale
+        self.forward_scale = freward_scale
         self.catch_range = catch_range
         self.obj_dist = obj_dist
-
+        self.subtasks_dirs = subtask_dirs
+        if subtask_dirs is None:
+            self.dirs = np.array([0, 0])
+            self.info_sample = {}
+        else:
+            self.dirs = np.concatenate([np.array([0, 0])[np.newaxis, :], self.subtasks_dirs], axis=0)
+            self.info_sample = {"subrewards": np.zeros(self.subtasks_dirs.shape[0], np.float32)}
+        self.pos_t = None
+        self.pos_t_prime = None
+        self.rot_angle = None
         self._reset_objects()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
         utils.EzPickle.__init__(self)
@@ -344,23 +354,34 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return self._get_obs()
 
     def _reset_objects(self):
-        self.dir = self.f_gen_obj()
-        self.objects = [np.concatenate([self.obj_dist * self.dir, (0,)])]
+        self.dirs[0] = self.f_gen_obj()
+        self.objects = [np.concatenate([self.obj_dist * self.dirs[0], (0,)])]
 
     def _get_obs(self):
         # return sensor data along with data about itself
         self_obs = self._get_ant_obs()
         return np.concatenate([self_obs, ])
 
+    def compute_cont_reward(self, a, pos_t_prime, pos_t, target_dirs, cfrc_ext):
+        fw_dist = np.dot(target_dirs, pos_t_prime[0:2] - pos_t[0:2])
+        forward_reward = fw_dist / self.dt
+        ctrl_cost = .5 * np.square(a).sum()
+        contact_cost = 0.5 * 1e-3 * np.sum(
+            np.square(np.clip(cfrc_ext, -1, 1)))
+        survive_reward = 1.0
+        internal_reward = - ctrl_cost - contact_cost
+        rewards = self.forward_scale * forward_reward + survive_reward + internal_reward
+        return rewards[0], {"subrewards": rewards[1:]}
+
     def _step(self, action):
-        obs, in_rw, done, info = self._ant_step(action)
+        obs, in_rw, done, info_ant = self._ant_step(action)
         if done:
-            return self._get_obs(), -10, done, info
+            return self._get_obs(), -10, done, info_ant
         reward = in_rw
 
         com = self.get_body_com("torso")
         if not self.fix_goal:
-            obj_pos = com[:2] + self.obj_dist * self.dir
+            obj_pos = com[:2] + self.obj_dist * self.dirs[0]
             self.objects[0] = np.concatenate([obj_pos, (0,)])
         if self.use_sparse_reward:
             if np.sum((com[:2] - self.objects[0][:2]) ** 2) < self.catch_range ** 2:
@@ -375,36 +396,31 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             assert not self.fix_goal
             if np.random.rand() < self.reset_goal_prob:
                 self._reset_objects()
-        return obs, reward, done, info
+        return obs, reward, done, info_ant
+
+    def check_if_ant_crash(self, state, rot_angle):
+        notdone = np.isfinite(state).all() \
+                  and rot_angle > 0  # and state[2] >= 0.2 and state[2] <= 1.0
+        # TODO: verify what happens if remove the last condition
+        done = not notdone
+        return done
 
     def _ant_step(self, a):
-        pos_t = self.get_body_com("torso")
+        self.pos_t = self.get_body_com("torso")
         self.do_simulation(a, self.frame_skip)
-        pos_t_prime = self.get_body_com("torso")
-        fw_dist = np.dot(pos_t_prime[0:2] - pos_t[0:2], self.dir)
-        forward_reward = fw_dist / self.dt
-        ctrl_cost = .5 * np.square(a).sum()
-        contact_cost = 0.5 * 1e-3 * np.sum(
-            np.square(np.clip(self.model.data.cfrc_ext, -1, 1)))
-        survive_reward = 1.0
-        internal_reward = - ctrl_cost - contact_cost
-        reward = self.freward_scale * forward_reward + survive_reward + internal_reward
-        state = self.state_vector()
-        rot_angle = self.data.xmat[1, 8]
-        notdone = np.isfinite(state).all() \
-                  and rot_angle > 0 and state[2] >= 0.2 and state[2] <= 1.0
-        done = not notdone
+        self.pos_t_prime = self.get_body_com("torso")
+        self.state = self.state_vector()
+        self.rot_angle = self.data.xmat[1, 8]
+        done = self.check_if_ant_crash(self.state, self.rot_angle)
         ob = self._get_obs()
-        return ob, reward, done, dict(
-            reward_forward=forward_reward,
-            reward_ctrl=-ctrl_cost,
-            reward_contact=-contact_cost,
-            reward_survive=survive_reward)
+        reward, ant_info = self.compute_cont_reward(a, self.pos_t_prime, self.pos_t, self.dirs,
+                                                    self.model.data.cfrc_ext)
+        return ob, reward, done, ant_info
 
     def _get_ant_obs(self):
         if self.with_state_task:
             return np.concatenate([
-                self.dir,
+                self.dirs[0],
                 self.model.data.qpos.flat[2:],
                 self.model.data.qvel.flat,
                 np.clip(self.model.data.cfrc_ext, -1, 1).flat,
@@ -445,7 +461,7 @@ class SimpleSingleGatherEnv(SingleGatherEnv):
     def render(self, mode='human', close=False):
         assert mode == "rgb_array" or close == True
         blank = np.zeros((64, 64, 1), dtype='uint8')
-        task_id = self.cord_to_id[self.dir[0]][self.dir[1]]
+        task_id = self.cord_to_id[self.dirs[0][0]][self.dirs[0][1]]
         slc = self.slc_dict[task_id]
         blank[slc[0][0]:slc[0][1], slc[1][0]:slc[1][1], :] = 255
         return blank
