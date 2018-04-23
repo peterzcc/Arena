@@ -33,6 +33,7 @@ class BatchUpdateAgent(Agent):
         # max_l = 10000
 
         self.time_count = 0
+        self.epoch_step = 0
         self.num_episodes = 0
         self.train_data = None
 
@@ -45,7 +46,8 @@ class BatchUpdateAgent(Agent):
             processed_observation.append(observation[1])
         action, agent_info = self.policy.predict(processed_observation, pid=self.id)
 
-        self.memory.append_state(observation, action, info=agent_info, pid=self.id)
+        self.memory.append_state(observation, action, info=agent_info, pid=self.id,
+                                 curr_time_step=self.time_count)
 
         return action
 
@@ -53,7 +55,8 @@ class BatchUpdateAgent(Agent):
 
         self.memory.append_feedback(reward, pid=self.id)
         self.time_count += 1
-        is_episode_clipped = self.time_count * self.policy.num_actors == self.policy.batch_size
+        self.epoch_step += 1
+        is_episode_clipped = self.epoch_step * self.policy.num_actors == self.policy.batch_size
         # if self.policy.batch_mode == "episode":
         #     batch_ends = done and self.memory.incre_count_and_check_done()
         # else:
@@ -61,6 +64,7 @@ class BatchUpdateAgent(Agent):
         if done or is_episode_clipped:
             terminated = False
             if done:
+                self.time_count = 0
                 try:
                     terminated = np.asscalar(info["terminated"])
                 except KeyError:
@@ -85,4 +89,4 @@ class BatchUpdateAgent(Agent):
                         res_ram
                     ))
             self.policy.batch_barrier.wait()
-            self.time_count = 0
+            self.epoch_step = 0

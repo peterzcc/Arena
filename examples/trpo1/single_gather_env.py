@@ -336,7 +336,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.obj_dist = obj_dist
         self.subtasks_dirs = subtask_dirs
         if subtask_dirs is None:
-            self.dirs = np.array([0, 0])
+            self.dirs = np.array([[0, 0]])
             self.info_sample = {}
         else:
             self.dirs = np.concatenate([np.array([0, 0])[np.newaxis, :], self.subtasks_dirs], axis=0)
