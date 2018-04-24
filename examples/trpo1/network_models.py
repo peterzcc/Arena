@@ -104,15 +104,14 @@ class MultiNetwork(object):
             else:
                 root_logits = tf.layers.dense(self.fc_layers[-1], action_space.n - 1,
                                               kernel_initializer=ScalingOrth(scale=1.0, dtype=dtype))
-
-                def hard_termination_indicator(hrl_meta_input, max_length=4.5):
-                    time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0), trainable=False)
-                    time_offset = tf.get_variable(name="time_offset", initializer=tf.constant(max_length),
+                max_length = 19.5
+                with tf.variable_scope("ter_model") as time_scope:
+                    self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
+                                                       trainable=False)
+                    self.time_offset = tf.get_variable(name="time_offset", initializer=tf.constant(max_length),
                                                   trainable=False)
-                    time_logit = -time_weight * (hrl_meta_input[:, 1:2] - time_offset)
-                    return time_logit
+                    time_logit = -self.time_weight * (self.hrl_meta_input[:, 1:2] - self.time_offset)
 
-                time_logit = hard_termination_indicator(self.hrl_meta_input, max_length=4.5)
                 full_logits = logits_from_cond_categorical(root_logits, time_logit,
                                                            is_initial_step=self.hrl_meta_input[:, 2:3])
                 assert isinstance(self.distribution, Categorical)

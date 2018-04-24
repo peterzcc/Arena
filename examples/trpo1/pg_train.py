@@ -461,11 +461,17 @@ def main():
 
         def f_train_leaf(n):
             return not f_train_root(n)
+
+        num_leaf = (len(full_tasks.keys()) - 1)
+
+        def hrl_batch_size(n_update):
+            return args.batch_size if n_update > args.npret else args.batch_size * num_leaf
+
         root_model = PolicyGradientModel(root_obseravation_space, root_action_space,
                                          name=args.env,
                                          timestep_limit=T,
                                          num_actors=num_actors,
-                                         f_batch_size=const_batch_size,
+                                         f_batch_size=hrl_batch_size,
                                          batch_mode=args.batch_mode,
                                          f_target_kl=const_target_kl,
                                          n_imgfeat=n_imgfeat,
@@ -482,6 +488,7 @@ def main():
                                          save_model=args.save_model,
                                          is_flexible_hrl_model=True)
         models = [root_model]
+
         for env_name, _ in list(full_tasks.items())[1:]:
             p = PolicyGradientModel(observation_space, action_space,
                                     name=env_name,
