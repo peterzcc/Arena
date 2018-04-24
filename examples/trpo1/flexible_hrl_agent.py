@@ -101,10 +101,8 @@ class FlexibleHrlAgent(Agent):
                 self.root_policy.train(extracted_result["paths"])
 
                 for p, train_paths in zip(self.sub_policies, extracted_result["leaf_paths"]):
-                    if train_paths is not None:
-                        p.train(train_paths)
-                    else:
-                        logging.debug("No training data for {}".format(p.name))
+                    p.train(train_paths)
+
 
                 train_after = time.time()
                 train_time = (train_after - train_before) / extracted_result["time_count"]

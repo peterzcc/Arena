@@ -89,9 +89,14 @@ PYTHONPATH="/mnt/m2/mzcc/Arena/examples/trpo1" python3.6 ./run_mujoco.py --env A
 
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move1 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
 
+nvidia-smi -q -d "MEMORY,UTILIZATION", --display=TYPE
+       Display only selected information: MEMORY, UTILIZATION,  ECC,  TEMPERA‐
+       TURE,  POWER,  CLOCK,  COMPUTE,  PIDS,  PERFORMANCE,  SUPPORTED_CLOCKS,
+       PAGE_RETIREMENT, ACCOUNTING Flags  can  be  combined  with  comma  e.g.
+       "MEMORY,ECC".  Sampling data with max, min and avg is also returned for
+       POWER,  UTILIZATION  and  CLOCK  display  types.   Doesn't  work   with
+       -u/--unit or -x/--xml-format flags.
 
-echo 'deb http://deb.torproject.org/torproject.org jessie main'>> /etc/apt/sources.list.d/tor.list
-reach_test
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 

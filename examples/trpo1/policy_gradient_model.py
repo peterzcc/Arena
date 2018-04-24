@@ -267,6 +267,7 @@ class PolicyGradientModel(ModelWithCritic):
 
         # self.init_model_path = self.saver.save(self.session, 'init_model')
         self.n_update = 0
+        self.n_fit = 0
         self.n_pretrain = 0
         self.separate_update = True
         self.should_update_critic = True
@@ -605,32 +606,39 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
     def train(self, paths, pid=None):
+
         if self.should_train and self.f_train_this_epoch(self.n_update):
-            logging.debug("-------------------------------------------")
-            logging.debug("training model: {}".format(self.name))
-            feed, feed_critic, extra_data = self.concat_paths(paths)
+            if paths is None:
+                logging.debug("No training data for {}".format(self.name))
+            else:
+                logging.debug("-------------------------------------------")
+                logging.debug("training model:\t{} at t\t{}".format(self.name,self.n_update))
+                feed, feed_critic, extra_data = self.concat_paths(paths)
 
-            batch_size = feed[self.policy.action_n].shape[0]
-            mean_t_reward = extra_data["rewards"].mean()
-            logging.info("mean_t reward for {}:\t{}".format(self.name, mean_t_reward))
-            self.handle_model_saving(mean_t_reward)
+                batch_size = feed[self.policy.action_n].shape[0]
+                mean_t_reward = extra_data["rewards"].mean()
+                logging.info("mean_t reward for {}:\t{}".format(self.name, mean_t_reward))
+                self.handle_model_saving(mean_t_reward)
 
-            self.critic_lock.acquire_write()
-            if self.should_update_critic:
-                self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
-            self.critic_lock.release_write()
+                self.critic_lock.acquire_write()
+                if self.should_update_critic:
+                    self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
+                self.critic_lock.release_write()
 
-            # if self.debug:
-            #     advant_n = feed[self.policy.advant]
-            #     # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
-            #     # action_dist_logstds_n = feed[self.net.dist_vars["logstd"]]
-            #     # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
-            #     if hasattr(self.act_space, "low"):
-            #         logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
-            #         # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
-            if self.should_update_policy:
-                self.policy_lock.acquire_write()
+                # if self.debug:
+                #     advant_n = feed[self.policy.advant]
+                #     # logging.debug("advant_n: {}".format(np.linalg.norm(advant_n)))
+                #     # action_dist_logstds_n = feed[self.net.dist_vars["logstd"]]
+                #     # logging.debug("state max: {}\n min: {}".format(state_input.max(axis=0), state_input.min(axis=0)))
+                #     if hasattr(self.act_space, "low"):
+                #         logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
+                #         # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
                 if self.should_update_policy:
-                    self.fit_policy(feed, batch_size, pid=pid)
-                self.policy_lock.release_write()
+                    self.policy_lock.acquire_write()
+                    if self.n_fit == 0 and self.is_flexible_hrl_model:
+                        self.session.run(tf.assign(self.executer_net.fixed_ter_weight, 0))
+                    if self.should_update_policy:
+                        self.fit_policy(feed, batch_size, pid=pid)
+                    self.policy_lock.release_write()
+                    self.n_fit += 1
         self.increment_n_update()

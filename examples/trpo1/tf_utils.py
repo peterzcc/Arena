@@ -200,6 +200,8 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
     logging.debug("Failed to find improvement")
     return x, 0
 
+def logit(p):
+    return np.log(p/(1-p))
 
 def tf_run_batched(accum_op, reset_op, feed, N, session, minibatch_size=64, extra_input={}):
     assert N > 0
