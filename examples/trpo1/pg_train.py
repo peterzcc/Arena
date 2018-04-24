@@ -358,6 +358,7 @@ def main():
                                     f_batch_size=const_batch_size,
                                     batch_mode=args.batch_mode,
                                     f_target_kl=const_target_kl,
+                                    lr=args.lr,
                                     n_imgfeat=n_imgfeat,
                                     mode=args.rl_method,
                                     update_per_epoch=4,
@@ -474,6 +475,7 @@ def main():
                                          f_batch_size=hrl_batch_size,
                                          batch_mode=args.batch_mode,
                                          f_target_kl=const_target_kl,
+                                         lr=args.lr,
                                          n_imgfeat=n_imgfeat,
                                          mode=args.rl_method,
                                          kl_history_length=1,
@@ -505,6 +507,7 @@ def main():
                                     f_batch_size=const_batch_size,
                                     batch_mode=args.batch_mode,
                                     f_target_kl=const_target_kl,
+                                    lr=args.lr,
                                     mode=args.rl_method,
                                     kl_history_length=1,
                                     surr_loss=args.loss,
@@ -536,7 +539,7 @@ def main():
                             f_create_params, single_process_mode=single_process_mode, render_option=args.render,
                             log_episodes=True)
     logging.info("run arges: {}".format(args))
-    logging.info("version: {}".format(get_git_revision_short_hash()))
+    logging.info("version: {}".format(str(get_git_revision_short_hash())))
 
     experiment.run_parallelly(num_actors, num_epoch, steps_per_epoch,
                               with_testing_length=test_length)

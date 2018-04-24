@@ -40,6 +40,7 @@ class PolicyGradientModel(ModelWithCritic):
                  timestep_limit=1000,
                  n_imgfeat=0,
                  f_target_kl=None,
+                 lr=0.0001,
                  minibatch_size=128,
                  mode="ACKTR",
                  surr_loss="PPO",
@@ -238,7 +239,8 @@ class PolicyGradientModel(ModelWithCritic):
                 self.fit_policy = self.fit_acktr
             elif self.mode == "PG":
                 with tf.variable_scope("pg") as scope:
-                    self.pg_optim = tf.train.AdamOptimizer(learning_rate=0.001)
+                    self.lr = lr
+                    self.pg_optim = tf.train.AdamOptimizer(learning_rate=self.lr)
                     self.pg_loss = (
                                        self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss) + self.ent_loss
 
@@ -451,7 +453,8 @@ class PolicyGradientModel(ModelWithCritic):
         # action_dist_logstds_n = concat([path["log_std"] for path in aggre_paths])
 
         feed.update({**dist_vars})
-        if self.is_flexible_hrl_model:
+        no_ter_train = True
+        if no_ter_train and self.is_flexible_hrl_model:
             is_root_decision = action_n != 0
             feed = {k: v[is_root_decision] for (k, v) in feed.items()}
 
@@ -606,6 +609,10 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
     def train(self, paths, pid=None):
+        if paths is not None and self.is_flexible_hrl_model:
+            logging.debug("root at t\t{}".format(self.n_update))
+            logging.info("pi:{}".format(np.mean(1.0 / (1 + np.exp(-paths["logits"])), axis=0)))
+            logging.info("ave subt:{}".format(np.mean(paths["observation"][2][:, 1])))
 
         if self.should_train and self.f_train_this_epoch(self.n_update):
             if paths is None:
@@ -615,9 +622,10 @@ class PolicyGradientModel(ModelWithCritic):
                 logging.debug("training model:\t{} at t\t{}".format(self.name,self.n_update))
                 feed, feed_critic, extra_data = self.concat_paths(paths)
 
-                batch_size = feed[self.policy.action_n].shape[0]
+                batch_size = feed[self.policy.advant].shape[0]
                 mean_t_reward = extra_data["rewards"].mean()
-                logging.info("mean_t reward for {}:\t{}".format(self.name, mean_t_reward))
+                logging.info("name:\t{} mean_r_t:\t{}".format(self.name, mean_t_reward))
+
                 self.handle_model_saving(mean_t_reward)
 
                 self.critic_lock.acquire_write()
