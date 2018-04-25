@@ -87,15 +87,15 @@ CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" p
 
 CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move7 --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001
 
-python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --load-leaf 0
+CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --load-leaf 0
 
 
 CUDA_VISIBLE_DEVICES=1,2
 
-PYTHONPATH="/mnt/m2/mzcc/Arena/examples/trpo1" python3.6 ./run_mujoco.py --env Ant-v1
+python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001
 
 
-CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move3 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
+CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move0 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
 
 
 

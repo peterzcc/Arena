@@ -339,7 +339,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             self.dirs = np.array([[0, 0]])
             self.info_sample = {}
         else:
-            self.dirs = np.concatenate([np.array([0, 0])[np.newaxis, :], self.subtasks_dirs], axis=0)
+            self.dirs = np.concatenate([np.array([[0, 0]]), self.subtasks_dirs], axis=0)
             self.info_sample = {"subrewards": np.zeros(self.subtasks_dirs.shape[0], np.float32)}
         self.pos_t = None
         self.pos_t_prime = None

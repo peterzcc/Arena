@@ -34,8 +34,6 @@ class PolicyGradientModel(ModelWithCritic):
                  session=None,
                  conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
                  min_std=1e-6,
-                 cg_damping=0.1,
-                 cg_iters=10,
                  max_kl=0.01,
                  timestep_limit=1000,
                  n_imgfeat=0,
@@ -52,6 +50,7 @@ class PolicyGradientModel(ModelWithCritic):
                  ent_k=0,
                  comb_method=aggregate_feature,
                  load_old_model=False,
+                 model_load_dir="./model",
                  should_train=True,
                  f_train_this_epoch=lambda x: True,
                  parallel_predict=True,
@@ -70,8 +69,6 @@ class PolicyGradientModel(ModelWithCritic):
 
         # store constants
         self.min_std = min_std
-        self.cg_damping = cg_damping
-        self.cg_iters = cg_iters
         self.max_kl = max_kl
         self.minibatch_size = minibatch_size
         self.use_empirical_fim = True
@@ -283,14 +280,14 @@ class PolicyGradientModel(ModelWithCritic):
             for qr in [self.k_q_runner]:
                 if (qr != None):
                     self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
-        self.model_load_path = "./models/" + self.name
+        self.model_load_path = model_load_dir + "/" + self.name
         self.model_save_path = "./" + Experiment.EXP_NAME + "/" + self.name
         self.full_model_saver = tf.train.Saver(var_list=[*self.critic.var_list, *self.policy.var_list])
         self.has_loaded_model = False
         self.load_old_model = load_old_model
         self.parallel_predict = parallel_predict
-        if self.load_old_model and not self.has_loaded_model:
-            self.restore_parameters()
+        # if self.load_old_model and not self.has_loaded_model:
+        #     self.restore_parameters()
 
     def get_state_activation(self, t_batch):
         if self.comb_method != aggregate_feature:
@@ -304,15 +301,17 @@ class PolicyGradientModel(ModelWithCritic):
         return st_enabled, img_enabled
 
     def restore_parameters(self):
-        if not self.has_loaded_model:
-            if self.load_old_model:
-                logging.debug("Loading {}".format(self.model_load_path))
-                self.full_model_saver.restore(self.session, self.model_load_path)
-                self.has_loaded_model = True
+        logging.debug("Loading {}".format(self.model_load_path))
+        self.full_model_saver.restore(self.session, self.model_load_path)
+        self.has_loaded_model = True
 
     def predict(self, observation, pid=0):
-        if not self.has_loaded_model:
-            self.restore_parameters()
+        if self.load_old_model and not self.has_loaded_model:
+            self.policy_lock.acquire_write()
+            if not self.has_loaded_model:
+                self.restore_parameters()
+            self.policy_lock.release_write()
+
         if self.parallel_predict:
             obs = None
             if self.num_actors == 1:

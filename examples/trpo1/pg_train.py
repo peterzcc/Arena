@@ -118,6 +118,9 @@ def main():
     parser.add_argument('--withimg', default=False, type=bool, help='append image input')
     parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
                         const=True, )
+    parser.add_argument('--load-dir', default="models", type=str, help='model directory')
+    parser.add_argument('--load-leaf', default=True, type=str2bool, nargs='?',
+                        const=True, )
     parser.add_argument('--no-train', default=False, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--env', default="ant", type=str, help='env')
@@ -129,8 +132,7 @@ def main():
                         help='num img feat')
     parser.add_argument('--save-model', required=False, type=int, default=10,
                         help='save_model')
-    parser.add_argument('--load-leaf', default=True, type=str2bool, nargs='?',
-                        const=True, )
+
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
     parser.add_argument("--debug", default=False, type=str2bool, nargs='?', const=True, help='debug')
     args = parser.parse_args()
@@ -370,6 +372,7 @@ def main():
                                     ent_k=args.ent_k,
                                     session=session,
                                     load_old_model=args.load_model,
+                                    model_load_dir=args.load_dir,
                                     parallel_predict=True,
                                     should_train=not args.no_train,
                                     save_model=args.save_model)
@@ -486,6 +489,7 @@ def main():
                                          ent_k=args.ent_k,
                                          session=session,
                                          load_old_model=args.load_model,
+                                         model_load_dir=args.load_dir,
                                          should_train=not args.no_train,
                                          f_train_this_epoch=f_train_root,
                                          parallel_predict=False,
@@ -503,6 +507,7 @@ def main():
                                     ent_k=args.ent_k,
                                     session=session,
                                     load_old_model=args.load_leaf,
+                                    model_load_dir=args.load_dir,
                                     should_train=True,
                                     f_train_this_epoch=f_train_leaf,
                                     parallel_predict=False,

@@ -112,7 +112,7 @@ class MultiNetwork(object):
                                                   trainable=False)
                     time_logit = -self.time_weight * (self.hrl_meta_input[:, 1:2] - self.time_offset)
                     self.fixed_prob_ter_logit = tf.get_variable("fix_ter_prob",
-                                                                initializer=tf.constant(logit(0.005), dtype=tf.float32),
+                                                                initializer=tf.constant(logit(0.01), dtype=tf.float32),
                                                                 dtype=tf.float32)
                     cont_prob_offset = 1.0 - self.fixed_prob_ter_logit
                     self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(1.0, dtype=tf.float32),
@@ -131,7 +131,8 @@ class MultiNetwork(object):
             self.new_likelihood_sym = tf.check_numerics(
                 self.distribution.log_likelihood_sym(self.action_n, self.dist_vars),
                 "new logpi nan")
-            self.old_likelihood = tf.check_numerics(self.distribution.log_likelihood_sym(self.action_n, self.old_vars),
+            self.old_likelihood = tf.check_numerics(
+                tf.maximum(self.distribution.log_likelihood_sym(self.action_n, self.old_vars), np.log(1e-8)),
                                                     "old logpi nan")
 
             self.ratio_n = tf.check_numerics(tf.exp(self.new_likelihood_sym - self.old_likelihood), "ratio is nan")
