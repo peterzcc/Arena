@@ -120,6 +120,7 @@ class Experiment(object):
 
         signal.signal(signal.SIGINT, self.interrupt)
         self.is_terminated = False
+        self.dead_locked = False
 
     EXP_NAME = "exp_unknown"
 
@@ -244,12 +245,15 @@ class Experiment(object):
         while epoch_num < num_epoch and not self.is_terminated:
             try:
                 rx_msg = self.episode_q.get(block=True, timeout=15 * 60)
+                self.dead_locked = False
             except queue.Empty:
-                logging.warning("Not received message for too long. Maybe there is something wrong")
-                for (pid, p_actuator) in enumerate(self.actuator_processes):
-                    logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
-                for (pid, agent_thread) in enumerate(self.agent_threads):
-                    logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
+                if not self.dead_locked:
+                    logging.warning("Not received message for too long. Maybe there is something wrong")
+                    self.dead_locked = True
+                # for (pid, p_actuator) in enumerate(self.actuator_processes):
+                #     logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
+                # for (pid, agent_thread) in enumerate(self.agent_threads):
+                #     logging.debug("Agent {} alive:{}".format(pid, agent_thread.is_alive()))
                 continue
             try:
                 pid = rx_msg["id"]

@@ -5,7 +5,7 @@ from tensorflow.contrib.layers import variance_scaling_initializer
 import numpy as np
 # import prettytensor as pt
 import logging
-from tf_utils import LbfgsOptimizer, run_batched, aggregate_feature, lrelu
+from tf_utils import LbfgsOptimizer, run_batched, aggregate_feature, lrelu, batch_run_forward
 from cnn import cnn_network
 from scaling_orth import ScalingOrth
 concat = np.concatenate
@@ -193,5 +193,6 @@ class MultiBaseline(object):
                 feed[self.img_input] = path["observation"][1]
             if self.is_flexible_hrl_model:
                 feed[self.hrl_meta_input] = path["observation"][2]
-            ret = self.session.run(self.net, feed_dict=feed)
-            return np.reshape(ret, (ret.shape[0],))
+            V = batch_run_forward(self.net, feed=feed, N=path["times"].shape[0], session=self.session,
+                                  minibatch_size=self.minibatch_size)
+            return np.reshape(V, (V.shape[0],))

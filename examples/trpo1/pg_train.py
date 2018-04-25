@@ -458,7 +458,7 @@ def main():
                                        )]
 
         def f_train_root(n):
-            return n > args.npret
+            return False  # n > args.npret
 
         def f_train_leaf(n):
             return not f_train_root(n)

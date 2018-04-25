@@ -216,6 +216,17 @@ def tf_run_batched(accum_op, reset_op, feed, N, session, minibatch_size=64, extr
         session.run(accum_op, feed_dict={**this_feed, **extra_input})
 
 
+def batch_run_forward(y, feed, N, session, minibatch_size=64, extra_input={}):
+    result = np.empty(shape=(N, *y.shape[1:]))
+    for start in range(0, N, minibatch_size):
+        end = min(start + minibatch_size, N)
+        this_size = end - start
+        assert this_size > 0
+        slc = range(start, end)
+        this_feed = {k: v[slc] for k, v in list(feed.items())}
+        result[slc] = session.run(y, feed_dict={**this_feed, **extra_input})
+    return result
+
 def run_batched(func, feed, N, session, minibatch_size=64, extra_input={}, average=True):
     assert N > 0
     result = None
