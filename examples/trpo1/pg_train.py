@@ -129,6 +129,8 @@ def main():
                         help='num img feat')
     parser.add_argument('--save-model', required=False, type=int, default=10,
                         help='save_model')
+    parser.add_argument('--load-leaf', default=True, type=str2bool, nargs='?',
+                        const=True, )
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
     parser.add_argument("--debug", default=False, type=str2bool, nargs='?', const=True, help='debug')
     args = parser.parse_args()
@@ -500,7 +502,7 @@ def main():
                                     comb_method=comb_methd,
                                     ent_k=args.ent_k,
                                     session=session,
-                                    load_old_model=True,
+                                    load_old_model=args.load_leaf,
                                     should_train=True,
                                     f_train_this_epoch=f_train_leaf,
                                     parallel_predict=False,
