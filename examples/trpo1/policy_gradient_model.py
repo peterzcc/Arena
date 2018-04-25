@@ -56,7 +56,7 @@ class PolicyGradientModel(ModelWithCritic):
                  parallel_predict=True,
                  save_model=True,
                  loss_type="PPO",
-                 max_grad_norm=None,
+                 max_grad_norm=0.5,
                  is_flexible_hrl_model=False
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
