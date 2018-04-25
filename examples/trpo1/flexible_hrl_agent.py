@@ -62,9 +62,9 @@ class FlexibleHrlAgent(Agent):
         root_decision, root_model_info = self.root_policy.predict(wrapped_obs, pid=self.id)
         # self.memory.append_observation(wrapped_obs, pid=self.id)
         # self.memory.append_action(root_decision, root_model_info, pid=self.id)
-
-        action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
         self.update_meta_status(root_decision)
+        action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
+
         self.memory.append_state(wrapped_obs, root_decision, root_model_info, self.id,
                                  leaf_id=self.current_policy_id, leaf_action=action, leaf_model_info=leaf_model_info,
                                  curr_time_step=self.time_count)

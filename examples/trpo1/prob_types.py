@@ -132,8 +132,9 @@ class Categorical(ProbType):
                                          scale=1.0, mode="fan_avg", distribution="normal", dtype=dtype))
         old_dist_vars = dict(logits=old_logits)
         dist_vars = dict(logits=logits)
+        interm_vars = dict(logits=logits)
         sample = tf.distributions.Categorical(logits=logits).sample()
-        return dist_vars, old_dist_vars, sample, {}
+        return dist_vars, old_dist_vars, sample, interm_vars
 
     def log_likelihood_sym(self, x_var, dist_info_vars):
         one_hot_actions = tf.one_hot(x_var, self.n)
@@ -159,6 +160,13 @@ class Categorical(ProbType):
     def kf_loglike(self, action_n, dist_vars, interm_vars):
         return self.log_likelihood_sym(action_n, dist_vars)
 
+    def reset_exp(self, interm_vars, exploration=0.1):
+        return tf.Print(tf.constant(0.0), [], "not implemented")
+        # logits = interm_vars["logits"]
+        # normed_logits = logits - tf.reduce_logsumexp(logits)
+        # final_logits = tf.maximum(normed_logits, np.log(exploration/logits.shape[1].value))
+        # return tf.assign(logits, final_logits)
+
 
 class DiagonalGaussian(ProbType):
     def __init__(self, dim):
@@ -177,20 +185,24 @@ class DiagonalGaussian(ProbType):
                                  kernel_initializer=tf.variance_scaling_initializer(
                                      scale=1.0, mode="fan_avg", distribution="normal", dtype=dtype))
 
-        logstd_param = logstd_1a = tf.get_variable("logstd", (self.dim,), tf.float32,
-                                                   tf.zeros_initializer())  # Variance on outputs
-        logstd_1a = tf.expand_dims(logstd_1a, 0)
+        logstd_param = tf.get_variable("logstd", (self.dim,), tf.float32,
+                                       tf.zeros_initializer())  # Variance on outputs
+        logstd_1a = tf.expand_dims(logstd_param, 0)
         std_1a = tf.exp(logstd_1a)
         logstd_n = tf.tile(logstd_1a, [tf.shape(mean_n)[0], 1])
         std_n = tf.tile(std_1a, [tf.shape(mean_n)[0], 1])
         old_dist_vars = dict(mean=old_mean_n, logstd=old_logstd_n)
         dist_vars = dict(mean=mean_n, logstd=logstd_n)
-        interm_vars = dict(std=std_n)
+        interm_vars = dict(std=std_n, logstd_param=logstd_param)
         sample = tf.distributions.Normal(loc=mean_n, scale=std_n).sample()
         return dist_vars, old_dist_vars, sample, interm_vars
 
     def gen_dist_info(self, mean, log_std):
         return dict(mean=mean, log_std=log_std)
+
+    def reset_exp(self, interm_vars, std=0.05):
+        param = interm_vars["logstd_param"]
+        return tf.assign(param, np.log(np.ones(param.get_shape().as_list())) * std)
 
     def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
         old_means = old_dist_info_vars["mean"]

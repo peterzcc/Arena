@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
-    aggregate_feature, select_st, explained_variance_batched, tf_run_batched
+    aggregate_feature, select_st, explained_variance_batched, tf_run_batched, batch_run_forward
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
 from prob_types import DiagonalGaussian, Categorical, CategoricalWithProb
@@ -57,7 +57,8 @@ class PolicyGradientModel(ModelWithCritic):
                  save_model=True,
                  loss_type="PPO",
                  max_grad_norm=0.5,
-                 is_flexible_hrl_model=False
+                 is_flexible_hrl_model=False,
+                 reset_exp=False
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -285,6 +286,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.full_model_saver = tf.train.Saver(var_list=[*self.critic.var_list, *self.policy.var_list])
         self.has_loaded_model = False
         self.load_old_model = load_old_model
+        self.should_reset_exp = reset_exp
         self.parallel_predict = parallel_predict
         # if self.load_old_model and not self.has_loaded_model:
         #     self.restore_parameters()
@@ -310,6 +312,9 @@ class PolicyGradientModel(ModelWithCritic):
             self.policy_lock.acquire_write()
             if not self.has_loaded_model:
                 self.restore_parameters()
+                if self.should_reset_exp:
+                    logging.info("reset exploration")
+                    self.session.run(self.executer_net.reset_exp)
             self.policy_lock.release_write()
 
         if self.parallel_predict:
@@ -640,7 +645,7 @@ class PolicyGradientModel(ModelWithCritic):
                 #     if hasattr(self.act_space, "low"):
                 #         logging.debug("act_clips: {}".format(np.sum(concat([path["clips"] for path in paths]))))
                 #         # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
-                if self.should_update_policy:
+                if self.should_update_policy and batch_size > 0:
                     self.policy_lock.acquire_write()
                     if self.n_fit == 0 and self.is_flexible_hrl_model:
                         self.session.run(tf.assign(self.executer_net.fixed_ter_weight, 0))

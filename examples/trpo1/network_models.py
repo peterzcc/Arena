@@ -112,7 +112,8 @@ class MultiNetwork(object):
                                                   trainable=False)
                     time_logit = -self.time_weight * (self.hrl_meta_input[:, 1:2] - self.time_offset)
                     self.fixed_prob_ter_logit = tf.get_variable("fix_ter_prob",
-                                                                initializer=tf.constant(logit(0.01), dtype=tf.float32),
+                                                                initializer=tf.constant(logit(0.01),
+                                                                                        dtype=tf.float32),
                                                                 dtype=tf.float32)
                     cont_prob_offset = 1.0 - self.fixed_prob_ter_logit
                     self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(1.0, dtype=tf.float32),
@@ -121,7 +122,7 @@ class MultiNetwork(object):
                                   (1-self.fixed_ter_weight)*time_logit
 
                 full_logits = logits_from_cond_categorical(root_logits, final_contlogit,
-                                                           is_initial_step=self.hrl_meta_input[:, 2:3])
+                                                           is_initial_step=self.hrl_meta_input[:, 2:3])  
                 assert isinstance(self.distribution, Categorical)
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(logits=full_logits)
@@ -150,12 +151,10 @@ class MultiNetwork(object):
             # Sampled loss of the policy
 
             self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
+            self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
+            self.kl = tf.reduce_mean(self.kls)
 
-            self.kl = tf.reduce_mean(self.distribution.kl_sym(self.old_vars, self.dist_vars))
             ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
             self.ent = tf.reduce_sum(ent_n) / self.batch_size_float
             self.losses = [self.ppo_surr, self.kl, self.ent]
-
-
-
-
+            self.reset_exp = self.distribution.reset_exp(self.interm_vars)

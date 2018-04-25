@@ -121,7 +121,11 @@ def main():
     parser.add_argument('--load-dir', default="models", type=str, help='model directory')
     parser.add_argument('--load-leaf', default=True, type=str2bool, nargs='?',
                         const=True, )
+    parser.add_argument('--reset-exp', default=False, type=str2bool, nargs='?',
+                        const=True, )
     parser.add_argument('--no-train', default=False, type=str2bool, nargs='?',
+                        const=True, )
+    parser.add_argument('--train-leaf', default=False, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--env', default="ant", type=str, help='env')
     parser.add_argument('--loss', default="PPO", type=str, help='loss')
@@ -372,6 +376,7 @@ def main():
                                     ent_k=args.ent_k,
                                     session=session,
                                     load_old_model=args.load_model,
+                                    reset_exp=args.reset_exp,
                                     model_load_dir=args.load_dir,
                                     parallel_predict=True,
                                     should_train=not args.no_train,
@@ -463,7 +468,7 @@ def main():
                                        )]
 
         def f_train_root(n):
-            return False  # n > args.npret
+            return n > args.npret
 
         def f_train_leaf(n):
             return not f_train_root(n)
@@ -508,7 +513,8 @@ def main():
                                     session=session,
                                     load_old_model=args.load_leaf,
                                     model_load_dir=args.load_dir,
-                                    should_train=True,
+                                    reset_exp=args.reset_exp,
+                                    should_train=args.train_leaf,
                                     f_train_this_epoch=f_train_leaf,
                                     parallel_predict=False,
                                     f_batch_size=const_batch_size,

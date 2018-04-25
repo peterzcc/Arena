@@ -64,6 +64,7 @@ class DictMemory(object):
         # self.run_start_times = np.zeros((num_actors,), dtype=np.float32)
 
         self.gpow = self.gamma ** np.arange(0, timestep_limit)
+        self.leaf_info_keys = None
 
     def append_state(self, observation, action, info, pid=0,
                      leaf_id=None, leaf_action=None, leaf_model_info=None, curr_time_step=None):
@@ -76,9 +77,11 @@ class DictMemory(object):
             self.current_path[pid]["root_" + k].append(v)
         if leaf_id is not None:
             self.current_path[pid]["leaf_id"].append(leaf_id)
-            self.current_path[pid]["leaf_action"].append(leaf_action)
+            self.current_path[pid]["leaf_{}_".format(leaf_id) + "action"].append(leaf_action)
+            if self.leaf_info_keys is None:
+                self.leaf_info_keys = leaf_model_info.keys()
             for k, v in leaf_model_info.items():
-                full_key = "leaf_" + k
+                full_key = "leaf_{}_{}".format(leaf_id, k)
                 self.current_path[pid][full_key].append(v)
 
     def append_observation(self, observation, pid=0):
@@ -287,24 +290,36 @@ class DictMemory(object):
         #     path["times"] =
         self.compute_gae_for_path(root_paths, f_critic=self.f_critic)
 
+
         if self.normalize:
             self.normalize_gae(root_paths)
         result = {"paths": root_paths}
         if with_subtasks:
             agg_paths = {}
+            leaf_paths = [dict() for i in range(self.num_leafs)]
             leaf_prefix = "leaf_"
-            for k in paths[0].keys():
+            for k in ["leaf_id"]:
                 if k.startswith(leaf_prefix):
                     agg_paths[k[len(leaf_prefix):]] = np.concatenate([p[k] for p in paths])
+            for pi in range(self.num_leafs):
+                leaf_i_prefix = "leaf_{}_".format(pi)
+                for k in list(self.leaf_info_keys) + ["action"]:
+                    full_k = leaf_i_prefix + k
+                    list_k = [p[full_k] for p in paths if full_k in p]
+                    if len(list_k) != 0:
+                        leaf_paths[pi][k] = np.concatenate(list_k)
+                    else:
+                        leaf_paths[pi][k] = None
             for k in ["observation", "times"]:
                 agg_paths[k] = root_paths[k]
             subrewards = np.concatenate([p["subrewards"] for p in paths])
             agg_paths["reward"] = np.choose(agg_paths["id"], subrewards.T)
+            agg_paths["index"] = np.arange(0, agg_paths["times"].shape[0])
 
             is_leaf_split = np.zeros(root_paths["reward"].shape, dtype=np.bool)
             leaf_term = np.zeros(root_paths["reward"].shape, dtype=np.bool)
 
-            is_leaf_split[root_paths["splits"] - 1] = True
+            is_leaf_split[root_paths["splits"][:-1]] = True
             leaf_term[root_paths["splits"] - 1] = root_paths["terminated"]
 
             leaf_exits = np.flatnonzero(root_paths["action"])
@@ -314,8 +329,7 @@ class DictMemory(object):
             full_leaf_splits = np.append(np.flatnonzero(is_leaf_split), is_leaf_split.shape[0])
             full_leaf_terms = leaf_term[full_leaf_splits - 1]
             full_leaf_ids = agg_paths["id"][full_leaf_splits - 1]
-            del agg_paths["id"]
-
+            # del agg_paths["id"]
             splitted_paths = {}
             for k in agg_paths.keys():
                 if k == "observation":
@@ -325,7 +339,6 @@ class DictMemory(object):
                 else:
                     splitted_paths[k] = np.split(agg_paths[k], full_leaf_splits)
 
-            leaf_paths = [dict() for i in range(self.num_leafs)]
             for l in range(self.num_leafs):
                 this_paths = {}
                 is_this_leaf = full_leaf_ids == l
