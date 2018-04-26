@@ -617,6 +617,9 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("root at t\t{}".format(self.n_update))
             logging.info("pi:{}".format(np.mean(1.0 / (1 + np.exp(-paths["logits"])), axis=0)))
             logging.info("ave subt:{}".format(np.mean(paths["observation"][2][:, 1])))
+        feed, feed_critic, extra_data = self.concat_paths(paths)
+        mean_t_reward = extra_data["rewards"].mean()
+        logging.info("name:\t{} mean_r_t:\t{}".format(self.name, mean_t_reward))
 
         if self.should_train and self.f_train_this_epoch(self.n_update):
             if paths is None:
@@ -624,12 +627,7 @@ class PolicyGradientModel(ModelWithCritic):
             else:
                 logging.debug("-------------------------------------------")
                 logging.debug("training model:\t{} at t\t{}".format(self.name,self.n_update))
-                feed, feed_critic, extra_data = self.concat_paths(paths)
-
                 batch_size = feed[self.policy.advant].shape[0]
-                mean_t_reward = extra_data["rewards"].mean()
-                logging.info("name:\t{} mean_r_t:\t{}".format(self.name, mean_t_reward))
-
                 self.handle_model_saving(mean_t_reward)
 
                 self.critic_lock.acquire_write()
