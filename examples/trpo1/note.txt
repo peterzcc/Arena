@@ -87,12 +87,12 @@ CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" p
 
 CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move7 --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001
 
-CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --load-leaf 0
+CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --load-leaf 0 --train-leaf 1 --npret 37500
 
 
 CUDA_VISIBLE_DEVICES=1,2
 
-python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --train-leaf 1 --reset-exp 1 --npret 37500
+python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --train-leaf 1 --npret 37500 --ent-k 0.01
 
 
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move0 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
@@ -101,7 +101,6 @@ kls_o = (self.policy.kls, feed,
                                               self.session,
                                               minibatch_size=self.minibatch_size,
                                               extra_input={})
-kls_o = batch_run_forward(self.policy.kls, feed, num_samples, self.session, self.minibatch_size, extra_input={})
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 

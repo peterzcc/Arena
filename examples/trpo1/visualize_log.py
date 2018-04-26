@@ -6,7 +6,8 @@ import sys
 import numpy as np
 import mujoco_py as mj
 
-def get_loss(logfile, outpath, starting_point=1, mode=None,name=""):
+
+def get_loss(logfile, outpath, starting_point=1, mode=None, name="", extra_str="move1"):
     """
     Plot visualization graph
     Usage: - logfile: log file
@@ -32,9 +33,10 @@ def get_loss(logfile, outpath, starting_point=1, mode=None,name=""):
                   'Average Return:([+-]?[0-9]*[.]?[0-9]+)',
                   'ae loss after: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
                   'ae expvar: ([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
-                  'mse:([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)']
+                  'mse:([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
+                  '{} mean_r_t:\t([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)'.format(extra_str)]
     name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar',
-                 'mse']
+                 'mse', 'mean_r_t']
     name_dict = {v:i for i,v in zip(np.arange(len(name_list)),name_list)}
     timestep_list = []
     mode = name_dict[name] if name != "" else mode
@@ -95,8 +97,10 @@ def main():
                         help='Starting point of curve.')
     parser.add_argument('-m', '--mode', required=False, type=int, default=None,
                         help='mode')
+    parser.add_argument('--extra', required=False, type=str, default="move1",
+                        help='extra string')
     args, unknown = parser.parse_known_args()
-    get_loss(args.logfile, args.outpath, args.starting_point, args.mode,args.name)
+    get_loss(args.logfile, args.outpath, args.starting_point, args.mode, args.name, extra_str=args.extra)
 
 
 if __name__ == '__main__':

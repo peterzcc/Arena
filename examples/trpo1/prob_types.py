@@ -200,9 +200,9 @@ class DiagonalGaussian(ProbType):
     def gen_dist_info(self, mean, log_std):
         return dict(mean=mean, log_std=log_std)
 
-    def reset_exp(self, interm_vars, std=0.05):
+    def reset_exp(self, interm_vars, std=0.1):
         param = interm_vars["logstd_param"]
-        return tf.assign(param, np.log(np.ones(param.get_shape().as_list())) * std)
+        return tf.assign(param, np.log(np.ones(param.get_shape().as_list()) * std))
 
     def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
         old_means = old_dist_info_vars["mean"]
