@@ -288,6 +288,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.load_old_model = load_old_model
         self.should_reset_exp = reset_exp
         self.parallel_predict = parallel_predict
+        self.has_reset_fix_ter_weight = False
         # if self.load_old_model and not self.has_loaded_model:
         #     self.restore_parameters()
 
@@ -316,7 +317,14 @@ class PolicyGradientModel(ModelWithCritic):
                     logging.info("reset exploration")
                     self.session.run(self.executer_net.reset_exp)
             self.policy_lock.release_write()
-
+        if self.should_train and self.is_flexible_hrl_model and not self.has_reset_fix_ter_weight \
+                and self.n_fit == 0 \
+                and self.f_train_this_epoch(self.n_update):
+            self.policy_lock.acquire_write()
+            if not self.has_reset_fix_ter_weight:
+                self.session.run(tf.assign(self.executer_net.fixed_ter_weight, 0))
+                self.has_reset_fix_ter_weight = True
+            self.policy_lock.release_write()
         if self.parallel_predict:
             obs = None
             if self.num_actors == 1:
@@ -405,7 +413,9 @@ class PolicyGradientModel(ModelWithCritic):
 
             info_this_thread = {k: v[0, :] for k, v in self.dist_infos.items()}
             agent_info = {**info_this_thread,
-                          **dict(st_enabled=self.exp_st_enabled[0, :], img_enabled=self.exp_img_enabled[0])}
+                          **dict(st_enabled=self.exp_st_enabled[0, :],
+                                 img_enabled=self.exp_img_enabled[0])}
+
             action = np.take(self.stored_actions, 0, axis=0)
 
         if self.debug:
@@ -600,7 +610,6 @@ class PolicyGradientModel(ModelWithCritic):
                                               minibatch_size=self.minibatch_size,
                                               extra_input={})
             logging.debug("\nold_surr: {}\told kl: {}\told ent: {}".format(surr_o, kl_o, ent_o))
-        # _ = self.session.run(self.pg_update, feed_dict=feed)
         _ = tf_run_batched(self.p_accum_op, self.p_accum_reset, feed, num_samples, self.session,
                            minibatch_size=self.minibatch_size)
         g_norm, _ = self.session.run([self.g_norm, self.p_apply_grad],
@@ -616,11 +625,15 @@ class PolicyGradientModel(ModelWithCritic):
     def train(self, paths, pid=None):
         if paths is not None and self.is_flexible_hrl_model:
             logging.debug("root at t\t{}".format(self.n_update))
-            logging.info("pi:{}".format(np.mean(1.0 / (1 + np.exp(-paths["logits"])), axis=0)))
+            norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
+            logging.info("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))
             logging.info("ave subt:{}".format(np.mean(paths["observation"][2][:, 1])))
-        feed, feed_critic, extra_data = self.concat_paths(paths)
-        mean_t_reward = extra_data["rewards"].mean()
-        logging.info("name:\t{} mean_r_t:\t{}".format(self.name, mean_t_reward))
+        if paths is not None:
+            feed, feed_critic, extra_data = self.concat_paths(paths)
+            mean_t_reward = extra_data["rewards"].mean()
+            logging.info("name:\t{0} mean_r_t:\t{1:.4f}".format(self.name, mean_t_reward))
+        else:
+            feed, mean_t_reward, feed_critic = None, None, None
 
         if self.should_train and self.f_train_this_epoch(self.n_update):
             if paths is None:
@@ -646,10 +659,9 @@ class PolicyGradientModel(ModelWithCritic):
                 #         # logging.debug("std: {}".format(np.mean(np.exp(np.ravel(action_dist_logstds_n)))))
                 if self.should_update_policy and batch_size > 0:
                     self.policy_lock.acquire_write()
-                    if self.n_fit == 0 and self.is_flexible_hrl_model:
-                        self.session.run(tf.assign(self.executer_net.fixed_ter_weight, 0))
                     if self.should_update_policy:
                         self.fit_policy(feed, batch_size, pid=pid)
+
                     self.policy_lock.release_write()
                     self.n_fit += 1
         self.increment_n_update()

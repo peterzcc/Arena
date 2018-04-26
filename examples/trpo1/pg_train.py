@@ -25,6 +25,8 @@ import subprocess
 BATH_SIZE = 10000
 
 
+# np.set_printoptions(precision=4)
+
 def get_git_revision_short_hash():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
 
