@@ -104,7 +104,7 @@ class MultiNetwork(object):
             else:
                 root_logits = tf.layers.dense(self.fc_layers[-1], action_space.n - 1,
                                               kernel_initializer=ScalingOrth(scale=1.0, dtype=dtype))
-                max_length = 9.5
+                max_length = 50
                 with tf.variable_scope("ter_model") as time_scope:
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
                                                        trainable=False)
@@ -122,7 +122,7 @@ class MultiNetwork(object):
                                   (1-self.fixed_ter_weight)*time_logit
 
                 full_logits = logits_from_cond_categorical(root_logits, final_contlogit,
-                                                           is_initial_step=self.hrl_meta_input[:, 2:3])  
+                                                           is_initial_step=self.hrl_meta_input[:, 2:3])
                 assert isinstance(self.distribution, Categorical)
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(logits=full_logits)
