@@ -72,9 +72,9 @@ def get_loss(logfile, outpath, starting_point=1, mode=None, name="", extra_str="
         # x1, x2, y1, y2 = plt.axis()
         #
         # plt.axis((x1, x2, y1, 0.005))
-        x1, x2, y1, y2 = plt.axis()
-
-        plt.axis((x1, x2, -5.5, -2.0))
+        # x1, x2, y1, y2 = plt.axis()
+        #
+        # plt.axis((x1, x2, -5.5, -2.0))
     elif mode == 5:
         l_data = np.minimum(t_array.shape[0], len(loss_list))
         plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)
