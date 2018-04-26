@@ -250,7 +250,7 @@ class PolicyGradientModel(ModelWithCritic):
                     self.p_accum_op = [tf.assign_add(p, g) for (p, g) in zip(self.p_grads_sum, self.p_grads)]
 
                     if max_grad_norm is not None:
-                        self.p_final_grads, g_norm = tf.clip_by_global_norm(self.p_grads_sum, max_grad_norm)
+                        self.p_final_grads, self.g_norm = tf.clip_by_global_norm(self.p_grads_sum, max_grad_norm)
                     else:
                         self.p_final_grads = self.p_grads_sum
                     p_grads_var = [(g, v) for g, v in zip(self.p_grads_sum, self.policy.var_list)]
@@ -593,24 +593,25 @@ class PolicyGradientModel(ModelWithCritic):
 
     def fit_pg(self, feed, num_samples, pid=None):
         if self.debug:
-            logging.debug("\nbatch_size: {}\n".format(num_samples))
+            logging.debug("\nbatch_size: {}".format(num_samples))
             surr_o, kl_o, ent_o = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
                                               num_samples,
                                               self.session,
                                               minibatch_size=self.minibatch_size,
                                               extra_input={})
-            logging.debug("\nold ppo_surr: {}\nold kl: {}\nold ent: {}".format(surr_o, kl_o, ent_o))
+            logging.debug("\nold_surr: {}\told kl: {}\told ent: {}".format(surr_o, kl_o, ent_o))
         # _ = self.session.run(self.pg_update, feed_dict=feed)
         _ = tf_run_batched(self.p_accum_op, self.p_accum_reset, feed, num_samples, self.session,
                            minibatch_size=self.minibatch_size)
-        _ = self.session.run(self.p_apply_grad,
-                             feed_dict={})
+        g_norm, _ = self.session.run([self.g_norm, self.p_apply_grad],
+                                     feed_dict={})
         if self.debug:
             surr_new, kl_new, ent_new = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
                                                     num_samples,
                                                     self.session,
                                                     minibatch_size=self.minibatch_size, )
-            logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
+            logging.debug("\nnew_surr: {}\tnew_kl: {}\tnew_ent: {}".format(surr_new, kl_new, ent_new))
+            logging.debug("\ngnorm: {}".format(g_norm))
 
     def train(self, paths, pid=None):
         if paths is not None and self.is_flexible_hrl_model:
