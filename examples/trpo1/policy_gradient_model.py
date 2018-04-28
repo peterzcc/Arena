@@ -54,7 +54,7 @@ class PolicyGradientModel(ModelWithCritic):
                  should_train=True,
                  f_train_this_epoch=lambda x: True,
                  parallel_predict=True,
-                 save_model=True,
+                 save_model=10,
                  loss_type="PPO",
                  max_grad_norm=0.5,
                  is_flexible_hrl_model=False,
@@ -165,11 +165,13 @@ class PolicyGradientModel(ModelWithCritic):
         var_list = self.policy.var_list
 
         self.target_kl_initial = None if f_target_kl is None else f_target_kl(0)
-        self.target_kl_sym = tf.placeholder(shape=[], dtype=tf.float32, name="a_target_kl")
+        self.target_kl_sym = tf.placeholder(shape=[], dtype=tf.float32, name="target_kl")
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         self.fit_policy = None
         self.loss_type = loss_type
+        self.rl_loss = (
+            self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss)
         if should_train:
             if self.mode == "ADA_KL":
                 # adaptive kl
@@ -237,10 +239,20 @@ class PolicyGradientModel(ModelWithCritic):
                 self.fit_policy = self.fit_acktr
             elif self.mode == "PG":
                 with tf.variable_scope("pg") as scope:
-                    self.lr = lr
-                    self.pg_optim = tf.train.AdamOptimizer(learning_rate=self.lr)
-                    self.pg_loss = (
-                                       self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss) + self.ent_loss
+                    self.p_step_size = lr
+                    self.p_max_step_size = 0.1
+                    self.p_min_step_size = 1e-7
+                    self.p_sym_step_size = tf.placeholder(shape=[], dtype=tf.float32, name="p_step_size")
+                    self.pg_optim = tf.train.AdamOptimizer(learning_rate=self.p_sym_step_size)
+                    self.p_beta = tf.placeholder(shape=[], dtype=tf.float32, name="a_beta")
+                    self.p_beta_max = 35.0
+                    self.p_beta_min = 1.0 / 35.0
+                    self.p_beta_value = 3
+                    self.p_eta_value = 50
+                    self.p_kl_loss = self.p_beta * self.policy.kl + \
+                                     self.p_eta_value * tf.square(
+                        tf.maximum(0.0, self.policy.kl - 2.0 * self.target_kl_sym))
+                    self.pg_loss = self.rl_loss + self.ent_loss + self.p_kl_loss
 
                     self.p_grads = tf.gradients(self.pg_loss, self.policy.var_list)
 
@@ -283,7 +295,8 @@ class PolicyGradientModel(ModelWithCritic):
                     self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
         self.model_load_path = model_load_dir + "/" + self.name
         self.model_save_path = "./" + Experiment.EXP_NAME + "/" + self.name
-        self.full_model_saver = tf.train.Saver(var_list=[*self.critic.var_list, *self.policy.var_list])
+        self.full_model_saver = tf.train.Saver(
+            var_list=[*self.critic.var_list, *self.critic.var_notrain, *self.policy.var_list])
         self.has_loaded_model = False
         self.load_old_model = load_old_model
         self.should_reset_exp = reset_exp
@@ -317,14 +330,14 @@ class PolicyGradientModel(ModelWithCritic):
                     logging.info("reset exploration")
                     self.session.run(self.executer_net.reset_exp)
             self.policy_lock.release_write()
-        if self.should_train and self.is_flexible_hrl_model and not self.has_reset_fix_ter_weight \
-                and self.n_fit == 0 \
-                and self.f_train_this_epoch(self.n_update):
-            self.policy_lock.acquire_write()
-            if not self.has_reset_fix_ter_weight:
-                self.session.run(tf.assign(self.executer_net.fixed_ter_weight, 0))
-                self.has_reset_fix_ter_weight = True
-            self.policy_lock.release_write()
+        # if self.should_train and self.is_flexible_hrl_model and not self.has_reset_fix_ter_weight \
+        #         and self.n_fit == 0 \
+        #         and self.f_train_this_epoch(self.n_update):
+        #     self.policy_lock.acquire_write()
+        #     if not self.has_reset_fix_ter_weight:
+        #         self.session.run(tf.assign(self.executer_net.fixed_ter_weight, 0))
+        #         self.has_reset_fix_ter_weight = True
+        #     self.policy_lock.release_write()
         if self.parallel_predict:
             obs = None
             if self.num_actors == 1:
@@ -602,6 +615,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
     def fit_pg(self, feed, num_samples, pid=None):
+        target_kl_value = self.f_target_kl(self.n_update)
         if self.debug:
             logging.debug("\nbatch_size: {}".format(num_samples))
             surr_o, kl_o, ent_o = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
@@ -611,16 +625,35 @@ class PolicyGradientModel(ModelWithCritic):
                                               extra_input={})
             logging.debug("\nold_surr: {}\told kl: {}\told ent: {}".format(surr_o, kl_o, ent_o))
         _ = tf_run_batched(self.p_accum_op, self.p_accum_reset, feed, num_samples, self.session,
-                           minibatch_size=self.minibatch_size)
+                           minibatch_size=self.minibatch_size,
+                           extra_input={self.target_kl_sym: target_kl_value,
+                                        self.p_beta: self.p_beta_value})
         g_norm, _ = self.session.run([self.g_norm, self.p_apply_grad],
-                                     feed_dict={})
+                                     feed_dict={self.p_sym_step_size: self.p_step_size,
+                                                self.p_beta: self.p_beta_value, })
+
+        surr_new, kl_new, ent_new = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
+                                                num_samples,
+                                                self.session,
+                                                minibatch_size=self.minibatch_size, )
         if self.debug:
-            surr_new, kl_new, ent_new = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
-                                                    num_samples,
-                                                    self.session,
-                                                    minibatch_size=self.minibatch_size, )
             logging.debug("\nnew_surr: {}\tnew_kl: {}\tnew_ent: {}".format(surr_new, kl_new, ent_new))
             logging.debug("\ngnorm: {}".format(g_norm))
+        if kl_new > target_kl_value * 2:
+            self.p_beta_value = np.minimum(self.p_beta_max, 1.5 * self.p_beta_value)
+            if self.p_beta_value > self.p_beta_max - 5:
+                self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / 1.5)
+            logging.debug('beta -> %s' % self.p_beta_value)
+            logging.debug('step_size -> %s' % self.p_step_size)
+        elif kl_new < target_kl_value / 2:
+            self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / 1.5)
+            if self.p_beta_value < self.p_beta_min:
+                self.p_step_size = np.minimum(self.p_max_step_size, 1.5 * self.p_step_size)
+            logging.debug('beta -> %s' % self.p_beta_value)
+            logging.debug('step_size -> %s' % self.p_step_size)
+        else:
+            logging.debug('beta OK = %s' % self.p_beta_value)
+            logging.debug('step_size OK = %s' % self.p_step_size)
 
     def train(self, paths, pid=None):
         if paths is not None and self.is_flexible_hrl_model:

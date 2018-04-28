@@ -204,7 +204,7 @@ class DiagonalGaussian(ProbType):
         param = interm_vars["logstd_param"]
         return tf.assign(param, np.log(np.ones(param.get_shape().as_list()) * std))
 
-    def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
+    def kl_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
         old_means = old_dist_info_vars["mean"]
         old_log_stds = old_dist_info_vars["logstd"]
         new_means = new_dist_info_vars["mean"]
@@ -222,7 +222,7 @@ class DiagonalGaussian(ProbType):
         # ln(\sigma_2/\sigma_1)
         numerator = tf.square(old_means - new_means) + \
                     tf.square(old_std) - tf.square(new_std)
-        denominator = 2 * tf.square(new_std) + 1e-8
+        denominator = 2 * tf.square(new_std) + epsilon
         return tf.reduce_sum(
             numerator / denominator + new_log_stds - old_log_stds, -1)
 

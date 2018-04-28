@@ -30,6 +30,7 @@ class MultiBaseline(object):
         self.minibatch_size = minibatch_size
         self.comb_method = comb_method
         self.normalize = True
+        self.var_notrain = []
         with tf.variable_scope(main_scope):
             # add  timestep
             self.state_input = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name="x")
@@ -41,6 +42,7 @@ class MultiBaseline(object):
             self.mu = tf.get_variable("scale_mu", initializer=tf.constant(0.0), trainable=False)
             self.new_std = tf.placeholder(tf.float32, shape=[], name="scale_sgma")
             self.new_mean = tf.placeholder(tf.float32, shape=[], name="scale_mu")
+            self.var_notrain += [self.sigma, self.mu]
 
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
             self.final_state = self.st_enabled * self.state_input
@@ -134,7 +136,7 @@ class MultiBaseline(object):
         vary = np.var(y)
         return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
 
-    def print_loss(self, feed):
+    def print_loss(self, feed, extra=""):
         mse = \
             run_batched([self.real_mse],
                         feed=feed, N=feed[self.y].shape[0],
@@ -143,7 +145,7 @@ class MultiBaseline(object):
         # ypred = self.session.run(self.net, feed_dict=feed)
         # ex_var = self.explained_var(ypred, feed[self.y])
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
-        logging.debug("vf:\n mse:{}".format(mse))
+        logging.debug("vf:\t {}_mse:{}".format(extra, mse))
 
     def fit(self, feed, update_mode="full", num_pass=1, pid=None):
 
@@ -157,8 +159,8 @@ class MultiBaseline(object):
         elif update_mode == "st":
             train_op = [self.mse, self.upper_train]
         if self.debug_mode and (pid is None or pid == 0):
-            logging.debug("before vf optimization")
-            self.print_loss(feed)
+            # logging.debug("before vf optimization")
+            self.print_loss(feed, extra="old")
         new_mu = feed[self.y].mean()
         new_sigma = feed[self.y].std()
         self.session.run(self.scale_updates, feed_dict={self.new_mean: new_mu,
@@ -179,8 +181,8 @@ class MultiBaseline(object):
                     break
 
         if self.debug_mode and (pid is None or pid == 0):
-            logging.debug("after vf optimization")
-            self.print_loss(feed)
+            # logging.debug("after vf optimization")
+            self.print_loss(feed, extra="new")
 
     def predict(self, path):
         if self.net is None:

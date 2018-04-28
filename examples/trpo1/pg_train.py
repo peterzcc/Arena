@@ -166,6 +166,9 @@ def main():
 
 
     hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
+    hrl_8d = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
+                         move2=x_up_obj, move3=x_down_obj,
+                         move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
 
     hrl1 = OrderedDict(move2d=random_direction,
                        move0=x_forward_obj, move1=x_backward_obj,
@@ -193,7 +196,7 @@ def main():
                           )
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl1, reach2d=hrl2, dynamic2d=hrl_changing_goal,
                           reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage)
-    hrl_8d = dict(move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
+
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -214,6 +217,10 @@ def main():
             logging.info("actuator[{}], direction: {}".format(pid, f_direction))
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=f_direction)
+        elif args.env in hrl_8d:
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_8d[args.env],
+                                  reset_goal_prob=0, )
         elif args.env in hrl0:
             with_state_task = False
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
@@ -224,10 +231,7 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=hrl1[args.env],
                                   reset_goal_prob=0, )
-        elif args.env in hrl_8d:
-            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
-                                  f_gen_obj=hrl_8d[args.env],
-                                  reset_goal_prob=0, )
+
         elif args.env in hrl_changing_goal:
             with_state_task = False
 
