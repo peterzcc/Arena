@@ -67,19 +67,23 @@ nvidia-smi --query-gpu="accounting.mode" --format=csv
 
 nvidia-smi -q -d "MEMORY,UTILIZATION" -lms 500
 nvidia-smi --query-accounted-apps="gpu_utilization" --format=csv
+
 mux0
 
-CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --train-leaf 0 --npret -1 --lr 0.0001
-CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move4 --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --train-leaf 0 --lr 0.001
+CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
 
-CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.001 --load-leaf 1 --train-leaf 1 --npret 37500 --ent-k 0.01
+CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move1 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
 
-CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --train-leaf 0 --lr 0.003
+CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move2 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
+
+CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move3 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
 
 
-CUDA_VISIBLE_DEVICES=1,2
 
+local 60:
 python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --train-leaf 1 --npret 37500 --ent-k 0.01
+
+python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.003 --train-leaf 0 --npret -1 --ent-k 0.01 --load-dir "finetuned_models"
 
 
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move0 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record

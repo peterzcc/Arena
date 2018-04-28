@@ -40,8 +40,8 @@ class MultiBaseline(object):
 
             self.sigma = tf.get_variable("scale_sigma", initializer=tf.constant(1.0), trainable=False)
             self.mu = tf.get_variable("scale_mu", initializer=tf.constant(0.0), trainable=False)
-            self.new_std = tf.placeholder(tf.float32, shape=[], name="scale_sgma")
-            self.new_mean = tf.placeholder(tf.float32, shape=[], name="scale_mu")
+            self.new_std = tf.placeholder(tf.float32, shape=[], name="new_sigma")
+            self.new_mean = tf.placeholder(tf.float32, shape=[], name="new_mu")
             self.var_notrain += [self.sigma, self.mu]
 
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
