@@ -104,7 +104,7 @@ class MultiNetwork(object):
             else:
                 root_logits = tf.layers.dense(self.fc_layers[-1], action_space.n - 1,
                                               kernel_initializer=ScalingOrth(scale=1.0, dtype=dtype))
-                max_length = 50.0
+                max_length = 25.0
                 with tf.variable_scope("ter_model") as time_scope:
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
                                                        trainable=False)
@@ -116,7 +116,8 @@ class MultiNetwork(object):
                                                                                         dtype=tf.float32),
                                                                 dtype=tf.float32)
                     cont_prob_offset = 1.0 - self.fixed_prob_ter_logit
-                    self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(0.0, dtype=tf.float32),
+                    self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(1.0, dtype=tf.float32),
+                                                            # TODO: tune
                                                             dtype=tf.float32)
                     final_contlogit = self.fixed_ter_weight * cont_prob_offset + \
                                   (1-self.fixed_ter_weight)*time_logit

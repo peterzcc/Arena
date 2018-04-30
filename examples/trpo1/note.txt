@@ -81,9 +81,8 @@ CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" p
 
 
 local 60:
-python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --train-leaf 1 --npret 37500 --ent-k 0.01
+python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001 --train-leaf 1 --npret 37500 --num-steps 60e7
 
-python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.003 --train-leaf 0 --npret -1 --ent-k 0.01 --load-dir "finetuned_models"
 
 
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move0 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
