@@ -480,7 +480,7 @@ class PolicyGradientModel(ModelWithCritic):
         # action_dist_logstds_n = concat([path["log_std"] for path in aggre_paths])
 
         feed.update({**dist_vars})
-        no_ter_train = True
+        no_ter_train = False
         if no_ter_train and self.is_flexible_hrl_model:
             is_root_decision = action_n != 0
             feed = {k: v[is_root_decision] for (k, v) in feed.items()}

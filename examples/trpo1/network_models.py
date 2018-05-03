@@ -116,7 +116,7 @@ class MultiNetwork(object):
                                                                                         dtype=tf.float32),
                                                                 dtype=tf.float32)
                     cont_prob_offset = 1.0 - self.fixed_prob_ter_logit
-                    self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(1.0, dtype=tf.float32),
+                    self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(0.0, dtype=tf.float32),
                                                             # TODO: tune
                                                             dtype=tf.float32)
                     final_contlogit = self.fixed_ter_weight * cont_prob_offset + \

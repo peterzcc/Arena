@@ -33,7 +33,7 @@ def discount(x, gamma):
 
 
 class DictMemory(object):
-    def __init__(self, gamma=0.995,
+    def __init__(self, gamma=0.999,
                  lam=0.96, normalize=True, timestep_limit=1000,
                  f_critic_root=None,
                  num_leafs=0,
