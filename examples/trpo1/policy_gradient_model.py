@@ -58,6 +58,7 @@ class PolicyGradientModel(ModelWithCritic):
                  loss_type="PPO",
                  max_grad_norm=0.5,
                  is_flexible_hrl_model=False,
+                 is_decider=False,
                  reset_exp=False
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
@@ -119,11 +120,12 @@ class PolicyGradientModel(ModelWithCritic):
             return cnn_network(t_input, conv_sizes, cnn_activation=tf.nn.leaky_relu,
                                fc_sizes=cnn_fc_feat, fc_activation=tf.nn.leaky_relu)
 
-        self.name = name
+        self.name = name if not self.is_flexible_hrl_model else name + "_switcher"
+        self.is_decider = is_decider
 
         self.critic = MultiBaseline(session=self.session, observation_space=self.ob_space,
                                     minibatch_size=minibatch_size,
-                                    main_scope=name + "_critic",
+                                    main_scope=self.name + "_critic",
                                     timestep_limit=timestep_limit,
                                     activation=tf.nn.elu,
                                     n_imgfeat=self.n_imgfeat,
@@ -134,10 +136,7 @@ class PolicyGradientModel(ModelWithCritic):
         if hasattr(self.act_space, "low"):
             self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
         else:
-            if self.is_flexible_hrl_model:
-                self.distribution = Categorical(num_cat=self.act_space.n)
-            else:
-                self.distribution = Categorical(num_cat=self.act_space.n)
+            self.distribution = Categorical(num_cat=self.act_space.n)
 
         self.theta = None
         # self.info_shape = dict(mean=self.act_space.shape,
@@ -146,7 +145,7 @@ class PolicyGradientModel(ModelWithCritic):
         #                        img_enabled=(),
         #                        st_enabled=self.ob_space[0].low.shape)
 
-        self.policy = MultiNetwork(scope=name + "_policy",
+        self.policy = MultiNetwork(scope=self.name + "_policy",
                                    observation_space=self.ob_space,
                                    action_space=self.act_space,
                                    n_imgfeat=self.n_imgfeat,
@@ -656,7 +655,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug('step_size OK = %s' % self.p_step_size)
 
     def train(self, paths, pid=None):
-        if paths is not None and self.is_flexible_hrl_model:
+        if paths is not None and self.is_decider:
             logging.debug("root at t\t{}".format(self.n_update))
             norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
             logging.info("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))

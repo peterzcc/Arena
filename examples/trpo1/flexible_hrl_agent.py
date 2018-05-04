@@ -25,8 +25,9 @@ class FlexibleHrlAgent(Agent):
 
         assert shared_params is not None
         # self.param_lock = shared_params["lock"]
-        self.root_policy: PolicyGradientModel = shared_params["models"][0]
-        self.sub_policies = shared_params["models"][1:]
+        self.decider: PolicyGradientModel = shared_params["models"]["decider"]
+        self.switcher: PolicyGradientModel = shared_params["models"]["switcher"]
+        self.sub_policies = shared_params["models"]["leafs"]
         self.sub_pol_act_t = 0
         self.memory: DictMemory = shared_params["memory"]
 
@@ -39,14 +40,14 @@ class FlexibleHrlAgent(Agent):
 
         self.num_episodes = 0
         self.train_data = None
-        self.should_clip_episodes = (self.root_policy.batch_mode == "timestep")
+        self.should_clip_episodes = (self.decider.batch_mode == "timestep")
         self.full_tasks = full_tasks
         self.current_policy_id = 0
         self.is_initial_step = 1
 
-    def update_meta_status(self, root_decision):
-        self.current_policy_id = root_decision - 1 if root_decision != 0 else self.current_policy_id
-        self.sub_pol_act_t = 1 if root_decision != 0 else self.sub_pol_act_t + 1
+    def update_meta_status(self, should_switch, decision):
+        self.current_policy_id = decision if should_switch else self.current_policy_id
+        self.sub_pol_act_t = 1 if should_switch else self.sub_pol_act_t + 1
 
     def wrap_meta_obs(self, observation):
         return [*observation, np.array([self.current_policy_id, self.sub_pol_act_t, self.is_initial_step])]
@@ -56,18 +57,22 @@ class FlexibleHrlAgent(Agent):
         if self.batch_start_time is None:
             self.batch_start_time = time.time()
 
-        self.is_initial_step = (self.time_count == 0)
+        self.is_initial_step = (self.sub_pol_act_t == 0)
         wrapped_obs = self.wrap_meta_obs(observation)
 
-        root_decision, root_model_info = self.root_policy.predict(wrapped_obs, pid=self.id)
-        # self.memory.append_observation(wrapped_obs, pid=self.id)
-        # self.memory.append_action(root_decision, root_model_info, pid=self.id)
-        self.update_meta_status(root_decision)
+        should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
+        if should_switch:
+            decision, decider_model_info = self.decider.predict(wrapped_obs, pid=self.id)
+        else:
+            decision, decider_model_info = None, None
+        self.update_meta_status(should_switch, decision)
         action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
 
-        self.memory.append_state(wrapped_obs, root_decision, root_model_info, self.id,
-                                 leaf_id=self.current_policy_id, leaf_action=action, leaf_model_info=leaf_model_info,
-                                 curr_time_step=self.time_count)
+        self.memory.append_hrl_state(wrapped_obs, should_switch, switcher_model_info, decision, decider_model_info,
+                                     self.id,
+                                     leaf_id=self.current_policy_id, leaf_action=action,
+                                     leaf_model_info=leaf_model_info,
+                                     curr_time_step=self.time_count)
 
 
 
@@ -80,7 +85,6 @@ class FlexibleHrlAgent(Agent):
         self.time_count += 1
         if done:
             self.time_count = 0
-            self.sub_pol_act_t = 1
 
         batch_ends = self.memory.incre_count_and_check_done()
 
@@ -91,16 +95,18 @@ class FlexibleHrlAgent(Agent):
             except KeyError:
                 logging.warning(": no info about real termination ")
                 terminated = done
+            self.sub_pol_act_t = 0
             self.memory.transfer_single_path(terminated, self.id)
-        self.root_policy.batch_ends[self.id] = batch_ends
+        self.decider.batch_ends[self.id] = batch_ends
         if batch_ends:
-            self.root_policy.batch_barrier.wait()
+            self.decider.batch_barrier.wait()
             if self.id == 0:
                 extracted_result = self.memory.profile_extract_all(with_subtasks=True)
                 train_before = time.time()
-                self.root_policy.train(extracted_result["paths"])
+                self.decider.train(extracted_result["decider_data"])
+                self.switcher.train(extracted_result["switcher_data"])
 
-                for p, train_paths in zip(self.sub_policies, extracted_result["leaf_paths"]):
+                for p, train_paths in zip(self.sub_policies, extracted_result["leaf_data"]):
                     p.train(train_paths)
 
 
@@ -115,5 +121,5 @@ class FlexibleHrlAgent(Agent):
                         train_time,
                         res_ram
                     ))
-            self.root_policy.batch_barrier.wait()
+            self.decider.batch_barrier.wait()
             self.num_epoch += 1

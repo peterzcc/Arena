@@ -390,69 +390,11 @@ def main():
                                     save_model=args.save_model)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
-                            f_critic_root=model.compute_critic,
+                            f_critic={"decider": model.compute_critic},
                             num_actors=num_actors,
                             f_check_batch=model.check_batch_finished)
         return {"models": [model], "memory": memory}
 
-    def f_should_return_root(source, t, target=None):
-        return t >= 10  # TODO
-
-    def hrl_shared_params():
-        from policy_gradient_model import PolicyGradientModel
-        from dict_memory import DictMemory
-        sample_env = f_create_env()
-        observation_space = sample_env.observation_space
-        action_space = sample_env.action_space
-        sample_env.env.close()
-        n_imgfeat = args.nfeat if append_image else 0
-        comb_methd = concat_feature if append_image else aggregate_feature
-
-        comb_methd = concat_without_task if feat_sup else comb_methd
-        session = create_session()
-
-        root_action_space = Discrete(len(full_tasks) - 1)
-        root_model = PolicyGradientModel(observation_space, root_action_space,
-                                         name=args.env,
-                                         timestep_limit=T,
-                                         num_actors=num_actors,
-                                         f_batch_size=const_batch_size,
-                                         batch_mode=args.batch_mode,
-                                         f_target_kl=const_target_kl,
-                                         n_imgfeat=n_imgfeat,
-                                         mode=args.rl_method,
-                                         kl_history_length=1,
-                                         comb_method=comb_methd,
-                                         surr_loss=args.loss,
-                                         ent_k=args.ent_k,
-                                         session=session,
-                                         load_old_model=args.load_model,
-                                         should_train=not args.no_train,
-                                         parallel_predict=False,
-                                         save_model=args.save_model)
-        models = [root_model]
-        for env_name, _ in list(full_tasks.items())[1:]:
-            p = PolicyGradientModel(observation_space, action_space,
-                                    name=env_name,
-                                    timestep_limit=T,
-                                    num_actors=num_actors,
-                                    n_imgfeat=n_imgfeat,
-                                    comb_method=comb_methd,
-                                    ent_k=args.ent_k,
-                                    session=session,
-                                    load_old_model=True,
-                                    should_train=False,
-                                    parallel_predict=False)
-            models.append(p)
-        # for p in models[1:]:
-        #     p.restore_parameters()
-        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
-                            timestep_limit=T,
-                            f_critic_root=root_model.compute_critic,
-                            num_actors=num_actors,
-                            f_check_batch=root_model.check_batch_finished, )
-
-        return {"models": models, "memory": memory, "f_should_return_root": f_should_return_root}
 
     def flexible_hrl_shared_params():
         from policy_gradient_model import PolicyGradientModel
@@ -467,12 +409,15 @@ def main():
         comb_methd = concat_without_task if feat_sup else comb_methd
         session = create_session()
 
-        root_action_space = Discrete(len(full_tasks))
+        decider_action_space = Discrete(len(full_tasks) - 1)
+        decider_observation_space = observation_space
+
         # Data structure: [state, image, current policy, current execution time, is initial step
-        root_obseravation_space = [*observation_space,
-                                   Box(np.array([0, 0, 0]),
-                                       np.array([root_action_space.n, np.inf, 1.0])
-                                       )]
+        switcher_action_space = Discrete(2)
+        switcher_obseravation_space = [*observation_space,
+                                       Box(np.array([0, 0, 0]),
+                                           np.array([decider_action_space.n, np.inf, 1.0])
+                                           )]
 
         def f_train_root(n):
             return n > args.npret
@@ -485,29 +430,52 @@ def main():
         def hrl_batch_size(n_update):
             return args.batch_size if n_update > args.npret else args.batch_size * num_leaf
 
-        root_model = PolicyGradientModel(root_obseravation_space, root_action_space,
-                                         name=args.env,
-                                         timestep_limit=T,
-                                         num_actors=num_actors,
-                                         f_batch_size=hrl_batch_size,
-                                         batch_mode=args.batch_mode,
-                                         f_target_kl=const_target_kl,
-                                         lr=args.lr,
-                                         n_imgfeat=n_imgfeat,
-                                         mode=args.rl_method,
-                                         kl_history_length=1,
-                                         comb_method=comb_methd,
-                                         surr_loss=args.loss,
-                                         ent_k=args.ent_k,
-                                         session=session,
-                                         load_old_model=args.load_model,
-                                         model_load_dir=args.load_dir,
-                                         should_train=not args.no_train,
-                                         f_train_this_epoch=f_train_root,
-                                         parallel_predict=False,
-                                         save_model=args.save_model,
-                                         is_flexible_hrl_model=True)
-        models = [root_model]
+        decider_model = PolicyGradientModel(decider_observation_space, decider_action_space,
+                                            name=args.env,
+                                            timestep_limit=T,
+                                            num_actors=num_actors,
+                                            f_batch_size=hrl_batch_size,
+                                            batch_mode=args.batch_mode,
+                                            f_target_kl=lambda n: args.kl,
+                                            lr=args.lr,
+                                            n_imgfeat=n_imgfeat,
+                                            mode=args.rl_method,
+                                            kl_history_length=1,
+                                            comb_method=comb_methd,
+                                            surr_loss=args.loss,
+                                            ent_k=args.ent_k,
+                                            session=session,
+                                            load_old_model=args.load_model,
+                                            model_load_dir=args.load_dir,
+                                            should_train=not args.no_train,
+                                            f_train_this_epoch=f_train_root,
+                                            parallel_predict=False,
+                                            save_model=args.save_model,
+                                            is_flexible_hrl_model=False,
+                                            is_decider=True)
+        switcher_model = PolicyGradientModel(switcher_obseravation_space, switcher_action_space,
+                                             name=args.env,
+                                             timestep_limit=T,
+                                             num_actors=num_actors,
+                                             f_batch_size=hrl_batch_size,
+                                             batch_mode=args.batch_mode,
+                                             f_target_kl=lambda n: args.kl,
+                                             lr=args.lr,
+                                             n_imgfeat=n_imgfeat,
+                                             mode=args.rl_method,
+                                             kl_history_length=1,
+                                             comb_method=comb_methd,
+                                             surr_loss=args.loss,
+                                             ent_k=args.ent_k,
+                                             session=session,
+                                             load_old_model=False,
+                                             model_load_dir=args.load_dir,
+                                             should_train=False,
+                                             f_train_this_epoch=f_train_root,
+                                             parallel_predict=False,
+                                             save_model=args.save_model,
+                                             is_flexible_hrl_model=True)
+        models = {"decider": decider_model, "switcher": switcher_model, "leafs": []}
 
         for env_name, _ in list(full_tasks.items())[1:]:
             p = PolicyGradientModel(observation_space, action_space,
@@ -534,7 +502,7 @@ def main():
                                     save_model=args.save_model,
                                     is_flexible_hrl_model=False
                                     )
-            models.append(p)
+            models["leafs"].append(p)
         # for p in models[1:]:
         #     p.restore_parameters()
         # memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
@@ -544,11 +512,13 @@ def main():
         #                     f_check_batch=root_model.check_batch_finished, )
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
-                            f_critic_root=root_model.compute_critic,
-                            f_critic_leafs=[m.compute_critic for m in models[1:]],
-                            num_leafs=len(models) - 1,
+                            f_critic={"decider": decider_model.compute_critic,
+                                      "switcher": switcher_model.compute_critic,
+                                      "leafs": [m.compute_critic for m in models["leafs"]]
+                                      },
+                            num_leafs=len(full_tasks) - 1,
                             num_actors=num_actors,
-                            f_check_batch=root_model.check_batch_finished, )
+                            f_check_batch=decider_model.check_batch_finished, )
 
         return {"models": models, "memory": memory}
 

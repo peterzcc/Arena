@@ -6,7 +6,7 @@ import numpy as np
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
     aggregate_feature, select_st, logit
 import logging
-from prob_types import DiagonalGaussian, CategoricalWithProb, Categorical, logits_from_cond_categorical
+from prob_types import DiagonalGaussian, CategoricalWithProb, Categorical, logits_from_ter_categorical
 dtype = tf.float32
 
 
@@ -102,28 +102,28 @@ class MultiNetwork(object):
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(self.fc_layers[-1])
             else:
-                root_logits = tf.layers.dense(self.fc_layers[-1], action_space.n - 1,
+                root_logits = tf.layers.dense(self.fc_layers[-1], 1,
                                               kernel_initializer=ScalingOrth(scale=1.0, dtype=dtype))
-                max_length = 25.0
-                with tf.variable_scope("ter_model") as time_scope:
+                max_length = 9.5
+                with tf.variable_scope("switch_model") as time_scope:
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
                                                        trainable=False)
                     self.time_offset = tf.get_variable(name="time_offset", initializer=tf.constant(max_length),
                                                   trainable=False)
-                    time_logit = -self.time_weight * (self.hrl_meta_input[:, 1:2] - self.time_offset)
+                    time_logit = self.time_weight * (self.hrl_meta_input[:, 1:2] - self.time_offset)
                     self.fixed_prob_ter_logit = tf.get_variable("fix_ter_prob",
                                                                 initializer=tf.constant(logit(0.01),
                                                                                         dtype=tf.float32),
                                                                 dtype=tf.float32)
-                    cont_prob_offset = 1.0 - self.fixed_prob_ter_logit
+
                     self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(0.0, dtype=tf.float32),
                                                             # TODO: tune
                                                             dtype=tf.float32)
-                    final_contlogit = self.fixed_ter_weight * cont_prob_offset + \
-                                  (1-self.fixed_ter_weight)*time_logit
+                    final_terlogit = self.fixed_ter_weight * self.fixed_prob_ter_logit + \
+                                     (1 - self.fixed_ter_weight) * time_logit
 
-                full_logits = logits_from_cond_categorical(root_logits, final_contlogit,
-                                                           is_initial_step=self.hrl_meta_input[:, 2:3])
+                full_logits = logits_from_ter_categorical(root_logits, final_terlogit,
+                                                          is_initial_step=self.hrl_meta_input[:, 2:3])
                 assert isinstance(self.distribution, Categorical)
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(logits=full_logits)

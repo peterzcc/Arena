@@ -84,7 +84,7 @@ CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" p
 
 local 60:
 
-python3.6 pg_train.py --env move2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.00001 --load-leaf 1 --train-leaf 0 --npret -1
+python3.6 pg_train.py --env move2d --rl-method PG --nactor 20 --batch-size 10000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.00001 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.1
 
 
 

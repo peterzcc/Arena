@@ -73,11 +73,11 @@ def categorical_crossentropy(output, labels, from_logits=False):
 INF = 1e6
 
 
-def logits_from_cond_categorical(logits, p, is_initial_step):
+def logits_from_ter_categorical(logits, p, is_initial_step):
     scaled_logits = logits - tf.reduce_logsumexp(logits, axis=1, keepdims=True)
     # bool_is_initial = tf.not_equal(is_initial_step, 0)
-    continue_logit = (1.0 - is_initial_step) * p + is_initial_step * -INF
-    full_logits = tf.concat([continue_logit, scaled_logits], axis=1)
+    ter_logit = (1.0 - is_initial_step) * p + is_initial_step * INF
+    full_logits = tf.pad(ter_logit, [[0, 0], [1, 0]])
     return full_logits
 
 
