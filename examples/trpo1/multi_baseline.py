@@ -161,10 +161,12 @@ class MultiBaseline(object):
         if self.debug_mode and (pid is None or pid == 0):
             # logging.debug("before vf optimization")
             self.print_loss(feed, extra="old")
-        new_mu = feed[self.y].mean()
-        new_sigma = feed[self.y].std()
-        self.session.run(self.scale_updates, feed_dict={self.new_mean: new_mu,
-                                                        self.new_std: new_sigma})
+        update_scale = False
+        if update_scale:
+            new_mu = feed[self.y].mean()
+            new_sigma = feed[self.y].std()
+            self.session.run(self.scale_updates, feed_dict={self.new_mean: new_mu,
+                                                            self.new_std: new_sigma})
         batch_N = feed[self.y].shape[0]
 
         for n_pass in range(num_pass):

@@ -400,7 +400,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def check_if_ant_crash(self, state, rot_angle):
         notdone = np.isfinite(state).all() \
-                  and rot_angle > 0  # and state[2] >= 0.2 and state[2] <= 1.0
+                  and rot_angle > 0 and state[2] >= 0.2 and state[2] <= 1.0
         # TODO: verify what happens if remove the last condition
         done = not notdone
         return done

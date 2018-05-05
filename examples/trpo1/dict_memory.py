@@ -279,7 +279,7 @@ class DictMemory(object):
         #     path["advantage"] = (path["advantage"] - mean) / (std + 1e-6)
         paths["advantage"] = (paths["advantage"] - mean) / (std + 1e-6)
 
-    def extract_all(self, pid=None, with_subtasks=False):  
+    def extract_all(self, pid=None, with_subtasks=False):
         paths = self.extract_paths(pid)
         obs = self.stack_obs_for_paths(paths)
         common_data = {}

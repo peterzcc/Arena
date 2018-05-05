@@ -104,7 +104,7 @@ class MultiNetwork(object):
             else:
                 root_logits = tf.layers.dense(self.fc_layers[-1], 1,
                                               kernel_initializer=ScalingOrth(scale=1.0, dtype=dtype))
-                max_length = 9.5
+                max_length = 50 - 0.5
                 with tf.variable_scope("switch_model") as time_scope:
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
                                                        trainable=False)

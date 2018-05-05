@@ -248,9 +248,12 @@ class PolicyGradientModel(ModelWithCritic):
                     self.p_beta_min = 1.0 / 35.0
                     self.p_beta_value = 3
                     self.p_eta_value = 50
-                    self.p_kl_loss = self.p_beta * self.policy.kl + \
-                                     self.p_eta_value * tf.square(
-                        tf.maximum(0.0, self.policy.kl - 2.0 * self.target_kl_sym))
+                    if self.f_target_kl is not None:
+                        self.p_kl_loss = self.p_beta * self.policy.kl + \
+                                         self.p_eta_value * tf.square(
+                            tf.maximum(0.0, self.policy.kl - 2.0 * self.target_kl_sym))
+                    else:
+                        self.p_kl_loss = 0.0
                     self.pg_loss = self.rl_loss + self.ent_loss + self.p_kl_loss
 
                     self.p_grads = tf.gradients(self.pg_loss, self.policy.var_list)
@@ -614,7 +617,8 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
 
     def fit_pg(self, feed, num_samples, pid=None):
-        target_kl_value = self.f_target_kl(self.n_update)
+
+        target_kl_value = self.f_target_kl(self.n_update) if self.f_target_kl is not None else None
         if self.debug:
             logging.debug("\nbatch_size: {}".format(num_samples))
             surr_o, kl_o, ent_o = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
@@ -638,21 +642,22 @@ class PolicyGradientModel(ModelWithCritic):
         if self.debug:
             logging.debug("\nnew_surr: {}\tnew_kl: {}\tnew_ent: {}".format(surr_new, kl_new, ent_new))
             logging.debug("\ngnorm: {}".format(g_norm))
-        if kl_new > target_kl_value * 2:
-            self.p_beta_value = np.minimum(self.p_beta_max, 1.5 * self.p_beta_value)
-            if self.p_beta_value > self.p_beta_max - 5:
-                self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / 1.5)
-            logging.debug('beta -> %s' % self.p_beta_value)
-            logging.debug('step_size -> %s' % self.p_step_size)
-        elif kl_new < target_kl_value / 2:
-            self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / 1.5)
-            if self.p_beta_value < self.p_beta_min:
-                self.p_step_size = np.minimum(self.p_max_step_size, 1.5 * self.p_step_size)
-            logging.debug('beta -> %s' % self.p_beta_value)
-            logging.debug('step_size -> %s' % self.p_step_size)
-        else:
-            logging.debug('beta OK = %s' % self.p_beta_value)
-            logging.debug('step_size OK = %s' % self.p_step_size)
+        if self.f_target_kl is not None:
+            if kl_new > target_kl_value * 2:
+                self.p_beta_value = np.minimum(self.p_beta_max, 1.5 * self.p_beta_value)
+                if self.p_beta_value > self.p_beta_max - 5:
+                    self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / 1.5)
+                logging.debug('beta -> %s' % self.p_beta_value)
+                logging.debug('step_size -> %s' % self.p_step_size)
+            elif kl_new < target_kl_value / 2:
+                self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / 1.5)
+                if self.p_beta_value < self.p_beta_min:
+                    self.p_step_size = np.minimum(self.p_max_step_size, 1.5 * self.p_step_size)
+                logging.debug('beta -> %s' % self.p_beta_value)
+                logging.debug('step_size -> %s' % self.p_step_size)
+            else:
+                logging.debug('beta OK = %s' % self.p_beta_value)
+                logging.debug('step_size OK = %s' % self.p_step_size)
 
     def train(self, paths, pid=None):
         if paths is not None and self.is_decider:

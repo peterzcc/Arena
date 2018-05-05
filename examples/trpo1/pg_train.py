@@ -109,7 +109,7 @@ def main():
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     parser.add_argument('--batch-mode', required=False, type=str, default='timestep',
                         help='timestep or episode')
-    parser.add_argument('--kl', required=False, default=0.002, type=float,
+    parser.add_argument('--kl', required=False, default=None, type=float,
                         help='target kl')
     parser.add_argument('--ent-k', required=False, default=0, type=float,
                         help='entropy loss weight')
@@ -117,8 +117,11 @@ def main():
                         help='gae lambda')
     parser.add_argument('--gamma', required=False, default=0.995, type=float,
                         help='gae lambda')
-    parser.add_argument('--withimg', default=False, type=bool, help='append image input')
+    parser.add_argument('--withimg', default=False, type=str2bool, nargs='?',
+                        const=True, )
     parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
+                        const=True, )
+    parser.add_argument('--norm-gae', default=True, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--load-dir', default="models", type=str, help='model directory')
     parser.add_argument('--load-leaf', default=True, type=str2bool, nargs='?',
@@ -223,9 +226,11 @@ def main():
                                   reset_goal_prob=0, )
         elif args.env in hrl0:
             with_state_task = False
+            subtask_dirs = np.stack([v() for (k, v) in list(hrl0.items())[1:]], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=hrl0[args.env],
-                                  reset_goal_prob=0, )
+                                  reset_goal_prob=0,
+                                  subtask_dirs=subtask_dirs)
         elif args.env in hrl_move2d:
             subtask_dirs = np.stack([v() for (k, v) in list(hrl_move2d.items())[1:]], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
@@ -324,8 +329,13 @@ def main():
     def const_batch_size(n_update):
         return args.batch_size
 
-    def const_target_kl(n_update):
+    def const_kl(n_update):
         return args.kl
+
+    if args.kl is None:
+        f_target_kl = None
+    else:
+        f_target_kl = const_kl
 
     start_t = 0
     end_t = args.num_steps / 10000
@@ -372,7 +382,7 @@ def main():
                                     num_actors=num_actors,
                                     f_batch_size=const_batch_size,
                                     batch_mode=args.batch_mode,
-                                    f_target_kl=const_target_kl,
+                                    f_target_kl=f_target_kl,
                                     lr=args.lr,
                                     n_imgfeat=n_imgfeat,
                                     mode=args.rl_method,
@@ -494,7 +504,7 @@ def main():
                                     parallel_predict=False,
                                     f_batch_size=const_batch_size,
                                     batch_mode=args.batch_mode,
-                                    f_target_kl=const_target_kl,
+                                    f_target_kl=f_target_kl,
                                     lr=args.lr,
                                     mode=args.rl_method,
                                     kl_history_length=1,
@@ -510,7 +520,7 @@ def main():
         #                     f_critic=root_model.compute_critic,
         #                     num_actors=num_actors,
         #                     f_check_batch=root_model.check_batch_finished, )
-        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=args.norm_gae,
                             timestep_limit=T,
                             f_critic={"decider": decider_model.compute_critic,
                                       "switcher": switcher_model.compute_critic,
