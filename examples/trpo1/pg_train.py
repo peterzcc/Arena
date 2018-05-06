@@ -22,6 +22,7 @@ import os
 from collections import OrderedDict
 from tf_utils import aggregate_feature, concat_feature, concat_without_task, str2bool
 import subprocess
+
 BATH_SIZE = 10000
 
 
@@ -29,6 +30,7 @@ BATH_SIZE = 10000
 
 def get_git_revision_short_hash():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
+
 
 def linear_moving_value(x1, x2, t1, t2, t):
     if t < t1:
@@ -80,6 +82,7 @@ def v_n11():
 def v_n1n1():
     return np.sqrt(1 / 2) * np.array((-1, -1))
 
+
 def random_direction():
     choice = np.random.randint(0, 4)
     return DIRECTIONS[choice, :]
@@ -93,10 +96,14 @@ def random_cont_direction():
 def x_for_back():
     choice = np.random.randint(0, 2) * 2
     return DIRECTIONS[choice, :]
+
+
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
                         help='learning rate of the choosen optimizer')
+    parser.add_argument('--vlr', required=False, default=0.0003, type=float,
+                        help='learning rate of the critic')
     parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
@@ -157,7 +164,6 @@ def main():
     # final_factor = 0.01
     test_length = 0
 
-
     import multiprocessing
     render_lock = multiprocessing.Lock()
     barrier = multiprocessing.Barrier(num_actors)
@@ -165,8 +171,6 @@ def main():
 
     append_image = args.withimg
     feat_sup = False
-
-
 
     hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
     hrl_8d = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
@@ -199,7 +203,6 @@ def main():
                           )
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
                           reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage)
-
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -384,6 +387,7 @@ def main():
                                     batch_mode=args.batch_mode,
                                     f_target_kl=f_target_kl,
                                     lr=args.lr,
+                                    critic_lr=args.vlr,
                                     n_imgfeat=n_imgfeat,
                                     mode=args.rl_method,
                                     update_per_epoch=4,
@@ -404,7 +408,6 @@ def main():
                             num_actors=num_actors,
                             f_check_batch=model.check_batch_finished)
         return {"models": [model], "memory": memory}
-
 
     def flexible_hrl_shared_params():
         from policy_gradient_model import PolicyGradientModel
@@ -446,8 +449,9 @@ def main():
                                             num_actors=num_actors,
                                             f_batch_size=hrl_batch_size,
                                             batch_mode=args.batch_mode,
-                                            f_target_kl=lambda n: args.kl,
+                                            f_target_kl=f_target_kl,
                                             lr=args.lr,
+                                            critic_lr=args.vlr,
                                             n_imgfeat=n_imgfeat,
                                             mode=args.rl_method,
                                             kl_history_length=1,
@@ -469,8 +473,9 @@ def main():
                                              num_actors=num_actors,
                                              f_batch_size=hrl_batch_size,
                                              batch_mode=args.batch_mode,
-                                             f_target_kl=lambda n: args.kl,
+                                             f_target_kl=f_target_kl,
                                              lr=args.lr,
+                                             critic_lr=args.vlr,
                                              n_imgfeat=n_imgfeat,
                                              mode=args.rl_method,
                                              kl_history_length=1,
@@ -506,6 +511,7 @@ def main():
                                     batch_mode=args.batch_mode,
                                     f_target_kl=f_target_kl,
                                     lr=args.lr,
+                                    critic_lr=args.vlr,
                                     mode=args.rl_method,
                                     kl_history_length=1,
                                     surr_loss=args.loss,
@@ -543,6 +549,7 @@ def main():
 
     experiment.run_parallelly(num_actors, num_epoch, steps_per_epoch,
                               with_testing_length=test_length)
+
 
 if __name__ == '__main__':
     main()

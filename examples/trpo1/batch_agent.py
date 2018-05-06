@@ -58,9 +58,9 @@ class BatchUpdateAgent(Agent):
         self.epoch_step += 1
         is_episode_clipped = self.epoch_step * self.policy.num_actors == self.policy.batch_size
         # if self.policy.batch_mode == "episode":
-        #     batch_ends = done and self.memory.incre_count_and_check_done()
+        #     batch_ends = done and self.memory.check_done()
         # else:
-        #     batch_ends = self.memory.incre_count_and_check_done(self.id)
+        #     batch_ends = self.memory.check_done(self.id)
         if done or is_episode_clipped:
             terminated = False
             if done:

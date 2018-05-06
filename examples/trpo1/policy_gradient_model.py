@@ -34,11 +34,11 @@ class PolicyGradientModel(ModelWithCritic):
                  session=None,
                  conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
                  min_std=1e-6,
-                 max_kl=0.01,
                  timestep_limit=1000,
                  n_imgfeat=0,
                  f_target_kl=None,
                  lr=0.0001,
+                 critic_lr=0.0003,
                  minibatch_size=128,
                  mode="ACKTR",
                  surr_loss="PPO",
@@ -71,7 +71,6 @@ class PolicyGradientModel(ModelWithCritic):
 
         # store constants
         self.min_std = min_std
-        self.max_kl = max_kl
         self.minibatch_size = minibatch_size
         self.use_empirical_fim = True
         self.mode = mode
@@ -132,7 +131,8 @@ class PolicyGradientModel(ModelWithCritic):
                                     comb_method=self.comb_method,
                                     cnn_trainable=cnn_trainable,
                                     f_build_cnn=f_build_img_net,
-                                    is_flexible_hrl_model=is_flexible_hrl_model)
+                                    is_flexible_hrl_model=is_flexible_hrl_model,
+                                    lr=critic_lr)
         if hasattr(self.act_space, "low"):
             self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
         else:

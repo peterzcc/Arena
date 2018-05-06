@@ -72,7 +72,7 @@ class HrlAgent(Agent):
             self.sub_pol_act_t = 0
             self.time_count += 1
 
-        batch_ends = self.memory.incre_count_and_check_done()
+        batch_ends = self.memory.check_done()
 
         if done or batch_ends:
             self.acting_policy = self.root_policy

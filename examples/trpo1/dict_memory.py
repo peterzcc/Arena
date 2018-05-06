@@ -32,6 +32,14 @@ def discount(x, gamma):
     return signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
 
+def rm_empty(l):
+    if l[0].size == 0:
+        return l[1:]
+    elif l[-1].size == 0:
+        return l[:-1]
+    else:
+        return l
+
 SWITCHER_PREFIX = "switcher_"
 SWITCHER_ACTION = "switcher_action"
 DECIDER_PREFIX = "decider_"
@@ -40,6 +48,7 @@ OBSERVATION = "observation"
 TIMES = "times"
 REWARD = "reward"
 TERMINATED = "terminated"
+HAS_DECISION = "has_decision"
 class DictMemory(object):
     def __init__(self, gamma=0.999,
                  lam=0.96, normalize=True, timestep_limit=1000,
@@ -99,7 +108,9 @@ class DictMemory(object):
         self.current_path[pid][SWITCHER_ACTION].append(should_switch)
         for (k, v) in switcher_model_info.items():
             self.current_path[pid][SWITCHER_PREFIX + k].append(v)
-        if decision is not None:
+        has_decision = decision is not None
+        self.current_path[pid][HAS_DECISION].append(has_decision)
+        if has_decision:
             self.current_path[pid][DECIDER_ACTION].append(decision)
             for (k, v) in decider_model_info.items():
                 self.current_path[pid][DECIDER_PREFIX + k].append(v)
@@ -130,7 +141,7 @@ class DictMemory(object):
         # self.time_counts[pid] += 1
         self.time_count += 1
 
-    def incre_count_and_check_done(self, pid=None):
+    def check_done(self, pid=None):
         if pid is None:
             batch_ends = self.f_check_batch(self.time_count, self.num_episodes)
         else:
@@ -325,6 +336,8 @@ class DictMemory(object):
             common_data.update(**gae_infos)
             result = {"paths": common_data}
         else:
+            for k in [HAS_DECISION, ]:
+                common_data[k] = np.concatenate([p[k] for p in paths])
             result = {}
             # switch policy
             switcher_data = {}
@@ -356,7 +369,7 @@ class DictMemory(object):
                 agg_paths[k] = common_data[k]
             subrewards = np.concatenate([p["subrewards"] for p in paths])
             agg_paths[REWARD] = np.choose(agg_paths["id"], subrewards.T)
-            agg_paths["index"] = np.arange(0, agg_paths[TIMES].shape[0])
+            # agg_paths["index"] = np.arange(0, agg_paths[TIMES].shape[0])
 
             is_leaf_split = np.zeros(common_data[REWARD].shape, dtype=np.bool)
             leaf_term = np.zeros(common_data[REWARD].shape, dtype=np.bool)
@@ -364,7 +377,7 @@ class DictMemory(object):
             is_leaf_split[common_data["splits"][:-1]] = True
             leaf_term[common_data["splits"] - 1] = common_data[TERMINATED]
 
-            leaf_exits = np.flatnonzero(switcher_data["action"])
+            leaf_exits = np.flatnonzero(common_data[HAS_DECISION])
             is_leaf_split[leaf_exits] = True
             is_leaf_split[0] = False
 
@@ -374,7 +387,7 @@ class DictMemory(object):
             decider_data = {}
             for k in paths[0].keys():
                 if k.startswith(DECIDER_PREFIX):
-                    decider_data[k[len(DECIDER_PREFIX):]] = np.concatenate([p[k] for p in paths])
+                    decider_data[k[len(DECIDER_PREFIX):]] = np.concatenate([p[k] for p in paths if k in p])
             for k in [OBSERVATION, ]:
                 decider_data[k] = [obs[leaf_exits] for obs in common_data[k]]
             for k in [TIMES, ]:
@@ -383,21 +396,32 @@ class DictMemory(object):
                 decider_data[k] = common_data[k]
 
             # decider path
-            decider_grouped_rewards = np.split(common_data[REWARD], leaf_exits[1:])
+            # is_decider_split = np.zeros(common_data[REWARD].shape, dtype=np.int32)
+            # is_decider_split[[common_data["splits"][:-1]]] = 1
+            # decider_path_ids = np.cumsum(is_decider_split)
+            # decider_act_path_id = decider_path_ids[leaf_exits]
+            # decider_splits = np.flatnonzero(decider_act_path_id[:-1] != decider_act_path_id[1:]) + 1
+
+            decider_grouped_rewards = rm_empty(np.split(common_data[REWARD], leaf_exits))
             group_lens = list(map(len, decider_grouped_rewards))
             grouped_gpow = list(map(lambda l: self.gpow[0:l], group_lens))  # [self.gpow[0:glen] for glen in group_lens]
             smdp_rs = list(map(np.inner, decider_grouped_rewards, grouped_gpow))
             # [np.inner(r, p) for r, p in zip(decider_grouped_rewards, grouped_gpow)])
             smdp_r = np.array(smdp_rs)
+            # if leaf_exits[0] != 0:
+            #     smdp_r = smdp_r[1:]
             decider_data[REWARD] = smdp_r
             assert smdp_r.size == decider_data[TIMES].size
 
             # split
             full_is_decider_split = np.zeros(common_data[REWARD].shape, dtype=np.bool)
-            full_is_decider_split[common_data["splits"][:-1]] = True
-            grouped_splits = np.split(full_is_decider_split, leaf_exits[1:])
-            is_decider_split = np.array(list(map(lambda x: x[0], grouped_splits)))
-            decider_data["splits"] = np.flatnonzero(is_decider_split)
+            full_is_decider_split[common_data["splits"][:-1] - 1] = True
+            # grouped_is_split = rm_empty(np.split(full_is_decider_split, full_leaf_splits))
+            # is_decider_split = np.array(list(map(lambda x: x[-1], grouped_is_split)))
+            is_decider_split = full_is_decider_split[full_leaf_splits - 1]
+            is_decider_split[-1] = False
+            decider_data["splits"] = np.flatnonzero(is_decider_split) + 1
+            assert decider_data["splits"][-1] != decider_data["action"].size
             assert len(decider_data["splits"]) == len(decider_data[TERMINATED]) - 1
             decider_gae = self.compute_gae_for_path(decider_data, f_critic=self.f_critic["decider"],
                                                     normalize=self.normalize)

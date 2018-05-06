@@ -18,6 +18,7 @@ class MultiBaseline(object):
                  observation_space=None, n_imgfeat=1, activation=tf.nn.tanh,
                  max_iter=25, timestep_limit=1000, comb_method=aggregate_feature,
                  minibatch_size=256,
+                 lr=0.0003,
                  cnn_trainable=True,
                  f_build_cnn=None,
                  is_flexible_hrl_model=False):
@@ -42,6 +43,8 @@ class MultiBaseline(object):
             self.mu = tf.get_variable("scale_mu", initializer=tf.constant(0.0), trainable=False)
             self.new_std = tf.placeholder(tf.float32, shape=[], name="new_sigma")
             self.new_mean = tf.placeholder(tf.float32, shape=[], name="new_mu")
+            self.curr_mean_value = None
+            self.curr_std_value = None
             self.var_notrain += [self.sigma, self.mu]
 
             self.y = tf.placeholder(tf.float32, shape=[None], name="y")
@@ -124,7 +127,7 @@ class MultiBaseline(object):
             self.l2 = self.st_l2  #+ self.img_l2
             self.final_loss = self.mse  # S+ (self.l2) * self.l2_k
 
-            self.lr = 0.0003
+            self.lr = lr
             self.opt = tf.train.AdamOptimizer(learning_rate=self.lr)
             self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
                                            var_list=self.var_list)
@@ -142,10 +145,10 @@ class MultiBaseline(object):
                         feed=feed, N=feed[self.y].shape[0],
                         session=self.session,
                         minibatch_size=self.minibatch_size)[0]
-        # ypred = self.session.run(self.net, feed_dict=feed)
-        # ex_var = self.explained_var(ypred, feed[self.y])
+        ypred = self.session.run(self.net, feed_dict=feed)
+        ex_var = self.explained_var(ypred, feed[self.y])
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
-        logging.debug("vf:\t {}_mse:{}".format(extra, mse))
+        logging.debug("vf:\t {}_mse:{}\tex_var:{}".format(extra, mse, ex_var))
 
     def fit(self, feed, update_mode="full", num_pass=1, pid=None):
 
@@ -161,12 +164,18 @@ class MultiBaseline(object):
         if self.debug_mode and (pid is None or pid == 0):
             # logging.debug("before vf optimization")
             self.print_loss(feed, extra="old")
-        update_scale = False
+        update_scale = True
         if update_scale:
+            beta = 0.95
             new_mu = feed[self.y].mean()
             new_sigma = feed[self.y].std()
-            self.session.run(self.scale_updates, feed_dict={self.new_mean: new_mu,
-                                                            self.new_std: new_sigma})
+            if self.curr_mean_value is None:
+                self.curr_mean_value = new_mu
+                self.curr_std_value = new_sigma
+            self.curr_mean_value = beta * self.curr_mean_value + (1 - beta) * new_mu
+            self.curr_std_value = beta * self.curr_std_value + (1 - beta) * new_sigma
+            self.session.run(self.scale_updates, feed_dict={self.new_mean: self.curr_mean_value,
+                                                            self.new_std: self.curr_std_value})
         batch_N = feed[self.y].shape[0]
 
         for n_pass in range(num_pass):

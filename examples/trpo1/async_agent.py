@@ -52,7 +52,7 @@ class AsyncAgent(Agent):
 
         self.memory.append_feedback(reward, pid=self.id)
         # is_episode_clipped = self.time_count * self.model.num_actors == self.model.batch_size
-        batch_ends = self.memory.incre_count_and_check_done(self.id)
+        batch_ends = self.memory.check_done(self.id)
         if done or batch_ends:
             terminated = False
             if done:

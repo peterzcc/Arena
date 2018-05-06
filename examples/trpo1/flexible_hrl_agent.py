@@ -42,11 +42,11 @@ class FlexibleHrlAgent(Agent):
         self.train_data = None
         self.should_clip_episodes = (self.decider.batch_mode == "timestep")
         self.full_tasks = full_tasks
-        self.current_policy_id = 0
+        self.current_policy_id = None
         self.is_initial_step = 1
 
-    def update_meta_status(self, should_switch, decision):
-        self.current_policy_id = decision if should_switch else self.current_policy_id
+    def update_meta_status(self, should_switch):
+        self.current_policy_id = None if should_switch else self.current_policy_id
         self.sub_pol_act_t = 1 if should_switch else self.sub_pol_act_t + 1
 
     def wrap_meta_obs(self, observation):
@@ -57,26 +57,51 @@ class FlexibleHrlAgent(Agent):
         if self.batch_start_time is None:
             self.batch_start_time = time.time()
 
-        self.is_initial_step = (self.sub_pol_act_t == 0)
+        self.is_initial_step = False
         wrapped_obs = self.wrap_meta_obs(observation)
 
-        should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
-        if should_switch:
+        if self.current_policy_id is None:
             decision, decider_model_info = self.decider.predict(wrapped_obs, pid=self.id)
+            self.current_policy_id = decision
+            self.sub_pol_act_t = 1
         else:
             decision, decider_model_info = None, None
-        self.update_meta_status(should_switch, decision)
-        action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
+        should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
 
+        action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
         self.memory.append_hrl_state(wrapped_obs, should_switch, switcher_model_info, decision, decider_model_info,
                                      self.id,
                                      leaf_id=self.current_policy_id, leaf_action=action,
                                      leaf_model_info=leaf_model_info,
                                      curr_time_step=self.time_count)
-
-
+        self.update_meta_status(should_switch)
 
         return action
+
+    def sync_train(self):
+        self.decider.batch_barrier.wait()
+        if self.id == 0:
+            extracted_result = self.memory.profile_extract_all(with_subtasks=True)
+            train_before = time.time()
+            self.decider.train(extracted_result["decider_data"])
+            self.switcher.train(extracted_result["switcher_data"])
+
+            for p, train_paths in zip(self.sub_policies, extracted_result["leaf_data"]):
+                p.train(train_paths)
+
+            train_after = time.time()
+            train_time = (train_after - train_before) / extracted_result["time_count"]
+            fps = 1.0 / train_time
+            res_ram = resident() / (1024 * 1024)
+            logging.info(
+                '\nfps:%f\ntt:%f\nram:%f\n\n\n\n' \
+                % (
+                    fps,
+                    train_time,
+                    res_ram
+                ))
+        self.decider.batch_barrier.wait()
+        self.num_epoch += 1
 
     def receive_feedback(self, reward, done, info={}):
 
@@ -85,8 +110,13 @@ class FlexibleHrlAgent(Agent):
         self.time_count += 1
         if done:
             self.time_count = 0
+            self.sub_pol_act_t = 0
+            self.current_policy_id = None
 
-        batch_ends = self.memory.incre_count_and_check_done()
+        if done or self.current_policy_id is None:
+            batch_ends = self.memory.check_done()
+        else:
+            batch_ends = False
 
         if done or batch_ends:
             terminated = False
@@ -95,31 +125,7 @@ class FlexibleHrlAgent(Agent):
             except KeyError:
                 logging.warning(": no info about real termination ")
                 terminated = done
-            self.sub_pol_act_t = 0
             self.memory.transfer_single_path(terminated, self.id)
         self.decider.batch_ends[self.id] = batch_ends
         if batch_ends:
-            self.decider.batch_barrier.wait()
-            if self.id == 0:
-                extracted_result = self.memory.profile_extract_all(with_subtasks=True)
-                train_before = time.time()
-                self.decider.train(extracted_result["decider_data"])
-                self.switcher.train(extracted_result["switcher_data"])
-
-                for p, train_paths in zip(self.sub_policies, extracted_result["leaf_data"]):
-                    p.train(train_paths)
-
-
-                train_after = time.time()
-                train_time = (train_after - train_before) / extracted_result["time_count"]
-                fps = 1.0 / train_time
-                res_ram = resident() / (1024 * 1024)
-                logging.info(
-                    '\nfps:%f\ntt:%f\nram:%f\n\n\n\n' \
-                    % (
-                        fps,
-                        train_time,
-                        res_ram
-                    ))
-            self.decider.batch_barrier.wait()
-            self.num_epoch += 1
+            self.sync_train()
