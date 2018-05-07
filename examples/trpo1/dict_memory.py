@@ -32,6 +32,14 @@ def discount(x, gamma):
     return signal.lfilter([1], [1, -gamma], x[::-1], axis=0)[::-1]
 
 
+def var_discount(x, t, pow_series):
+    discounts = pow_series[t]
+    return np.sum(x * discounts)
+
+
+def reverse_cumsum(x):
+    return np.cumsum(x[::-1])[::-1]
+
 def rm_empty(l):
     if l[0].size == 0:
         return l[1:]
@@ -78,7 +86,9 @@ class DictMemory(object):
         self.run_start_time = None
         # self.run_start_times = np.zeros((num_actors,), dtype=np.float32)
 
-        self.gpow = self.gamma ** np.arange(0, timestep_limit)
+        self.gamma_pow = np.power(self.gamma, np.arange(0, timestep_limit), dtype=np.float64)
+        self.lam_pow = np.power(self.lam, np.arange(0, timestep_limit), dtype=np.float64)
+
         self.leaf_info_keys = None
 
     def append_state(self, observation, action, info, pid=0,
@@ -255,6 +265,9 @@ class DictMemory(object):
     def compute_delta(self, reward, b1):
         return reward + self.gamma * b1[1:] - b1[:-1]
 
+    def compute_var_delta(self, reward, b1, gamma_diff):
+        return reward + gamma_diff * b1[1:] - b1[:-1]
+
     def compute_gae_for_path(self, path, rewards=None, f_critic=None, normalize=False):
         results = {}
 
@@ -266,19 +279,69 @@ class DictMemory(object):
         results["baseline"] = f_critic(path)
         b = np.split(results["baseline"], path["splits"])
 
-        # b1 = np.append(b, 0 if path[TERMINATED] else b[-1])
         b1 = list(map(self.append_term, b, path[TERMINATED]))
 
         # deltas = path['reward'] + self.gamma * b1[1:] - b1[:-1]
         deltas = list(map(self.compute_delta, rewards, b1))
         advs = list(map(lambda x: discount(x, self.gamma * self.lam), deltas))
-        # path["advantage"] = discount(deltas, self.gamma * self.lam)
-        results["advantage"] = np.concatenate(advs)
+        # correctly scale the advs
+        # whole_decision_times = path["decision_times"]
+        # decision_times = np.split(whole_decision_times, path["splits"])
+        lens = [len(r) for r in rewards]
+        lam_discounted_accum = list(
+            map(lambda l: discount(np.ones(l, dtype=np.float64), self.lam), lens))
+        whole_lam_discounted_accum = np.concatenate(lam_discounted_accum)
+        results["advantage"] = np.concatenate(advs) / whole_lam_discounted_accum
         results["return"] = np.concatenate(returns)
+
         if normalize:
             self.normalize_gae(results)
         return results
 
+    def time_diff_with_zero_padding(self, pow_series, x):
+        if x.size == 1:
+            return np.array(pow_series[0])
+        else:
+            return np.append(pow_series[x[1:] - x[:-1]], 0)
+
+    def gae_hrl(self, path, rewards=None, f_critic=None, normalize=False):
+        results = {}
+
+        if rewards is None:
+            rewards = np.split(path[REWARD], path["splits"])
+        whole_decision_times = path["decision_times"]
+        decision_times = np.split(whole_decision_times, path["splits"])
+        whole_gamma_powered = self.gamma_pow[whole_decision_times]
+        whole_lam_powered = self.lam_pow[whole_decision_times]
+        gamma_powered = np.split(whole_gamma_powered, path["splits"])
+        lam_powered = np.split(whole_lam_powered, path["splits"])
+
+        results["baseline"] = f_critic(path)
+        b = np.split(results["baseline"], path["splits"])
+
+        b1 = list(map(self.append_term, b, path[TERMINATED]))
+
+        gamma_diffs = list(map(lambda x: self.time_diff_with_zero_padding(self.gamma_pow, x),
+                               decision_times))
+        # lam_diffs = list(map(lambda x: self.time_diff_with_zero_padding(self.lam_pow, x),
+        #                        decision_times))
+        # returns = np.split(path["return"], path["splits"])
+
+        deltas = list(
+            map(lambda r, b, g: self.compute_var_delta(r, b, g), rewards, b1, gamma_diffs))
+        lam_discounted_accum = list(map(lambda t: reverse_cumsum(t), lam_powered))
+        whole_lam_discounted_accum = np.concatenate(lam_discounted_accum)
+
+        adv_unscaled = list(
+            map(lambda d, g, l: reverse_cumsum(d * g * l), deltas, gamma_powered, lam_discounted_accum))
+        whole_adv_unscaled = np.concatenate(adv_unscaled)
+        whole_adv_scaled = whole_adv_unscaled / (whole_lam_discounted_accum * whole_gamma_powered)
+
+        results["advantage"] = whole_adv_scaled
+        results["return"] = path["return"]
+        if normalize:
+            self.normalize_gae(results)
+        return results
 
     def normalize_gae(self, paths):
         alladv = paths["advantage"]  # np.concatenate([path["advantage"] for path in paths])
@@ -296,29 +359,8 @@ class DictMemory(object):
         common_data = {}
         common_data[OBSERVATION] = obs
 
-        # if "pos" in paths[0]:
-        #     for path in paths:
-        #         path["reward"] = np.array(path["reward"])
-        #         path["action"] = np.array(path["action"])
-        #
-        #         path["times"] = \
-        #             (np.arange(len(path["reward"])).reshape(-1, 1) / float(self.timestep_limit))[path["pos"], :]
-        #
-        #         # semi_mdp_r = np.zeros(path["action"].shape)
-        #
-        #         grouped_rewards = np.split(path["reward"], path["pos"][1:])
-        #         group_lens = list(map(len, grouped_rewards))
-        #         grouped_gpow = [self.gpow[0:glen] for glen in group_lens]
-        #         semi_mdp_r = np.array([np.inner(r, p) for r, p in zip(grouped_rewards, grouped_gpow)])
-        #
-        #
-        #         path["return"] = discount(semi_mdp_r, self.gamma)
-        #         b = path["baseline"] = self.f_critic(path)
-        #         b1 = np.append(b, 0 if path["terminated"] else b[-1])
-        #
-        #         deltas = semi_mdp_r + self.gamma * b1[1:] - b1[:-1]
-        #         path["advantage"] = discount(deltas, self.gamma * self.lam)
         path_lens = [len(p[REWARD]) for p in paths]
+        # common_data["decision_times"] = np.concatenate(list(map(lambda l: np.arange(0, l), path_lens)))
         common_data["splits"] = np.cumsum(path_lens, dtype=int)
         common_data[TERMINATED] = np.array([p[TERMINATED] for p in paths])
         for k in [REWARD, "time_unormalized"]:
@@ -396,21 +438,19 @@ class DictMemory(object):
                 decider_data[k] = common_data[k]
 
             # decider path
-            # is_decider_split = np.zeros(common_data[REWARD].shape, dtype=np.int32)
-            # is_decider_split[[common_data["splits"][:-1]]] = 1
-            # decider_path_ids = np.cumsum(is_decider_split)
-            # decider_act_path_id = decider_path_ids[leaf_exits]
-            # decider_splits = np.flatnonzero(decider_act_path_id[:-1] != decider_act_path_id[1:]) + 1
 
             decider_grouped_rewards = rm_empty(np.split(common_data[REWARD], leaf_exits))
             group_lens = list(map(len, decider_grouped_rewards))
-            grouped_gpow = list(map(lambda l: self.gpow[0:l], group_lens))  # [self.gpow[0:glen] for glen in group_lens]
+            grouped_gpow = list(
+                map(lambda l: self.gamma_pow[0:l], group_lens))  # [self.gamma_pow[0:glen] for glen in group_lens]
             smdp_rs = list(map(np.inner, decider_grouped_rewards, grouped_gpow))
-            # [np.inner(r, p) for r, p in zip(decider_grouped_rewards, grouped_gpow)])
             smdp_r = np.array(smdp_rs)
-            # if leaf_exits[0] != 0:
-            #     smdp_r = smdp_r[1:]
             decider_data[REWARD] = smdp_r
+            smdp_l = np.array(list(map(np.size, decider_grouped_rewards)))
+            decider_data["sublength"] = smdp_l
+            decision_times = list(map(np.flatnonzero, [np.array(path[HAS_DECISION]) for path in paths]))
+            decider_data["decision_times"] = np.concatenate(decision_times)
+            decider_data["return"] = switcher_data["return"][leaf_exits]
             assert smdp_r.size == decider_data[TIMES].size
 
             # split
@@ -421,10 +461,9 @@ class DictMemory(object):
             is_decider_split = full_is_decider_split[full_leaf_splits - 1]
             is_decider_split[-1] = False
             decider_data["splits"] = np.flatnonzero(is_decider_split) + 1
-            assert decider_data["splits"][-1] != decider_data["action"].size
             assert len(decider_data["splits"]) == len(decider_data[TERMINATED]) - 1
-            decider_gae = self.compute_gae_for_path(decider_data, f_critic=self.f_critic["decider"],
-                                                    normalize=self.normalize)
+            decider_gae = self.gae_hrl(decider_data, f_critic=self.f_critic["decider"],
+                                       normalize=self.normalize)
             decider_data.update(**decider_gae)
             result.update(decider_data=decider_data)
 

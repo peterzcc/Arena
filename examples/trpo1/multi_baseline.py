@@ -164,7 +164,7 @@ class MultiBaseline(object):
         if self.debug_mode and (pid is None or pid == 0):
             # logging.debug("before vf optimization")
             self.print_loss(feed, extra="old")
-        update_scale = True
+        update_scale = False
         if update_scale:
             beta = 0.95
             new_mu = feed[self.y].mean()

@@ -88,7 +88,7 @@ local 60:
 python3.6 pg_train.py --env move1d --rl-method PG --nactor 10 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss trad --norm-gae 0
 
 
-python3.6 pg_train.py --env CartPole-v1 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --lr 0.002 --loss trad
+python3.6 pg_train.py --env CartPole-v1 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --lr 0.002 --loss trad --norm-gae 0
 
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move0 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
 
