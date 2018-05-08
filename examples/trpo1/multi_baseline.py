@@ -103,7 +103,7 @@ class MultiBaseline(object):
                     self.last_w, self.last_b = tf.trainable_variables(scope=scope_last.name)
                     y = pre_y * self.sigma + self.mu
 
-                self.net = tf.reshape(y, (-1,))  # why reshape?
+                self.net = tf.check_numerics(tf.reshape(y, (-1,)), "value {} not numeric".format(pre_y.name))
                 err = self.y - self.net
 
                 self.real_mse = tf.reduce_mean(err ** 2)
@@ -148,7 +148,7 @@ class MultiBaseline(object):
         ypred = self.session.run(self.net, feed_dict=feed)
         ex_var = self.explained_var(ypred, feed[self.y])
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
-        logging.debug("vf:\t {}_mse:{}\tex_var:{}".format(extra, mse, ex_var))
+        logging.debug("vf:\t {}_mse:{} \tex_var:{}".format(extra, mse, ex_var))
 
     def fit(self, feed, update_mode="full", num_pass=1, pid=None):
 

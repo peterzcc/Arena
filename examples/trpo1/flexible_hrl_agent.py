@@ -43,7 +43,7 @@ class FlexibleHrlAgent(Agent):
         self.should_clip_episodes = (self.decider.batch_mode == "timestep")
         self.full_tasks = full_tasks
         self.current_policy_id = None
-        self.is_initial_step = 1
+        self.is_initial_step = 0
 
     def update_meta_status(self, should_switch):
         self.current_policy_id = None if should_switch else self.current_policy_id
@@ -57,15 +57,15 @@ class FlexibleHrlAgent(Agent):
         if self.batch_start_time is None:
             self.batch_start_time = time.time()
 
-        self.is_initial_step = False
-        wrapped_obs = self.wrap_meta_obs(observation)
+
 
         if self.current_policy_id is None:
-            decision, decider_model_info = self.decider.predict(wrapped_obs, pid=self.id)
+            decision, decider_model_info = self.decider.predict(observation, pid=self.id)
             self.current_policy_id = decision
             self.sub_pol_act_t = 1
         else:
             decision, decider_model_info = None, None
+        wrapped_obs = self.wrap_meta_obs(observation)
         should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
 
         action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
