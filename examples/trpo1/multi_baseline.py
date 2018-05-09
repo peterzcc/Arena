@@ -145,7 +145,9 @@ class MultiBaseline(object):
                         feed=feed, N=feed[self.y].shape[0],
                         session=self.session,
                         minibatch_size=self.minibatch_size)[0]
-        ypred = self.session.run(self.net, feed_dict=feed)
+        # ypred = self.session.run(self.net, feed_dict=feed)
+        ypred = batch_run_forward(self.net, feed=feed, N=feed[self.time_input].shape[0], session=self.session,
+                                  minibatch_size=self.minibatch_size)
         ex_var = self.explained_var(ypred, feed[self.y])
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
         logging.debug("vf:\t {}_mse:{} \tex_var:{}".format(extra, mse, ex_var))
