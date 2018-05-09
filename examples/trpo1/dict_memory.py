@@ -274,15 +274,33 @@ class DictMemory(object):
     def compute_var_delta(self, reward, b1, gamma_diff):
         return reward + gamma_diff * b1[1:] - b1[:-1]
 
+    def compute_return(self, reward, b, ter):
+        bootstraped_reward = reward.copy()
+        if not ter:
+            bootstraped_reward[-1] = b[-1]
+        return discount(bootstraped_reward, self.gamma)
+
+    def compute_smdp_return(self, reward, b, ter, gamma_powered):
+        bootstraped_reward = reward.copy()
+        if not ter:
+            bootstraped_reward[-1] = b[-1]
+        return_scaled = reverse_cumsum(bootstraped_reward * gamma_powered) / gamma_powered
+        return return_scaled
+
     def compute_gae_for_path(self, path, rewards=None, f_critic=None, normalize=False):
         results = {}
 
         if rewards is None:
             rewards = valid_split(path['reward'], path[SPLITS])
-        returns = list(map(lambda x: discount(x, self.gamma),
-                           rewards))
+
         results["baseline"] = f_critic(path)
         b = valid_split(results["baseline"], path[SPLITS])
+
+        # returns = list(map(lambda x: discount(x, self.gamma),
+        #                    rewards))
+        returns = list(map(self.compute_return, rewards, b, path[TERMINATED]))
+        whole_returns = np.concatenate(returns)
+        results["return"] = whole_returns
 
         b1 = list(map(self.append_term, b, path[TERMINATED]))
 
@@ -306,7 +324,7 @@ class DictMemory(object):
                 deltas, lam_discounted_accum)
         )
         results["advantage"] = np.concatenate(advs)
-        results["return"] = np.concatenate(returns)
+
 
         if normalize:
             self.normalize_gae(results)
@@ -339,10 +357,16 @@ class DictMemory(object):
                                decision_times))
         # lam_diffs = list(map(lambda x: self.time_diff_with_zero_padding(self.lam_pow, x),
         #                        decision_times))
-        returns_unscaled = list(
-            map(lambda r, g: reverse_cumsum(r * g), rewards, gamma_powered)
-        )
-        whole_returns_scaled = np.concatenate(returns_unscaled) / whole_gamma_powered
+        # returns_scaled = list(
+        #     map(lambda r, g: reverse_cumsum(r * g)/g, rewards, gamma_powered)
+        # )
+
+        returns_scaled = list(map(
+            self.compute_smdp_return, rewards, b, path[TERMINATED], gamma_powered
+        ))
+
+        whole_returns_scaled = np.concatenate(returns_scaled)
+        results["return"] = whole_returns_scaled
 
         deltas = list(
             map(lambda r, b, g: self.compute_var_delta(r, b, g),
@@ -357,7 +381,7 @@ class DictMemory(object):
         # whole_adv_scaled = whole_adv_unscaled / (whole_lam_discounted_accum * whole_gamma_powered)
         whole_adv_scaled = np.concatenate(adv_scaled)
         results["advantage"] = whole_adv_scaled
-        results["return"] = whole_returns_scaled
+
         if normalize:
             self.normalize_gae(results)
         return results
