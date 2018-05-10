@@ -452,8 +452,12 @@ class DictMemory(object):
                         leaf_data[pi][k] = None
             for k in [OBSERVATION, TIMES]:
                 agg_paths[k] = common_data[k]
-            subrewards = np.concatenate([p["subrewards"] for p in paths])
-            agg_paths[REWARD] = np.choose(agg_paths["id"], subrewards.T)
+            if "subrewards" in paths[0]:
+                train_sub = True
+                subrewards = np.concatenate([p["subrewards"] for p in paths])
+                agg_paths[REWARD] = np.choose(agg_paths["id"], subrewards.T)
+            else:
+                train_sub = False
             # agg_paths["index"] = np.arange(0, agg_paths[TIMES].shape[0])
 
             is_leaf_split = np.zeros(common_data[REWARD].shape, dtype=np.bool)
@@ -542,9 +546,11 @@ class DictMemory(object):
                     lens = list(map(len, this_paths[TIMES]))
                     leaf_data[l][SPLITS] = np.cumsum(lens)
                     leaf_data[l][TERMINATED] = full_leaf_terms[is_this_leaf]
-                    results = self.compute_gae_for_path(leaf_data[l], rewards=this_paths[REWARD],
-                                                        f_critic=self.f_critic["leafs"][l], normalize=self.normalize)
-                    leaf_data[l].update(**results)
+                    if train_sub:
+                        results = self.compute_gae_for_path(leaf_data[l], rewards=this_paths[REWARD],
+                                                            f_critic=self.f_critic["leafs"][l],
+                                                            normalize=self.normalize)
+                        leaf_data[l].update(**results)
                 else:
                     leaf_data[l] = None
             result["leaf_data"] = leaf_data

@@ -57,9 +57,10 @@ class PolicyGradientModel(ModelWithCritic):
                  save_model=10,
                  loss_type="PPO",
                  max_grad_norm=0.5,
-                 is_flexible_hrl_model=False,
+                 is_switcher_with_init_len=0,
                  is_decider=False,
-                 reset_exp=False
+                 reset_exp=False,
+                 const_action=None
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -96,7 +97,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.batch_size = None if self.f_batch_size is None else self.f_batch_size(0)
         self.f_target_kl = f_target_kl
         self.kl_history_length = kl_history_length
-        self.is_flexible_hrl_model = is_flexible_hrl_model
+        self.is_switcher_with_init_len = is_switcher_with_init_len
         if self.batch_mode == "timestep":
             self.batch_barrier = thd.Barrier(num_actors)
         else:
@@ -119,7 +120,7 @@ class PolicyGradientModel(ModelWithCritic):
             return cnn_network(t_input, conv_sizes, cnn_activation=tf.nn.leaky_relu,
                                fc_sizes=cnn_fc_feat, fc_activation=tf.nn.leaky_relu)
 
-        self.name = name if not self.is_flexible_hrl_model else name + "_switcher"
+        self.name = name if not self.is_switcher_with_init_len else name + "_switcher"
         self.is_decider = is_decider
 
         self.critic = MultiBaseline(session=self.session, observation_space=self.ob_space,
@@ -131,7 +132,7 @@ class PolicyGradientModel(ModelWithCritic):
                                     comb_method=self.comb_method,
                                     cnn_trainable=cnn_trainable,
                                     f_build_cnn=f_build_img_net,
-                                    is_flexible_hrl_model=is_flexible_hrl_model,
+                                    is_switcher_with_init_len=is_switcher_with_init_len,
                                     lr=critic_lr)
         if hasattr(self.act_space, "low"):
             self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
@@ -156,7 +157,7 @@ class PolicyGradientModel(ModelWithCritic):
                                    session=self.session,
                                    cnn_trainable=cnn_trainable,
                                    f_build_cnn=f_build_img_net,
-                                   is_flexible_hrl_model=is_flexible_hrl_model
+                                   is_switcher_with_init_len=is_switcher_with_init_len
                                    )
         self.executer_net = self.policy
 
@@ -304,6 +305,8 @@ class PolicyGradientModel(ModelWithCritic):
         self.should_reset_exp = reset_exp
         self.parallel_predict = parallel_predict
         self.has_reset_fix_ter_weight = False
+        self.const_action = const_action
+
         # if self.load_old_model and not self.has_loaded_model:
         #     self.restore_parameters()
 
@@ -324,6 +327,8 @@ class PolicyGradientModel(ModelWithCritic):
         self.has_loaded_model = True
 
     def predict(self, observation, pid=0):
+        if self.const_action is not None:
+            return self.const_action, {}
         if self.load_old_model and not self.has_loaded_model:
             self.policy_lock.acquire_write()
             if not self.has_loaded_model:
@@ -332,7 +337,7 @@ class PolicyGradientModel(ModelWithCritic):
                     logging.info("reset exploration")
                     self.session.run(self.executer_net.reset_exp)
             self.policy_lock.release_write()
-        # if self.should_train and self.is_flexible_hrl_model and not self.has_reset_fix_ter_weight \
+        # if self.should_train and self.is_switcher_with_init_len and not self.has_reset_fix_ter_weight \
         #         and self.n_fit == 0 \
         #         and self.f_train_this_epoch(self.n_update):
         #     self.policy_lock.acquire_write()
@@ -349,8 +354,8 @@ class PolicyGradientModel(ModelWithCritic):
                     obs = observation
                 if self.n_imgfeat != 0:
                     obs.append(np.expand_dims(observation[1], 0))
-                if self.is_flexible_hrl_model:
-                    obs.append(np.expand_dims(observation[2], 0))
+                if self.is_switcher_with_init_len:
+                    obs.append(np.expand_dims(observation[-1], 0))
                 st_enabled, img_enabled = self.get_state_activation(self.n_update)
                 self.exp_st_enabled = np.expand_dims(st_enabled, 0)
                 self.exp_img_enabled = img_enabled
@@ -361,7 +366,7 @@ class PolicyGradientModel(ModelWithCritic):
                     obs = [np.stack([ob[0] for ob in self.obs_list])]
                     if self.n_imgfeat != 0:
                         obs.append(np.stack([o[1] for o in self.obs_list]))
-                    if self.is_flexible_hrl_model:
+                    if self.is_switcher_with_init_len:
                         obs.append(np.stack([o[2] for o in self.obs_list]))
                     st_enabled, img_enabled = self.get_state_activation(self.n_update)
                     st_enabled = np.tile(st_enabled, (self.num_actors, 1))
@@ -379,7 +384,7 @@ class PolicyGradientModel(ModelWithCritic):
                 if self.n_imgfeat != 0:
                     feed[self.critic.img_input] = obs[1]
                     feed[self.executer_net.img_input] = obs[1]
-                if self.is_flexible_hrl_model:
+                if self.is_switcher_with_init_len:
                     feed[self.critic.hrl_meta_input] = obs[2]
                     feed[self.executer_net.hrl_meta_input] = obs[2]
                 self.policy_lock.acquire_read()
@@ -415,8 +420,8 @@ class PolicyGradientModel(ModelWithCritic):
                 img_input = np.expand_dims(observation[1], 0)
                 feed[self.critic.img_input] = img_input
                 feed[self.executer_net.img_input] = img_input
-            if self.is_flexible_hrl_model:
-                meta_input = np.expand_dims(observation[2], 0)
+            if self.is_switcher_with_init_len:
+                meta_input = np.expand_dims(observation[-1], 0)
                 feed[self.policy.hrl_meta_input] = meta_input
                 feed[self.critic.hrl_meta_input] = meta_input
 
@@ -473,8 +478,8 @@ class PolicyGradientModel(ModelWithCritic):
             feed[self.policy.img_input] = img_input
             feed[self.critic.img_input] = img_input
             feed_critic[self.critic.img_input] = img_input
-        if self.is_flexible_hrl_model:
-            hrl_meta_input = paths["observation"][2]  #concat([path["observation"][2] for path in paths])
+        if self.is_switcher_with_init_len:
+            hrl_meta_input = paths["observation"][-1]  # concat([path["observation"][2] for path in paths])
             feed[self.policy.hrl_meta_input] = hrl_meta_input
             feed[self.critic.hrl_meta_input] = hrl_meta_input
             feed_critic[self.critic.hrl_meta_input] = hrl_meta_input
@@ -483,7 +488,7 @@ class PolicyGradientModel(ModelWithCritic):
 
         feed.update({**dist_vars})
         no_ter_train = False
-        if no_ter_train and self.is_flexible_hrl_model:
+        if no_ter_train and self.is_switcher_with_init_len:
             is_root_decision = action_n != 0
             feed = {k: v[is_root_decision] for (k, v) in feed.items()}
 
@@ -555,13 +560,13 @@ class PolicyGradientModel(ModelWithCritic):
         logging.debug("\nnew ppo_surr: {}\nnew kl: {}\nnew ent: {}".format(surr_new, kl_new, ent_new))
         if kl_new > target_kl_value * 2:
             self.a_beta_value = np.minimum(self.a_beta_max, 1.5 * self.a_beta_value)
-            if self.a_beta_value > self.a_beta_max - 5 or early_stopped:
+            if self.a_beta_value > self.a_beta_max / 1.2 or early_stopped:
                 self.a_step_size = np.maximum(self.a_min_step_size, self.a_step_size / 1.5)
             logging.debug('beta -> %s' % self.a_beta_value)
             logging.debug('step_size -> %s' % self.a_step_size)
         elif kl_new < target_kl_value / 2:
             self.a_beta_value = np.maximum(self.a_beta_min, self.a_beta_value / 1.5)
-            if self.a_beta_value < self.a_beta_min:
+            if self.a_beta_value < 1.2 * self.a_beta_min:
                 self.a_step_size = np.minimum(self.a_max_step_size, 1.5 * self.a_step_size)
             logging.debug('beta -> %s' % self.a_beta_value)
             logging.debug('step_size -> %s' % self.a_step_size)
@@ -644,14 +649,15 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("\ngnorm: {}".format(g_norm))
         if self.f_target_kl is not None:
             if kl_new > target_kl_value * 2:
-                self.p_beta_value = np.minimum(self.p_beta_max, 1.5 * self.p_beta_value)
-                if self.p_beta_value > self.p_beta_max - 5:
+                self.p_beta_value = np.minimum(self.p_beta_max,
+                                               1.5 / 2 * (kl_new / target_kl_value) * self.p_beta_value)
+                if self.p_beta_value > self.p_beta_max / 1.2:
                     self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / 1.5)
                 logging.debug('beta -> %s' % self.p_beta_value)
                 logging.debug('step_size -> %s' % self.p_step_size)
             elif kl_new < target_kl_value / 2:
                 self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / 1.5)
-                if self.p_beta_value < self.p_beta_min:
+                if self.p_beta_value < 1.2 * self.p_beta_min:
                     self.p_step_size = np.minimum(self.p_max_step_size, 1.5 * self.p_step_size)
                 logging.debug('beta -> %s' % self.p_beta_value)
                 logging.debug('step_size -> %s' % self.p_step_size)
@@ -660,11 +666,13 @@ class PolicyGradientModel(ModelWithCritic):
                 logging.debug('step_size OK = %s' % self.p_step_size)
 
     def train(self, paths, pid=None):
+        if self.const_action is not None:
+            return
         if paths is not None and self.is_decider:
             logging.debug("root at t\t{}".format(self.n_update))
             norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
             logging.info("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))
-            logging.info("ave subt:{}".format(np.mean(paths["observation"][2][:, 1])))
+            logging.info("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
             mean_t_reward = extra_data["rewards"].mean()

@@ -26,11 +26,11 @@ class MultiNetwork(object):
                  distibution=DiagonalGaussian(1),
                  session=None,
                  f_build_cnn=None,
-                 is_flexible_hrl_model=False
+                 is_switcher_with_init_len=0
                  ):
         self.comb_method = comb_method
         self.min_std = min_std
-        self.is_flexible_hrl_model = is_flexible_hrl_model
+        self.is_switcher_with_init_len = is_switcher_with_init_len
 
         self.session = session
         local_scope = scope
@@ -44,9 +44,9 @@ class MultiNetwork(object):
                 self.img_float = tf.cast(self.img_input, tf.float32) / 255
             # else:
             #     self.img_input = 0
-            if self.is_flexible_hrl_model:
+            if self.is_switcher_with_init_len:
                 self.hrl_meta_input = tf.placeholder(tf.float32,
-                                                     shape=(None, *observation_space[2].shape),
+                                                     shape=(None, *observation_space[-1].shape),
                                                      name="hrl_meta_input")
             if hasattr(action_space, 'low'):
                 self.action_n = tf.placeholder(dtype, shape=(None,) + action_space.shape, name="%s_action" % scope)
@@ -75,7 +75,7 @@ class MultiNetwork(object):
                         self.image_features = img_net_layers[-1]
                     self.full_feature = self.comb_method(self.st_enabled * self.checked_state_input,
                                                          self.img_enabled[:, tf.newaxis] * self.image_features)
-                    if self.is_flexible_hrl_model:
+                    if self.is_switcher_with_init_len:
                         self.full_feature = tf.concat(axis=1,
                                                       values=[self.full_feature, self.hrl_meta_input])
 
@@ -98,13 +98,13 @@ class MultiNetwork(object):
             self.batch_size_float = tf.cast(batch_size, tf.float32)
 
             self.distribution = distibution
-            if not self.is_flexible_hrl_model:
+            if not self.is_switcher_with_init_len:
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(self.fc_layers[-1])
             else:
                 root_logits = tf.layers.dense(self.fc_layers[-1], 1,
                                               kernel_initializer=ScalingOrth(scale=1.0, dtype=dtype))
-                max_length = 10 - 0.5
+                max_length = self.is_switcher_with_init_len - 0.5
                 with tf.variable_scope("switch_model") as time_scope:
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
                                                        trainable=False)

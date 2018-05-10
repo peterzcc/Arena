@@ -21,7 +21,7 @@ class MultiBaseline(object):
                  lr=0.0003,
                  cnn_trainable=True,
                  f_build_cnn=None,
-                 is_flexible_hrl_model=False):
+                 is_switcher_with_init_len=0):
         self.session = session
         self.max_iter = max_iter
         self.l2_k = 1e-4
@@ -72,10 +72,10 @@ class MultiBaseline(object):
                 self.cnn_weights = []
                 self.img_fc_weights = []
                 self.final_image_features = None
-            self.is_flexible_hrl_model = is_flexible_hrl_model
-            if self.is_flexible_hrl_model:
+            self.is_switcher_with_init_len = is_switcher_with_init_len
+            if self.is_switcher_with_init_len:
                 self.hrl_meta_input = tf.placeholder(tf.float32,
-                                                     shape=(None, *observation_space[2].shape),
+                                                     shape=(None, *observation_space[-1].shape),
                                                      name="meta_hrl_state")
             with tf.variable_scope("nethigher") as this_scope:
                 if self.final_image_features is not None:
@@ -86,7 +86,7 @@ class MultiBaseline(object):
                 self.full_feature = tf.concat(
                     axis=1,
                     values=[self.aggregated_feature, self.time_input])
-                if self.is_flexible_hrl_model:
+                if self.is_switcher_with_init_len:
                     self.full_feature = tf.concat(axis=1,
                                                   values=[self.full_feature, self.hrl_meta_input])
 
@@ -166,18 +166,7 @@ class MultiBaseline(object):
         if self.debug_mode and (pid is None or pid == 0):
             # logging.debug("before vf optimization")
             self.print_loss(feed, extra="old")
-        update_scale = False
-        if update_scale:
-            beta = 0.95
-            new_mu = feed[self.y].mean()
-            new_sigma = feed[self.y].std()
-            if self.curr_mean_value is None:
-                self.curr_mean_value = new_mu
-                self.curr_std_value = new_sigma
-            self.curr_mean_value = beta * self.curr_mean_value + (1 - beta) * new_mu
-            self.curr_std_value = beta * self.curr_std_value + (1 - beta) * new_sigma
-            self.session.run(self.scale_updates, feed_dict={self.new_mean: self.curr_mean_value,
-                                                            self.new_std: self.curr_std_value})
+
         batch_N = feed[self.y].shape[0]
 
         for n_pass in range(num_pass):
@@ -197,6 +186,19 @@ class MultiBaseline(object):
             # logging.debug("after vf optimization")
             self.print_loss(feed, extra="new")
 
+        update_scale = True
+        if update_scale:
+            beta = 0.9
+            new_mu = feed[self.y].mean()
+            new_sigma = feed[self.y].std()
+            if self.curr_mean_value is None:
+                self.curr_mean_value = new_mu
+                self.curr_std_value = new_sigma
+            self.curr_mean_value = beta * self.curr_mean_value + (1 - beta) * new_mu
+            self.curr_std_value = beta * self.curr_std_value + (1 - beta) * new_sigma
+            self.session.run(self.scale_updates, feed_dict={self.new_mean: self.curr_mean_value,
+                                                            self.new_std: self.curr_std_value})
+
     def predict(self, path):
         if self.net is None:
             raise ValueError("value net is None")
@@ -206,8 +208,8 @@ class MultiBaseline(object):
                     self.st_enabled: path["st_enabled"], self.img_enabled: path["img_enabled"]}
             if self.n_imgfeat != 0:
                 feed[self.img_input] = path["observation"][1]
-            if self.is_flexible_hrl_model:
-                feed[self.hrl_meta_input] = path["observation"][2]
+            if self.is_switcher_with_init_len:
+                feed[self.hrl_meta_input] = path["observation"][-1]
             V = batch_run_forward(self.net, feed=feed, N=path["times"].shape[0], session=self.session,
                                   minibatch_size=self.minibatch_size)
             return np.reshape(V, (V.shape[0],))

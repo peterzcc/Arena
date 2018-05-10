@@ -113,6 +113,8 @@ def main():
                         help='batch size')
     parser.add_argument('--num-steps', required=False, type=int, default=15e7,
                         help='Total number of steps')
+    parser.add_argument('--switcher-length', required=False, type=int, default=10,
+                        help='switcher length')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     parser.add_argument('--batch-mode', required=False, type=str, default='timestep',
                         help='timestep or episode')
@@ -142,7 +144,7 @@ def main():
     parser.add_argument('--env', default="ant", type=str, help='env')
     parser.add_argument('--loss', default="PPO", type=str, help='loss')
     parser.add_argument('--rl-method', default="ACKTR", type=str, help='rl method')
-    parser.add_argument('--npret', required=False, type=int, default=500,
+    parser.add_argument('--npret', required=False, type=int, default=-1,
                         help='num pretrain')
     parser.add_argument('--nfeat', required=False, type=int, default=0,
                         help='num img feat')
@@ -201,8 +203,9 @@ def main():
                           move0=x_forward_obj, move1=x_backward_obj,
                           move2=x_up_obj, move3=x_down_obj
                           )
+    hrl_fake = OrderedDict(**{"cartpole_hrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
-                          reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage)
+                          reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -277,6 +280,8 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=x_forward_obj,
                                   reset_goal_prob=0, )
+        elif args.env == "cartpole_hrl":
+            env = gym.make("CartPole-v1")
         else:
             env = gym.make(args.env)
         # env = MazeEnv()
@@ -465,7 +470,7 @@ def main():
                                             f_train_this_epoch=f_train_root,
                                             parallel_predict=False,
                                             save_model=args.save_model,
-                                            is_flexible_hrl_model=False,
+                                            is_switcher_with_init_len=False,
                                             is_decider=True)
         switcher_model = PolicyGradientModel(switcher_obseravation_space, switcher_action_space,
                                              name=args.env,
@@ -489,10 +494,14 @@ def main():
                                              f_train_this_epoch=f_train_root,
                                              parallel_predict=False,
                                              save_model=args.save_model,
-                                             is_flexible_hrl_model=True)
+                                             is_switcher_with_init_len=args.switcher_length)
         models = {"decider": decider_model, "switcher": switcher_model, "leafs": []}
 
-        for env_name, _ in list(full_tasks.items())[1:]:
+        for i, env_name in enumerate(list(full_tasks.keys())[1:]):
+            if args.env in hrl_fake:
+                const_action = i
+            else:
+                const_action = None
             p = PolicyGradientModel(observation_space, action_space,
                                     name=env_name,
                                     timestep_limit=T,
@@ -516,7 +525,8 @@ def main():
                                     kl_history_length=1,
                                     surr_loss=args.loss,
                                     save_model=args.save_model,
-                                    is_flexible_hrl_model=False
+                                    is_switcher_with_init_len=False,
+                                    const_action=const_action
                                     )
             models["leafs"].append(p)
         # for p in models[1:]:
