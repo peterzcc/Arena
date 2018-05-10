@@ -64,7 +64,7 @@ SPLITS = "splits"
 
 
 class DictMemory(object):
-    def __init__(self, gamma=0.999,
+    def __init__(self, gamma=0.995,
                  lam=0.96, normalize=True, timestep_limit=1000,
                  f_critic={},
                  num_leafs=0,

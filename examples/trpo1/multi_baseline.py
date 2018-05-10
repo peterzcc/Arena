@@ -186,9 +186,9 @@ class MultiBaseline(object):
             # logging.debug("after vf optimization")
             self.print_loss(feed, extra="new")
 
-        update_scale = True
+        update_scale = False
         if update_scale:
-            beta = 0.9
+            beta = 0.96
             new_mu = feed[self.y].mean()
             new_sigma = feed[self.y].std()
             if self.curr_mean_value is None:

@@ -88,6 +88,10 @@ def random_direction():
     return DIRECTIONS[choice, :]
 
 
+def up_for():
+    choice = np.random.randint(0, 2)
+    return DIRECTIONS[choice, :]
+
 def random_cont_direction():
     a = np.random.rand() * 2 * np.pi
     return np.array([np.cos(a), np.sin(a)])
@@ -204,8 +208,10 @@ def main():
                           move2=x_up_obj, move3=x_down_obj
                           )
     hrl_fake = OrderedDict(**{"cartpole_hrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
+    hrl_up_for = OrderedDict(move_up_for=up_for, move0=x_forward_obj, move2=x_up_obj)
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
-                          reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake)
+                          reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
+                          move_up_for=hrl_up_for)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -282,6 +288,11 @@ def main():
                                   reset_goal_prob=0, )
         elif args.env == "cartpole_hrl":
             env = gym.make("CartPole-v1")
+        elif args.env in hrl_up_for:
+            subtask_dirs = np.stack([v() for (k, v) in list(hrl_root_tasks[args.env].items())[1:]], axis=0)
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_root_tasks[args.env][args.env],
+                                  reset_goal_prob=0, subtask_dirs=subtask_dirs)
         else:
             env = gym.make(args.env)
         # env = MazeEnv()

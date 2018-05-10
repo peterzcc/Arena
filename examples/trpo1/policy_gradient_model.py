@@ -672,6 +672,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.debug("root at t\t{}".format(self.n_update))
             norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
             logging.info("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))
+        if self.is_switcher_with_init_len:
             logging.info("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
