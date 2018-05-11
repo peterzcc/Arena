@@ -356,16 +356,17 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         obs, in_rw, done, info = self._ant_step(action)
         if done:
             return self._get_obs(), -10, done, info
-
+        reward = in_rw
         com = self.get_body_com("torso")
         if not self.fix_goal:
             obj_pos = com[:2] + self.obj_dist * self.dir
             self.objects[0] = np.concatenate([obj_pos, (0,)])
-        if np.sum((com[:2] - self.objects[0][:2]) ** 2) < self.catch_range ** 2:
-            reward = 1
-            done = True
-        else:
-            reward = -0.01
+        if self.use_sparse_reward:
+            if np.sum((com[:2] - self.objects[0][:2]) ** 2) < self.catch_range ** 2:
+                reward = 1
+                done = True
+            else:
+                reward = -0.01
         if self.reset_goal_prob != 0:
             assert not self.fix_goal
             if np.random.rand() < self.reset_goal_prob:
