@@ -247,11 +247,11 @@ def main():
             else:
                 use_internal_reward = True
             subtask_dirs = np.stack([v() for (k, v) in list(hrl0.items())[1:]], axis=0)
-            env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                                        f_gen_obj=hrl0[args.env],  # x_forward_obj if pid % 2 else x_backward_obj,#
-                                        reset_goal_prob=0,
-                                        use_internal_reward=use_internal_reward,
-                                        subtask_dirs=subtask_dirs)
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                  f_gen_obj=hrl0[args.env],  # x_forward_obj if pid % 2 else x_backward_obj,#
+                                  reset_goal_prob=0,
+                                  use_internal_reward=use_internal_reward,
+                                  subtask_dirs=subtask_dirs)
         elif args.env in hrl_move2d:
             subtask_dirs = np.stack([v() for (k, v) in list(hrl_move2d.items())[1:]], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
