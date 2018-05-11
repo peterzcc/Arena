@@ -47,6 +47,8 @@ class ComplexWrapper(object):
             img_min = 0
             img_max = 255
             assert len(image_shape) == 3
+            if image_shape[2] == 1:
+                rgb_to_gray = False
             if rgb_to_gray:
                 num_channel = 1 * num_frame
             else:
