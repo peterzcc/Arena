@@ -322,7 +322,7 @@ def main():
         return {"models": [model], "memory": memory}
 
     def f_should_return_root(source, t, target=None):
-        return t >= 5
+        return t >= 10
 
     def hrl_shared_params():
         # TODO: hrl
