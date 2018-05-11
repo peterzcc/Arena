@@ -293,7 +293,7 @@ def main():
                                   reset_goal_prob=0, )
         elif args.env == "movetest":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
-                                  f_gen_obj=x_forward_obj,
+                                  f_gen_obj=x_for_back,
                                   forward_scale=10.0,
                                   reset_goal_prob=0, )
         elif args.env == "cartpole_hrl":

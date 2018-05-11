@@ -71,9 +71,9 @@ nvidia-smi --query-gpu="accounting.mode" --format=csv
 
 nvidia-smi -q -d "MEMORY,UTILIZATION" -lms 500
 nvidia-smi --query-accounted-apps="gpu_utilization" --format=csv
-CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move4 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
 
 mux0
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env movetest --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --kl 0.001 --vlr 0.001
 
 
 
