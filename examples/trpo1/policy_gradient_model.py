@@ -124,7 +124,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.is_decider = is_decider
 
         self.critic = MultiBaseline(session=self.session, observation_space=self.ob_space,
-                                    minibatch_size=minibatch_size,
+                                    minibatch_size=64,
                                     main_scope=self.name + "_critic",
                                     timestep_limit=timestep_limit,
                                     activation=tf.nn.elu,

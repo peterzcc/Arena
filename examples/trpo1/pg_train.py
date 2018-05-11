@@ -102,6 +102,8 @@ def x_for_back():
     return DIRECTIONS[choice, :]
 
 
+cwd = os.getcwd()
+
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
@@ -173,7 +175,7 @@ def main():
     import multiprocessing
     render_lock = multiprocessing.Lock()
     barrier = multiprocessing.Barrier(num_actors)
-    cwd = os.getcwd()
+
 
     append_image = args.withimg
     feat_sup = False
@@ -224,25 +226,32 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=random_cont_direction,
                                   reset_goal_prob=0, )
+
         elif args.env == "custant":
             env = CustomAnt(file_path=cwd + "/cust_ant.xml")
+        elif args.env in hrl_8d:
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_8d[args.env],
+                                  reset_goal_prob=0, )
         elif args.env == "forward_and_backward":
             with_state_task = not (append_image and not feat_sup)
             f_direction = x_forward_obj if pid % 2 == 0 else x_backward_obj
             logging.info("actuator[{}], direction: {}".format(pid, f_direction))
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                   f_gen_obj=f_direction)
-        elif args.env in hrl_8d:
-            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
-                                  f_gen_obj=hrl_8d[args.env],
-                                  reset_goal_prob=0, )
+
         elif args.env in hrl0:
             with_state_task = False
+            if args.env == list(hrl_root_tasks[args.env].keys())[0]:
+                use_internal_reward = False
+            else:
+                use_internal_reward = True
             subtask_dirs = np.stack([v() for (k, v) in list(hrl0.items())[1:]], axis=0)
-            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                                  f_gen_obj=hrl0[args.env],
-                                  reset_goal_prob=0,
-                                  subtask_dirs=subtask_dirs)  
+            env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                        f_gen_obj=hrl0[args.env],  # x_forward_obj if pid % 2 else x_backward_obj,#
+                                        reset_goal_prob=0,
+                                        use_internal_reward=use_internal_reward,
+                                        subtask_dirs=subtask_dirs)
         elif args.env in hrl_move2d:
             subtask_dirs = np.stack([v() for (k, v) in list(hrl_move2d.items())[1:]], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
@@ -285,6 +294,7 @@ def main():
         elif args.env == "movetest":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=x_forward_obj,
+                                  forward_scale=10.0,
                                   reset_goal_prob=0, )
         elif args.env == "cartpole_hrl":
             env = gym.make("CartPole-v1")
@@ -295,14 +305,7 @@ def main():
                                   reset_goal_prob=0, subtask_dirs=subtask_dirs)
         else:
             env = gym.make(args.env)
-        # env = MazeEnv()
 
-        # return GymWrapper(env,
-        #                   max_null_op=0, max_episode_length=T)
-        # env = CustomAnt(file_path=cwd + "/cust_ant.xml")
-
-        # env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-        #                             f_gen_obj=forward_backward)
         if args.env in hrl_dimage and args.env not in hrl_root_tasks:
             dummy_image = True
         else:

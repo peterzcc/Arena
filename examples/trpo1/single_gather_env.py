@@ -315,9 +315,11 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             with_state_task=True,
             use_sparse_reward=False,
             reset_goal_prob=0,
-            freward_scale=1.0,
+            forward_scale=1.0,
             catch_range=0.5,
             obj_dist=1.25,
+            init_noise=0.1,
+            use_internal_reward=False,
             subtask_dirs=None,
             *args, **kwargs
     ):
@@ -331,10 +333,12 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.use_sparse_reward = use_sparse_reward
         self.fix_goal = use_sparse_reward
         self.reset_goal_prob = reset_goal_prob
-        self.forward_scale = freward_scale
+        self.forward_scale = forward_scale
         self.catch_range = catch_range
         self.obj_dist = obj_dist
         self.subtasks_dirs = subtask_dirs
+        self.use_internal_reward = use_internal_reward
+        self.init_noise = init_noise
         if subtask_dirs is None:
             self.dirs = np.array([[0, 0]])
             self.info_sample = {}
@@ -369,8 +373,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         contact_cost = 0.5 * 1e-3 * np.sum(
             np.square(np.clip(cfrc_ext, -1, 1)))
         survive_reward = 1.0
-        internal_reward = - ctrl_cost - contact_cost
-        rewards = self.forward_scale * forward_reward + survive_reward + internal_reward
+        internal_reward = survive_reward - ctrl_cost - contact_cost if self.use_sparse_reward else 0.0
+        rewards = self.forward_scale * forward_reward + internal_reward
         return rewards[0], {"subrewards": rewards[1:]}
 
     def _step(self, action):
@@ -400,7 +404,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def check_if_ant_crash(self, state, rot_angle):
         notdone = np.isfinite(state).all() \
-                  and rot_angle > 0  # and state[2] >= 0.2 and state[2] <= 1.0
+                  and rot_angle > 0 and state[2] >= 0.2 and state[2] <= 1.0
         # TODO: verify what happens if remove the last condition
         done = not notdone
         return done
@@ -433,8 +437,9 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             ])
 
     def reset_model(self):
-        qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq, low=-.1, high=.1)
-        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * .1
+        qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq,
+                                                       low=-self.init_noise, high=self.init_noise)
+        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * self.init_noise
         self.set_state(qpos, qvel)
         return self._get_obs()
 
@@ -447,7 +452,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return self.viewer
 
     def viewer_setup(self):
-        distance = self.model.stat.extent * 0.6 * 1.5
+        distance = self.model.stat.extent * 0.6  # TODO: verify* 1.5
         self.viewer.cam.distance = distance
 
 

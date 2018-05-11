@@ -101,7 +101,7 @@ class MultiBaseline(object):
                     pre_y = tf.layers.dense(self.fc_layers[-1], 1, activation=None,
                                             kernel_initializer=ScalingOrth())
                     self.last_w, self.last_b = tf.trainable_variables(scope=scope_last.name)
-                    y = pre_y * self.sigma + self.mu
+                    y = pre_y
 
                 self.net = tf.check_numerics(tf.reshape(y, (-1,)), "value {} not numeric".format(pre_y.name))
                 err = self.y - self.net
@@ -163,6 +163,20 @@ class MultiBaseline(object):
             train_op = [self.img_train]
         elif update_mode == "st":
             train_op = [self.mse, self.upper_train]
+
+        update_scale = True
+        if update_scale:
+            beta = 0.95
+            new_mu = feed[self.y].mean()
+            new_sigma = feed[self.y].std()
+            if self.curr_mean_value is None:
+                self.curr_mean_value = new_mu
+                self.curr_std_value = new_sigma
+            self.curr_mean_value = beta * self.curr_mean_value + (1 - beta) * new_mu
+            self.curr_std_value = beta * self.curr_std_value + (1 - beta) * new_sigma
+            self.session.run(self.scale_updates, feed_dict={self.new_mean: self.curr_mean_value,
+                                                            self.new_std: self.curr_std_value})
+
         if self.debug_mode and (pid is None or pid == 0):
             # logging.debug("before vf optimization")
             self.print_loss(feed, extra="old")
@@ -185,19 +199,6 @@ class MultiBaseline(object):
         if self.debug_mode and (pid is None or pid == 0):
             # logging.debug("after vf optimization")
             self.print_loss(feed, extra="new")
-
-        update_scale = True
-        if update_scale:
-            beta = 0.99
-            new_mu = feed[self.y].mean()
-            new_sigma = feed[self.y].std()
-            if self.curr_mean_value is None:
-                self.curr_mean_value = new_mu
-                self.curr_std_value = new_sigma
-            self.curr_mean_value = beta * self.curr_mean_value + (1 - beta) * new_mu
-            self.curr_std_value = beta * self.curr_std_value + (1 - beta) * new_sigma
-            self.session.run(self.scale_updates, feed_dict={self.new_mean: self.curr_mean_value,
-                                                            self.new_std: self.curr_std_value})
 
     def predict(self, path):
         if self.net is None:

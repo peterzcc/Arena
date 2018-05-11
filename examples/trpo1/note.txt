@@ -28,8 +28,8 @@ cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_PYTHON3=ON
 import cv2;cv2.imshow('ob',obs[1][0]);cv2.waitKey(0);cv2.destroyAllWindows()
 
 
-
-import cv2;cv2.imshow('ob',observation[1]);cv2.waitKey(0);cv2.destroyAllWindows()
+img=img_input[0,:,:,0]
+import cv2;cv2.imshow('ob',img);cv2.waitKey(0);cv2.destroyAllWindows()
 
 from matplotlib import pyplot as plt;plt.figure(1);plt.imshow(obs[1][0,:,:,0], cmap='gray', interpolation='bicubic');plt.xticks([]), plt.yticks([]);plt.draw()
 
@@ -71,27 +71,17 @@ nvidia-smi --query-gpu="accounting.mode" --format=csv
 
 nvidia-smi -q -d "MEMORY,UTILIZATION" -lms 500
 nvidia-smi --query-accounted-apps="gpu_utilization" --format=csv
+CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move4 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
 
 mux0
 
-CUDA_VISIBLE_DEVICES=0 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move4 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
 
-CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move5 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
-
-CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move6 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
-
-CUDA_VISIBLE_DEVICES=2 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env move7 --rl-method PG --nactor 20 --batch-size 8000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001
 
 CUDA_VISIBLE_DEVICES=0,1,2
 mux6
 CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.003 --kl 0.001 --load-leaf 0 --train-leaf 1 --npret 37500 --num-steps 600000000
 
-1mux0
-CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env move_up_for --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --vlr 0.0001 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.1 --loss PPO  --norm-gae 1 --kl 0.0001 --load-dir models_target --switcher-length 50
-
-CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env move_up_for --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --vlr 0.0003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.1 --loss PPO  --norm-gae 1 --kl 0.0001 --load-dir models_target --switcher-length 50
-
-CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move_up_for --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --vlr 0.001 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.1 --loss PPO  --norm-gae 1 --kl 0.0001 --load-dir models_target --switcher-length 50
+1mux3
 
 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move_up_for --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.1 --loss PPO  --norm-gae 1 --kl 0.0001 --load-dir models_target --switcher-length 50
 
@@ -100,8 +90,7 @@ CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move_up_for --rl-meth
 
 local 60:
 
-
-python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.1 --loss PPO  --norm-gae 1 --kl 0.0001 --load-dir models --switcher-length 32
+python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.001 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.0 --loss PPO  --kl 0.001 --load-dir models --switcher-length 20
 
 
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move0 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
