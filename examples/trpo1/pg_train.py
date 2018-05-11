@@ -352,8 +352,8 @@ def main():
                                          comb_method=comb_methd,
                                          ent_k=args.ent_k,
                                          session=session,
-                                         load_old_model=args.load_model,
-                                         should_train=not args.load_model,
+                                         load_old_model=False,
+                                         should_train=True,
                                          parallel_predict=False)
         models = [root_model]
         for env_name, _ in list(full_tasks.items())[1:]:
