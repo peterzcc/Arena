@@ -37,7 +37,7 @@ class ScalingOrth(Initializer):
         for behavior.
     """
 
-    def __init__(self, scale=1.0, seed=None, dtype=dtypes.float32, mode="fan_in", ):
+    def __init__(self, scale=1.0, seed=None, dtype=dtypes.float32, mode="fan_avg", ):
         self.gain = scale
         self.dtype = _assert_float_dtype(dtypes.as_dtype(dtype))
         self.seed = seed

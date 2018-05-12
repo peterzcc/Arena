@@ -18,7 +18,7 @@ from cnn import ConvAutoencorder, cnn_network, ConvFcAutoencorder
 # from baselines.common import tf_util as U
 from baselines.acktr import kfac
 from arena.experiment import Experiment
-
+from scaling_orth import ScalingOrth
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -48,7 +48,7 @@ class PolicyGradientModel(ModelWithCritic):
                  update_per_epoch=4,
                  kl_history_length=1,
                  ent_k=0,
-                 comb_method=aggregate_feature,
+                 comb_method=concat_feature,
                  load_old_model=False,
                  model_load_dir="./model",
                  should_train=True,
@@ -118,7 +118,8 @@ class PolicyGradientModel(ModelWithCritic):
 
         def f_build_img_net(t_input):
             return cnn_network(t_input, conv_sizes, cnn_activation=tf.nn.leaky_relu,
-                               fc_sizes=cnn_fc_feat, fc_activation=tf.nn.leaky_relu)
+                               fc_sizes=cnn_fc_feat, fc_activation=tf.nn.leaky_relu,
+                               initializer_fn=ScalingOrth)
 
         self.name = name if not self.is_switcher_with_init_len else name + "_switcher"
         self.is_decider = is_decider
@@ -127,7 +128,7 @@ class PolicyGradientModel(ModelWithCritic):
                                     minibatch_size=64,
                                     main_scope=self.name + "_critic",
                                     timestep_limit=timestep_limit,
-                                    activation=tf.nn.elu,
+                                    activation=tf.nn.leaky_relu,
                                     n_imgfeat=self.n_imgfeat,
                                     comb_method=self.comb_method,
                                     cnn_trainable=cnn_trainable,

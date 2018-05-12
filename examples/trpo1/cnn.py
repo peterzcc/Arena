@@ -5,7 +5,7 @@ from scaling_orth import ScalingOrth
 
 def cnn_network(input,
                 conv_sizes,
-                cnn_activation=lrelu, initializer_fn=ScalingOrth(),
+                cnn_activation=lrelu, initializer_fn=ScalingOrth,
                 fc_sizes=None, fc_activation=tf.tanh,
                 trainable=True):
     cnn_scope = "cnn"
@@ -17,7 +17,7 @@ def cnn_network(input,
             #                     weights=tf.orthogonal_initializer()
             #                     )
             this_layer = tf.layers.conv2d(layers[-1], depth, kernel, stride, activation=cnn_activation,
-                                          kernel_initializer=initializer_fn,
+                                          kernel_initializer=initializer_fn(),
                                           padding="same",
                                           trainable=trainable)
             layers.append(this_layer)
@@ -29,7 +29,7 @@ def cnn_network(input,
             current_layer = final_cnn_flat
             for num_hid in fc_sizes:
                 current_layer = tf.layers.dense(current_layer, num_hid, activation=fc_activation,
-                                                kernel_initializer=initializer_fn)
+                                                kernel_initializer=initializer_fn())
                 layers.append(current_layer)
             fc_weights = tf.trainable_variables(current_scope.name)
     else:
