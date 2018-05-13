@@ -17,6 +17,7 @@ class MultiBaseline(object):
     def __init__(self, session=None, main_scope="value_f",
                  observation_space=None, n_imgfeat=1, activation=tf.nn.tanh,
                  max_iter=25, timestep_limit=1000, comb_method=aggregate_feature,
+                 initializer=ScalingOrth,
                  minibatch_size=256,
                  lr=0.0003,
                  cnn_trainable=True,
@@ -32,6 +33,7 @@ class MultiBaseline(object):
         self.comb_method = comb_method
         self.normalize = True
         self.var_notrain = []
+        self.initializer = initializer
         with tf.variable_scope(main_scope):
             # add  timestep
             self.state_input = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name="x")
@@ -95,11 +97,11 @@ class MultiBaseline(object):
                 self.fc_layers = [self.full_feature]
                 for hidden_size in hidden_sizes:
                     h = tf.layers.dense(self.fc_layers[-1], hidden_size,
-                                        activation=activation, kernel_initializer=ScalingOrth())
+                                        activation=activation, kernel_initializer=self.initializer())
                     self.fc_layers.append(h)
                 with tf.variable_scope("final") as scope_last:
                     pre_y = tf.layers.dense(self.fc_layers[-1], 1, activation=None,
-                                            kernel_initializer=ScalingOrth())
+                                            kernel_initializer=self.initializer())
                     self.last_w, self.last_b = tf.trainable_variables(scope=scope_last.name)
                     y = pre_y
 

@@ -116,10 +116,14 @@ class PolicyGradientModel(ModelWithCritic):
         else:
             cnn_fc_feat = (64, n_imgfeat,)
 
+        def initializer():
+            # return ScalingOrth(scale=1.0)
+            return tf.variance_scaling_initializer(scale=1.0, mode="fan_avg")
+
         def f_build_img_net(t_input):
             return cnn_network(t_input, conv_sizes, cnn_activation=tf.nn.leaky_relu,
                                fc_sizes=cnn_fc_feat, fc_activation=tf.nn.leaky_relu,
-                               initializer_fn=ScalingOrth)
+                               initializer_fn=initializer)
 
         self.name = name if not self.is_switcher_with_init_len else name + "_switcher"
         self.is_decider = is_decider
@@ -134,6 +138,7 @@ class PolicyGradientModel(ModelWithCritic):
                                     cnn_trainable=cnn_trainable,
                                     f_build_cnn=f_build_img_net,
                                     is_switcher_with_init_len=is_switcher_with_init_len,
+                                    initializer=initializer,
                                     lr=critic_lr)
         if hasattr(self.act_space, "low"):
             self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
@@ -158,6 +163,7 @@ class PolicyGradientModel(ModelWithCritic):
                                    session=self.session,
                                    cnn_trainable=cnn_trainable,
                                    f_build_cnn=f_build_img_net,
+                                   initializer=initializer,
                                    is_switcher_with_init_len=is_switcher_with_init_len
                                    )
         self.executer_net = self.policy

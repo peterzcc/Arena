@@ -88,11 +88,12 @@ CUDA_VISIBLE_DEVICES=1 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" p
 1mux3
 CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.001 --vlr 0.002 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss PPO  --kl 0.0002 --load-dir models --switcher-length 25
 
-local 60:
-python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 8000 --withimg 0 --nfeat 0 --load-model 0 --lr 0.003 --kl 0.001 --vlr 0.002 --load-leaf 0 --train-leaf 1 --npret 75000 --num-steps 600000000
+local :
+python3.6 pg_train.py --env simplemove1d --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --kl 0.0003 --vlr 0.001
 
 
 
+record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env move0 --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash

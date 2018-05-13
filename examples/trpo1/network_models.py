@@ -21,6 +21,7 @@ class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_space,
                  n_imgfeat=1, extra_feaatures=[], st_enabled=None, img_enabled=None,
                  comb_method=aggregate_feature,
+                 initializer=ScalingOrth,
                  cnn_trainable=True,
                  min_std=1e-6,
                  distibution=DiagonalGaussian(1),
@@ -31,7 +32,7 @@ class MultiNetwork(object):
         self.comb_method = comb_method
         self.min_std = min_std
         self.is_switcher_with_init_len = is_switcher_with_init_len
-
+        self.initializer = initializer
         self.session = session
         local_scope = scope
         with tf.variable_scope(local_scope) as this_scope:
@@ -90,8 +91,7 @@ class MultiNetwork(object):
             for hid in hidden_sizes:
                 current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=tf.tanh,
                                              kernel_initializer=
-                                             ScalingOrth(
-                                                 scale=1.0, dtype=dtype)
+                                             self.initializer()
                                              )
                 self.fc_layers.append(current_fc)
             batch_size = tf.shape(self.state_input)[0]
@@ -103,7 +103,7 @@ class MultiNetwork(object):
                     self.distribution.create_dist_vars(self.fc_layers[-1])
             else:
                 root_logits = tf.layers.dense(self.fc_layers[-1], 1,
-                                              kernel_initializer=ScalingOrth(scale=1.0, dtype=dtype))
+                                              kernel_initializer=self.initializer())
                 max_length = self.is_switcher_with_init_len - 0.5
                 with tf.variable_scope("switch_model") as time_scope:
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
