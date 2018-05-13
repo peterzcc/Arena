@@ -12,6 +12,26 @@ tf.set_random_seed(seed)
 
 dtype = tf.float32
 
+class MiniBatchAccumulator(object):
+    def __init__(self, var):
+        with tf.variable_scope("accumulator"):
+        self.accum_var = [tf.Variable(tf.zeros(v.shape),
+            dtype=v.dtype, trainable=False)
+            for v in var]
+
+    def gen_accum_op(self, diffs):
+        return
+            [tf.assign_add(v, d) for (v, d) in zip(self.accum_var, diffs)]
+
+    def gen_reset_op(self):
+        return reset_ops = [tf.assign(v, tf.zeros(v.shape, dtype=v.dtype))
+            for v in self.accum_var]
+
+    def gen_apply_reset_op(self, apply_ops):
+        with tf.control_dependencies(apply_ops):
+            reset_ops = self.gen_reset_op()
+        return reset_ops
+
 
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
@@ -203,9 +223,9 @@ def linesearch(f, x, fullstep, expected_improve_rate, max_backtracks=10, accept_
 def logit(p):
     return np.log(p/(1-p))
 
-def tf_run_batched(accum_op, reset_op, feed, N, session, minibatch_size=64, extra_input={}):
+def tf_run_batched(accum_op, feed, N, session, minibatch_size=64, extra_input={}):
     assert N > 0
-    session.run([reset_op], feed_dict={})
+    # session.run([reset_op], feed_dict={})
 
     for start in range(0, N, minibatch_size):
         end = min(start + minibatch_size, N)

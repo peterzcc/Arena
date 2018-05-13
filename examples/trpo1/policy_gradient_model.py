@@ -2,7 +2,7 @@ from __future__ import absolute_import
 from arena.models.model import ModelWithCritic
 import tensorflow as tf
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
-    aggregate_feature, select_st, explained_variance_batched, tf_run_batched, batch_run_forward
+    aggregate_feature, select_st, explained_variance_batched, tf_run_batched, batch_run_forward, MiniBatchAccumulator
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
 from prob_types import DiagonalGaussian, Categorical, CategoricalWithProb
@@ -266,17 +266,21 @@ class PolicyGradientModel(ModelWithCritic):
 
                     self.p_grads = tf.gradients(self.pg_loss, self.policy.var_list)
 
-                    self.p_grads_sum = [tf.Variable(tf.zeros(g.shape), dtype=g.dtype, trainable=False)
-                                        for g in self.p_grads]
-                    self.p_accum_reset = [tf.assign(p, tf.zeros(p.shape, dtype=p.dtype)) for p in self.p_grads_sum]
-                    self.p_accum_op = [tf.assign_add(p, g) for (p, g) in zip(self.p_grads_sum, self.p_grads)]
+                    # self.p_grads_sum = [tf.Variable(tf.zeros(g.shape), dtype=g.dtype, trainable=False)
+                    #                     for g in self.p_grads]
+                    self.p_grads_accumulator = MiniBatchAccumulator(self.p_grads)
+                    # self.p_accum_reset = [tf.assign(p, tf.zeros(p.shape, dtype=p.dtype)) for p in self.p_grads_sum]
+                    # self.p_accum_op = [tf.assign_add(p, g) for (p, g) in zip(self.p_grads_sum, self.p_grads)]
+                    self.p_accum_op = self.p_grads_accumulator.gen_accum_op(self.p_grads)
 
                     if max_grad_norm is not None:
-                        self.p_final_grads, self.g_norm = tf.clip_by_global_norm(self.p_grads_sum, max_grad_norm)
+                        p_final_grads, self.g_norm = tf.clip_by_global_norm(self.p_grads_accumulator.var, max_grad_norm)
                     else:
-                        self.p_final_grads = self.p_grads_sum
-                    p_grads_var = [(g, v) for g, v in zip(self.p_grads_sum, self.policy.var_list)]
-                    self.p_apply_grad = self.pg_optim.apply_gradients(p_grads_var)
+                        p_final_grads = self.p_grads_accumulator.var
+                    p_grads_var = [(g, v) for g, v in zip(self.p_final_grads, self.policy.var_list)]
+                    p_apply_grad = self.pg_optim.apply_gradients(p_grads_var)
+                    self.p_apply_reset_accum =
+                        self.p_grads_accumulator.gen_apply_reset_op(p_apply_grad)
 
                 self.fit_policy = self.fit_pg
             else:
@@ -639,11 +643,11 @@ class PolicyGradientModel(ModelWithCritic):
                                               minibatch_size=self.minibatch_size,
                                               extra_input={})
             logging.debug("\nold_surr: {}\told kl: {}\told ent: {}".format(surr_o, kl_o, ent_o))
-        _ = tf_run_batched(self.p_accum_op, self.p_accum_reset, feed, num_samples, self.session,
+        _ = tf_run_batched(self.p_accum_op, feed, num_samples, self.session,
                            minibatch_size=self.minibatch_size,
                            extra_input={self.target_kl_sym: target_kl_value,
                                         self.p_beta: self.p_beta_value})
-        g_norm, _ = self.session.run([self.g_norm, self.p_apply_grad],
+        g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
                                      feed_dict={self.p_sym_step_size: self.p_step_size,
                                                 self.p_beta: self.p_beta_value, })
 
