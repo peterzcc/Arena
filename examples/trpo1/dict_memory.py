@@ -96,6 +96,7 @@ class DictMemory(object):
         self.lam_pow = np.power(self.lam, np.arange(0, timestep_limit), dtype=np.float64)
 
         self.leaf_info_keys = None
+        self.scale_adv = False
 
     def append_state(self, observation, action, info, pid=0,
                      leaf_id=None, leaf_action=None, leaf_model_info=None, curr_time_step=None):
@@ -320,7 +321,7 @@ class DictMemory(object):
         lam_discounted_accum = list(
             map(lambda l: discount(np.ones(l, dtype=np.float64), self.lam), lens))
         advs = list(
-            map(lambda d, l: discount(d * l, self.gamma * self.lam) / l,
+            map(lambda d, l: discount(d * l, self.gamma * self.lam)/ (l if self.scale_adv else 1.0),
                 deltas, lam_discounted_accum)
         )
         results["advantage"] = np.concatenate(advs)
@@ -375,7 +376,7 @@ class DictMemory(object):
         whole_lam_discounted_accum = np.concatenate(lam_discounted_accum)
 
         adv_scaled = list(
-            map(lambda d, g, l: reverse_cumsum(d * g * l) / (g * l),
+            map(lambda d, g, l: reverse_cumsum(d * g * l) / (g * l if self.scale_adv else g),
                 deltas, gamma_powered, lam_discounted_accum))
         # whole_adv_unscaled = np.concatenate(adv_unscaled)
         # whole_adv_scaled = whole_adv_unscaled / (whole_lam_discounted_accum * whole_gamma_powered)

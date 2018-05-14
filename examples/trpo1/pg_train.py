@@ -299,7 +299,7 @@ def main():
         elif args.env == "simplemove1d":
             env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                         f_gen_obj=x_for_back,
-                                        forward_scale=1.0,
+                                        forward_scale=10.0,
                                         reset_goal_prob=0, )
         elif args.env == "cartpole_hrl":
             env = gym.make("CartPole-v1")
@@ -311,10 +311,7 @@ def main():
         else:
             env = gym.make(args.env)
 
-        if args.env in hrl_dimage and args.env not in hrl_root_tasks:
-            dummy_image = True
-        else:
-            dummy_image = False
+        dummy_image = False
         final_env = ComplexWrapper(env, max_episode_length=T,
                                    append_image=append_image, rgb_to_gray=True,
                                    visible_state_ids=range(env.observation_space.shape[0]),
