@@ -274,12 +274,13 @@ class PolicyGradientModel(ModelWithCritic):
                     self.p_accum_op = self.p_grads_accumulator.gen_accum_op(self.p_grads)
 
                     if max_grad_norm is not None:
-                        p_final_grads, self.g_norm = tf.clip_by_global_norm(self.p_grads_accumulator.var, max_grad_norm)
+                        p_final_grads, self.g_norm = tf.clip_by_global_norm(self.p_grads_accumulator.accum_var,
+                                                                            max_grad_norm)
                     else:
-                        p_final_grads = self.p_grads_accumulator.var
-                    p_grads_var = [(g, v) for g, v in zip(self.p_final_grads, self.policy.var_list)]
+                        p_final_grads = self.p_grads_accumulator.accum_var
+                    p_grads_var = [(g, v) for g, v in zip(p_final_grads, self.policy.var_list)]
                     p_apply_grad = self.pg_optim.apply_gradients(p_grads_var)
-                    self.p_apply_reset_accum =
+                    self.p_apply_reset_accum = \
                         self.p_grads_accumulator.gen_apply_reset_op(p_apply_grad)
 
                 self.fit_policy = self.fit_pg

@@ -15,20 +15,20 @@ dtype = tf.float32
 class MiniBatchAccumulator(object):
     def __init__(self, var):
         with tf.variable_scope("accumulator"):
-        self.accum_var = [tf.Variable(tf.zeros(v.shape),
-            dtype=v.dtype, trainable=False)
-            for v in var]
+            self.accum_var = [tf.Variable(tf.zeros(v.shape),
+                                          dtype=v.dtype, trainable=False)
+                              for v in var]
 
     def gen_accum_op(self, diffs):
-        return
+        return \
             [tf.assign_add(v, d) for (v, d) in zip(self.accum_var, diffs)]
 
     def gen_reset_op(self):
-        return reset_ops = [tf.assign(v, tf.zeros(v.shape, dtype=v.dtype))
-            for v in self.accum_var]
+        return [tf.assign(v, tf.zeros(v.shape, dtype=v.dtype))
+                for v in self.accum_var]
 
     def gen_apply_reset_op(self, apply_ops):
-        with tf.control_dependencies(apply_ops):
+        with tf.control_dependencies([apply_ops]):
             reset_ops = self.gen_reset_op()
         return reset_ops
 
