@@ -76,7 +76,7 @@ class Experiment(object):
 
         # add the handlers to the logger
         root.addHandler(fh)
-        root.addHandler(ch)
+        # root.addHandler(ch)
 
         if single_process_mode == False:
             self.render_lock = mp.Lock()
