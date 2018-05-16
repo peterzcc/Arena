@@ -61,7 +61,7 @@ class Experiment(object):
             os.mkdir(self.stats_file_dir)
         root = logging.getLogger()
         root.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s %(message)s')
         Experiment.EXP_NAME = self.stats_file_dir
 
         # create file handler which logs even debug messages
@@ -70,13 +70,13 @@ class Experiment(object):
         fh.setFormatter(formatter)
 
         # # create console handler with a higher log level
-        # ch = logging.StreamHandler()
-        # ch.setLevel(logging.ERROR)
-        # ch.setFormatter(formatter)
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(formatter)
 
         # add the handlers to the logger
         root.addHandler(fh)
-        # root.addHandler(ch)
+        root.addHandler(ch)
 
         if single_process_mode == False:
             self.render_lock = mp.Lock()

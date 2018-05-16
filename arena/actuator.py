@@ -91,9 +91,6 @@ class Actuator(object):
             self.current_obs, self.reward, self.episode_ends, info_env = \
                 self.env.step(current_action)
             if self.render_option == RenderOption.record:
-                # frame = self.current_obs[1]
-                # if frame.shape[2] == 1:
-                #     frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 self.video_encoder.capture_frame()
             msg_tx = {"reward": self.reward, "done": self.episode_ends, **info_env}
             self.stats_tx[1].send(msg_tx)

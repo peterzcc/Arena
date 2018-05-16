@@ -133,10 +133,12 @@ class MultiNetwork(object):
             self.new_likelihood_sym = tf.check_numerics(
                 self.distribution.log_likelihood_sym(self.action_n, self.dist_vars),
                 "new logpi nan")
-            self.old_likelihood = tf.check_numerics(
-                tf.maximum(self.distribution.log_likelihood_sym(self.action_n, self.old_vars), np.log(1e-8)),
+            self.old_likelihood = tf.check_numerics(self.distribution.log_likelihood_sym(self.action_n, self.old_vars),
                                                     "old logpi nan")
-
+            # self.old_likelihood = tf.check_numerics(
+            #     tf.maximum(self.distribution.log_likelihood_sym(self.action_n, self.old_vars), np.log(1e-8)),
+            #                                         "old logpi nan")
+            eps = 1e-8
             self.ratio_n = tf.check_numerics(tf.exp(self.new_likelihood_sym - self.old_likelihood), "ratio is nan")
             self.var_list = tf.trainable_variables(this_scope.name)
             if not cnn_trainable:

@@ -320,10 +320,16 @@ class DictMemory(object):
         # lam_discounted_accum = list(map(lambda t: reverse_cumsum(t), lam_powered))
         lam_discounted_accum = list(
             map(lambda l: discount(np.ones(l, dtype=np.float64), self.lam), lens))
-        advs = list(
-            map(lambda d, l: discount(d * l, self.gamma * self.lam)/ (l if self.scale_adv else 1.0),
-                deltas, lam_discounted_accum)
-        )
+        if self.scale_adv:
+            advs = list(
+                map(lambda d, l: discount(d * l, self.gamma * self.lam) / (l),
+                    deltas, lam_discounted_accum)
+            )
+        else:
+            advs = list(
+                map(lambda d, l: discount(d * l, self.gamma * self.lam),
+                    deltas, lam_discounted_accum)
+            )
         results["advantage"] = np.concatenate(advs)
 
 
@@ -373,11 +379,15 @@ class DictMemory(object):
             map(lambda r, b, g: self.compute_var_delta(r, b, g),
                 rewards, b1, gamma_diffs))
         lam_discounted_accum = list(map(lambda t: reverse_cumsum(t), lam_powered))
-        whole_lam_discounted_accum = np.concatenate(lam_discounted_accum)
-
-        adv_scaled = list(
-            map(lambda d, g, l: reverse_cumsum(d * g * l) / (g * l if self.scale_adv else g),
-                deltas, gamma_powered, lam_discounted_accum))
+        # whole_lam_discounted_accum = np.concatenate(lam_discounted_accum)
+        if self.scale_adv:
+            adv_scaled = list(
+                map(lambda d, g, l: reverse_cumsum(d * g * l) / (g * l),
+                    deltas, gamma_powered, lam_discounted_accum))
+        else:
+            adv_scaled = list(
+                map(lambda d, g, l: reverse_cumsum(d * g * l) / (g),
+                    deltas, gamma_powered, lam_discounted_accum))
         # whole_adv_unscaled = np.concatenate(adv_unscaled)
         # whole_adv_scaled = whole_adv_unscaled / (whole_lam_discounted_accum * whole_gamma_powered)
         whole_adv_scaled = np.concatenate(adv_scaled)

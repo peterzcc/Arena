@@ -180,7 +180,6 @@ class MultiBaseline(object):
                                                             self.new_std: self.curr_std_value})
 
         if self.debug_mode and (pid is None or pid == 0):
-            # logging.debug("before vf optimization")
             self.print_loss(feed, extra="old")
 
         batch_N = feed[self.y].shape[0]
@@ -199,7 +198,6 @@ class MultiBaseline(object):
                     break
 
         if self.debug_mode and (pid is None or pid == 0):
-            # logging.debug("after vf optimization")
             self.print_loss(feed, extra="new")
 
     def predict(self, path):
