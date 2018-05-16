@@ -319,7 +319,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             catch_range=0.5,
             obj_dist=1.25,
             init_noise=0.1,
-            use_internal_reward=False,
+            use_internal_reward=True,
             subtask_dirs=None,
             *args, **kwargs
     ):
@@ -373,7 +373,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         contact_cost = 0.5 * 1e-3 * np.sum(
             np.square(np.clip(cfrc_ext, -1, 1)))
         survive_reward = 1.0
-        internal_reward = survive_reward - ctrl_cost - contact_cost if not self.use_sparse_reward else 0.0
+        internal_reward = survive_reward - ctrl_cost - contact_cost if self.use_internal_reward else 0.0
         rewards = self.forward_scale * forward_reward + internal_reward
         return rewards[0], {"subrewards": rewards[1:]}
 
