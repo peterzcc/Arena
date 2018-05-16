@@ -211,9 +211,10 @@ def main():
                           )
     hrl_fake = OrderedDict(**{"cartpole_hrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
     hrl_up_for = OrderedDict(move_up_for=up_for, move0=x_forward_obj, move2=x_up_obj)
+    hrl_simple1d = OrderedDict(simplehrl1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
                           reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
-                          move_up_for=hrl_up_for)
+                          move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -252,6 +253,18 @@ def main():
                                   reset_goal_prob=0,
                                   use_internal_reward=use_internal_reward,
                                   subtask_dirs=subtask_dirs)
+        elif args.env == "simplehrl1d":
+            with_state_task = False
+            if args.env == list(hrl_root_tasks[args.env].keys())[0]:
+                use_internal_reward = False
+            else:
+                use_internal_reward = True
+            subtask_dirs = np.stack([v() for (k, v) in list(hrl0.items())[1:]], axis=0)
+            env = SimpleSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+                                        f_gen_obj=x_for_back,  # x_forward_obj if pid % 2 else x_backward_obj,#
+                                        reset_goal_prob=0,
+                                        use_internal_reward=use_internal_reward,
+                                        subtask_dirs=subtask_dirs)
         elif args.env in hrl_move2d:
             subtask_dirs = np.stack([v() for (k, v) in list(hrl_move2d.items())[1:]], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,

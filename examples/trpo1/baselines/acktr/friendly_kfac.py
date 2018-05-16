@@ -821,6 +821,7 @@ class FriendlyKfacOptimizer():
 
         return [(a, b) for a, b in zip(g, varlist)]
 
+    # todo batching
     def apply_gradients_kfac(self, grads):
         g, varlist = list(zip(*grads))
 
@@ -957,7 +958,10 @@ class FriendlyKfacOptimizer():
         return self.apply_gradients(grads)
 
     def minimize(self, loss, loss_sampled, var_list=None):
+        #TODO: batching
         grads = self.compute_gradients(loss, var_list=var_list)
+
         update_stats_op = self.compute_and_apply_stats(
             loss_sampled, var_list=var_list)
+        #todo batching
         return self.apply_gradients(grads)
