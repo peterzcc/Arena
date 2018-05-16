@@ -19,6 +19,7 @@ from cnn import ConvAutoencorder, cnn_network, ConvFcAutoencorder
 from baselines.acktr import kfac
 from arena.experiment import Experiment
 from scaling_orth import ScalingOrth
+from concurrent.futures import ThreadPoolExecutor
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -255,6 +256,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.parallel_predict = parallel_predict
         self.has_reset_fix_ter_weight = False
         self.const_action = const_action
+        self.critic_update_executor = ThreadPoolExecutor(max_workers=1)
 
 
     def get_state_activation(self, t_batch):
@@ -529,6 +531,11 @@ class PolicyGradientModel(ModelWithCritic):
                 logging.debug('beta OK = %s' % self.p_beta_value)
                 logging.debug('step_size OK = %s' % self.p_step_size)
 
+    def fit_critic(self, feed_critic, pid=None):
+        self.critic_lock.acquire_write()
+        self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
+        self.critic_lock.release_write()
+
     def train(self, paths, pid=None):
         if self.const_action is not None:
             return
@@ -566,8 +573,6 @@ class PolicyGradientModel(ModelWithCritic):
                     self.policy_lock.release_write()
                     self.n_fit += 1
 
-                self.critic_lock.acquire_write()
                 if self.should_update_critic:
-                    self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
-                self.critic_lock.release_write()
+                    self.critic_update_executor.submit(self.fit_critic, feed_critic, pid)
         self.increment_n_update()

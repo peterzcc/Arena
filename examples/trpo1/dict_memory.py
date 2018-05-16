@@ -178,7 +178,7 @@ class DictMemory(object):
             extract_time = (extract_end_time - run_end_time) / time_count
             self.run_start_time = None
             self.num_epoch += 1
-            logging.info("Name: {}".format(Experiment.EXP_NAME))
+            logging.info("\n\n\n\nName: {}".format(Experiment.EXP_NAME))
             logging.info(
                 'Epoch:%d \nt: %d\nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
                 % (self.num_epoch,

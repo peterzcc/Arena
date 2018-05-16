@@ -82,7 +82,7 @@ class BatchUpdateAgent(Agent):
                 fps = 1.0 / train_time
                 res_ram = resident() / (1024 * 1024)
                 logging.info(
-                    '\nfps:%f\ntt:%f\nram:%f\n\n\n\n' \
+                    '\nfps:%f\ntt:%f\nram:%f' \
                     % (
                         fps,
                         train_time,
