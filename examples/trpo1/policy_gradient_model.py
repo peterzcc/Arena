@@ -42,7 +42,7 @@ class PolicyGradientModel(ModelWithCritic):
                  critic_lr=0.0003,
                  minibatch_size=128,
                  mode="ACKTR",
-                 surr_loss="PPO",
+                 loss_type="PPO",
                  num_actors=1,
                  f_batch_size=None,
                  batch_mode="episode",
@@ -56,7 +56,6 @@ class PolicyGradientModel(ModelWithCritic):
                  f_train_this_epoch=lambda x: True,
                  parallel_predict=True,
                  save_model=10,
-                 loss_type="PPO",
                  max_grad_norm=0.5,
                  is_switcher_with_init_len=0,
                  is_decider=False,
@@ -143,8 +142,9 @@ class PolicyGradientModel(ModelWithCritic):
             self.distribution = Categorical(num_cat=self.act_space.n)
 
         self.theta = None
+        WASS_POSTFIX = "_WASS"
 
-        use_wasserstein = (self.mode == "PG" and loss_type == "PPO_TRAD_WASS")
+        use_wasserstein = (self.mode == "PG" and loss_type.endswith(WASS_POSTFIX))
 
         self.policy = MultiNetwork(scope=self.name + "_policy",
                                    observation_space=self.ob_space,
@@ -171,7 +171,8 @@ class PolicyGradientModel(ModelWithCritic):
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         self.fit_policy = None
-        self.loss_type = "PPO_TRAD" if loss_type == "PPO_TRAD_WASS" else loss_type
+
+        self.loss_type = loss_type[:-len(WASS_POSTFIX)] if loss_type.endswith(WASS_POSTFIX) else loss_type
 
         self.rl_loss = self.policy.rl_losses[self.loss_type]
         if should_train:
