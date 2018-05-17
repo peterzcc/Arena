@@ -73,10 +73,11 @@ nvidia-smi -q -d "MEMORY,UTILIZATION" -lms 500
 nvidia-smi --query-accounted-apps="gpu_utilization" --format=csv
 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move_up_for --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.0001 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.1 --loss PPO  --norm-gae 1 --kl 0.0001 --load-dir models_target --switcher-length 50
 python3.6 pg_train.py --env scalemove1d --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --kl 0.0003 --vlr 0.001
+CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env simplehrl1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.0 --loss PPO  --kl 0.001 --load-dir models_target --switcher-length 20
 
 mux
 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss PPO  --kl 0.001 --load-dir models_target --switcher-length 20
-CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env simplehrl1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.0 --loss PPO  --kl 0.001 --load-dir models_target --switcher-length 20
+CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss PPO  --kl 0.001 --load-dir models_target --switcher-length 20
 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env scalemove1d --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --kl 0.0003 --vlr 0.001
 CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 2500 --withimg 1 --nfeat 30 --load-model 0 --kl 0.0003 --vlr 0.001
 

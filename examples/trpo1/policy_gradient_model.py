@@ -120,7 +120,7 @@ class PolicyGradientModel(ModelWithCritic):
         def f_build_img_net(t_input):
             return cnn_network(t_input, conv_sizes, cnn_activation=tf.nn.leaky_relu,
                                fc_sizes=cnn_fc_feat, fc_activation=tf.nn.leaky_relu,
-                               initializer_fn=initializer)
+                               initializer_fn=tf.orthogonal_initializer)
 
         self.name = name if not self.is_switcher_with_init_len else name + "_switcher"
         self.is_decider = is_decider
