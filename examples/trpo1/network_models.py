@@ -27,13 +27,15 @@ class MultiNetwork(object):
                  distibution=DiagonalGaussian(1),
                  session=None,
                  f_build_cnn=None,
-                 is_switcher_with_init_len=0
+                 is_switcher_with_init_len=0,
+                 use_wasserstein=False
                  ):
         self.comb_method = comb_method
         self.min_std = min_std
         self.is_switcher_with_init_len = is_switcher_with_init_len
         self.initializer = initializer
         self.session = session
+        self.use_wasserstein = use_wasserstein
         local_scope = scope
         with tf.variable_scope(local_scope) as this_scope:
             self.state_input = tf.placeholder(
@@ -153,11 +155,24 @@ class MultiNetwork(object):
 
             # Sampled loss of the policy
 
-            self.trad_surr_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
+            self.trad_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
+            log_ppo_max_ratio = np.log(1.0 + self.PPO_eps)
+            log_ppo_min_ratio = np.log(1.0 - self.PPO_eps)
+            clipped_new_likelihoold = tf.clip_by_value(self.new_likelihood_sym,
+                                                       self.old_likelihood + log_ppo_min_ratio,
+                                                       self.old_likelihood + log_ppo_max_ratio)
+            self.ppo_trad_loss = tf.check_numerics(
+                -tf.reduce_mean(tf.minimum(self.new_likelihood_sym * self.advant,
+                                           clipped_new_likelihoold * self.advant)),
+                "ppo_trad nan")
             self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
             self.kl = tf.reduce_mean(self.kls)
+            if isinstance(self.distribution, DiagonalGaussian) and self.use_wasserstein:
+                self.wassersteins = self.distribution.wasserstein_sym(self.old_vars, self.dist_vars)
+                self.kl = tf.reduce_mean(self.wassersteins)
 
             ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
             self.ent = tf.reduce_sum(ent_n) / self.batch_size_float
+            self.rl_losses = {"PPO": self.ppo_surr, "TRAD": self.trad_loss, "PPO_TRAD": self.ppo_trad_loss}
             self.losses = [self.ppo_surr, self.kl, self.ent]
             self.reset_exp = self.distribution.reset_exp(self.interm_vars)

@@ -226,6 +226,7 @@ class DiagonalGaussian(ProbType):
         return tf.reduce_sum(
             numerator / denominator + new_log_stds - old_log_stds, -1)
 
+
     def log_likelihood_sym(self, x_var, dist_info_vars):
         """
         \frac{1}{(2\pi)^{\frac{n}{2}}\sigma_\theta}exp(-(\frac{a-\mu_{\pi_\theta}}{2\sigma_\theta})^2)
@@ -247,6 +248,25 @@ class DiagonalGaussian(ProbType):
         mu2, logstd2 = mu, logstd
 
         return self.kl_sym(dict(mean=mu1, log_std=logstd1), dict(mean=mu2, log_std=logstd2))
+
+    def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
+        old_means = old_dist_info_vars["mean"]
+        old_log_stds = old_dist_info_vars["logstd"]
+        new_means = new_dist_info_vars["mean"]
+        new_log_stds = new_dist_info_vars["logstd"]
+        old_sqrt_std = tf.exp(old_log_stds / 2)
+        new_sqrt_std = tf.exp(new_log_stds / 2)
+        wasserstein = tf.square(old_means - new_means) + tf.square(old_sqrt_std - new_sqrt_std)
+
+        return tf.reduce_sum(wasserstein, axis=-1)
+
+    def wasserstein_firstfixed(self, old_dist_info_vars):
+        mu = old_dist_info_vars["mean"]
+        logstd = old_dist_info_vars["logstd"]
+        mu1, logstd1 = tuple(map(tf.stop_gradient, [mu, logstd]))
+        mu2, logstd2 = mu, logstd
+
+        return self.wasserstein_sym(dict(mean=mu1, log_std=logstd1), dict(mean=mu2, log_std=logstd2))
 
     def sample(self, dist_info):
         means = dist_info["mean"]

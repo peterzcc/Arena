@@ -156,7 +156,8 @@ class PolicyGradientModel(ModelWithCritic):
                                    cnn_trainable=cnn_trainable,
                                    f_build_cnn=f_build_img_net,
                                    initializer=initializer,
-                                   is_switcher_with_init_len=is_switcher_with_init_len
+                                   is_switcher_with_init_len=is_switcher_with_init_len,
+                                   use_wasserstein=True
                                    )
         self.executer_net = self.policy
 
@@ -169,8 +170,8 @@ class PolicyGradientModel(ModelWithCritic):
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         self.fit_policy = None
         self.loss_type = loss_type
-        self.rl_loss = (
-            self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss)
+
+        self.rl_loss = self.policy.rl_losses[self.loss_type]
         if should_train:
             if self.mode == "ACKTR":
                 self.k_stepsize = tf.Variable(initial_value=np.float32(0.03), name='stepsize')
@@ -183,8 +184,7 @@ class PolicyGradientModel(ModelWithCritic):
                                                   async=True, cold_iter=1,
                                                   weight_decay_dict={}, max_grad_norm=None)
 
-                self.k_surr_loss = self.policy.ppo_surr if self.loss_type == "PPO" else self.policy.trad_surr_loss
-                self.k_final_loss = self.k_surr_loss + self.ent_loss
+                self.k_final_loss = self.rl_loss + self.ent_loss
 
                 self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
                                                                           self.policy.mean_loglike,
@@ -459,7 +459,7 @@ class PolicyGradientModel(ModelWithCritic):
 
     def handle_model_saving(self, mean_t_reward):
         if self.save_model > 0 and self.n_update > self.last_save + self.save_model:
-            if mean_t_reward > self.best_mean_reward:
+            if mean_t_reward >= self.best_mean_reward:
                 self.best_mean_reward = mean_t_reward
                 logging.debug("Saving {} with averew/step: {}".format(self.model_save_path, self.best_mean_reward))
                 self.full_model_saver.save(self.session, self.model_save_path, write_state=False)
@@ -467,7 +467,7 @@ class PolicyGradientModel(ModelWithCritic):
 
     def print_stat(self, feed, num_samples, tag="old"):
 
-        surr, kl, ent = run_batched([self.policy.trad_surr_loss, self.policy.kl, self.policy.ent], feed,
+        surr, kl, ent = run_batched([self.policy.trad_loss, self.policy.kl, self.policy.ent], feed,
                                     num_samples,
                                     self.session,
                                     minibatch_size=self.minibatch_size,
