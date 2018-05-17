@@ -254,9 +254,9 @@ class DiagonalGaussian(ProbType):
         old_log_stds = old_dist_info_vars["logstd"]
         new_means = new_dist_info_vars["mean"]
         new_log_stds = new_dist_info_vars["logstd"]
-        old_sqrt_std = tf.exp(old_log_stds / 2)
-        new_sqrt_std = tf.exp(new_log_stds / 2)
-        wasserstein = tf.square(old_means - new_means) + tf.square(old_sqrt_std - new_sqrt_std)
+        old_std = tf.exp(old_log_stds)
+        new_std = tf.exp(new_log_stds)
+        wasserstein = tf.square(old_means - new_means) + tf.square(old_std - new_std)
 
         return tf.reduce_sum(wasserstein, axis=-1)
 

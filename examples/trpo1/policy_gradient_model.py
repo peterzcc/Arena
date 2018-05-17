@@ -144,7 +144,7 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.theta = None
 
-        use_wasserstein = (self.mode == "PG" and loss_type == "PPO_TRAD")
+        use_wasserstein = (self.mode == "PG" and loss_type == "PPO_TRAD_WASS")
 
         self.policy = MultiNetwork(scope=self.name + "_policy",
                                    observation_space=self.ob_space,
@@ -171,7 +171,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         self.fit_policy = None
-        self.loss_type = loss_type
+        self.loss_type = "PPO_TRAD" if loss_type == "PPO_TRAD_WASS" else loss_type
 
         self.rl_loss = self.policy.rl_losses[self.loss_type]
         if should_train:
