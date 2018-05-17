@@ -144,6 +144,8 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.theta = None
 
+        use_wasserstein = (self.mode == "PG" and self.loss_type == "PPO_TRAD")
+
         self.policy = MultiNetwork(scope=self.name + "_policy",
                                    observation_space=self.ob_space,
                                    action_space=self.act_space,
@@ -157,7 +159,7 @@ class PolicyGradientModel(ModelWithCritic):
                                    f_build_cnn=f_build_img_net,
                                    initializer=initializer,
                                    is_switcher_with_init_len=is_switcher_with_init_len,
-                                   use_wasserstein=True
+                                   use_wasserstein=use_wasserstein
                                    )
         self.executer_net = self.policy
 
