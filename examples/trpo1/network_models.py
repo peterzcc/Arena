@@ -23,7 +23,6 @@ class MultiNetwork(object):
                  comb_method=aggregate_feature,
                  initializer=ScalingOrth,
                  cnn_trainable=True,
-                 min_std=1e-6,
                  distibution=DiagonalGaussian(1),
                  session=None,
                  f_build_cnn=None,
@@ -31,7 +30,6 @@ class MultiNetwork(object):
                  use_wasserstein=False
                  ):
         self.comb_method = comb_method
-        self.min_std = min_std
         self.is_switcher_with_init_len = is_switcher_with_init_len
         self.initializer = initializer
         self.session = session

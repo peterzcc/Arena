@@ -16,7 +16,7 @@ class MultiBaseline(object):
 
     def __init__(self, session=None, main_scope="value_f",
                  observation_space=None, n_imgfeat=1, activation=tf.nn.tanh,
-                 max_iter=25, timestep_limit=1000, comb_method=aggregate_feature,
+                 max_iter=25, comb_method=aggregate_feature,
                  initializer=ScalingOrth,
                  minibatch_size=256,
                  lr=0.0003,
@@ -27,7 +27,6 @@ class MultiBaseline(object):
         self.max_iter = max_iter
         self.l2_k = 1e-4
         self.mix_frac = 1
-        self.timestep_limit = timestep_limit
         self.scope = main_scope
         self.minibatch_size = minibatch_size
         self.comb_method = comb_method

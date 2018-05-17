@@ -34,8 +34,6 @@ class PolicyGradientModel(ModelWithCritic):
                  name="agent",
                  session=None,
                  conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
-                 min_std=1e-6,
-                 timestep_limit=1000,
                  n_imgfeat=0,
                  f_target_kl=None,
                  lr=0.0001,
@@ -69,7 +67,6 @@ class PolicyGradientModel(ModelWithCritic):
         logging.debug("model args:\n {}".format(args))
 
         # store constants
-        self.min_std = min_std
         self.minibatch_size = minibatch_size
         self.use_empirical_fim = True
         self.mode = mode
@@ -127,7 +124,6 @@ class PolicyGradientModel(ModelWithCritic):
         self.critic = MultiBaseline(session=self.session, observation_space=self.ob_space,
                                     minibatch_size=64,
                                     main_scope=self.name + "_critic",
-                                    timestep_limit=timestep_limit,
                                     activation=tf.nn.leaky_relu,
                                     n_imgfeat=self.n_imgfeat,
                                     comb_method=self.comb_method,
@@ -152,7 +148,6 @@ class PolicyGradientModel(ModelWithCritic):
                                    n_imgfeat=self.n_imgfeat,
                                    extra_feaatures=[],
                                    comb_method=self.comb_method,
-                                   min_std=min_std,
                                    distibution=self.distribution,
                                    session=self.session,
                                    cnn_trainable=cnn_trainable,

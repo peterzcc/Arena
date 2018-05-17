@@ -420,7 +420,6 @@ def main():
 
         model = PolicyGradientModel(observation_space, action_space,
                                     name=args.env,
-                                    timestep_limit=T,
                                     num_actors=num_actors,
                                     f_batch_size=const_batch_size,
                                     batch_mode=args.batch_mode,
@@ -484,7 +483,6 @@ def main():
 
         decider_model = PolicyGradientModel(decider_observation_space, decider_action_space,
                                             name=args.env,
-                                            timestep_limit=T,
                                             num_actors=num_actors,
                                             f_batch_size=hrl_batch_size,
                                             batch_mode=args.batch_mode,
@@ -508,7 +506,6 @@ def main():
                                             is_decider=True)
         switcher_model = PolicyGradientModel(switcher_obseravation_space, switcher_action_space,
                                              name=args.env,
-                                             timestep_limit=T,
                                              num_actors=num_actors,
                                              f_batch_size=hrl_batch_size,
                                              batch_mode=args.batch_mode,
@@ -538,7 +535,6 @@ def main():
                 const_action = None
             p = PolicyGradientModel(observation_space, action_space,
                                     name=env_name,
-                                    timestep_limit=T,
                                     num_actors=num_actors,
                                     n_imgfeat=n_imgfeat,
                                     comb_method=comb_methd,
