@@ -274,7 +274,7 @@ class PolicyGradientModel(ModelWithCritic):
 
     def restore_parameters(self):
         logging.debug("Loading {}".format(self.model_load_path))
-        if os.path.exists(self.model_load_path):
+        if os.path.exists(self.model_load_path + ".index"):
             try:
                 self.full_model_saver.restore(self.session, self.model_load_path)
             except (ValueError):
