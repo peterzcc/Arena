@@ -20,6 +20,7 @@ from baselines.acktr import kfac
 from arena.experiment import Experiment
 from scaling_orth import ScalingOrth
 from concurrent.futures import ThreadPoolExecutor
+import os
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -56,6 +57,7 @@ class PolicyGradientModel(ModelWithCritic):
                  save_model=10,
                  max_grad_norm=0.5,
                  is_switcher_with_init_len=0,
+                 switcher_cost_k=0.01,
                  is_decider=False,
                  reset_exp=False,
                  const_action=None
@@ -170,6 +172,9 @@ class PolicyGradientModel(ModelWithCritic):
         self.loss_type = loss_type[:-len(WASS_POSTFIX)] if loss_type.endswith(WASS_POSTFIX) else loss_type
 
         self.rl_loss = self.policy.rl_losses[self.loss_type]
+        if self.is_switcher_with_init_len:
+            self.switcher_cost_k = switcher_cost_k
+            self.rl_loss = self.rl_loss + self.switcher_cost_k + self.policy.switcher_cost
         if should_train:
             if self.mode == "ACKTR":
                 self.k_stepsize = tf.Variable(initial_value=np.float32(0.03), name='stepsize')
@@ -256,7 +261,6 @@ class PolicyGradientModel(ModelWithCritic):
         self.const_action = const_action
         self.critic_update_executor = ThreadPoolExecutor(max_workers=1)
 
-
     def get_state_activation(self, t_batch):
         if self.comb_method != aggregate_feature:
             all_st_enabled = True
@@ -270,7 +274,13 @@ class PolicyGradientModel(ModelWithCritic):
 
     def restore_parameters(self):
         logging.debug("Loading {}".format(self.model_load_path))
-        self.full_model_saver.restore(self.session, self.model_load_path)
+        if os.path.exists(self.model_load_path):
+            try:
+                self.full_model_saver.restore(self.session, self.model_load_path)
+            except (ValueError):
+                logging.debug("failed to load {}".format(self.model_load_path))
+        else:
+            logging.warning("path doesn't exist {}".format(self.model_load_path))
         self.has_loaded_model = True
 
     def predict(self, observation, pid=0):
@@ -457,7 +467,7 @@ class PolicyGradientModel(ModelWithCritic):
 
     def handle_model_saving(self, mean_t_reward):
         if self.save_model > 0 and self.n_update > self.last_save + self.save_model:
-            if mean_t_reward >= self.best_mean_reward:
+            if mean_t_reward >= 0.9 * self.best_mean_reward:
                 self.best_mean_reward = mean_t_reward
                 logging.debug("Saving {} with r: {}".format(self.model_save_path, self.best_mean_reward))
                 self.full_model_saver.save(self.session, self.model_save_path, write_state=False)
@@ -545,7 +555,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.info("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
-            mean_t_reward = extra_data["return"].mean()
+            mean_t_reward = extra_data["return"].max()
             logging.info("name:\t{0} mean_r_t:\t{1:.4f}".format(self.name, mean_t_reward))
         else:
             feed, mean_t_reward, feed_critic = None, None, None

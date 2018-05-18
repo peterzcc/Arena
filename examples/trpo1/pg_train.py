@@ -128,6 +128,8 @@ def main():
                         help='target kl')
     parser.add_argument('--ent-k', required=False, default=0, type=float,
                         help='entropy loss weight')
+    parser.add_argument('--switcher-k', required=False, default=0.01, type=float,
+                        help='entropy loss weight')
     parser.add_argument('--lam', required=False, default=0.97, type=float,
                         help='gae lambda')
     parser.add_argument('--gamma', required=False, default=0.995, type=float,
@@ -143,7 +145,9 @@ def main():
                         const=True, )
     parser.add_argument('--reset-exp', default=False, type=str2bool, nargs='?',
                         const=True, )
-    parser.add_argument('--no-train', default=False, type=str2bool, nargs='?',
+    parser.add_argument('--train-decider', default=True, type=str2bool, nargs='?',
+                        const=True, )
+    parser.add_argument('--train-switcher', default=False, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--train-leaf', default=False, type=str2bool, nargs='?',
                         const=True, )
@@ -438,7 +442,7 @@ def main():
                                     reset_exp=args.reset_exp,
                                     model_load_dir=args.load_dir,
                                     parallel_predict=True,
-                                    should_train=not args.no_train,
+                                    should_train=args.train_decider,
                                     save_model=args.save_model)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
@@ -498,7 +502,7 @@ def main():
                                             session=session,
                                             load_old_model=args.load_model,
                                             model_load_dir=args.load_dir,
-                                            should_train=not args.no_train,
+                                            should_train=args.train_decider,
                                             f_train_this_epoch=f_train_root,
                                             parallel_predict=False,
                                             save_model=args.save_model,
@@ -519,13 +523,14 @@ def main():
                                              loss_type=args.loss,
                                              ent_k=args.ent_k,
                                              session=session,
-                                             load_old_model=False,
+                                             load_old_model=args.load_model,
                                              model_load_dir=args.load_dir,
-                                             should_train=False,
+                                             should_train=args.train_switcher,
                                              f_train_this_epoch=f_train_root,
                                              parallel_predict=False,
                                              save_model=args.save_model,
-                                             is_switcher_with_init_len=args.switcher_length)
+                                             is_switcher_with_init_len=args.switcher_length,
+                                             switcher_cost_k=args.switcher_k)
         models = {"decider": decider_model, "switcher": switcher_model, "leafs": []}
 
         for i, env_name in enumerate(list(full_tasks.keys())[1:]):

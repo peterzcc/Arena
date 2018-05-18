@@ -69,6 +69,7 @@ class MultiNetwork(object):
                     img_net_layers, cnn_weights, img_fc_weights = f_build_cnn(self.img_float)
                     self.cnn_weights = cnn_weights
                     self.img_fc_weights = img_fc_weights
+                    self.img_var_list = cnn_weights + img_fc_weights
 
                     if n_imgfeat < 0:
                         self.image_features = tf.layers.flatten(img_net_layers[-1])
@@ -117,16 +118,15 @@ class MultiNetwork(object):
                                                                 dtype=tf.float32)
 
                     self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(0.0, dtype=tf.float32),
-                                                            # TODO: tune
                                                             dtype=tf.float32)
                     final_terlogit = self.fixed_ter_weight * self.fixed_prob_ter_logit + \
                                      (1 - self.fixed_ter_weight) * time_logit
 
-                full_logits = logits_from_ter_categorical(root_logits, final_terlogit,
-                                                          is_initial_step=self.hrl_meta_input[:, 2:3])
+                self.full_logits = logits_from_ter_categorical(root_logits, final_terlogit,
+                                                               is_initial_step=self.hrl_meta_input[:, 2:3])
                 assert isinstance(self.distribution, Categorical)
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
-                    self.distribution.create_dist_vars(logits=full_logits)
+                    self.distribution.create_dist_vars(logits=self.full_logits)
             self.mean_loglike = - tf.reduce_mean(
                 self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
 
@@ -175,3 +175,6 @@ class MultiNetwork(object):
             self.rl_losses = {"PPO": self.ppo_surr, "TRAD": self.trad_loss, "PPO_TRAD": self.ppo_trad_loss}
             self.losses = [self.ppo_surr, self.kl, self.ent]
             self.reset_exp = self.distribution.reset_exp(self.interm_vars)
+            if self.is_switcher_with_init_len:
+                self.switch_prob = tf.sigmoid(self.full_logits[:, 1:2])
+                self.switcher_cost = tf.reduce_mean(self.switch_prob)
