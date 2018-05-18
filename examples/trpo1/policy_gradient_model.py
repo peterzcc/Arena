@@ -5,7 +5,7 @@ from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, 
     aggregate_feature, select_st, explained_variance_batched, tf_run_batched, batch_run_forward, MiniBatchAccumulator
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
-from prob_types import DiagonalGaussian, Categorical, CategoricalWithProb
+from prob_types import DiagonalGaussian, Categorical
 from network_models import MultiNetwork
 import numpy as np
 import random
@@ -432,7 +432,7 @@ class PolicyGradientModel(ModelWithCritic):
             is_root_decision = action_n != 0
             feed = {k: v[is_root_decision] for (k, v) in feed.items()}
 
-        extra = {"rewards": rewards}
+        extra = {"return": returns}
 
         return feed, feed_critic, extra
 
@@ -459,7 +459,7 @@ class PolicyGradientModel(ModelWithCritic):
         if self.save_model > 0 and self.n_update > self.last_save + self.save_model:
             if mean_t_reward >= self.best_mean_reward:
                 self.best_mean_reward = mean_t_reward
-                logging.debug("Saving {} with averew/step: {}".format(self.model_save_path, self.best_mean_reward))
+                logging.debug("Saving {} with r: {}".format(self.model_save_path, self.best_mean_reward))
                 self.full_model_saver.save(self.session, self.model_save_path, write_state=False)
                 self.last_save = self.n_update
 
@@ -545,7 +545,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.info("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
-            mean_t_reward = extra_data["rewards"].mean()
+            mean_t_reward = extra_data["return"].mean()
             logging.info("name:\t{0} mean_r_t:\t{1:.4f}".format(self.name, mean_t_reward))
         else:
             feed, mean_t_reward, feed_critic = None, None, None

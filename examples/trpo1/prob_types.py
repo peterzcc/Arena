@@ -17,9 +17,6 @@ class ProbType(object):
     def log_likelihood_sym(self, x_var, dist_info_vars):
         pass
 
-    def kl_sym_firstfixed(self, old_dist_info_vars):
-        pass
-
     def sample(self, dist_info):
         pass
 
@@ -81,41 +78,41 @@ def logits_from_ter_categorical(logits, p, is_initial_step):
     return full_logits
 
 
-class CategoricalWithProb(ProbType):
-    def __init__(self, num_cat):
-        self.n = num_cat
-
-    def create_dist_vars(self, probs, dtype=tf.float32):
-        old_probs = tf.placeholder(dtype,
-                                   shape=(None, self.n), name="old_probs")
-        old_dist_vars = dict(probs=old_probs)
-        dist_vars = dict(probs=probs)
-        sample = tf.distributions.Categorical(probs=probs).sample()
-        return dist_vars, old_dist_vars, sample, {}
-
-    def log_likelihood_sym(self, x_var, dist_info_vars):
-        one_hot_actions = tf.one_hot(x_var, self.n)
-        logp = -categorical_crossentropy(output=dist_info_vars["probs"], labels=one_hot_actions)
-        return logp
-
-    def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
-        old_p = old_dist_info_vars["probs"]
-        new_p = new_dist_info_vars["probs"]
-        old_dist = tf.distributions.Categorical(probs=old_p)
-        new_dist = tf.distributions.Categorical(probs=new_p)
-        kl = old_dist.kl_divergence(new_dist)
-        return kl
-
-    def entropy(self, dist_info):
-        dist = tf.distributions.Categorical(probs=dist_info["probs"])
-        return dist.entropy()
-
-    def sample(self, dist_info):
-        dist = tf.distributions.Categorical(probs=dist_info["probs"])
-        return dist.sample()
-
-    def kf_loglike(self, action_n, dist_vars, interm_vars):
-        return self.log_likelihood_sym(action_n, dist_vars)
+# class CategoricalWithProb(ProbType):
+#     def __init__(self, num_cat):
+#         self.n = num_cat
+#
+#     def create_dist_vars(self, probs, dtype=tf.float32):
+#         old_probs = tf.placeholder(dtype,
+#                                    shape=(None, self.n), name="old_probs")
+#         old_dist_vars = dict(probs=old_probs)
+#         dist_vars = dict(probs=probs)
+#         sample = tf.distributions.Categorical(probs=probs).sample()
+#         return dist_vars, old_dist_vars, sample, {}
+#
+#     def log_likelihood_sym(self, x_var, dist_info_vars):
+#         one_hot_actions = tf.one_hot(x_var, self.n)
+#         logp = -categorical_crossentropy(output=dist_info_vars["probs"], labels=one_hot_actions)
+#         return logp
+#
+#     def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
+#         old_p = old_dist_info_vars["probs"]
+#         new_p = new_dist_info_vars["probs"]
+#         old_dist = tf.distributions.Categorical(probs=old_p)
+#         new_dist = tf.distributions.Categorical(probs=new_p)
+#         kl = old_dist.kl_divergence(new_dist)
+#         return kl
+#
+#     def entropy(self, dist_info):
+#         dist = tf.distributions.Categorical(probs=dist_info["probs"])
+#         return dist.entropy()
+#
+#     def sample(self, dist_info):
+#         dist = tf.distributions.Categorical(probs=dist_info["probs"])
+#         return dist.sample()
+#
+#     def kf_loglike(self, action_n, dist_vars, interm_vars):
+#         return self.log_likelihood_sym(action_n, dist_vars)
 
 
 class Categorical(ProbType):
@@ -148,6 +145,15 @@ class Categorical(ProbType):
         new_dist = tf.distributions.Categorical(logits=new_l)
         kl = old_dist.kl_divergence(new_dist)
         return kl
+
+    def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
+        old_l = old_dist_info_vars["logits"]
+        new_l = new_dist_info_vars["logits"]
+        old_dist = tf.distributions.Categorical(logits=old_l)
+        new_dist = tf.distributions.Categorical(logits=new_l)
+        # wasserstein = tf.reduce_sum((old_dist.probs - new_dist.probs)**2/2, axis=-1)
+        wasserstein = tf.reduce_sum(tf.abs(old_dist.probs - new_dist.probs) / 2, axis=-1)
+        return wasserstein
 
     def entropy(self, dist_info):
         dist = tf.distributions.Categorical(logits=dist_info["logits"])
@@ -241,14 +247,6 @@ class DiagonalGaussian(ProbType):
                0.5 * tf.reduce_sum(tf.square(zs), -1) - \
                0.5 * means.get_shape()[-1].value * np.log(2 * np.pi)
 
-    def kl_sym_firstfixed(self, old_dist_info_vars):
-        mu = old_dist_info_vars["mean"]
-        logstd = old_dist_info_vars["logstd"]
-        mu1, logstd1 = tuple(map(tf.stop_gradient, [mu, logstd]))
-        mu2, logstd2 = mu, logstd
-
-        return self.kl_sym(dict(mean=mu1, log_std=logstd1), dict(mean=mu2, log_std=logstd2))
-
     def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
         old_means = old_dist_info_vars["mean"]
         old_log_stds = old_dist_info_vars["logstd"]
@@ -256,17 +254,9 @@ class DiagonalGaussian(ProbType):
         new_log_stds = new_dist_info_vars["logstd"]
         old_std = tf.exp(old_log_stds)
         new_std = tf.exp(new_log_stds)
-        wasserstein = tf.square(old_means - new_means) + tf.square(old_std - new_std)
+        wasserstein_terms = tf.square(old_means - new_means) + tf.square(old_std - new_std)
 
-        return tf.reduce_sum(wasserstein, axis=-1)
-
-    def wasserstein_firstfixed(self, old_dist_info_vars):
-        mu = old_dist_info_vars["mean"]
-        logstd = old_dist_info_vars["logstd"]
-        mu1, logstd1 = tuple(map(tf.stop_gradient, [mu, logstd]))
-        mu2, logstd2 = mu, logstd
-
-        return self.wasserstein_sym(dict(mean=mu1, log_std=logstd1), dict(mean=mu2, log_std=logstd2))
+        return tf.reduce_sum(wasserstein_terms, axis=-1)
 
     def sample(self, dist_info):
         means = dist_info["mean"]

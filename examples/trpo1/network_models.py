@@ -6,7 +6,7 @@ import numpy as np
 from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, run_batched, concat_feature, \
     aggregate_feature, select_st, logit
 import logging
-from prob_types import DiagonalGaussian, CategoricalWithProb, Categorical, logits_from_ter_categorical
+from prob_types import DiagonalGaussian, Categorical, logits_from_ter_categorical
 dtype = tf.float32
 
 
@@ -163,11 +163,12 @@ class MultiNetwork(object):
                 -tf.reduce_mean(tf.minimum(self.new_likelihood_sym * self.advant,
                                            clipped_new_likelihoold * self.advant)),
                 "ppo_trad nan")
-            self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
-            self.kl = tf.reduce_mean(self.kls)
-            if isinstance(self.distribution, DiagonalGaussian) and self.use_wasserstein:
+            if self.use_wasserstein:
                 self.wassersteins = self.distribution.wasserstein_sym(self.old_vars, self.dist_vars)
                 self.kl = tf.reduce_mean(self.wassersteins)
+            else:
+                self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
+                self.kl = tf.reduce_mean(self.kls)
 
             ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
             self.ent = tf.reduce_sum(ent_n) / self.batch_size_float
