@@ -75,7 +75,9 @@ CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move_up_for --rl-meth
 python3.6 pg_train.py --env scalemove1d --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 1 --nfeat 30 --load-model 0 --kl 0.0003 --vlr 0.001
 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env simplehrl1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.0 --loss PPO  --kl 0.001 --load-dir models_target --switcher-length 20
 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move4 --rl-method ACKTR --nactor 20 --batch-size 2500 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001
-CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.001 --vlr 0.002 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss PPO  --kl 0.0002 --load-dir models --switcher-length 25
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --lr 0.001 --vlr 0.002 --l
+oad-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss PPO  --kl 0.0002 --load-dir models --switcher-length 25
+python3.6 ../plot.py -w 20 --dir "../rec_dy2/rec_180505_move0" "."
 
 mux
 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move1d --rl-method ACKTR --nactor 20 --batch-size 20000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.003 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss PPO  --kl 0.001 --load-dir models_target --switcher-length 20
@@ -115,6 +117,7 @@ i +=0
 
 i +=1;plt.figure(0);plt.imshow(x[i,:,:],cmap="gray");plt.figure(1);plt.imshow(recon[i,:,:,0],cmap="gray");plt.figure(2);plt.imshow(np.reshape(features[i,:,:,:],(7,7,1)),cmap="gray")
 
+python3.6 ../plot.py -w 20 --dir "../rec_dy2/rec_180505_move0" "."
 
 CUDA_VISIBLE_DEVICES="" python3.6 ./project2.py --task train_ae
 
