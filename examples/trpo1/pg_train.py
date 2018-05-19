@@ -323,6 +323,11 @@ def main():
                                   f_gen_obj=x_for_back,
                                   forward_scale=10.0,
                                   reset_goal_prob=0, )
+        elif args.env == "scalemove4":
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_8d["move4"],
+                                  forward_scale=10.0,
+                                  reset_goal_prob=0, )
         elif args.env == "cartpole_hrl":
             env = gym.make("CartPole-v1")
         elif args.env in hrl_up_for:
