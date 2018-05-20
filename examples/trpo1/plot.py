@@ -46,7 +46,8 @@ def main():
             x = x[:args.n]
             y = y[:args.n]
         if args.t is not None:
-            max_id = np.flatnonzero(x > args.t)[0]
+            exceeds = np.flatnonzero(x > args.t)
+            max_id = exceeds[0] if len(exceeds) != 0 else len(x)
             x = x[:max_id]
             y = y[:max_id]
         plt.plot(x, y, linewidth=0.5)
