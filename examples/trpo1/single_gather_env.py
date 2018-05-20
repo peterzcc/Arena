@@ -340,10 +340,10 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.use_internal_reward = use_internal_reward
         self.init_noise = init_noise
         if subtask_dirs is None:
-            self.dirs = np.array([[0, 0]])
+            self.dirs = np.array([[0.0, 0.0]])
             self.info_sample = {}
         else:
-            self.dirs = np.concatenate([np.array([[0, 0]]), self.subtasks_dirs], axis=0)
+            self.dirs = np.concatenate([np.array([[0.0, 0.0]]), self.subtasks_dirs], axis=0)
             self.info_sample = {"subrewards": np.zeros(self.subtasks_dirs.shape[0], np.float32)}
         self.pos_t = None
         self.pos_t_prime = None
@@ -358,7 +358,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return self._get_obs()
 
     def _reset_objects(self):
-        self.dirs[0] = self.f_gen_obj()
+        self.dirs[0, :] = self.f_gen_obj()
+        assert np.any(self.dirs[0])
         self.objects = [np.concatenate([self.obj_dist * self.dirs[0], (0,)])]
 
     def _get_obs(self):
@@ -367,7 +368,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return np.concatenate([self_obs, ])
 
     def compute_cont_reward(self, a, pos_t_prime, pos_t, target_dirs, cfrc_ext):
-        fw_dist = np.dot(target_dirs, pos_t_prime[0:2] - pos_t[0:2])
+        pos_diff = pos_t_prime[0:2] - pos_t[0:2]
+        fw_dist = np.dot(target_dirs, pos_diff)
         forward_reward = fw_dist / self.dt
         ctrl_cost = .5 * np.square(a).sum()
         contact_cost = 0.5 * 1e-3 * np.sum(
