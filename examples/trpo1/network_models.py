@@ -166,9 +166,11 @@ class MultiNetwork(object):
             if self.use_wasserstein:
                 self.wassersteins = self.distribution.wasserstein_sym(self.old_vars, self.dist_vars)
                 self.kl = tf.reduce_mean(self.wassersteins)
+                self.loss_sampled = self.kl
             else:
                 self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
                 self.kl = tf.reduce_mean(self.kls)
+                self.loss_sampled = self.mean_loglike
 
             ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
             self.ent = tf.reduce_sum(ent_n) / self.batch_size_float

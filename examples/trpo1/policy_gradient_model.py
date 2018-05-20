@@ -556,7 +556,7 @@ class PolicyGradientModel(ModelWithCritic):
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
             mean_t_reward = extra_data["return"].mean()
-            logging.info("name:\t{0} mean_r_t:\t{1:.4f}".format(self.name, mean_t_reward))
+            logging.info("name: {0} mean_r_t: {1:.4f}".format(self.name, mean_t_reward))
         else:
             feed, mean_t_reward, feed_critic = None, None, None
 
@@ -565,7 +565,7 @@ class PolicyGradientModel(ModelWithCritic):
                 logging.debug("No training data for {}".format(self.name))
             else:
                 logging.debug("-------------------------------------------")
-                logging.debug("training model:\t{} at t\t{}".format(self.name,self.n_update))
+                logging.debug("training model: {} at t\t{}".format(self.name, self.n_update))
                 batch_size = feed[self.policy.advant].shape[0]
                 self.handle_model_saving(mean_t_reward)
 
