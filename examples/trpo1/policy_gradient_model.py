@@ -442,7 +442,7 @@ class PolicyGradientModel(ModelWithCritic):
             is_root_decision = action_n != 0
             feed = {k: v[is_root_decision] for (k, v) in feed.items()}
 
-        extra = {"return": returns}
+        extra = {"return": returns, "reward": rewards, "time": times}
 
         return feed, feed_critic, extra
 
@@ -555,7 +555,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.info("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
-            mean_t_reward = extra_data["return"].max()
+            mean_t_reward = extra_data["return"].mean()
             logging.info("name:\t{0} mean_r_t:\t{1:.4f}".format(self.name, mean_t_reward))
         else:
             feed, mean_t_reward, feed_critic = None, None, None
