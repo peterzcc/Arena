@@ -24,6 +24,8 @@ def main():
 
     parser.add_argument('--n', '-n', required=False, type=int, default=None,
                         help='length')
+    parser.add_argument('--t', '-t', required=False, type=float, default=None,
+                        help='time')
     parser.add_argument('--dataname', default="Reward", type=str, help='name')
     parser.add_argument('--dir', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
 
@@ -41,10 +43,14 @@ def main():
         x = data[0]
         y = data[1]
         if args.n is not None:
-            plt.plot(x[:args.n], y[:args.n], linewidth=0.5)
-        else:
-            plt.plot(x, y, linewidth=0.5)
-            labels.append("agent_{}".format(i))
+            x = x[:args.n]
+            y = y[:args.n]
+        if args.t is not None:
+            max_id = np.flatnonzero(x > args.t)[0]
+            x = x[:max_id]
+            y = y[:max_id]
+        plt.plot(x, y, linewidth=0.5)
+        labels.append("agent_{}".format(i))
     plt.legend(labels, loc='upper left')
     plt.savefig('vis_train' + '.pdf', bbox_inches='tight')
     # plt.show()
