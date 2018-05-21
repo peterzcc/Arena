@@ -108,6 +108,12 @@ def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
     parser.add_argument('--lr', required=False, default=0.0001, type=float,
                         help='learning rate of the choosen optimizer')
+    parser.add_argument('--npass', required=False, type=int, default=1,
+                        help='num pass')
+    parser.add_argument('--multi-update', default=False, type=str2bool, nargs='?',
+                        const=True, )
+    parser.add_argument('--minibatch-size', required=False, type=int, default=64,
+                        help='minibatch size')
     parser.add_argument('--vlr', required=False, default=0.0003, type=float,
                         help='learning rate of the critic')
     parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
@@ -414,6 +420,10 @@ def main():
         else:
             return sess
 
+    policy_shared_params = dict(npass=args.npass,
+                                minibatch_size=args.minibatch_size,
+                                multi_update=args.multi_update)
+
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
@@ -448,7 +458,8 @@ def main():
                                     model_load_dir=args.load_dir,
                                     parallel_predict=True,
                                     should_train=args.train_decider,
-                                    save_model=args.save_model)
+                                    save_model=args.save_model,
+                                    **policy_shared_params)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
                             timestep_limit=T,
                             f_critic={"decider": model.compute_critic},
@@ -512,7 +523,8 @@ def main():
                                             parallel_predict=False,
                                             save_model=args.save_model,
                                             is_switcher_with_init_len=False,
-                                            is_decider=True)
+                                            is_decider=True,
+                                            **policy_shared_params)
         switcher_model = PolicyGradientModel(switcher_obseravation_space, switcher_action_space,
                                              name=args.env,
                                              num_actors=num_actors,
@@ -535,7 +547,8 @@ def main():
                                              parallel_predict=False,
                                              save_model=args.save_model,
                                              is_switcher_with_init_len=args.switcher_length,
-                                             switcher_cost_k=args.switcher_k)
+                                             switcher_cost_k=args.switcher_k,
+                                             **policy_shared_params)
         models = {"decider": decider_model, "switcher": switcher_model, "leafs": []}
 
         for i, env_name in enumerate(list(full_tasks.keys())[1:]):
@@ -566,7 +579,8 @@ def main():
                                     loss_type=args.loss,
                                     save_model=args.save_model,
                                     is_switcher_with_init_len=False,
-                                    const_action=const_action
+                                    const_action=const_action,
+                                    **policy_shared_params
                                     )
             models["leafs"].append(p)
         # for p in models[1:]:

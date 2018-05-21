@@ -41,6 +41,7 @@ class PolicyGradientModel(ModelWithCritic):
                  critic_lr=0.0003,
                  npass=1,
                  minibatch_size=64,
+                 multi_update=False,
                  mode="ACKTR",
                  loss_type="PPO",
                  num_actors=1,
@@ -66,6 +67,7 @@ class PolicyGradientModel(ModelWithCritic):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
         self.act_space = action_space
+        self.multi_update = multi_update
         args = locals()
         logging.debug("model args:\n {}".format(args))
 
@@ -513,9 +515,8 @@ class PolicyGradientModel(ModelWithCritic):
 
         target_kl_value = self.f_target_kl(self.n_update) if self.f_target_kl is not None else None
         _, _, _ = self.print_stat(feed, num_samples, tag="old")
-        multi_update = True
         for pass_i in range(self.pg_npass):
-            if multi_update:
+            if self.multi_update:
                 ids = np.random.permutation(np.arange(num_samples))
                 for start in range(0, num_samples, self.minibatch_size):
                     end = start + self.minibatch_size if num_samples - start < 2 * self.minibatch_size else num_samples
