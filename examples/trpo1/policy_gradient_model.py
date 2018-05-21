@@ -521,12 +521,11 @@ class PolicyGradientModel(ModelWithCritic):
                 for start in range(0, num_samples, self.minibatch_size):
                     end = start + self.minibatch_size if num_samples - start < 2 * self.minibatch_size else num_samples
                     slc = ids[start:end]
-                    this_size = end - start
                     this_feed = {k: v[slc] for k, v in feed.items()}
-                    _ = tf_run_batched(self.p_accum_op, this_feed, this_size, self.session,
-                                       minibatch_size=self.minibatch_size,
-                                       extra_input={self.target_kl_sym: target_kl_value,
-                                                    self.p_beta: self.p_beta_value})
+                    _ = self.session.run(self.p_accum_op,
+                                         feed_dict={**this_feed,
+                                                    self.p_sym_step_size: self.p_step_size,
+                                                    self.p_beta: self.p_beta_value, })
                     g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
                                                  feed_dict={self.p_sym_step_size: self.p_step_size,
                                                             self.p_beta: self.p_beta_value, })
