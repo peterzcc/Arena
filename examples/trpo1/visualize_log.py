@@ -36,7 +36,7 @@ def get_loss(logfile, outpath, starting_point=1, mode=None, name="", extra_str="
                   'mse:([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)',
                   '{} mean_r_t:\t([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)'.format(extra_str),
                   'ave subt:([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)']
-    name_list = ['Return', 'Std', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar',
+    name_list = ['Return', 'std: ', 'image_loss', 'Num. action overflows', 'KL', 'Performance', 'ae loss', 'ae expvar',
                  'mse', 'mean_r_t', 'subpolicy_len']
     name_dict = {v:i for i,v in zip(np.arange(len(name_list)),name_list)}
     timestep_list = []
