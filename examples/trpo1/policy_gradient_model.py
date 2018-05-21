@@ -39,7 +39,8 @@ class PolicyGradientModel(ModelWithCritic):
                  f_target_kl=None,
                  lr=0.0001,
                  critic_lr=0.0003,
-                 minibatch_size=128,
+                 npass=1,
+                 minibatch_size=64,
                  mode="ACKTR",
                  loss_type="PPO",
                  num_actors=1,
@@ -122,9 +123,9 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.name = name if not self.is_switcher_with_init_len else name + "_switcher"
         self.is_decider = is_decider
-
+        self.npass = npass
         self.critic = MultiBaseline(session=self.session, observation_space=self.ob_space,
-                                    minibatch_size=64,
+                                    minibatch_size=minibatch_size,
                                     main_scope=self.name + "_critic",
                                     activation=tf.nn.leaky_relu,
                                     n_imgfeat=self.n_imgfeat,
@@ -197,6 +198,8 @@ class PolicyGradientModel(ModelWithCritic):
                 self.fit_policy = self.fit_acktr
             elif self.mode == "PG":
                 with tf.variable_scope("pg") as scope:
+                    self.pg_npass = 10
+                    self.pg_minibatch_size = minibatch_size
                     self.p_step_size = lr
                     self.p_max_step_size = 0.1
                     self.p_min_step_size = 1e-7
@@ -510,13 +513,30 @@ class PolicyGradientModel(ModelWithCritic):
 
         target_kl_value = self.f_target_kl(self.n_update) if self.f_target_kl is not None else None
         _, _, _ = self.print_stat(feed, num_samples, tag="old")
-        _ = tf_run_batched(self.p_accum_op, feed, num_samples, self.session,
-                           minibatch_size=self.minibatch_size,
-                           extra_input={self.target_kl_sym: target_kl_value,
-                                        self.p_beta: self.p_beta_value})
-        g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
-                                     feed_dict={self.p_sym_step_size: self.p_step_size,
-                                                self.p_beta: self.p_beta_value, })
+        multi_update = True
+        for pass_i in range(self.pg_npass):
+            if multi_update:
+                ids = np.random.permutation(np.arange(num_samples))
+                for start in range(0, num_samples, self.minibatch_size):
+                    end = start + self.minibatch_size if num_samples - start < 2 * self.minibatch_size else num_samples
+                    slc = ids[start:end]
+                    this_size = end - start
+                    this_feed = {k: v[slc] for k, v in feed.items()}
+                    _ = tf_run_batched(self.p_accum_op, this_feed, this_size, self.session,
+                                       minibatch_size=self.minibatch_size,
+                                       extra_input={self.target_kl_sym: target_kl_value,
+                                                    self.p_beta: self.p_beta_value})
+                    g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
+                                                 feed_dict={self.p_sym_step_size: self.p_step_size,
+                                                            self.p_beta: self.p_beta_value, })
+            else:
+                _ = tf_run_batched(self.p_accum_op, feed, num_samples, self.session,
+                                   minibatch_size=self.minibatch_size,
+                                   extra_input={self.target_kl_sym: target_kl_value,
+                                                self.p_beta: self.p_beta_value})
+                g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
+                                             feed_dict={self.p_sym_step_size: self.p_step_size,
+                                                        self.p_beta: self.p_beta_value, })
 
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
         if self.debug:
@@ -541,7 +561,7 @@ class PolicyGradientModel(ModelWithCritic):
 
     def fit_critic(self, feed_critic, pid=None):
         self.critic_lock.acquire_write()
-        self.critic.fit(feed_critic, update_mode="full", num_pass=1, pid=pid)
+        self.critic.fit(feed_critic, update_mode="full", num_pass=self.npass, pid=pid)
         self.critic_lock.release_write()
 
     def train(self, paths, pid=None):
