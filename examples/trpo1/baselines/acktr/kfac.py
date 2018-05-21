@@ -899,10 +899,10 @@ class KfacOptimizer():
                     u = tf.cond(tf.greater(self.factor_step,
                                            tf.convert_to_tensor(0)), getKfacGradOp, gradOp)
 
-                    optim = tf.train.MomentumOptimizer(
-                        self._lr * (1. - self._momentum), self._momentum)
+                    # optim = tf.train.MomentumOptimizer(
+                    #     self._lr * (1. - self._momentum), self._momentum)
 
-                    # optim = tf.train.AdamOptimizer(self._lr, epsilon=0.01)
+                    optim = tf.train.AdamOptimizer(self._lr)
 
                     #Apply natural gradient
                     def optimOp():

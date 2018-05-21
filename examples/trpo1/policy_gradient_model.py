@@ -177,7 +177,7 @@ class PolicyGradientModel(ModelWithCritic):
             self.rl_loss = self.rl_loss + self.switcher_cost_k + self.policy.switcher_cost
         if should_train:
             if self.mode == "ACKTR":
-                self.k_stepsize = tf.Variable(initial_value=np.float32(0.03), name='stepsize')
+                self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
                 self.k_momentum = 0.9
                 self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
                                                   cold_lr= self.k_stepsize * (1 - self.k_momentum),

@@ -113,7 +113,7 @@ disprun python3.6 ../plot.py -w200 --dir "../exp_102" "../exp_103" "../exp_104" 
 99 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss PPO_WASS
 100 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO_WASS
 101 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.001 --loss PPO_WASS
-disprun python3.6 ../plot.py -w200 --dir "." "../exp_78" "../exp_99" ../exp_100/ "../exp_101"
+disprun python3.6 ../plot.py -w200 --dir "../exp_98" "../exp_78" "../exp_99" ../exp_100/ "../exp_101"
 
 local :
 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO_WASS
