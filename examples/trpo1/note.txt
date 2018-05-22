@@ -89,33 +89,48 @@ CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move1d --rl-method PG
 10 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move1d --rl-method PG --nactor 20 --batch-size 10000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss TRAD_WASS  --kl 0.0001 --load-dir models_target --switcher-length 25
 54 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move1d --rl-method PG --nactor 20 --batch-size 10000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss TRAD_WASS  --kl 0.0003 --load-dir models_target --switcher-length 25
 
+
 0mux
-adam acktr
+adam acktr wass
 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --loss PPO_WASS
 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001 --loss PPO_WASS
 CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss PPO_WASS
 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.001 --loss PPO_WASS
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00001 --vlr 0.001 --loss PPO_WASS
+disprun python3.6 ../plot.py -w200 --dir "../exp_18" "../exp_1" "../exp_2" ../exp_3 "../exp_4"
+disprun python3.6 ../plot.py -w200 --dir "../exp_2" ../exp_3 "../exp_4" "../exp_104" ../exp_105 "../exp_106"
+disprun python3.6 ../plot.py -w200 --dir "../exp_1" "../exp_2" ../exp_3 "../exp_4" "../exp_14" "../exp_15" "../exp_16"
 
+disprun python3.6 ../plot.py -w200 --dir "../exp_2" ../exp_3 "../exp_4" "../exp_21" "../exp_22" "../exp_23"
 
 1mux0
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move4 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0002 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method PG --nactor 1 --batch-size 2048 --withimg 0 --nfeat 0 --load-model 0  --loss PPO --lr 0.0003 --vlr 0.0003 --multi-update 1 --npass 10 --minibatch-size 64
+dead CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move4 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0002 --vlr 0.001 --loss PPO_WASS
+dead CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method PG --nactor 1 --batch-size 2048 --withimg 0 --nfeat 0 --load-model 0  --loss PPO --lr 0.0003 --vlr 0.0003 --multi-update 1 --npass 10 --minibatch-size 64
+pure PPO:
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method PG --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0  --loss PPO --lr 0.00003 --vlr 0.001
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method PG --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0  --loss PPO --lr 0.0001 --vlr 0.001
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method PG --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0  --loss PPO --lr 0.0003 --vlr 0.001
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method PG --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0  --loss PPO --lr 0.001 --vlr 0.001
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method PG --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0  --loss PPO --lr 0.003 --vlr 0.001
+disprun python3.6 ../plot.py -w200 --dir "../exp_13" "../exp_14" "../exp_15" "../exp_16" "../exp_17"
+disprun python3.6 ../plot.py -w200 --dir "../exp_14" "../exp_15" "../exp_2" ../exp_3 "../exp_4"
+
 
 2mux
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.001 --loss PPO_WASS
-disprun python3.6 ../plot.py -w200 --dir "../exp_102" "../exp_103" "../exp_104" ../exp_105 "../exp_106"
+adam acktr kl reproduction:
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO
+
 
 3mux
-98 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --loss PPO_WASS
-99 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss PPO_WASS
-100 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO_WASS
-101 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method PG --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.001 --loss PPO_WASS
-disprun python3.6 ../plot.py -w200 --dir "../exp_98" "../exp_78" "../exp_99" ../exp_100/ "../exp_101"
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 20480 --withimg 1 --nfeat 30 --load-dir models --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 1 --switcher-start 150  --switcher-length 25 --npret -1  --loss PPO --ent-k 0.01 --switcher-k 1.0  --lr 0.0003
+CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 20480 --withimg 1 --nfeat 30 --load-dir models --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 1 --switcher-start 150  --switcher-length 25 --npret -1  --loss PPO --ent-k 0.01 --switcher-k 1.0  --lr 0.001
+CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 20480 --withimg 1 --nfeat 30 --load-dir models --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 1 --switcher-start 150  --switcher-length 25 --npret -1  --loss PPO --ent-k 0.01 --switcher-k 1.0  --lr 0.003
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 20480 --withimg 1 --nfeat 30 --load-dir models --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 1 --switcher-start 150  --switcher-length 25 --npret -1  --loss PPO --ent-k 0.01 --switcher-k 1.0  --lr 0.01
+CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 20480 --withimg 1 --nfeat 30 --load-dir models --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 1 --switcher-start 150  --switcher-length 25 --npret -1  --loss PPO --ent-k 0.01 --switcher-k 1.0  --lr 0.03
 
 local :
 

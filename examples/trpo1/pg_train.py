@@ -127,6 +127,8 @@ def main():
                         help='Total number of steps')
     parser.add_argument('--switcher-length', required=False, type=int, default=10,
                         help='switcher length')
+    parser.add_argument('--switcher-start', required=False, type=int, default=0,
+                        help='switcher training start time')
     parser.add_argument('--lr-decrease', default=True, type=bool, help='whether to decrease lr')
     parser.add_argument('--batch-mode', required=False, type=str, default='timestep',
                         help='timestep or episode')
@@ -490,11 +492,14 @@ def main():
                                            np.array([decider_action_space.n, np.inf, 1.0])
                                            )]
 
-        def f_train_root(n):
+        def f_train_decider(n):
             return n > args.npret
 
+        def f_train_switcher(n):
+            return n > args.npret and n >= args.switcher_start
+
         def f_train_leaf(n):
-            return not f_train_root(n)
+            return not f_train_decider(n)
 
         num_leaf = (len(full_tasks.keys()) - 1)
 
@@ -519,7 +524,7 @@ def main():
                                             load_old_model=args.load_model,
                                             model_load_dir=args.load_dir,
                                             should_train=args.train_decider,
-                                            f_train_this_epoch=f_train_root,
+                                            f_train_this_epoch=f_train_decider,
                                             parallel_predict=False,
                                             save_model=args.save_model,
                                             is_switcher_with_init_len=False,
@@ -543,7 +548,7 @@ def main():
                                              load_old_model=args.load_model,
                                              model_load_dir=args.load_dir,
                                              should_train=args.train_switcher,
-                                             f_train_this_epoch=f_train_root,
+                                             f_train_this_epoch=f_train_switcher,
                                              parallel_predict=False,
                                              save_model=args.save_model,
                                              is_switcher_with_init_len=args.switcher_length,

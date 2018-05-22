@@ -575,7 +575,7 @@ class PolicyGradientModel(ModelWithCritic):
             logging.info("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
-            mean_t_reward = extra_data["return"].mean()
+            mean_t_reward = extra_data["reward"].mean()
             logging.info("name: {0} mean_r_t: {1:.4f}".format(self.name, mean_t_reward))
         else:
             feed, mean_t_reward, feed_critic = None, None, None
