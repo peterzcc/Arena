@@ -316,7 +316,7 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=hrl_dimage[args.env],
                                   reset_goal_prob=0, )
-        elif args.env == "movetest":
+        elif args.env == "flatmove1d":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=x_for_back,
                                   forward_scale=1.0,

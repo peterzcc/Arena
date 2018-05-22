@@ -90,7 +90,7 @@ class MultiNetwork(object):
             logging.info("policy hidden sizes: {}".format(hidden_sizes))
             self.fc_layers = [self.full_feature]
             for hid in hidden_sizes:
-                current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=tf.tanh,
+                current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=tf.nn.leaky_relu,  # tf.tanh, #TODO
                                              kernel_initializer=
                                              self.initializer()
                                              )
