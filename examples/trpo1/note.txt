@@ -84,13 +84,10 @@ CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move1d --rl-method PG
 
 
 0mux
-adam acktr wass
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00001 --vlr 0.001 --loss PPO_WASS
-disprun python3.6 ../plot.py -w200 --dir "../exp_18" "../exp_1" "../exp_2" "../exp_3" "../exp_4"
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss PPO
+CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0003 --vlr 0.001 --loss PPO
+CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.001 --loss PPO
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.003 --vlr 0.001 --loss PPO
 
 1mux0
 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env move2d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.002 --load-leaf 0 --train-leaf 1 --train-decider 0 --train-switcher 0  --switcher-length 334 --npret 75000  --loss PPO_WASS --kl 0.0001
@@ -112,7 +109,6 @@ disprun python3.6 ../plot.py -w200 --dir "../exp_26" "../exp_27" "../exp_28" "..
 local :
 python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss PPO_WASS
 
-python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss PPO_WASS
 
 record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env simplemove1d --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record --load-dir exp_7
