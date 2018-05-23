@@ -284,14 +284,13 @@ def main():
                                   reset_goal_prob=0.0,
                                   subtask_dirs=subtask_dirs)
 
-        elif args.env in hrl_changing_goal:
-            with_state_task = False
-
+        elif args.env == "dynamic2d":
             subtask_dirs = np.stack([v() for (k, v) in list(hrl_changing_goal.items())[1:]], axis=0)
-            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=hrl_changing_goal[args.env],
                                   reset_goal_prob=0.01,
-                                  subtask_dirs=subtask_dirs)
+                                  subtask_dirs=subtask_dirs,
+                                  use_internal_reward=False)
         elif args.env == "reach_test":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=random_direction,
