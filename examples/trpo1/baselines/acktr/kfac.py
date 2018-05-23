@@ -12,7 +12,7 @@ class KfacOptimizer():
     def __init__(self, learning_rate=0.01, momentum=0.9, clip_kl=0.01, kfac_update=2, stats_accum_iter=60,
                  full_stats_init=False, cold_iter=100, cold_lr=None, async=False, async_stats=False, epsilon=1e-2,
                  stats_decay=0.95, blockdiag_bias=False, channel_fac=False, factored_damping=False, approxT2=False,
-                 use_float64=False, weight_decay_dict={}, max_grad_norm=0.5):
+                 use_float64=False, weight_decay_dict={}, max_grad_norm=0.5, use_wasserstein=False):
         self.max_grad_norm = max_grad_norm
         self._lr = learning_rate
         self._momentum = momentum
@@ -54,6 +54,8 @@ class KfacOptimizer():
         self.param_vars = []
         self.stats = {}
         self.stats_eigen = {}
+
+        self.use_wasserstein = use_wasserstein
 
     def getFactors(self, g, varlist):
         graph = tf.get_default_graph()
@@ -898,11 +900,12 @@ class KfacOptimizer():
 
                     u = tf.cond(tf.greater(self.factor_step,
                                            tf.convert_to_tensor(0)), getKfacGradOp, gradOp)
+                    if not self.use_wasserstein:
 
-                    # optim = tf.train.MomentumOptimizer(
-                    #     self._lr * (1. - self._momentum), self._momentum)
-
-                    optim = tf.train.AdamOptimizer(self._lr)
+                        optim = tf.train.MomentumOptimizer(
+                            self._lr * (1. - self._momentum), self._momentum)
+                    else:
+                        optim = tf.train.AdamOptimizer(self._lr)
 
                     #Apply natural gradient
                     def optimOp():

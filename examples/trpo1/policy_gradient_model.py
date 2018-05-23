@@ -188,7 +188,8 @@ class PolicyGradientModel(ModelWithCritic):
                                                   kfac_update=2,
                                                   epsilon=1e-2, stats_decay=0.99,
                                                   async=True, cold_iter=1,
-                                                  weight_decay_dict={}, max_grad_norm=None)
+                                                  weight_decay_dict={}, max_grad_norm=None,
+                                                  use_wasserstein=use_wasserstein)
 
                 self.k_final_loss = self.rl_loss + self.ent_loss
 
