@@ -391,6 +391,11 @@ def main():
                                   f_gen_obj=hrl_move2d8[args.env],
                                   reset_goal_prob=0.0,
                                   subtask_dirs=subtask_dirs)
+        elif args.env == "flatcont2d":
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=random_cont_direction,
+                                  forward_scale=1.0,
+                                  reset_goal_prob=0, )
         else:
             env = gym.make(args.env)
 
