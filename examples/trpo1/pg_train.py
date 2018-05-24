@@ -319,7 +319,7 @@ def main():
                                   subtask_dirs=subtask_dirs,
                                   use_internal_reward=False)
         elif args.env == "dynamic2d5":
-            subtask_dirs = np.stack([v() for (k, v) in list(task4.items())[1:]], axis=0)
+            subtask_dirs = np.stack([v() for (k, v) in list(task4.items())], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=hrl_dynamic2d5[args.env],
                                   reset_goal_prob=0.005,
@@ -327,7 +327,7 @@ def main():
                                   use_internal_reward=False,
                                   constraint_height=False)
         elif args.env == "dynamic2d5task8":
-            subtask_dirs = np.stack([v() for (k, v) in list(task8.items())[1:]], axis=0)
+            subtask_dirs = np.stack([v() for (k, v) in list(task8.items())], axis=0)
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=random_direction8,
                                   reset_goal_prob=0.005,
