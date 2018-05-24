@@ -623,7 +623,7 @@ def main():
                 p = PolicyGradientModel(observation_space, action_space,
                                         name=env_name,
                                         num_actors=num_actors,
-                                        n_imgfeat=0,  # 30, #TODO: manually set
+                                        n_imgfeat=30,  # TODO: manually set 0,  #
                                         comb_method=comb_methd,
                                         ent_k=args.ent_k,
                                         session=session,

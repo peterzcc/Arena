@@ -90,8 +90,14 @@ CUDA_VISIBLE_DEVICES=1,2,0 disprun python3.6 pg_train.py --env dynamic2d5task8 -
 CUDA_VISIBLE_DEVICES=2,0,1 disprun python3.6 pg_train.py --env dynamic2d5task8 --rl-method ACKTR --nactor 20 --batch-size 2500 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.002 --load-leaf 0 --train-leaf 1 --train-decider 0 --train-switcher 0  --switcher-length 200 --npret 75000  --loss TRAD_WASS --lr 0.001 --kl 0.00003
 CUDA_VISIBLE_DEVICES=0,1,2 disprun python3.6 pg_train.py --env dynamic2d5task8 --rl-method ACKTR --nactor 20 --batch-size 2500 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.002 --load-leaf 0 --train-leaf 1 --train-decider 0 --train-switcher 0  --switcher-length 200 --npret 75000  --loss TRAD_WASS --lr 0.001 --kl 0.001
 
-1mux1
-none
+1mux
+1
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.0001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.0003 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.001 --loss TRAD_WASS
+
+5
+CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env dynamic2d5 --rl-method PG --nactor 20 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_target --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 25 --npret -1  --loss TRAD --ent-k 0.01 --switcher-k 0.1  --lr 0.0003
 
 2mux
 
