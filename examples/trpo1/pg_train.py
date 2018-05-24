@@ -142,7 +142,7 @@ def main():
                         help='Number of parallel actor-learners')
     parser.add_argument('--batch-size', required=False, type=int, default=BATH_SIZE,
                         help='batch size')
-    parser.add_argument('--num-steps', required=False, type=int, default=15e7,
+    parser.add_argument('--num-steps', required=False, type=int, default=32e7,
                         help='Total number of steps')
     parser.add_argument('--switcher-length', required=False, type=int, default=10,
                         help='switcher length')
@@ -623,7 +623,7 @@ def main():
                 p = PolicyGradientModel(observation_space, action_space,
                                         name=env_name,
                                         num_actors=num_actors,
-                                        n_imgfeat=30,  # TODO: manually set 0,  #
+                                        n_imgfeat=30,  # MARK: manually set 0,  #
                                         comb_method=comb_methd,
                                         ent_k=args.ent_k,
                                         session=session,
