@@ -44,6 +44,7 @@ class GpuManager(object):
             return '/cpu:0'
         this_gpu = GpuManager.GPU_DEVICES[GpuManager.CURRENT_DEVICE_ID]
         GpuManager.CURRENT_DEVICE_ID = (GpuManager.CURRENT_DEVICE_ID + 1) % num_gpu
+        logging.info("current device: {}".format(this_gpu))
         return this_gpu
 def get_git_revision_short_hash():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
@@ -461,7 +462,7 @@ def main():
     def create_session():
         import tensorflow as tf
         gpu_options = tf.GPUOptions(allow_growth=True)
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True,
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False,
                                                 allow_soft_placement=True))
         if args.debug:
             from tensorflow.python import debug as tf_debug
