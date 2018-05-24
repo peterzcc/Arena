@@ -137,7 +137,8 @@ class PolicyGradientModel(ModelWithCritic):
                                     f_build_cnn=f_build_img_net,
                                     is_switcher_with_init_len=is_switcher_with_init_len,
                                     initializer=initializer,
-                                    lr=critic_lr)
+                                    lr=critic_lr,
+                                    name=self.name)
         if hasattr(self.act_space, "low"):
             self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
         else:
@@ -273,6 +274,14 @@ class PolicyGradientModel(ModelWithCritic):
         self._train_finish_queue = queue.Queue(maxsize=1)
         self._train_loop_thread = threading.Thread(target=self._train_loop)
         self._train_loop_thread.start()
+        self._log_msg = "{}:\n".format(self.name)
+
+    def _log(self, msg):
+        self._log_msg += msg + "\n"
+
+    def _drop_log(self):
+        logging.debug(self._log_msg)
+        self._log_msg = "{}:\n".format(self.name)
 
     def get_state_activation(self, t_batch):
         if self.comb_method != aggregate_feature:
@@ -286,15 +295,16 @@ class PolicyGradientModel(ModelWithCritic):
         return st_enabled, img_enabled
 
     def restore_parameters(self):
-        logging.debug("Loading {}".format(self.model_load_path))
+        self._log("Loading {}".format(self.model_load_path))
         if os.path.exists(self.model_load_path + ".index"):
             try:
                 self.full_model_saver.restore(self.session, self.model_load_path)
             except (ValueError):
-                logging.debug("failed to load {}".format(self.model_load_path))
+                self._log("failed to load {}".format(self.model_load_path))
         else:
             logging.warning("path doesn't exist {}".format(self.model_load_path))
         self.has_loaded_model = True
+        self._drop_log()
 
     def predict(self, observation, pid=0):
         if self.const_action is not None:
@@ -494,7 +504,7 @@ class PolicyGradientModel(ModelWithCritic):
                                     minibatch_size=self.minibatch_size,
                                     extra_input={})
         if self.debug:
-            logging.debug("\n{0}_surr: {1}\t{0}_kl: {2}\t{0}_ent: {3}".format(tag, surr, kl, ent))
+            self._log("\n{0}_surr: {1}\t{0}_kl: {2}\t{0}_ent: {3}".format(tag, surr, kl, ent))
         return surr, kl, ent
 
     def fit_acktr(self, feed, num_samples, pid=None):
@@ -511,13 +521,13 @@ class PolicyGradientModel(ModelWithCritic):
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
 
         if kl_new > target_kl_value * 2:
-            if verbose: logging.debug("kl too high")
+            if verbose: self._log("kl too high")
             self.session.run(tf.assign(self.k_stepsize, tf.maximum(min_stepsize, self.k_stepsize / 1.5)))
         elif kl_new < target_kl_value / 2:
-            if verbose: logging.debug("kl too low")
+            if verbose: self._log("kl too low")
             self.session.run(tf.assign(self.k_stepsize, tf.minimum(max_stepsize, self.k_stepsize * 1.5)))
         else:
-            if verbose: logging.debug("kl just right!")
+            if verbose: self._log("kl just right!")
 
     def fit_pg(self, feed, num_samples, pid=None):
 
@@ -548,24 +558,21 @@ class PolicyGradientModel(ModelWithCritic):
 
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
         if self.debug:
-            logging.debug("\ngnorm: {}".format(g_norm))
+            self._log("gnorm: {}".format(g_norm))
         if self.f_target_kl is not None:
             if kl_new > target_kl_value * 2:
                 self.p_beta_value = np.minimum(self.p_beta_max,
                                                1.5 / 2 * (kl_new / target_kl_value) * self.p_beta_value)
                 if self.p_beta_value > self.p_beta_max / 1.2:
                     self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / 1.5)
-                logging.debug('beta -> %s' % self.p_beta_value)
-                logging.debug('step_size -> %s' % self.p_step_size)
+                self._log('beta -> %{} \t step_size -> %{}'.format(self.p_beta_value, self.p_step_size))
             elif kl_new < target_kl_value / 2:
                 self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / 1.5)
                 if self.p_beta_value < 1.2 * self.p_beta_min:
                     self.p_step_size = np.minimum(self.p_max_step_size, 1.5 * self.p_step_size)
-                logging.debug('beta -> %s' % self.p_beta_value)
-                logging.debug('step_size -> %s' % self.p_step_size)
+                self._log('beta -> %{} \t step_size -> %{}'.format(self.p_beta_value, self.p_step_size))
             else:
-                logging.debug('beta OK = %s' % self.p_beta_value)
-                logging.debug('step_size OK = %s' % self.p_step_size)
+                self._log('beta OK = %{} \t step_size OK = %{}'.format(self.p_beta_value, self.p_step_size))
 
     def fit_critic(self, feed_critic, pid=None):
         self.critic_lock.acquire_write()
@@ -592,24 +599,24 @@ class PolicyGradientModel(ModelWithCritic):
         if self.const_action is not None:
             return
         if paths is not None and self.is_decider:
-            logging.debug("root at t\t{}".format(self.n_update))
+            self._log("root at t\t{}".format(self.n_update))
             norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
-            logging.info("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))
+            self._log("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))
         if self.is_switcher_with_init_len:
-            logging.info("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
+            self._log("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
             mean_t_reward = extra_data["reward"].mean()
-            logging.info("name: {0} mean_r_t: {1:.4f}".format(self.name, mean_t_reward))
+            self._log("name: {0} mean_r_t: {1:.4f}".format(self.name, mean_t_reward))
         else:
             feed, mean_t_reward, feed_critic = None, None, None
 
         if self.should_train and self.f_train_this_epoch(self.n_update):
             if paths is None:
-                logging.debug("No training data for {}".format(self.name))
+                self._log("No training data for {}".format(self.name))
             else:
-                logging.debug("-------------------------------------------")
-                logging.debug("training model: {} at t\t{}".format(self.name, self.n_update))
+                self._log("-------------------------------------------")
+                self._log("training model: {} at t\t{}".format(self.name, self.n_update))
                 batch_size = feed[self.policy.advant].shape[0]
                 self.handle_model_saving(mean_t_reward)
 
@@ -617,9 +624,9 @@ class PolicyGradientModel(ModelWithCritic):
                     self.policy_lock.acquire_write()
                     if self.should_update_policy:
                         if self.debug:
-                            logging.debug("\nbatch_size: {}".format(batch_size))
+                            self._log("\nbatch_size: {}".format(batch_size))
                             if hasattr(self.act_space, "low"):
-                                logging.debug("std: {}".format(np.mean(np.exp(np.ravel(paths["logstd"])))))
+                                self._log("std: {}".format(np.mean(np.exp(np.ravel(paths["logstd"])))))
                         self.fit_policy(feed, batch_size, pid=pid)
 
                     self.policy_lock.release_write()
@@ -628,3 +635,4 @@ class PolicyGradientModel(ModelWithCritic):
                 if self.should_update_critic:
                     self.critic_update_executor.submit(self.fit_critic, feed_critic, pid)
         self.increment_n_update()
+        self._drop_log()

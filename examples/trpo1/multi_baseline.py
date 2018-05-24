@@ -14,7 +14,7 @@ concat = np.concatenate
 class MultiBaseline(object):
     coeffs = None
 
-    def __init__(self, session=None, main_scope="value_f",
+    def __init__(self, session=None, name="", main_scope="value_f",
                  observation_space=None, n_imgfeat=1, activation=tf.nn.tanh,
                  max_iter=25, comb_method=aggregate_feature,
                  initializer=ScalingOrth,
@@ -33,6 +33,7 @@ class MultiBaseline(object):
         self.normalize = True
         self.var_notrain = []
         self.initializer = initializer
+        self.name = name
         with tf.variable_scope(main_scope):
             # add  timestep
             self.state_input = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name="x")
@@ -151,7 +152,7 @@ class MultiBaseline(object):
                                   minibatch_size=self.minibatch_size)
         ex_var = self.explained_var(ypred, feed[self.y])
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
-        logging.debug("vf:\t {}_mse:{} \tex_var:{}".format(extra, mse, ex_var))
+        logging.debug("vf_{}:\t {}_mse:{} \tex_var:{}".format(self.name, extra, mse, ex_var))
 
     def fit(self, feed, update_mode="full", num_pass=1, pid=None):
 
