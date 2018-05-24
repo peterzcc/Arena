@@ -28,17 +28,18 @@ def main():
                         help='time')
     parser.add_argument('--dataname', default="Reward", type=str, help='name')
     parser.add_argument('--dir', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
+    parser.add_argument('--label', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
 
     args = parser.parse_args()
     if args.dir == "":
         dirs = ["."]
     else:
         dirs = args.dir
+    labels = ["agent_{}".format(i) for i in range(len(dirs))] if args.label == "" else args.label
     datas = []
     for data_dir in dirs:
         x, y = read_data(data_dir, args.dataname, args.width, args.batch)
         datas.append([x, y])
-    labels = []
     for i, data in enumerate(datas):
         x = data[0]
         y = data[1]
@@ -51,7 +52,6 @@ def main():
             x = x[:max_id]
             y = y[:max_id]
         plt.plot(x, y, linewidth=0.5)
-        labels.append("agent_{}".format(i))
     plt.legend(labels, loc='upper left')
     plt.savefig('vis_train' + '.pdf', bbox_inches='tight')
     # plt.show()
