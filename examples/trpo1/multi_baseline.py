@@ -152,7 +152,7 @@ class MultiBaseline(object):
                                   minibatch_size=self.minibatch_size)
         ex_var = self.explained_var(ypred, feed[self.y])
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
-        logging.debug("vf_{}:\t {}_mse:{} \tex_var:{}".format(self.name, extra, mse, ex_var))
+        return "vf_{}:\t {}_mse:{} \tex_var:{}".format(self.name, extra, mse, ex_var)
 
     def fit(self, feed, update_mode="full", num_pass=1, pid=None):
 
@@ -180,7 +180,9 @@ class MultiBaseline(object):
                                                             self.new_std: self.curr_std_value})
 
         if self.debug_mode and (pid is None or pid == 0):
-            self.print_loss(feed, extra="old")
+            old_msg = self.print_loss(feed, extra="old")
+        else:
+            old_msg = ""
 
         batch_N = feed[self.y].shape[0]
 
@@ -198,7 +200,8 @@ class MultiBaseline(object):
                     break
 
         if self.debug_mode and (pid is None or pid == 0):
-            self.print_loss(feed, extra="new")
+            new_msg = self.print_loss(feed, extra="new")
+            logging.debug("\n{}\n{}".format(old_msg, new_msg))
 
     def predict(self, path):
         if self.net is None:

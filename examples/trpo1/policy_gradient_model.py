@@ -504,7 +504,7 @@ class PolicyGradientModel(ModelWithCritic):
                                     minibatch_size=self.minibatch_size,
                                     extra_input={})
         if self.debug:
-            self._log("\n{0}_surr: {1}\t{0}_kl: {2}\t{0}_ent: {3}".format(tag, surr, kl, ent))
+            self._log("{0}_surr: {1}\t{0}_kl: {2}\t{0}_ent: {3}".format(tag, surr, kl, ent))
         return surr, kl, ent
 
     def fit_acktr(self, feed, num_samples, pid=None):
@@ -624,7 +624,7 @@ class PolicyGradientModel(ModelWithCritic):
                     self.policy_lock.acquire_write()
                     if self.should_update_policy:
                         if self.debug:
-                            self._log("\nbatch_size: {}".format(batch_size))
+                            self._log("batch_size: {}".format(batch_size))
                             if hasattr(self.act_space, "low"):
                                 self._log("std: {}".format(np.mean(np.exp(np.ravel(paths["logstd"])))))
                         self.fit_policy(feed, batch_size, pid=pid)
