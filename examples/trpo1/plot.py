@@ -52,7 +52,7 @@ def main():
             x = x[:max_id]
             y = y[:max_id]
         plt.plot(x, y, linewidth=0.5)
-    plt.legend(labels, loc='upper left')
+    plt.legend(labels, loc='best')
     plt.savefig('vis_train' + '.pdf', bbox_inches='tight')
     # plt.show()
     plt.clf()
