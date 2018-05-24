@@ -664,7 +664,7 @@ def main():
 
     f_create_params = pg_shared_params if len(full_tasks) == 1 else flexible_hrl_shared_params
 
-    single_process_mode = True  # True if append_image else False
+    single_process_mode = True if append_image else False
     experiment = Experiment(f_create_env, f_create_agent,
                             f_create_params, single_process_mode=single_process_mode, render_option=args.render,
                             log_episodes=True)
