@@ -321,6 +321,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             init_noise=0.1,
             use_internal_reward=True,
             subtask_dirs=None,
+            constraint_height=True,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -348,6 +349,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.pos_t = None
         self.pos_t_prime = None
         self.rot_angle = None
+        self.constraint_height = constraint_height
         self._reset_objects()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
         utils.EzPickle.__init__(self)
@@ -405,8 +407,10 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return obs, reward, done, info_ant
 
     def check_if_ant_crash(self, state, rot_angle):
+        is_height_legal = 0.2 <= state[2] <= 1.0 if self.constraint_height else 0.01 <= state[2] <= 5.0
         notdone = np.isfinite(state).all() \
-                  and rot_angle > 0 and state[2] >= 0.2 and state[2] <= 1.0
+                  and rot_angle > 0 \
+                  and is_height_legal
         # TODO: verify what happens if remove the last condition
         done = not notdone
         return done

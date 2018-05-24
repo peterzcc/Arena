@@ -22,8 +22,9 @@ class MultiNetwork(object):
                  n_imgfeat=1, extra_feaatures=[], st_enabled=None, img_enabled=None,
                  comb_method=aggregate_feature,
                  initializer=ScalingOrth,
+                 activation=tf.tanh,
                  cnn_trainable=True,
-                 distibution=DiagonalGaussian(1),
+                 distribution=DiagonalGaussian(1),
                  session=None,
                  f_build_cnn=None,
                  is_switcher_with_init_len=0,
@@ -87,10 +88,15 @@ class MultiNetwork(object):
                     self.img_fc_weights = []
 
             hidden_sizes = (64, 64)
-            logging.info("policy hidden sizes: {}".format(hidden_sizes))
+            # logging.info("policy hidden sizes: {}".format(hidden_sizes))
             self.fc_layers = [self.full_feature]
+            if isinstance(distribution, DiagonalGaussian):
+                fc_activation = tf.tanh
+            else:
+                fc_activation = activation
+                logging.info("policy activation: {}".format(fc_activation))
             for hid in hidden_sizes:
-                current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=tf.tanh,
+                current_fc = tf.layers.dense(self.fc_layers[-1], hid, activation=fc_activation,
                                              kernel_initializer=
                                              self.initializer()
                                              )
@@ -98,7 +104,7 @@ class MultiNetwork(object):
             batch_size = tf.shape(self.state_input)[0]
             self.batch_size_float = tf.cast(batch_size, tf.float32)
 
-            self.distribution = distibution
+            self.distribution = distribution
             if not self.is_switcher_with_init_len:
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(self.fc_layers[-1])

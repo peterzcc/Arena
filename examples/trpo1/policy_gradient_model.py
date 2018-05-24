@@ -153,11 +153,12 @@ class PolicyGradientModel(ModelWithCritic):
                                    n_imgfeat=self.n_imgfeat,
                                    extra_feaatures=[],
                                    comb_method=self.comb_method,
-                                   distibution=self.distribution,
+                                   distribution=self.distribution,
                                    session=self.session,
                                    cnn_trainable=cnn_trainable,
                                    f_build_cnn=f_build_img_net,
                                    initializer=initializer,
+                                   activation=tf.nn.leaky_relu,
                                    is_switcher_with_init_len=is_switcher_with_init_len,
                                    use_wasserstein=use_wasserstein
                                    )

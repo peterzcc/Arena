@@ -22,12 +22,29 @@ import os
 from collections import OrderedDict
 from tf_utils import aggregate_feature, concat_feature, concat_without_task, str2bool
 import subprocess
+from tensorflow.python.client import device_lib
 
 BATH_SIZE = 10000
 
 
 # np.set_printoptions(precision=4)
+class GpuManager(object):
+    GPU_DEVICES = None
+    CURRENT_DEVICE_ID = 0
 
+    @staticmethod
+    def find_available_gpus():
+        local_device_protos = device_lib.list_local_devices()
+        GpuManager.GPU_DEVICES = [x.name for x in local_device_protos if x.device_type == 'GPU']
+
+    @staticmethod
+    def get_a_gpu_and_change():
+        num_gpu = len(GpuManager.GPU_DEVICES)
+        if num_gpu == 0:
+            return '/cpu:0'
+        this_gpu = GpuManager.GPU_DEVICES[GpuManager.CURRENT_DEVICE_ID]
+        GpuManager.CURRENT_DEVICE_ID = (GpuManager.CURRENT_DEVICE_ID + 1) % num_gpu
+        return this_gpu
 def get_git_revision_short_hash():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
 
@@ -86,6 +103,7 @@ def v_n1n1():
 def random_direction():
     choice = np.random.randint(0, 4)
     return DIRECTIONS[choice, :]
+
 
 
 def up_for():
@@ -191,15 +209,23 @@ def main():
 
     append_image = args.withimg
     feat_sup = False
-
+    task1d = OrderedDict(move0=x_forward_obj, move1=x_backward_obj)
     hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
-    hrl_8d = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
-                         move2=x_up_obj, move3=x_down_obj,
-                         move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
+    task4 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
+                        move2=x_up_obj, move3=x_down_obj)
+    task8 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
+                        move2=x_up_obj, move3=x_down_obj,
+                        move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
 
-    hrl_move2d = OrderedDict(move2d=random_direction,
-                             move0=x_forward_obj, move1=x_backward_obj,
-                             move2=x_up_obj, move3=x_down_obj
+    dir_funcs_task8 = list(task8.values())
+
+    def random_direction8():
+        choice = np.random.randint(0, len(dir_funcs_task8))
+        return dir_funcs_task8[choice]()
+
+    hrl_move2d8 = OrderedDict(move2d8=random_direction8, **task8)
+
+    hrl_move2d = OrderedDict(move2d=random_direction, **task4
                              )
     hrl2 = OrderedDict(reach2d=random_direction,
                        move0=x_forward_obj, move1=x_backward_obj,
@@ -213,6 +239,8 @@ def main():
                                     move0=x_forward_obj, move1=x_backward_obj,
                                     move2=x_up_obj, move3=x_down_obj
                                     )
+    hrl_dynamic2d5 = OrderedDict(dynamic2d5=random_direction,
+                                 **task4)
     hrl_c1 = OrderedDict(reachc1=random_direction,
                          move0=x_forward_obj, move1=x_backward_obj,
                          move2=x_up_obj, move3=x_down_obj
@@ -224,9 +252,11 @@ def main():
     hrl_fake = OrderedDict(**{"cartpole_hrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
     hrl_up_for = OrderedDict(move_up_for=up_for, move0=x_forward_obj, move2=x_up_obj)
     hrl_simple1d = OrderedDict(simplehrl1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
+
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
                           reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
-                          move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d)
+                          move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
+                          dynamic2d5=hrl_dynamic2d5)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -234,17 +264,11 @@ def main():
 
     def f_create_env(render_lock=None, pid=0):
         # env = GatherEnv()
-        if args.env == "single":
-            with_state_task = False
-            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
-                                  f_gen_obj=random_cont_direction,
-                                  reset_goal_prob=0, )
-
-        elif args.env == "custant":
+        if args.env == "custant":
             env = CustomAnt(file_path=cwd + "/cust_ant.xml")
-        elif args.env in hrl_8d:
+        elif args.env in task8:
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
-                                  f_gen_obj=hrl_8d[args.env],
+                                  f_gen_obj=task8[args.env],
                                   reset_goal_prob=0, )
         elif args.env == "forward_and_backward":
             with_state_task = not (append_image and not feat_sup)
@@ -291,6 +315,14 @@ def main():
                                   reset_goal_prob=0.01,
                                   subtask_dirs=subtask_dirs,
                                   use_internal_reward=False)
+        elif args.env == "dynamic2d5":
+            subtask_dirs = np.stack([v() for (k, v) in list(hrl_changing_goal.items())[1:]], axis=0)
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_changing_goal[args.env],
+                                  reset_goal_prob=0.005,
+                                  subtask_dirs=subtask_dirs,
+                                  use_internal_reward=False,
+                                  constraint_height=False)
         elif args.env == "reach_test":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=random_direction,
@@ -332,7 +364,7 @@ def main():
                                   reset_goal_prob=0, )
         elif args.env == "scalemove4":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
-                                  f_gen_obj=hrl_8d["move4"],
+                                  f_gen_obj=task8["move4"],
                                   forward_scale=10.0,
                                   reset_goal_prob=0, )
         elif args.env == "cartpole_hrl":
@@ -342,6 +374,12 @@ def main():
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=hrl_root_tasks[args.env][args.env],
                                   reset_goal_prob=0, subtask_dirs=subtask_dirs)
+        elif args.env == "move2d8":
+            subtask_dirs = np.stack([v() for v in list(hrl_move2d8.values())[1:]], axis=0)
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=hrl_move2d8[args.env],
+                                  reset_goal_prob=0.0,
+                                  subtask_dirs=subtask_dirs)
         else:
             env = gym.make(args.env)
 
@@ -413,7 +451,7 @@ def main():
     def create_session():
         import tensorflow as tf
         gpu_options = tf.GPUOptions(allow_growth=True)
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=True))
         if args.debug:
             from tensorflow.python import debug as tf_debug
             sess_debug = tf_debug.LocalCLIDebugWrapperSession(sess)
@@ -471,6 +509,7 @@ def main():
     def flexible_hrl_shared_params():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
+        import tensorflow as tf
         sample_env = f_create_env()
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
@@ -480,6 +519,7 @@ def main():
 
         comb_methd = concat_without_task if feat_sup else comb_methd
         session = create_session()
+        GpuManager.find_available_gpus()
 
         decider_action_space = Discrete(len(full_tasks) - 1)
         decider_observation_space = observation_space
@@ -505,54 +545,56 @@ def main():
         def hrl_batch_size(n_update):
             return args.batch_size if n_update > args.npret else args.batch_size * num_leaf
 
-        decider_model = PolicyGradientModel(decider_observation_space, decider_action_space,
-                                            name=args.env,
-                                            num_actors=num_actors,
-                                            f_batch_size=hrl_batch_size,
-                                            batch_mode=args.batch_mode,
-                                            f_target_kl=f_target_kl,
-                                            lr=args.lr,
-                                            critic_lr=args.vlr,
-                                            n_imgfeat=n_imgfeat,
-                                            mode=args.rl_method,
-                                            kl_history_length=1,
-                                            comb_method=comb_methd,
-                                            loss_type=args.loss,
-                                            ent_k=args.ent_k,
-                                            session=session,
-                                            load_old_model=args.load_model,
-                                            model_load_dir=args.load_dir,
-                                            should_train=args.train_decider,
-                                            f_train_this_epoch=f_train_decider,
-                                            parallel_predict=False,
-                                            save_model=args.save_model,
-                                            is_switcher_with_init_len=False,
-                                            is_decider=True,
-                                            **policy_shared_params)
-        switcher_model = PolicyGradientModel(switcher_obseravation_space, switcher_action_space,
-                                             name=args.env,
-                                             num_actors=num_actors,
-                                             f_batch_size=hrl_batch_size,
-                                             batch_mode=args.batch_mode,
-                                             f_target_kl=f_target_kl,
-                                             lr=args.lr,
-                                             critic_lr=args.vlr,
-                                             n_imgfeat=n_imgfeat,
-                                             mode=args.rl_method,
-                                             kl_history_length=1,
-                                             comb_method=comb_methd,
-                                             loss_type=args.loss,
-                                             ent_k=args.ent_k,
-                                             session=session,
-                                             load_old_model=args.load_model,
-                                             model_load_dir=args.load_dir,
-                                             should_train=args.train_switcher,
-                                             f_train_this_epoch=f_train_switcher,
-                                             parallel_predict=False,
-                                             save_model=args.save_model,
-                                             is_switcher_with_init_len=args.switcher_length,
-                                             switcher_cost_k=args.switcher_k,
-                                             **policy_shared_params)
+        with tf.device(GpuManager.get_a_gpu_and_change()):
+            decider_model = PolicyGradientModel(decider_observation_space, decider_action_space,
+                                                name=args.env,
+                                                num_actors=num_actors,
+                                                f_batch_size=hrl_batch_size,
+                                                batch_mode=args.batch_mode,
+                                                f_target_kl=f_target_kl,
+                                                lr=args.lr,
+                                                critic_lr=args.vlr,
+                                                n_imgfeat=n_imgfeat,
+                                                mode=args.rl_method,
+                                                kl_history_length=1,
+                                                comb_method=comb_methd,
+                                                loss_type=args.loss,
+                                                ent_k=args.ent_k,
+                                                session=session,
+                                                load_old_model=args.load_model,
+                                                model_load_dir=args.load_dir,
+                                                should_train=args.train_decider,
+                                                f_train_this_epoch=f_train_decider,
+                                                parallel_predict=False,
+                                                save_model=args.save_model,
+                                                is_switcher_with_init_len=False,
+                                                is_decider=True,
+                                                **policy_shared_params)
+        with tf.device(GpuManager.get_a_gpu_and_change()):
+            switcher_model = PolicyGradientModel(switcher_obseravation_space, switcher_action_space,
+                                                 name=args.env,
+                                                 num_actors=num_actors,
+                                                 f_batch_size=hrl_batch_size,
+                                                 batch_mode=args.batch_mode,
+                                                 f_target_kl=f_target_kl,
+                                                 lr=args.lr,
+                                                 critic_lr=args.vlr,
+                                                 n_imgfeat=n_imgfeat,
+                                                 mode=args.rl_method,
+                                                 kl_history_length=1,
+                                                 comb_method=comb_methd,
+                                                 loss_type=args.loss,
+                                                 ent_k=args.ent_k,
+                                                 session=session,
+                                                 load_old_model=args.load_model,
+                                                 model_load_dir=args.load_dir,
+                                                 should_train=args.train_switcher,
+                                                 f_train_this_epoch=f_train_switcher,
+                                                 parallel_predict=False,
+                                                 save_model=args.save_model,
+                                                 is_switcher_with_init_len=args.switcher_length,
+                                                 switcher_cost_k=args.switcher_k,
+                                                 **policy_shared_params)
         models = {"decider": decider_model, "switcher": switcher_model, "leafs": []}
 
         for i, env_name in enumerate(list(full_tasks.keys())[1:]):
@@ -560,33 +602,34 @@ def main():
                 const_action = i
             else:
                 const_action = None
-            p = PolicyGradientModel(observation_space, action_space,
-                                    name=env_name,
-                                    num_actors=num_actors,
-                                    n_imgfeat=30,
-                                    comb_method=comb_methd,
-                                    ent_k=args.ent_k,
-                                    session=session,
-                                    load_old_model=args.load_leaf,
-                                    conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
-                                    model_load_dir=args.load_dir,
-                                    reset_exp=args.reset_exp,
-                                    should_train=args.train_leaf,
-                                    f_train_this_epoch=f_train_leaf,
-                                    parallel_predict=False,
-                                    f_batch_size=const_batch_size,
-                                    batch_mode=args.batch_mode,
-                                    f_target_kl=f_target_kl,
-                                    lr=args.lr,
-                                    critic_lr=args.vlr,
-                                    mode=args.rl_method,
-                                    kl_history_length=1,
-                                    loss_type=args.loss,
-                                    save_model=args.save_model,
-                                    is_switcher_with_init_len=False,
-                                    const_action=const_action,
-                                    **policy_shared_params
-                                    )
+            with tf.device(GpuManager.get_a_gpu_and_change()):
+                p = PolicyGradientModel(observation_space, action_space,
+                                        name=env_name,
+                                        num_actors=num_actors,
+                                        n_imgfeat=0,  # 30,
+                                        comb_method=comb_methd,
+                                        ent_k=args.ent_k,
+                                        session=session,
+                                        load_old_model=args.load_leaf,
+                                        conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
+                                        model_load_dir=args.load_dir,
+                                        reset_exp=args.reset_exp,
+                                        should_train=args.train_leaf,
+                                        f_train_this_epoch=f_train_leaf,
+                                        parallel_predict=False,
+                                        f_batch_size=const_batch_size,
+                                        batch_mode=args.batch_mode,
+                                        f_target_kl=f_target_kl,
+                                        lr=args.lr,
+                                        critic_lr=args.vlr,
+                                        mode=args.rl_method,
+                                        kl_history_length=1,
+                                        loss_type=args.loss,
+                                        save_model=args.save_model,
+                                        is_switcher_with_init_len=False,
+                                        const_action=const_action,
+                                        **policy_shared_params
+                                        )
             models["leafs"].append(p)
         # for p in models[1:]:
         #     p.restore_parameters()
