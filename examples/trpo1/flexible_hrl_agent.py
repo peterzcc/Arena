@@ -84,20 +84,24 @@ class FlexibleHrlAgent(Agent):
             extracted_result = self.memory.profile_extract_all(with_subtasks=True)
             train_before = time.time()
 
-            decider_train_thread = threading.Thread(target=lambda: self.decider.train(extracted_result["decider_data"]))
-            switcher_train_thread = threading.Thread(
-                target=lambda: self.switcher.train(extracted_result["switcher_data"]))
-            # self.decider.train(extracted_result["decider_data"])
-            # self.switcher.train(extracted_result["switcher_data"])
-            threads = [decider_train_thread, switcher_train_thread]
-
-            for p, train_paths in zip(self.sub_policies, extracted_result["leaf_data"]):
-                threads.append(threading.Thread(target=lambda: p.train(train_paths)))
-                # p.train(train_paths)
-            for thread in threads:
-                thread.start()
-            for thread in threads:
-                thread.join()
+            sync = True
+            if sync:
+                self.decider.train(extracted_result["decider_data"])
+                self.switcher.train(extracted_result["switcher_data"])
+                for p, train_paths in zip(self.sub_policies, extracted_result["leaf_data"]):
+                    p.train(train_paths)
+            else:
+                decider_train_thread = threading.Thread(
+                    target=lambda: self.decider.train(extracted_result["decider_data"]))
+                switcher_train_thread = threading.Thread(
+                    target=lambda: self.switcher.train(extracted_result["switcher_data"]))
+                threads = [decider_train_thread, switcher_train_thread]
+                for p, train_paths in zip(self.sub_policies, extracted_result["leaf_data"]):
+                    threads.append(threading.Thread(target=lambda: p.train(train_paths)))
+                for thread in threads:
+                    thread.start()
+                for thread in threads:
+                    thread.join()
 
             train_after = time.time()
             train_time = (train_after - train_before) / extracted_result["time_count"]
