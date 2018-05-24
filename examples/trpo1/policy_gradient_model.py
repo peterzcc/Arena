@@ -21,6 +21,7 @@ from arena.experiment import Experiment
 from scaling_orth import ScalingOrth
 from concurrent.futures import ThreadPoolExecutor
 import os
+import threading, queue
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -267,6 +268,11 @@ class PolicyGradientModel(ModelWithCritic):
         self.has_reset_fix_ter_weight = False
         self.const_action = const_action
         self.critic_update_executor = ThreadPoolExecutor(max_workers=1)
+        self._train_paths = None
+        self._train_start_queue = queue.Queue(maxsize=1)
+        self._train_finish_queue = queue.Queue(maxsize=1)
+        self._train_loop_thread = threading.Thread(target=self._train_loop)
+        self._train_loop_thread.start()
 
     def get_state_activation(self, t_batch):
         if self.comb_method != aggregate_feature:
@@ -565,6 +571,22 @@ class PolicyGradientModel(ModelWithCritic):
         self.critic_lock.acquire_write()
         self.critic.fit(feed_critic, update_mode="full", num_pass=self.npass, pid=pid)
         self.critic_lock.release_write()
+
+    def _train_loop(self):
+        while True:
+            cmd = self._train_start_queue.get(block=True)
+            assert cmd == 0
+            self.train(self._train_paths)
+            self._train_paths = None
+            self._train_finish_queue.put(0, block=True)
+
+    def train_async(self, paths):
+        self._train_paths = paths
+        self._train_start_queue.put(0, block=True)
+
+    def wait_for_train_finish(self):
+        result = self._train_finish_queue.get(block=True)
+        assert result == 0
 
     def train(self, paths, pid=None):
         if self.const_action is not None:
