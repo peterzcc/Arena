@@ -461,7 +461,7 @@ def main():
 
     def create_session():
         import tensorflow as tf
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1250 / 8000)  # allow_growth=True)
+        gpu_options = tf.GPUOptions(allow_growth=True)  # TODO per_process_gpu_memory_fraction=1250 / 8000)  #
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False,
                                                 allow_soft_placement=True))
         if args.debug:

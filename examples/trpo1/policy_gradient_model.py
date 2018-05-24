@@ -184,6 +184,11 @@ class PolicyGradientModel(ModelWithCritic):
         if should_train:
             if self.mode == "ACKTR":
                 self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
+                k_min_stepsize = np.float32(1e-8)
+                k_max_stepsize = np.float32(1e0)
+                self.k_decrease_step = tf.assign(self.k_stepsize, tf.maximum(k_min_stepsize, self.k_stepsize / 1.5))
+                self.k_increase_step = tf.assign(self.k_stepsize, tf.minimum(k_max_stepsize, self.k_stepsize * 1.5))
+
                 self.k_momentum = 0.9
                 self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
                                                   cold_lr= self.k_stepsize * (1 - self.k_momentum),
@@ -515,17 +520,14 @@ class PolicyGradientModel(ModelWithCritic):
 
         _ = self.session.run(self.k_update_op, feed_dict=feed)
 
-        min_stepsize = np.float32(1e-8)
-        max_stepsize = np.float32(1e0)
-
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
 
         if kl_new > target_kl_value * 2:
             if verbose: self._log("kl too high")
-            self.session.run(tf.assign(self.k_stepsize, tf.maximum(min_stepsize, self.k_stepsize / 1.5)))
+            self.session.run(self.k_decrease_step)
         elif kl_new < target_kl_value / 2:
             if verbose: self._log("kl too low")
-            self.session.run(tf.assign(self.k_stepsize, tf.minimum(max_stepsize, self.k_stepsize * 1.5)))
+            self.session.run(self.k_increase_step)
         else:
             if verbose: self._log("kl just right!")
 
