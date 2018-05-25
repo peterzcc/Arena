@@ -36,7 +36,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
                   'ae loss after: {0}'.format(float_regex),
                   'ae expvar: {0}'.format(float_regex),
                   'mse:{0}'.format(float_regex),
-                  '{1} mean_r_t:\t{0}'.format(float_regex, extra_str),
+                  '{1} mean_r_t: {0}'.format(float_regex, extra_str),
                   'ave subt:{0}'.format(float_regex)]
     name_list = ['return', 'std', 'image_loss', 'num_action_overflows', 'kl', 'performance', 'ae_loss', 'ae_expvar',
                  'mse', 'mean_r_t', 'subpolicy_len']
