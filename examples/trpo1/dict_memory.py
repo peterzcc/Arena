@@ -222,9 +222,10 @@ class DictMemory(object):
         else:
             self.current_path[pid][TERMINATED] = False
         self.dist_paths[pid].append({k: v for (k, v) in list(self.current_path[pid].items())})
-        episode_len = len(self.current_path[pid]["action"])
+        episode_len = len(self.current_path[pid][OBSERVATION])
 
         with self.paths_lock:
+
             self.global_t += episode_len
             self.num_episodes += 1
         # self.pid_n_episodes[pid] += 1
