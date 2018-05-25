@@ -48,7 +48,8 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
     current_t = 0
     for line in loss_file:
         m = re.search(regex, line)
-        t = re.search('Epoch:([+-]?[0-9]*[.]?[0-9]+)', line)
+        t = re.search('Epoch:([+-]?[0-9]*[.]?[0-9]+)'
+'', line)
         if t is not None:
             current_t = t.group(1)
             # out_file.write("@" + str(num_steps) + "\n")
@@ -58,7 +59,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
             # out_file.write(str(loss) + "\n")
             timestep_list.append(current_t)
             loss_list.append(loss)
-    t_array = np.array(timestep_list, dtype=np.float32) / 1000000
+    t_array = np.array(timestep_list, dtype=np.float32) #/ 1000000
     loss_list = np.array(loss_list, dtype=np.float32)
     # if mode == 0:
     #     plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.', markersize=1.0)
