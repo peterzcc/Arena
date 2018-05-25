@@ -48,7 +48,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
     current_t = 0
     for line in loss_file:
         m = re.search(regex, line)
-        t = re.search('^Epoch:([+-]?[0-9]*[.]?[0-9]+)', line)
+        t = re.search('Epoch:([+-]?[0-9]*[.]?[0-9]+)', line)
         if t is not None:
             current_t = t.group(1)
             # out_file.write("@" + str(num_steps) + "\n")
