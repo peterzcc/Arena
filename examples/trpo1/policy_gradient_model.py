@@ -263,6 +263,8 @@ class PolicyGradientModel(ModelWithCritic):
             for qr in [self.k_q_runner]:
                 if (qr != None):
                     self.k_enqueue_threads.extend(qr.create_threads(self.session, coord=self.k_coord, start=True))
+            Experiment.f_terminate.append(self.k_coord.request_stop)
+            Experiment.f_terminate.append(lambda: self.k_coord.join(self.k_enqueue_threads))
         self.model_load_path = model_load_dir + "/" + self.name
         self.model_save_path = "./" + Experiment.EXP_NAME + "/" + self.name
         self.full_model_saver = tf.train.Saver(
@@ -582,8 +584,11 @@ class PolicyGradientModel(ModelWithCritic):
         self.critic_lock.release_write()
 
     def _train_loop(self):
-        while True:
-            cmd = self._train_start_queue.get(block=True)
+        while not Experiment.is_terminated:
+            try:
+                cmd = self._train_start_queue.get(block=True, timeout=1.0)
+            except queue.Empty:
+                continue
             assert cmd == 0
             self.train(self._train_paths)
             self._train_paths = None
@@ -606,6 +611,11 @@ class PolicyGradientModel(ModelWithCritic):
             self._log("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))
         if self.is_switcher_with_init_len:
             self._log("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
+
+        if Experiment.is_terminated:
+            self.clean()
+            return
+
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
             mean_t_reward = extra_data["reward"].mean()
@@ -614,6 +624,11 @@ class PolicyGradientModel(ModelWithCritic):
             feed, mean_t_reward, feed_critic = None, None, None
 
         if self.should_train and self.f_train_this_epoch(self.n_update):
+
+            if Experiment.is_terminated:
+                self.clean()
+                return
+
             if paths is None:
                 self._log("No training data for {}".format(self.name))
             else:
@@ -638,3 +653,13 @@ class PolicyGradientModel(ModelWithCritic):
                     self.critic_update_executor.submit(self.fit_critic, feed_critic, pid)
         self.increment_n_update()
         self._drop_log()
+        if Experiment.is_terminated:
+            self.clean()
+            return
+
+    def clean(self):
+        logging.warning("model terminating")
+        self.critic_update_executor.shutdown()
+        logging.warning("critic terminated")
+        self._train_loop_thread.join()
+        logging.warning("policy terminated")

@@ -43,7 +43,7 @@ class ComplexWrapper(object):
         if append_image:
             sample_image = self.render(mode="rgb_array")
             image_shape = sample_image.shape
-            logging.info("original size: {}".format(image_shape))
+            # logging.info("original size: {}".format(image_shape))
             img_min = 0
             img_max = 255
             assert len(image_shape) == 3

@@ -32,8 +32,7 @@ class Actuator(object):
         if self.render_option == RenderOption.record:
             self.video_encoder = VideoRecorder(self.env, path="./video_thd{}.mp4".format(self.id))
 
-
-        logging.debug("Actuator: {} initialized".format(self.id))
+        # logging.debug("Actuator: {} initialized".format(self.id))
 
     def reset(self):
         self.current_obs = self.env.reset()
@@ -45,7 +44,7 @@ class Actuator(object):
 
     def receive_cmd(self):
         if self.is_idle:
-            logging.debug("Actuator: {} waiting for start".format(self.id))
+            # logging.debug("Actuator: {} waiting for start".format(self.id))
             cmd = self.signal.get(block=True)
         else:
             try:
@@ -64,7 +63,7 @@ class Actuator(object):
             elif cmd == ProcessState.start:
                 self.is_idle = False
                 self.reset()
-                logging.debug("Actuator: {} started".format(self.id))
+                # logging.debug("Actuator: {} started".format(self.id))
             elif isinstance(cmd, RenderOption):
                 self.render_option = cmd
             else:
@@ -73,7 +72,7 @@ class Actuator(object):
     def clean_up(self):
         if self.video_encoder is not None:
             self.video_encoder.close()
-        logging.debug("Actuator: {} terminated".format(self.id))
+        # logging.debug("Actuator: {} terminated".format(self.id))
 
     def run_loop(self):
         while not self.is_terminated:

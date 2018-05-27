@@ -105,13 +105,15 @@ class FastPipe(Pipe):
         success = self.event_signal.wait(timeout=timeout)
         if success:
             self.event_signal.clear()
+        else:
+            return None
         return self.npdata
 
     def poll(self, timeout):
         return self.event_signal.wait(timeout=timeout)
 
 
-class MultiFastPipe(Pipe):
+class MultiFastPipe(FastPipe):
     def __init__(self, data_dict: dict):
         self.var_dict = {}
         self.shape_dict = {}
@@ -150,11 +152,14 @@ class MultiFastPipe(Pipe):
         self.event_signal.set()
 
     def recv(self, timeout=None):
-        self.prepare_np()
-        success = self.event_signal.wait(timeout=timeout)
-        if success:
-            self.event_signal.clear()
-        return self.npdata
+
+        # self.prepare_np()
+        # success = self.event_signal.wait(timeout=timeout)
+        # if success:
+        #     self.event_signal.clear()
+        # return self.npdata
+        return super(MultiFastPipe, self).recv(timeout)
 
     def poll(self, timeout):
-        return self.event_signal.wait(timeout=timeout)
+        # return self.event_signal.wait(timeout=timeout)
+        return super(MultiFastPipe, self).poll(timeout)

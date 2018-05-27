@@ -96,7 +96,7 @@ class DictMemory(object):
         self.lam_pow = np.power(self.lam, np.arange(0, timestep_limit), dtype=np.float64)
 
         self.leaf_info_keys = None
-        self.scale_adv = False
+        self.scale_adv = not normalize
 
     def append_state(self, observation, action, info, pid=0,
                      leaf_id=None, leaf_action=None, leaf_model_info=None, curr_time_step=None):

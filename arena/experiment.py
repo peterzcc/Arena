@@ -1,5 +1,5 @@
 import gym
-from arena.agents.test_mp_agent import Agent
+# from arena.agents.test_mp_agent import Agent
 from arena.actuator import Actuator
 from arena.mp_utils import ProcessState, force_map, FastPipe, RenderOption, MultiFastPipe
 from time import time
@@ -11,7 +11,7 @@ import numpy as np
 import ctypes
 import datetime
 import queue
-
+import threading
 from gym.spaces import Discrete, Box
 import signal
 import sys
@@ -119,10 +119,11 @@ class Experiment(object):
         self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
 
         signal.signal(signal.SIGINT, self.interrupt)
-        self.is_terminated = False
         self.dead_locked = False
 
     EXP_NAME = "exp_unknown"
+    is_terminated = False
+    f_terminate = []
 
     def terminate_all_actuators(self):
         force_map(lambda x: x.put(ProcessState.stop), self.actuator_channels)
@@ -212,7 +213,24 @@ class Experiment(object):
         force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
         print('You pressed Ctrl+C. Terminating..')
 
-        self.is_terminated = True
+        Experiment.is_terminated = True
+        self.terminate()
+        sys.exit()
+
+    def terminate(self):
+        logging.warning("Experiment terminating")
+        force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
+        for actuator in self.actuator_processes:
+            actuator.join()
+        logging.warning("actuators terminated")
+        for agent in self.agent_threads:
+            agent.join()
+        logging.warning("agents terminated")
+        for f in Experiment.f_terminate:
+            f()
+        for t in threading.enumerate():
+            logging.warning('ACTIVE: %s', t.getName())
+        logging.warning("finished cleaning")
         sys.exit()
 
     def run_parallelly(self, num_actor, num_epoch, epoch_length,
@@ -242,14 +260,18 @@ class Experiment(object):
         start_times = np.repeat(time(), num_actor)
         force_map(lambda x: x.put(ProcessState.start), self.actuator_channels)
 
-        while epoch_num < num_epoch and not self.is_terminated:
+        while epoch_num < num_epoch and not Experiment.is_terminated:
             try:
-                rx_msg = self.episode_q.get(block=True, timeout=15 * 60)
+                rx_msg = self.episode_q.get(block=True, timeout=1)
                 self.dead_locked = False
             except queue.Empty:
-                if not self.dead_locked:
-                    logging.warning("Not received message for too long. Maybe there is something wrong")
-                    self.dead_locked = True
+                if Experiment.is_terminated:
+                    self.terminate()
+                    return
+                # if not self.dead_locked:
+                #     logging.warning("Not received message for too long. Maybe there is something wrong")
+                #     self.dead_locked = True
+
                 # for (pid, p_actuator) in enumerate(self.actuator_processes):
                 #     logging.debug("Actuator {} alive:{}".format(pid, p_actuator.is_alive()))
                 # for (pid, agent_thread) in enumerate(self.agent_threads):
@@ -291,44 +313,40 @@ class Experiment(object):
                         epoch_num += 1
                 # logging.debug("exp: Epoch {} Finished.\n".format(epoch_num))
         logging.info("training finished")
-        force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
-        for actuator in self.actuator_processes:
-            actuator.join()
-        for agent in self.agent_threads:
-            agent.join()
+        self.terminate()
 
-    def run_testing_on_sub_process(self, test_length, process_id=0):
-        if not os.path.exists(self.log_test_path):
-            with open(self.log_test_path, 'w') as log_test_file:
-                log_test_file.write("t,mean reward, episode_num, fps\n")
-        self.actuator_channels[process_id].put(ProcessState.start)
-        test_t = 0
-        test_reward = 0
-        test_episode_num = 0
-        start_time = time()
-        while test_t < test_length:
-            raise ValueError("not implemented")
-            rx_msg = self.episode_q.get(block=True)
-            try:
-                if rx_msg["id"] != process_id:
-                    raise ValueError("Process id is not correct")
-                episode_reward = rx_msg["episode_reward"]
-                episode_count = rx_msg["episode_count"]
-            except KeyError:
-                raise ValueError("message error during testing")
-            test_reward += episode_reward
-            test_episode_num += 1
-            test_t += episode_count
-        end_time = time()
-        self.actuator_channels[process_id].put(ProcessState.stop)
-        process_stopped = False
-        while not process_stopped:
-            rx_msg = self.episode_q.get(block=True)
-            if "status" in rx_msg:
-                if rx_msg["status"] == ProcessState.stop:
-                    process_stopped = True
-        with open(self.log_test_path, 'a') as log_test_file:
-            log_test_file.write(",".join(map(str, [self.global_t.value,
-                                                   test_reward / test_episode_num,
-                                                   test_episode_num,
-                                                   round(test_t/(end_time-start_time))])) +"\n")
+    # def run_testing_on_sub_process(self, test_length, process_id=0):
+    #     if not os.path.exists(self.log_test_path):
+    #         with open(self.log_test_path, 'w') as log_test_file:
+    #             log_test_file.write("t,mean reward, episode_num, fps\n")
+    #     self.actuator_channels[process_id].put(ProcessState.start)
+    #     test_t = 0
+    #     test_reward = 0
+    #     test_episode_num = 0
+    #     start_time = time()
+    #     while test_t < test_length:
+    #         raise ValueError("not implemented")
+    #         rx_msg = self.episode_q.get(block=True)
+    #         try:
+    #             if rx_msg["id"] != process_id:
+    #                 raise ValueError("Process id is not correct")
+    #             episode_reward = rx_msg["episode_reward"]
+    #             episode_count = rx_msg["episode_count"]
+    #         except KeyError:
+    #             raise ValueError("message error during testing")
+    #         test_reward += episode_reward
+    #         test_episode_num += 1
+    #         test_t += episode_count
+    #     end_time = time()
+    #     self.actuator_channels[process_id].put(ProcessState.stop)
+    #     process_stopped = False
+    #     while not process_stopped:
+    #         rx_msg = self.episode_q.get(block=True)
+    #         if "status" in rx_msg:
+    #             if rx_msg["status"] == ProcessState.stop:
+    #                 process_stopped = True
+    #     with open(self.log_test_path, 'a') as log_test_file:
+    #         log_test_file.write(",".join(map(str, [self.global_t.value,
+    #                                                test_reward / test_episode_num,
+    #                                                test_episode_num,
+    #                                                round(test_t/(end_time-start_time))])) +"\n")

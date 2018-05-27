@@ -406,7 +406,7 @@ def main():
                                    num_frame=1,
                                    dummy_image=dummy_image,
                                    render_lock=render_lock)
-        logging.info("created env")
+        # logging.info("created env")
         return final_env
         # env = CustomPend()
         # return ComplexWrapper(env, max_episode_length=T,
