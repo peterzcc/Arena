@@ -22,6 +22,7 @@ from scaling_orth import ScalingOrth
 from concurrent.futures import ThreadPoolExecutor
 import os
 import threading, queue
+import pandas as pd
 concat = np.concatenate
 seed = 1
 random.seed(seed)
@@ -29,13 +30,13 @@ np.random.seed(seed)
 tf.set_random_seed(seed)
 
 dtype = tf.float32
-
+STATS_KEYS = ['mean', 'logstd', 'advantage', 'baseline', 'return']
 
 class PolicyGradientModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,
                  name="agent",
                  session=None,
-                 conv_sizes=(((3, 3), 16, 2), ((3, 3), 8, 2), ((3, 3), 4, 2)),#(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
+                 conv_sizes=(((3, 3), 16, 2), ((3, 3), 8, 2), ((3, 3), 4, 2)),  #(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
                  n_imgfeat=0,
                  f_target_kl=None,
                  lr=0.0001,
@@ -58,12 +59,13 @@ class PolicyGradientModel(ModelWithCritic):
                  f_train_this_epoch=lambda x: True,
                  parallel_predict=True,
                  save_model=10,
+                 savestats=False,
                  max_grad_norm=0.5,
                  is_switcher_with_init_len=0,
                  switcher_cost_k=0.01,
                  is_decider=False,
                  reset_exp=False,
-                 const_action=None
+                 const_action=None,
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -273,9 +275,11 @@ class PolicyGradientModel(ModelWithCritic):
         self.load_old_model = load_old_model
         self.should_reset_exp = reset_exp
         self.parallel_predict = parallel_predict
+        self.savestats = savestats
         self.has_reset_fix_ter_weight = False
         self.const_action = const_action
         self.critic_update_executor = ThreadPoolExecutor(max_workers=1)
+        Experiment.f_terminate.append(self.clean)
         self._train_paths = None
         self._train_start_queue = queue.Queue(maxsize=1)
         self._train_finish_queue = queue.Queue(maxsize=1)
@@ -427,6 +431,7 @@ class PolicyGradientModel(ModelWithCritic):
         return action, agent_info
 
     def concat_paths(self, paths):
+
         state_input = paths["observation"][0]  # concat([path["observation"][0] for path in paths])
 
         times = paths["times"]
@@ -473,6 +478,14 @@ class PolicyGradientModel(ModelWithCritic):
             feed = {k: v[is_root_decision] for (k, v) in feed.items()}
 
         extra = {"return": returns, "reward": rewards, "time": times}
+        if self.savestats:
+            with pd.HDFStore(Experiment.stats_path, 'a') as stats:
+                df_stats = ({k: pd.DataFrame(paths[k]) for k in STATS_KEYS})
+                old_logpi = batch_run_forward(self.policy.old_likelihood, feed=feed, N=times.size, session=self.session)
+                df_stats["old_logpi"] = pd.DataFrame(old_logpi)
+                for k, v in df_stats.items():
+                    stats.put("{}/{}".format(self.name, k),
+                              v, format="table", append=True)
 
         return feed, feed_critic, extra
 

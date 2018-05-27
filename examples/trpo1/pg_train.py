@@ -189,6 +189,7 @@ def main():
                         help='save_model')
 
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
+    parser.add_argument("--savestats", default=False, type=str2bool, nargs='?', const=True, help='savestats')
     parser.add_argument("--debug", default=False, type=str2bool, nargs='?', const=True, help='debug')
     args = parser.parse_args()
 
@@ -478,7 +479,8 @@ def main():
 
     policy_shared_params = dict(npass=args.npass,
                                 minibatch_size=args.minibatch_size,
-                                multi_update=args.multi_update)
+                                multi_update=args.multi_update,
+                                savestats=args.savestats)
 
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel

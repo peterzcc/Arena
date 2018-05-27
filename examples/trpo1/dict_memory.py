@@ -254,7 +254,8 @@ class DictMemory(object):
     def stack_obs_for_paths(self, paths):
         obs = []
         for i in range(len(paths[0][OBSERVATION][0])):
-            obs.append(np.concatenate([[o[i] for o in path["observation"]] for path in paths]))
+            obs.append(
+                np.concatenate([[o[i] for o in path["observation"]] for path in paths]).astype(np.float32))
 
             # for path in paths:
             #     path["observation"] = \
@@ -302,7 +303,7 @@ class DictMemory(object):
         #                    rewards))
         returns = list(map(self.compute_return, rewards, b, path[TERMINATED]))
         whole_returns = np.concatenate(returns)
-        results["return"] = whole_returns
+        results["return"] = whole_returns.astype(np.float32)
 
         b1 = list(map(self.append_term, b, path[TERMINATED]))
 
@@ -331,7 +332,7 @@ class DictMemory(object):
                 map(lambda d, l: discount(d * l, self.gamma * self.lam),
                     deltas, lam_discounted_accum)
             )
-        results["advantage"] = np.concatenate(advs)
+        results["advantage"] = np.concatenate(advs).astype(np.float32)
 
 
         if normalize:

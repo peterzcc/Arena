@@ -15,7 +15,7 @@ import threading
 from gym.spaces import Discrete, Box
 import signal
 import sys
-
+import pandas as pd
 
 
 
@@ -116,7 +116,7 @@ class Experiment(object):
         print("Saving data at: {}".format(self.stats_file_dir))
         self.log_train_path = os.path.join(self.stats_file_dir, "train_log.csv")
         self.log_test_path = os.path.join(self.stats_file_dir, "test_log.csv")
-        self.agent_save_path = os.path.join(self.stats_file_dir, "agent")
+        Experiment.stats_path = os.path.join(self.stats_file_dir, "stats.h5")
 
         signal.signal(signal.SIGINT, self.interrupt)
         self.dead_locked = False
@@ -124,6 +124,7 @@ class Experiment(object):
     EXP_NAME = "exp_unknown"
     is_terminated = False
     f_terminate = []
+    stats_path = None
 
     def terminate_all_actuators(self):
         force_map(lambda x: x.put(ProcessState.stop), self.actuator_channels)
