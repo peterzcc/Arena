@@ -18,17 +18,14 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
     """
     assert dir
     logfile = os.path.realpath('{}/log.txt'.format(dir))
-    # if outpath == "":
-    #     out_file = sys.stdout
-    # else:
-    #     out_file = open(outpath, 'w')
+    out_file = sys.stdout
     loss_file = open(logfile, 'r')
 
     # print("Parsing log from %s" % (logfile))
     loss_list = []
 
     float_regex = "([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)"
-    regex_list = ['Average Return:{0}'.format(float_regex), ' std: {0}'.format(float_regex),
+    regex_list = ['Average Return:{0}'.format(float_regex), 'std: {0}'.format(float_regex),
                   'img_loss={0}'.format(float_regex),
                   'act_clips: {0}'.format(float_regex),
                   'new_kl: {0}'.format(float_regex),
@@ -52,11 +49,11 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
 '', line)
         if t is not None:
             current_t = t.group(1)
-            # out_file.write("@" + str(num_steps) + "\n")
+            out_file.write("@" + str(current_t) + "\n")
             # timestep_list.append(num_steps)
         if m is not None:
             loss = m.group(1)
-            # out_file.write(str(loss) + "\n")
+            out_file.write(str(loss) + "\n")
             timestep_list.append(current_t)
             loss_list.append(loss)
     t_array = np.array(timestep_list, dtype=np.float32) #/ 1000000

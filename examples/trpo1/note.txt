@@ -93,6 +93,7 @@ disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname kl
 62 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.003 --loss PPO_WASS --savestat 1
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w20 --dir ../exp_64 ../exp_63 ../exp_62 --label vlr=0.0005 vlr=0.001 vlr=0.003
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std -w20 --dir ../exp_64 ../exp_63 ../exp_62
+disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir ../exp_64
 
 1mux
 1
