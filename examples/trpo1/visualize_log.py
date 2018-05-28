@@ -49,11 +49,11 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
 '', line)
         if t is not None:
             current_t = t.group(1)
-            out_file.write("@" + str(current_t) + "\n")
+            # out_file.write("@" + str(current_t) + "\n")
             # timestep_list.append(num_steps)
         if m is not None:
             loss = m.group(1)
-            out_file.write(str(loss) + "\n")
+            # out_file.write(str(loss) + "\n")
             timestep_list.append(current_t)
             loss_list.append(loss)
     t_array = np.array(timestep_list, dtype=np.float32) #/ 1000000
