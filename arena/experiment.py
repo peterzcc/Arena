@@ -60,6 +60,7 @@ class Experiment(object):
                 else:
                     try:
                         os.mkdir(self.stats_file_dir)
+                        mkdir_success = True
                     except FileExistsError:
                         experiment_id += 1
                         self.stats_file_dir = "exp_{:d}".format(experiment_id)
