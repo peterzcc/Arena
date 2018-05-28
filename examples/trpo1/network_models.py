@@ -170,7 +170,8 @@ class MultiNetwork(object):
                                            clipped_new_likelihoold * self.advant)),
                 "ppo_trad nan")
             if self.use_wasserstein:
-                self.wassersteins = self.distribution.wasserstein_sym(self.old_vars, self.dist_vars)
+                assert isinstance(self.distribution, DiagonalGaussian)
+                self.wassersteins = self.distribution.wasserstein_sampled_sym(self.old_vars, self.dist_vars)
                 self.kl = tf.reduce_mean(self.wassersteins)
                 self.loss_sampled = self.kl
             else:

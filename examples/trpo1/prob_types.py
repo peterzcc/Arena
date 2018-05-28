@@ -259,6 +259,20 @@ class DiagonalGaussian(ProbType):
 
         return tf.reduce_sum(wasserstein_terms, axis=-1)
 
+    def wasserstein_sampled_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
+        old_means = old_dist_info_vars["mean"]
+        old_log_stds = old_dist_info_vars["logstd"]
+        new_means = new_dist_info_vars["mean"]
+        mean_sample = tf.random_normal(tf.shape(new_means))
+        new_log_stds = new_dist_info_vars["logstd"]
+        logsted_sample = tf.random_normal(tf.shape(new_log_stds))
+        old_std = tf.exp(old_log_stds)
+        new_std = tf.exp(new_log_stds)
+        wasserstein_terms = tf.square(new_means + mean_sample - old_means) + tf.square(
+            new_std + logsted_sample - old_std)
+
+        return tf.reduce_sum(wasserstein_terms, axis=-1)
+
     def sample(self, dist_info):
         means = dist_info["mean"]
         log_stds = dist_info["logstd"]

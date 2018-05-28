@@ -188,6 +188,10 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
                 k_min_stepsize = np.float32(1e-8)
                 k_max_stepsize = np.float32(1e0)
+                self.k_adjust_ratio = tf.placeholder(tf.float32)
+                self.k_decrease_large_step = tf.assign(self.k_stepsize,
+                                                       tf.maximum(k_min_stepsize,
+                                                                  (1.0 / self.k_adjust_ratio) * self.k_stepsize))
                 self.k_decrease_step = tf.assign(self.k_stepsize, tf.maximum(k_min_stepsize, self.k_stepsize / 1.5))
                 self.k_increase_step = tf.assign(self.k_stepsize, tf.minimum(k_max_stepsize, self.k_stepsize * 1.5))
 
@@ -279,7 +283,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.has_reset_fix_ter_weight = False
         self.const_action = const_action
         self.critic_update_executor = ThreadPoolExecutor(max_workers=1)
-        Experiment.f_terminate.append(self.clean)
+        # Experiment.f_terminate.append(self.clean)
         self._train_paths = None
         self._train_start_queue = queue.Queue(maxsize=1)
         self._train_finish_queue = queue.Queue(maxsize=1)
@@ -537,10 +541,15 @@ class PolicyGradientModel(ModelWithCritic):
 
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
 
-        if kl_new > target_kl_value * 2:
+        kl_target_ratio = kl_new / target_kl_value
+        if kl_target_ratio > 4.0:
+            if verbose: self._log("kl too high")
+            self.session.run(self.k_decrease_large_step,
+                             feed_dict={self.k_adjust_ratio: 0.75 * kl_target_ratio})
+        elif kl_target_ratio > 2.0:
             if verbose: self._log("kl too high")
             self.session.run(self.k_decrease_step)
-        elif kl_new < target_kl_value / 2:
+        elif kl_target_ratio < 0.5:
             if verbose: self._log("kl too low")
             self.session.run(self.k_increase_step)
         else:
