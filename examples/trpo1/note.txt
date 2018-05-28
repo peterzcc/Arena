@@ -87,11 +87,16 @@ python3.6 $M2WS/Arena/examples/trpo1/visualize_log.py --dataname std
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname mean_r_t --extra move0 move1 move2 move3 move4 move5 move6 move7 -w200
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname kl
 
+sudo apt-get install libgd2-xpm-dev libcrypto++-dev libgeoip-dev libupnp-dev binutils-dev libqt4-dev kdelibs5-dev
+
 0mux5
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.002 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.002 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.002 --loss PPO_WASS
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.002 --loss PPO_WASS
+1 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.002 --loss PPO_WASS
+2 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.002 --loss PPO_WASS
+3 CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.002 --loss PPO_WASS
+4 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.002 --loss PPO_WASS
+5 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.002 --loss PPO_WASS
+
+disprun python3.6 ~/Arena/examples/trpo1/plot.py --dir ../exp_5 ../exp_1 ../exp_2 ../exp_3 ../exp_4 --label w2=0.00003 w2=0.0001 w2=0.0003 w2=0.001 w2=0.003 -w20
 
 1mux
 

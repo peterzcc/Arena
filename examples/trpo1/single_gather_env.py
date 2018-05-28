@@ -19,6 +19,19 @@ from threading import Lock
 mjCAT_ALL = 7
 
 
+def assign_curr(cur, extra, i):
+    cur.geoms[i] = extra.geoms[i - cur.ngeom]
+    return 0
+
+
+def mjextra_append_objects(cur, extra):
+    # for i in range(cur.ngeom, cur.ngeom + extra.ngeom):
+    #     cur.geoms[i] = extra.geoms[i - cur.ngeom]
+    list(map(lambda i: assign_curr(cur, extra, i), range(cur.ngeom, cur.ngeom + extra.ngeom)))
+    cur.ngeom = cur.ngeom + extra.ngeom
+    if cur.ngeom > cur.maxgeom:
+        raise ValueError("buffer limit exceeded!")
+
 class EmbeddedViewer(object):
     def __init__(self):
         self.last_render_time = 0
@@ -123,87 +136,87 @@ class EmbeddedViewer(object):
         else:
             mjlib.mjr_makeContext(None, byref(self.con), 150)
 
-    def handle_mouse_move(self, window, xpos, ypos):
+    # def handle_mouse_move(self, window, xpos, ypos):
+    #
+    #     # no buttons down: nothing to do
+    #     if not self.button_left_pressed \
+    #             and not self.button_middle_pressed \
+    #             and not self.button_right_pressed:
+    #         return
+    #
+    #     # compute mouse displacement, save
+    #     dx = int(self.scale * xpos) - self.last_mouse_x
+    #     dy = int(self.scale * ypos) - self.last_mouse_y
+    #     self.last_mouse_x = int(self.scale * xpos)
+    #     self.last_mouse_y = int(self.scale * ypos)
+    #
+    #     # require model
+    #     if not self.model:
+    #         return
+    #
+    #     # get current window size
+    #     width, height = glfw.get_framebuffer_size(self.window)
+    #
+    #     # get shift key state
+    #     mod_shift = glfw.get_key(window, glfw.KEY_LEFT_SHIFT) == glfw.PRESS \
+    #                 or glfw.get_key(window, glfw.KEY_RIGHT_SHIFT) == glfw.PRESS
+    #
+    #     # determine action based on mouse button
+    #     action = None
+    #     # if self.button_right_pressed:
+    #     #     action = C.MOUSE_MOVE_H if mod_shift else C.MOUSE_MOVE_V
+    #     # elif self.button_left_pressed:
+    #     #     action = C.MOUSE_ROTATE_H if mod_shift else C.MOUSE_ROTATE_V
+    #     # else:
+    #     #     action = C.MOUSE_ZOOM
+    #
+    #     self.gui_lock.acquire()
+    #
+    #     mjlib.mjv_moveCamera(action, dx, dy, byref(self.cam), width, height)
+    #
+    #     self.gui_lock.release()
 
-        # no buttons down: nothing to do
-        if not self.button_left_pressed \
-                and not self.button_middle_pressed \
-                and not self.button_right_pressed:
-            return
-
-        # compute mouse displacement, save
-        dx = int(self.scale * xpos) - self.last_mouse_x
-        dy = int(self.scale * ypos) - self.last_mouse_y
-        self.last_mouse_x = int(self.scale * xpos)
-        self.last_mouse_y = int(self.scale * ypos)
-
-        # require model
-        if not self.model:
-            return
-
-        # get current window size
-        width, height = glfw.get_framebuffer_size(self.window)
-
-        # get shift key state
-        mod_shift = glfw.get_key(window, glfw.KEY_LEFT_SHIFT) == glfw.PRESS \
-                    or glfw.get_key(window, glfw.KEY_RIGHT_SHIFT) == glfw.PRESS
-
-        # determine action based on mouse button
-        action = None
-        # if self.button_right_pressed:
-        #     action = C.MOUSE_MOVE_H if mod_shift else C.MOUSE_MOVE_V
-        # elif self.button_left_pressed:
-        #     action = C.MOUSE_ROTATE_H if mod_shift else C.MOUSE_ROTATE_V
-        # else:
-        #     action = C.MOUSE_ZOOM
-
-        self.gui_lock.acquire()
-
-        mjlib.mjv_moveCamera(action, dx, dy, byref(self.cam), width, height)
-
-        self.gui_lock.release()
-
-    def handle_mouse_button(self, window, button, act, mods):
-        # update button state
-        self.button_left_pressed = \
-            glfw.get_mouse_button(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS
-        self.button_middle_pressed = \
-            glfw.get_mouse_button(
-                window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS
-        self.button_right_pressed = \
-            glfw.get_mouse_button(
-                window, glfw.MOUSE_BUTTON_RIGHT) == glfw.PRESS
-
-        # update mouse position
-        x, y = glfw.get_cursor_pos(window)
-        self.last_mouse_x = int(self.scale * x)
-        self.last_mouse_y = int(self.scale * y)
-
-        if not self.model:
-            return
-
-        self.gui_lock.acquire()
-
-        # save info
-        if act == glfw.PRESS:
-            self.last_button = button
-            self.last_click_time = glfw.get_time()
-
-        self.gui_lock.release()
-
-    def handle_scroll(self, window, x_offset, y_offset):
-        # require model
-        if not self.model:
-            return
-
-        # get current window size
-        width, height = glfw.get_framebuffer_size(window)
-
-        # scroll
-        self.gui_lock.acquire()
-        # mjlib.mjv_moveCamera(C.MOUSE_ZOOM, 0, (-20 * y_offset),
-        #                      byref(self.cam), width, height)
-        self.gui_lock.release()
+    # def handle_mouse_button(self, window, button, act, mods):
+    #     # update button state
+    #     self.button_left_pressed = \
+    #         glfw.get_mouse_button(window, glfw.MOUSE_BUTTON_LEFT) == glfw.PRESS
+    #     self.button_middle_pressed = \
+    #         glfw.get_mouse_button(
+    #             window, glfw.MOUSE_BUTTON_MIDDLE) == glfw.PRESS
+    #     self.button_right_pressed = \
+    #         glfw.get_mouse_button(
+    #             window, glfw.MOUSE_BUTTON_RIGHT) == glfw.PRESS
+    #
+    #     # update mouse position
+    #     x, y = glfw.get_cursor_pos(window)
+    #     self.last_mouse_x = int(self.scale * x)
+    #     self.last_mouse_y = int(self.scale * y)
+    #
+    #     if not self.model:
+    #         return
+    #
+    #     self.gui_lock.acquire()
+    #
+    #     # save info
+    #     if act == glfw.PRESS:
+    #         self.last_button = button
+    #         self.last_click_time = glfw.get_time()
+    #
+    #     self.gui_lock.release()
+    #
+    # def handle_scroll(self, window, x_offset, y_offset):
+    #     # require model
+    #     if not self.model:
+    #         return
+    #
+    #     # get current window size
+    #     width, height = glfw.get_framebuffer_size(window)
+    #
+    #     # scroll
+    #     self.gui_lock.acquire()
+    #     # mjlib.mjv_moveCamera(C.MOUSE_ZOOM, 0, (-20 * y_offset),
+    #     #                      byref(self.cam), width, height)
+    #     self.gui_lock.release()
 
     def should_stop(self):
         return glfw.window_should_close(self.window)
@@ -235,19 +248,19 @@ class GatherViewer(MjViewer):
         self.green_ball_renderer = EmbeddedViewer()
         self.green_ball_model = green_ball_model
         self.green_ball_renderer.set_model(green_ball_model)
-        mjextra.append_objects(
+        mjextra_append_objects(
             self.objects, self.green_ball_renderer.objects)
 
     def start(self):
         super(GatherViewer, self).start()
         self.green_ball_renderer.start(self.window)
 
-    def handle_mouse_move(self, window, xpos, ypos):
-        super(GatherViewer, self).handle_mouse_move(window, xpos, ypos)
-        self.green_ball_renderer.handle_mouse_move(window, xpos, ypos)
-    def handle_scroll(self, window, x_offset, y_offset):
-        super(GatherViewer, self).handle_scroll(window, x_offset, y_offset)
-        self.green_ball_renderer.handle_scroll(window, x_offset, y_offset)
+    # def handle_mouse_move(self, window, xpos, ypos):
+    #     super(GatherViewer, self).handle_mouse_move(window, xpos, ypos)
+    #     self.green_ball_renderer.handle_mouse_move(window, xpos, ypos)
+    # def handle_scroll(self, window, x_offset, y_offset):
+    #     super(GatherViewer, self).handle_scroll(window, x_offset, y_offset)
+    #     self.green_ball_renderer.handle_scroll(window, x_offset, y_offset)
 
     def render(self):
         if not self.data:
@@ -256,7 +269,7 @@ class GatherViewer(MjViewer):
         self.gui_lock.acquire()
         glfw.make_context_current(self.window)
 
-        obj = self.env.objects[0]
+        obj = self.env.object
         x, y, typ = obj
         # print x, y
         qpos = np.zeros_like(self.green_ball_model.data.qpos)
@@ -284,9 +297,9 @@ class GatherViewer(MjViewer):
 
         tmpobjects = mjcore.MJVOBJECTS()
         mjlib.mjv_makeObjects(byref(tmpobjects), 1000)
-        mjextra.append_objects(
+        mjextra_append_objects(
             tmpobjects, self.green_ball_renderer.objects)
-        mjextra.append_objects(tmpobjects, self.objects)
+        mjextra_append_objects(tmpobjects, self.objects)
         mjlib.mjv_makeLights(
             self.model.ptr, self.data.ptr, byref(tmpobjects))
         mjlib.mjv_setCamera(self.model.ptr, self.data.ptr, byref(self.cam))
@@ -329,7 +342,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.activity_range = activity_range
         self.f_gen_obj = f_gen_obj
         # self.dir = None
-        self.objects = []
+        # self.objects = []
+        self.object = None
         self.with_state_task = with_state_task
         self.use_sparse_reward = use_sparse_reward
         self.fix_goal = use_sparse_reward
@@ -362,7 +376,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def _reset_objects(self):
         self.dirs[0, :] = self.f_gen_obj()
         assert np.any(self.dirs[0])
-        self.objects = [np.concatenate([self.obj_dist * self.dirs[0], (0,)])]
+        self.object = np.zeros((3,), dtype=np.float32)
+        self.object[0:2] = self.obj_dist * self.dirs[0]
 
     def _get_obs(self):
         # return sensor data along with data about itself
@@ -390,9 +405,9 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         com = self.get_body_com("torso")
         if not self.fix_goal:
             obj_pos = com[:2] + self.obj_dist * self.dirs[0]
-            self.objects[0] = np.concatenate([obj_pos, (0,)])
+            self.object = np.concatenate([obj_pos, (0,)])
         if self.use_sparse_reward:
-            if np.sum((com[:2] - self.objects[0][:2]) ** 2) < self.catch_range ** 2:
+            if np.sum((com[:2] - self.object[:2]) ** 2) < self.catch_range ** 2:
                 reward = 1
                 done = True
             elif np.max(np.abs(com[:2])) > 5:

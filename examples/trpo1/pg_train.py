@@ -335,6 +335,14 @@ def main():
                                   subtask_dirs=subtask_dirs,
                                   use_internal_reward=False,
                                   constraint_height=False)
+        elif args.env == "task8train":
+            subtask_dirs = np.stack([v() for (k, v) in list(task8.items())], axis=0)
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=x_forward_obj,
+                                  reset_goal_prob=0,
+                                  subtask_dirs=subtask_dirs,
+                                  use_internal_reward=True,
+                                  constraint_height=False)
         elif args.env == "reach_test":
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=random_direction,

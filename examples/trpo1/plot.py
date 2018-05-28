@@ -15,7 +15,7 @@ def read_data(data_dir, dataname, width=1, batch=1):
 
 def main():
     parser = argparse.ArgumentParser(description='Plot.')
-    parser.add_argument('--width', '-w', required=False, type=int, default=500,
+    parser.add_argument('--width', '-w', required=False, type=int, default=20,
                         help='window size')
     parser.add_argument('--batch', '-b', required=False, type=int, default=1,
                         help='batch size')
