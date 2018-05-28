@@ -85,7 +85,7 @@ CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env dynamic2d --rl-method
 disprun python3.6 ../../plot.py --dir ../exp_23 ../exp_24 ../exp_25 ../exp_26 --label 0.0001 0.0003 0.001 0.003
 python3.6 $M2WS/Arena/examples/trpo1/visualize_log.py --dataname std
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname mean_r_t --extra move0 move1 move2 move3 move4 move5 move6 move7 -w200
-disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname kl
+disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname expvar
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w20
 
 0mux5
