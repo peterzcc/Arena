@@ -243,6 +243,8 @@ def main():
                                     )
     hrl_dynamic2d5 = OrderedDict(dynamic2d5=random_direction,
                                  **task4)
+    hrl_task8train = OrderedDict(task8train=random_direction8,
+                                 **task8)
     hrl_dynamic2d5task8 = OrderedDict(dynamic2d5task8=random_direction8,
                                       **task8)
     hrl_c1 = OrderedDict(reachc1=random_direction,
@@ -260,7 +262,7 @@ def main():
     hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
                           reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
                           move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
-                          dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8)
+                          dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train)
 
     full_tasks = [args.env]
     if args.env in hrl_root_tasks:
@@ -633,7 +635,7 @@ def main():
                 p = PolicyGradientModel(observation_space, action_space,
                                         name=env_name,
                                         num_actors=num_actors,
-                                        n_imgfeat=30,  # MARK: manually set 0,  #
+                                        n_imgfeat=0,  # 30,  # MARK: manually set 0,  #
                                         comb_method=comb_methd,
                                         ent_k=args.ent_k,
                                         session=session,
