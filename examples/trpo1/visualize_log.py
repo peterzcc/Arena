@@ -125,6 +125,8 @@ def main():
     extra_names = [None] if args.extra == "" else args.extra
     if len(dirs) == 1 and len(extra_names) != 1:
         dirs = (len(extra_names)) * dirs
+    elif len(dirs) != 1 and len(extra_names) == 1:
+        extra_names = extra_names * len(dirs)
     for data_dir, extra_name in zip(dirs, extra_names):
         x, y = get_loss(data_dir, args.mode, args.dataname, extra_str=extra_name)
         if args.width != 1:

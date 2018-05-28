@@ -653,10 +653,10 @@ class KfacOptimizer():
                 GRAD_SHAPE = grad.get_shape()
                 if len(grad.get_shape()) > 2:
                     # reshape conv kernel parameters
-                    KW = int(grad.get_shape()[0])
-                    KH = int(grad.get_shape()[1])
-                    C = int(grad.get_shape()[2])
-                    D = int(grad.get_shape()[3])
+                    KW = int(grad.get_shape()[0])  # width
+                    KH = int(grad.get_shape()[1])  # hight
+                    C = int(grad.get_shape()[2])  # num channel
+                    D = int(grad.get_shape()[3])  # num depth
 
                     if len(fpropFactoredFishers) > 1 and self._channel_fac:
                         # reshape conv kernel parameters into tensor
@@ -684,7 +684,7 @@ class KfacOptimizer():
                     grad = tf.concat(
                         [grad, tf.expand_dims(grad_dict[var_assnBias], 0)], 0)
 
-                # project gradient to eigen space and reshape the eigenvalues
+                # project gradient to eigen space and reshape the eigenvalues #TODO: what ?
                 # for broadcasting
                 eigVals = []
 
@@ -756,7 +756,7 @@ class KfacOptimizer():
 
                 # grad = tf.Print(grad, [tf.convert_to_tensor('2'), tf.convert_to_tensor(var.name), grad.get_shape()])
                 #####
-                # project gradient back to euclidean space
+                # project gradient back to euclidean space TODO: understand this part
                 for idx, stats in enumerate(self.stats[var]['fprop_concat_stats']):
                     Q = self.stats_eigen[stats]['Q']
                     grad = gmatmul(Q, grad, transpose_a=False, reduce_dim=idx)
@@ -797,14 +797,15 @@ class KfacOptimizer():
             if KFAC_DEBUG:
                 print(('apply clipping to %s' % (var.name)))
             tf.Print(grad, [tf.sqrt(tf.reduce_sum(tf.pow(grad, 2)))], "Euclidean norm of new grad")
-            local_vg = tf.reduce_sum(grad * g * (self._lr * self._lr))
+            local_vg = tf.reduce_sum(grad * g * (self._lr * self._lr))  #Why is this the vFv ?
             vg += local_vg
 
         # recale everything
         if KFAC_DEBUG:
             print('apply vFv clipping')
 
-        scaling = tf.minimum(1., tf.sqrt(self._clip_kl / vg))
+        scaling = tf.minimum(1., tf.sqrt(
+            self._clip_kl / vg))  #vg is the vFv?, why scale with minimum 1.0? #TODO: figure out this
         if KFAC_DEBUG:
             scaling = tf.Print(scaling, [tf.convert_to_tensor(
                 'clip: '), scaling, tf.convert_to_tensor(' vFv: '), vg])
@@ -823,6 +824,7 @@ class KfacOptimizer():
 
         return [(a, b) for a, b in zip(g, varlist)]
 
+    #TODO: learn this
     def apply_gradients_kfac(self, grads):
         g, varlist = list(zip(*grads))
 
@@ -851,12 +853,12 @@ class KfacOptimizer():
 
         updateOps = []
         global_step_op = tf.assign_add(self.global_step, 1)
-        # update t
+        # update t = t+1
         updateOps.append(global_step_op)
 
         with tf.control_dependencies([global_step_op]):
 
-            # compute updates
+            # compute updates, #TODO: don't know what self._update_stats_op is for currently
             assert self._update_stats_op != None
             # Computed in self.apply_stats
             updateOps.append(self._update_stats_op)
@@ -871,6 +873,7 @@ class KfacOptimizer():
                 # compute and apply stats
                 if not self._async:
                     # synchronous eigen-decomp updates
+                    #TODO: what is self.applyStatsEigen(self.computeStatsEigen()) ?
                     updateFactorOps = tf.cond(tf.logical_and(tf.equal(tf.mod(self.stats_step, self._kfac_update),
                                                                       tf.convert_to_tensor(0)),
                                                              tf.greater_equal(self.stats_step, self._stats_accum_iter)),
@@ -895,7 +898,7 @@ class KfacOptimizer():
                         return list(g)
 
                     def getKfacGradOp():
-                        # This is where the gradient is applied
+                        # This is where the gradient is applied, TODO: how is the nature gradient computed?
                         return self.getKfacPrecondUpdates(g, varlist)
 
                     u = tf.cond(tf.greater(self.factor_step,
