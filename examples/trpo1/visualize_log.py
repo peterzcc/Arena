@@ -24,14 +24,15 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
     # print("Parsing log from %s" % (logfile))
     loss_list = []
 
-    float_regex = "([+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)"
+    float_regex = "(?P<target>[+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)"
+    minor_regex = "(?P<dummy>[+-]?[0-9]*[.]?[0-9]+([eE][-+]?[0-9]+)?)"
     regex_list = ['Average Return:{0}'.format(float_regex), 'std: {0}'.format(float_regex),
                   'img_loss={0}'.format(float_regex),
                   'act_clips: {0}'.format(float_regex),
                   'new_kl: {0}'.format(float_regex),
                   'Average Return:{0}'.format(float_regex),
                   'ae loss after: {0}'.format(float_regex),
-                  'old_mse:{0} \tex_var:{0}'.format(float_regex),
+                  'old_mse:{1} \tex_var:{0}'.format(float_regex, minor_regex),
                   'mse:{0}'.format(float_regex),
                   '{1} mean_r_t: {0}'.format(float_regex, extra_str),
                   'ave subt:{0}'.format(float_regex)]
@@ -52,7 +53,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
             # out_file.write("@" + str(current_t) + "\n")
             # timestep_list.append(num_steps)
         if m is not None:
-            loss = m.groups()[-1]
+            loss = m.groupdict()["target"]
             # out_file.write(str(loss) + "\n")
             timestep_list.append(current_t)
             loss_list.append(loss)
