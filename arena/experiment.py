@@ -52,13 +52,20 @@ class Experiment(object):
         if stats_file_dir is None:
             experiment_id = 1
             self.stats_file_dir = "exp_{:d}".format(experiment_id)
-            while os.path.exists(self.stats_file_dir):
-                experiment_id += 1
-                self.stats_file_dir = "exp_{:d}".format(experiment_id)
+            mkdir_success = False
+            while not mkdir_success:
+                if os.path.exists(self.stats_file_dir):
+                    experiment_id += 1
+                    self.stats_file_dir = "exp_{:d}".format(experiment_id)
+                else:
+                    try:
+                        os.mkdir(self.stats_file_dir)
+                    except FileExistsError:
+                        experiment_id += 1
+                        self.stats_file_dir = "exp_{:d}".format(experiment_id)
         else:
             self.stats_file_dir = stats_file_dir
-        if not os.path.exists(self.stats_file_dir):
-            os.mkdir(self.stats_file_dir)
+
         root = logging.getLogger()
         root.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s %(message)s')
@@ -77,6 +84,8 @@ class Experiment(object):
         # add the handlers to the logger
         root.addHandler(fh)
         # root.addHandler(ch)
+
+        self.single_process_mode = single_process_mode
 
         if single_process_mode == False:
             self.render_lock = mp.Lock()
@@ -221,9 +230,10 @@ class Experiment(object):
     def terminate(self):
         logging.warning("Experiment terminating")
         force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
-        for actuator in self.actuator_processes:
-            actuator.join()
-        logging.warning("actuators terminated")
+        if self.single_process_mode:
+            for actuator in self.actuator_processes:
+                actuator.join()
+            logging.warning("actuators terminated")
         for agent in self.agent_threads:
             agent.join()
         logging.warning("agents terminated")
