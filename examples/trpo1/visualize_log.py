@@ -52,7 +52,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
             # out_file.write("@" + str(current_t) + "\n")
             # timestep_list.append(num_steps)
         if m is not None:
-            loss = m.group(-1)
+            loss = m.groups()[-1]
             # out_file.write(str(loss) + "\n")
             timestep_list.append(current_t)
             loss_list.append(loss)
