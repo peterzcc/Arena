@@ -99,6 +99,10 @@ sudo apt-get install libgd2-xpm-dev libcrypto++-dev libgeoip-dev libupnp-dev bin
 disprun python3.6 ~/Arena/examples/trpo1/plot.py --dir ../exp_5 ../exp_1 ../exp_2 ../exp_3 ../exp_4 --label w2=0.00003 w2=0.0001 w2=0.0003 w2=0.001 w2=0.003 -w20
 
 1mux
+CUDA_VISIBLE_DEVICES=0,1,2 disprun python3.6 pg_train.py --env task8train --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.002 --load-leaf 0 --train-leaf 1 --train-decider 0 --train-switcher 0  --switcher-length 200 --npret 75000  --loss TRAD_WASS --lr 0.001 --kl 0.0003
+CUDA_VISIBLE_DEVICES=1,2,0 disprun python3.6 pg_train.py --env task8train --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.002 --load-leaf 0 --train-leaf 1 --train-decider 0 --train-switcher 0  --switcher-length 200 --npret 75000  --loss TRAD_WASS --lr 0.001 --kl 0.0003
+CUDA_VISIBLE_DEVICES=2,1,0 disprun python3.6 pg_train.py --env task8train --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.002 --load-leaf 0 --train-leaf 1 --train-decider 0 --train-switcher 0  --switcher-length 200 --npret 75000  --loss TRAD_WASS --lr 0.001 --kl 0.0003
+
 
 2mux
 

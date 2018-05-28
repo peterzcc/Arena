@@ -231,13 +231,13 @@ class Experiment(object):
     def terminate(self):
         logging.warning("Experiment terminating")
         force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
-        if self.single_process_mode:
-            for actuator in self.actuator_processes:
-                actuator.join()
-            logging.warning("actuators terminated")
-        for agent in self.agent_threads:
-            agent.join()
-        logging.warning("agents terminated")
+        # if self.single_process_mode:
+        #     for actuator in self.actuator_processes:
+        #         actuator.join()
+        #     logging.warning("actuators terminated")
+        # for agent in self.agent_threads:
+        #     agent.join()
+        # logging.warning("agents terminated")
         for f in Experiment.f_terminate:
             f()
         for t in threading.enumerate():
