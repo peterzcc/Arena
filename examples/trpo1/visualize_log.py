@@ -31,7 +31,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
                   'new_kl: {0}'.format(float_regex),
                   'Average Return:{0}'.format(float_regex),
                   'ae loss after: {0}'.format(float_regex),
-                  'old_mse:{0}\tex_var:{0}'.format(float_regex),
+                  'old_mse:{0} \tex_var:{0}'.format(float_regex),
                   'mse:{0}'.format(float_regex),
                   '{1} mean_r_t: {0}'.format(float_regex, extra_str),
                   'ave subt:{0}'.format(float_regex)]
