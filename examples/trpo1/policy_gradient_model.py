@@ -30,7 +30,7 @@ np.random.seed(seed)
 tf.set_random_seed(seed)
 
 dtype = tf.float32
-STATS_KEYS = ['mean', 'logstd', 'advantage', 'baseline', 'return']
+STATS_KEYS = ['mean', 'logstd', 'advantage', 'baseline', 'return', 'action']
 
 class PolicyGradientModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,

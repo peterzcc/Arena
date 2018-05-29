@@ -265,6 +265,7 @@ def main():
                           dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train)
 
     full_tasks = [args.env]
+    NOISE = "NOISE"
     if args.env in hrl_root_tasks:
         full_tasks = hrl_root_tasks[args.env]
 
@@ -407,6 +408,13 @@ def main():
                                   f_gen_obj=random_cont_direction,
                                   forward_scale=1.0,
                                   reset_goal_prob=0, )
+        elif args.env.startswith(NOISE):
+            init_noise = float(args.env[len(NOISE):])
+            env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                                  f_gen_obj=x_forward_obj,
+                                  forward_scale=0.0,
+                                  reset_goal_prob=0,
+                                  init_noise=init_noise)
         else:
             env = gym.make(args.env)
 
@@ -528,7 +536,7 @@ def main():
                                     should_train=args.train_decider,
                                     save_model=args.save_model,
                                     **policy_shared_params)
-        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=True,
+        memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=args.norm_gae,
                             timestep_limit=T,
                             f_critic={"decider": model.compute_critic},
                             num_actors=num_actors,
