@@ -96,7 +96,7 @@ class DictMemory(object):
         self.lam_pow = np.power(self.lam, np.arange(0, timestep_limit), dtype=np.float64)
 
         self.leaf_info_keys = None
-        self.scale_adv = not normalize
+        self.scale_adv = False
 
     def append_state(self, observation, action, info, pid=0,
                      leaf_id=None, leaf_action=None, leaf_model_info=None, curr_time_step=None):
@@ -336,7 +336,9 @@ class DictMemory(object):
 
 
         if normalize:
-            self.normalize_gae(results)
+            self.normalize_mean_scale(results)
+        else:
+            self.normalize_scale(results)
         return results
 
     def time_diff_with_zero_padding(self, pow_series, x):
@@ -396,10 +398,10 @@ class DictMemory(object):
         results["advantage"] = whole_adv_scaled
 
         if normalize:
-            self.normalize_gae(results)
+            self.normalize_mean_scale(results)
         return results
 
-    def normalize_gae(self, paths):
+    def normalize_mean_scale(self, paths):
         alladv = paths["advantage"]  # np.concatenate([path["advantage"] for path in paths])
         # Standardize advantage
         std = alladv.std()
@@ -408,6 +410,15 @@ class DictMemory(object):
         # for path in paths:
         #     path["advantage"] = (path["advantage"] - mean) / (std + 1e-6)
         paths["advantage"] = (paths["advantage"] - mean) / (std + 1e-6)
+
+    def normalize_scale(self, paths):
+        alladv = paths["advantage"]  # np.concatenate([path["advantage"] for path in paths])
+        # Standardize advantage
+        scale = (alladv ** 2).mean()
+
+        # for path in paths:
+        #     path["advantage"] = (path["advantage"] - mean) / (std + 1e-6)
+        paths["advantage"] = (paths["advantage"]) / (scale + 1e-6)
 
     def extract_all(self, pid=None, with_subtasks=False):
         paths = self.extract_paths(pid)
