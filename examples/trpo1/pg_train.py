@@ -414,7 +414,8 @@ def main():
                                   f_gen_obj=x_forward_obj,
                                   forward_scale=0.0,
                                   reset_goal_prob=0,
-                                  init_noise=init_noise)
+                                  init_noise=init_noise,
+                                  constraint_height=False)
         else:
             env = gym.make(args.env)
 

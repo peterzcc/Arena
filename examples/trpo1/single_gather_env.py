@@ -459,7 +459,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def reset_model(self):
         qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq,
-                                                       low=-self.init_noise, high=self.init_noise)
+                                                       low=-0.1, high=0.1)
         qvel = self.init_qvel + self.np_random.randn(self.model.nv) * self.init_noise
         self.set_state(qpos, qvel)
         return self._get_obs()
