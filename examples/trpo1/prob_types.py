@@ -302,7 +302,7 @@ class DiagonalGaussian(ProbType):
 
     def regulation_loss(self, dist_info):
         log_stds = dist_info["logstd"]
-        return tf.square(tf.maximum(log_stds, 0.0))
+        return tf.reduce_mean(tf.reduce_sum(tf.square(tf.maximum(log_stds, 0.0)), axis=-1))
 
     def kf_loglike(self, action_n, dist_vars, interm_vars):
         mean_n = dist_vars["mean"]
