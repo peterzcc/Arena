@@ -189,6 +189,7 @@ class MultiNetwork(object):
             ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
             self.ent = tf.reduce_sum(ent_n) / self.batch_size_float
             self.rl_losses = {"PPO": self.ppo_surr, "TRAD": self.trad_loss, "PPO_TRAD": self.ppo_trad_loss}
+            self.regulation_loss = self.distribution.regulation_loss(self.dist_vars)
             self.losses = [self.ppo_surr, self.kl, self.ent]
             self.reset_exp = self.distribution.reset_exp(self.interm_vars)
             if self.is_switcher_with_init_len:

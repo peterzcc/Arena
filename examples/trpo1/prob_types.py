@@ -29,6 +29,9 @@ class ProbType(object):
     def create_dist_vars(self, last_layer, dtype=tf.float32):
         pass
 
+    def regulation_loss(self, dist_info):
+        return 0.0
+
 
 _EPSILON = 1e-6
 
@@ -296,6 +299,10 @@ class DiagonalGaussian(ProbType):
     def entropy(self, dist_info):
         log_stds = dist_info["logstd"]
         return tf.reduce_sum(log_stds, 1) + 0.5 * np.log(2 * np.pi * np.e) * self.dim
+
+    def regulation_loss(self, dist_info):
+        log_stds = dist_info["logstd"]
+        return tf.square(tf.maximum(log_stds, 0.0))
 
     def kf_loglike(self, action_n, dist_vars, interm_vars):
         mean_n = dist_vars["mean"]

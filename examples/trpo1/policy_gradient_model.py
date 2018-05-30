@@ -177,6 +177,8 @@ class PolicyGradientModel(ModelWithCritic):
         self.target_kl_sym = tf.placeholder(shape=[], dtype=tf.float32, name="target_kl")
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
+        regulation_k = 50.0
+        self.regulation_loss = 0.0 if regulation_k == 0.0 else regulation_k * self.policy.regulation_loss
         self.fit_policy = None
 
         self.loss_type = loss_type[:-len(WASS_POSTFIX)] if loss_type.endswith(WASS_POSTFIX) else loss_type
@@ -185,6 +187,7 @@ class PolicyGradientModel(ModelWithCritic):
         if self.is_switcher_with_init_len:
             self.switcher_cost_k = switcher_cost_k
             self.rl_loss = self.rl_loss + self.switcher_cost_k + self.policy.switcher_cost
+        self.final_loss = self.rl_loss + self.ent_loss + self.regulation_loss
         if should_train:
             if self.mode == "ACKTR":
                 self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
@@ -207,7 +210,7 @@ class PolicyGradientModel(ModelWithCritic):
                                                   weight_decay_dict={}, max_grad_norm=None,
                                                   use_wasserstein=use_wasserstein)
 
-                self.k_final_loss = self.rl_loss + self.ent_loss
+                self.k_final_loss = self.final_loss
 
                 self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
                                                                           self.policy.mean_loglike,
@@ -235,7 +238,7 @@ class PolicyGradientModel(ModelWithCritic):
                             tf.maximum(0.0, self.policy.kl - 2.0 * self.target_kl_sym))
                     else:
                         self.p_kl_loss = 0.0
-                    self.pg_loss = self.rl_loss + self.ent_loss + self.p_kl_loss
+                    self.pg_loss = self.final_loss + self.p_kl_loss
 
                     self.p_grads = tf.gradients(self.pg_loss, self.policy.var_list)
 
