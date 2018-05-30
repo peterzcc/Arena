@@ -12,6 +12,18 @@ tf.set_random_seed(seed)
 
 dtype = tf.float32
 
+
+def scale_positive_gradient_op(x, scale=1.5):
+    @tf.RegisterGradient("ScalePositive")
+    def _const_mul_grad(unused_op, grad):
+        return (scale ** (-tf.sign(grad))) * grad
+
+    g = tf.get_default_graph()
+    with g.gradient_override_map({"Identity": "ScalePositive"}):
+        x_grad_scaled = tf.identity(x, name="Identity")
+        return x_grad_scaled
+
+
 class MiniBatchAccumulator(object):
     def __init__(self, var):
         with tf.variable_scope("accumulator"):

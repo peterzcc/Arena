@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-
+from tf_utils import scale_positive_gradient_op
 
 class ProbType(object):
     def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
@@ -204,8 +204,14 @@ class DiagonalGaussian(ProbType):
         sample = tf.distributions.Normal(loc=mean_n, scale=std_n).sample()
         return dist_vars, old_dist_vars, sample, interm_vars
 
-    def gen_dist_info(self, mean, log_std):
-        return dict(mean=mean, log_std=log_std)
+    # def gen_dist_info(self, mean, log_std):
+    #     return dict(mean=mean, log_std=log_std)
+
+    def gen_exploration_biased_dist_info(self, dist_info_vars, scale=1.5):
+        mean = dist_info_vars["mean"]
+        original_log_stds = dist_info_vars["logstd"]
+        grad_scaled_log_stds = scale_positive_gradient_op(original_log_stds, scale=scale)
+        return dict(mean=mean, logstd=grad_scaled_log_stds)
 
     def reset_exp(self, interm_vars, std=0.1):
         param = interm_vars["logstd_param"]
@@ -265,11 +271,11 @@ class DiagonalGaussian(ProbType):
         new_means = new_dist_info_vars["mean"]
         mean_sample = tf.random_normal(tf.shape(new_means))
         new_log_stds = new_dist_info_vars["logstd"]
-        logsted_sample = tf.random_normal(tf.shape(new_log_stds))
         old_std = tf.exp(old_log_stds)
         new_std = tf.exp(new_log_stds)
+        std_sample = tf.random_normal(tf.shape(new_std))
         wasserstein_terms = tf.square(new_means + mean_sample - old_means) + tf.square(
-            new_std + logsted_sample - old_std)
+            new_std + std_sample - old_std)
 
         return tf.reduce_sum(wasserstein_terms, axis=-1)
 

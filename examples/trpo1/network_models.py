@@ -28,6 +28,7 @@ class MultiNetwork(object):
                  session=None,
                  f_build_cnn=None,
                  is_switcher_with_init_len=0,
+                 logstd_exploration_bias=1.0,
                  use_wasserstein=False
                  ):
         self.comb_method = comb_method
@@ -136,9 +137,13 @@ class MultiNetwork(object):
             self.mean_loglike = - tf.reduce_mean(
                 self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
 
-            self.new_likelihood_sym = tf.check_numerics(
-                self.distribution.log_likelihood_sym(self.action_n, self.dist_vars),
-                "new logpi nan")
+            if logstd_exploration_bias != 1.0 and isinstance(self.distribution, DiagonalGaussian):
+                grad_biased_dist_vars = self.distribution.gen_exploration_biased_dist_info(self.dist_vars)
+                new_log_pi = self.distribution.log_likelihood_sym(self.action_n, grad_biased_dist_vars)
+            else:
+                new_log_pi = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
+
+            self.new_likelihood_sym = tf.check_numerics(new_log_pi, "new logpi nan")
             self.old_likelihood = tf.check_numerics(self.distribution.log_likelihood_sym(self.action_n, self.old_vars),
                                                     "old logpi nan")
             # self.old_likelihood = tf.check_numerics(

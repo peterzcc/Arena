@@ -66,6 +66,7 @@ class PolicyGradientModel(ModelWithCritic):
                  is_decider=False,
                  reset_exp=False,
                  const_action=None,
+                 policy_logstd_grad_bias=1.0
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -164,7 +165,8 @@ class PolicyGradientModel(ModelWithCritic):
                                    initializer=initializer,
                                    activation=tf.nn.leaky_relu,
                                    is_switcher_with_init_len=is_switcher_with_init_len,
-                                   use_wasserstein=use_wasserstein
+                                   use_wasserstein=use_wasserstein,
+                                   logstd_exploration_bias=policy_logstd_grad_bias
                                    )
         self.executer_net = self.policy
 
