@@ -138,7 +138,9 @@ class MultiNetwork(object):
                 self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
 
             if logstd_exploration_bias != 1.0 and isinstance(self.distribution, DiagonalGaussian):
-                grad_biased_dist_vars = self.distribution.gen_exploration_biased_dist_info(self.dist_vars)
+                grad_biased_dist_vars = self.distribution.gen_exploration_biased_dist_info(
+                    self.dist_vars,
+                    scale=logstd_exploration_bias)
                 new_log_pi = self.distribution.log_likelihood_sym(self.action_n, grad_biased_dist_vars)
             else:
                 new_log_pi = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
