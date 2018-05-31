@@ -111,6 +111,9 @@ def main():
                         help='gae lambda')
     parser.add_argument('--stdbias', required=False, default=0.0, type=float,
                         help='policy std bias')
+
+    parser.add_argument('--stddev', required=False, default=1.0, type=float,
+                        help='policy logstd sample std')
     parser.add_argument('--withimg', default=False, type=str2bool, nargs='?',
                         const=True, )
     parser.add_argument('--load-model', default=False, type=str2bool, nargs='?',
@@ -226,7 +229,8 @@ def main():
                                 minibatch_size=args.minibatch_size,
                                 multi_update=args.multi_update,
                                 savestats=args.savestats,
-                                policy_logstd_grad_bias=args.stdbias)
+                                policy_logstd_grad_bias=args.stdbias,
+                                logstd_sample_dev=args.stddev)
 
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel

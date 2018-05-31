@@ -40,7 +40,8 @@ class MultiNetwork(object):
                  is_switcher_with_init_len=0,
                  logstd_exploration_bias=0.0,
                  rl_loss_type="TRAD",
-                 use_wasserstein=False
+                 use_wasserstein=False,
+                 logstd_sample_dev=1.0
                  ):
         self.comb_method = comb_method
         self.is_switcher_with_init_len = is_switcher_with_init_len
@@ -183,7 +184,10 @@ class MultiNetwork(object):
             # Sampled loss of the policy
             if self.use_wasserstein:
                 assert isinstance(self.distribution, DiagonalGaussian)
-                self.wassersteins = self.distribution.wasserstein_sampled_sym(self.old_vars, self.dist_vars)
+                self.logstd_sample_dev = logstd_sample_dev
+                self.wassersteins = self.distribution.wasserstein_sampled_sym(
+                    self.old_vars, self.dist_vars,
+                    logstd_sample_dev=self.logstd_sample_dev)
                 self.kl = tf.reduce_mean(self.wassersteins)
                 self.loss_sampled = self.kl
             else:
