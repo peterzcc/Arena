@@ -66,7 +66,7 @@ class PolicyGradientModel(ModelWithCritic):
                  is_decider=False,
                  reset_exp=False,
                  const_action=None,
-                 policy_logstd_grad_bias=1.0
+                 policy_logstd_grad_bias=0.0
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -149,6 +149,7 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.theta = None
         WASS_POSTFIX = "_WASS"
+        self.loss_type = loss_type[:-len(WASS_POSTFIX)] if loss_type.endswith(WASS_POSTFIX) else loss_type
 
         use_wasserstein = (self.mode == "PG" and loss_type.endswith(WASS_POSTFIX))
 
@@ -166,11 +167,12 @@ class PolicyGradientModel(ModelWithCritic):
                                    activation=tf.nn.leaky_relu,
                                    is_switcher_with_init_len=is_switcher_with_init_len,
                                    use_wasserstein=use_wasserstein,
-                                   logstd_exploration_bias=policy_logstd_grad_bias
+                                   logstd_exploration_bias=policy_logstd_grad_bias,
+                                   rl_loss_type=self.loss_type
                                    )
         self.executer_net = self.policy
 
-        self.losses = self.policy.losses
+        # self.losses = self.policy.losses
         var_list = self.policy.var_list
 
         self.target_kl_initial = None if f_target_kl is None else f_target_kl(0)
@@ -178,12 +180,10 @@ class PolicyGradientModel(ModelWithCritic):
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         regulation_k = 50.0
-        self.regulation_loss = 0.0 if regulation_k == 0.0 else regulation_k * self.policy.regulation_loss
+        self.regulation_loss = 0.0  # if regulation_k == 0.0 else regulation_k * self.policy.regulation_loss
         self.fit_policy = None
 
-        self.loss_type = loss_type[:-len(WASS_POSTFIX)] if loss_type.endswith(WASS_POSTFIX) else loss_type
-
-        self.rl_loss = self.policy.rl_losses[self.loss_type]
+        self.rl_loss = self.policy.rl_loss
         if self.is_switcher_with_init_len:
             self.switcher_cost_k = switcher_cost_k
             self.rl_loss = self.rl_loss + self.switcher_cost_k + self.policy.switcher_cost
@@ -490,7 +490,7 @@ class PolicyGradientModel(ModelWithCritic):
         if self.savestats:
             with pd.HDFStore(Experiment.stats_path, 'a') as stats:
                 df_stats = ({k: pd.DataFrame(paths[k]) for k in STATS_KEYS})
-                old_logpi = batch_run_forward(self.policy.old_likelihood, feed=feed, N=times.size, session=self.session)
+                old_logpi = batch_run_forward(self.policy.old_log_pi, feed=feed, N=times.size, session=self.session)
                 df_stats["old_logpi"] = pd.DataFrame(old_logpi)
                 for k, v in df_stats.items():
                     stats.put("{}/{}".format(self.name, k),
@@ -527,7 +527,7 @@ class PolicyGradientModel(ModelWithCritic):
 
     def print_stat(self, feed, num_samples, tag="old"):
 
-        surr, kl, ent = run_batched([self.policy.trad_loss, self.policy.kl, self.policy.ent], feed,
+        surr, kl, ent = run_batched([self.policy.rl_loss, self.policy.kl, self.policy.ent], feed,
                                     num_samples,
                                     self.session,
                                     minibatch_size=self.minibatch_size,

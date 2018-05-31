@@ -15,7 +15,17 @@ dtype = tf.float32
 # import baselines.common.tf_util as U
 # from tf_utils import aggregate_feature, lrelu
 # import prettytensor as pt
+def trad_loss(new_logpi, advant, old_logpi=None):
+    return - tf.reduce_mean(new_logpi * advant)
 
+
+def ppo_loss(new_logpi, advant, old_logpi=None, ppo_eps=0.2):
+    ratio_n = tf.check_numerics(tf.exp(new_logpi - old_logpi), "ratio is nan")
+    clipped_ratio = tf.clip_by_value(ratio_n, 1.0 - ppo_eps, 1.0 + ppo_eps)
+    surr_n = ratio_n * advant
+    clipped_surr = clipped_ratio * advant
+    ppo_surrs = tf.minimum(surr_n, clipped_surr)
+    return - tf.reduce_mean(ppo_surrs)
 
 class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_space,
@@ -28,7 +38,8 @@ class MultiNetwork(object):
                  session=None,
                  f_build_cnn=None,
                  is_switcher_with_init_len=0,
-                 logstd_exploration_bias=1.0,
+                 logstd_exploration_bias=0.0,
+                 rl_loss_type="TRAD",
                  use_wasserstein=False
                  ):
         self.comb_method = comb_method
@@ -117,7 +128,7 @@ class MultiNetwork(object):
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
                                                        trainable=False)
                     self.time_offset = tf.get_variable(name="time_offset", initializer=tf.constant(max_length),
-                                                  trainable=False)
+                                                       trainable=False)
                     time_logit = self.time_weight * (self.hrl_meta_input[:, 1:2] - self.time_offset)
                     self.fixed_prob_ter_logit = tf.get_variable("fix_ter_prob",
                                                                 initializer=tf.constant(logit(0.01),
@@ -137,45 +148,39 @@ class MultiNetwork(object):
             self.mean_loglike = - tf.reduce_mean(
                 self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
 
-            if logstd_exploration_bias != 1.0 and isinstance(self.distribution, DiagonalGaussian):
-                grad_biased_dist_vars = self.distribution.gen_exploration_biased_dist_info(
-                    self.dist_vars,
-                    scale=logstd_exploration_bias)
-                new_log_pi = self.distribution.log_likelihood_sym(self.action_n, grad_biased_dist_vars)
-            else:
-                new_log_pi = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
+            new_log_pi = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
 
-            self.new_likelihood_sym = tf.check_numerics(new_log_pi, "new logpi nan")
-            self.old_likelihood = tf.check_numerics(self.distribution.log_likelihood_sym(self.action_n, self.old_vars),
-                                                    "old logpi nan")
-            # self.old_likelihood = tf.check_numerics(
-            #     tf.maximum(self.distribution.log_likelihood_sym(self.action_n, self.old_vars), np.log(1e-8)),
-            #                                         "old logpi nan")
-            eps = 1e-8
-            self.ratio_n = tf.check_numerics(tf.exp(self.new_likelihood_sym - self.old_likelihood), "ratio is nan")
+            self.new_log_pi = tf.check_numerics(new_log_pi, "new logpi nan")
+            self.old_log_pi = tf.check_numerics(self.distribution.log_likelihood_sym(self.action_n, self.old_vars),
+                                                "old logpi nan")
+
             self.var_list = tf.trainable_variables(this_scope.name)
             if not cnn_trainable:
                 self.var_list = [v for v in self.var_list if not (v in self.cnn_weights or v in self.img_fc_weights)]
+
             self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
-            self.PPO_eps = 0.2
-            self.clipped_ratio = tf.clip_by_value(self.ratio_n, 1.0 - self.PPO_eps, 1.0 + self.PPO_eps)
-            self.surr_n = self.ratio_n * self.advant
-            self.clipped_surr = self.clipped_ratio * self.advant
-            self.ppo_surr = tf.check_numerics(-tf.reduce_mean(tf.minimum(self.surr_n, self.clipped_surr)),
-                                              "ppo loss is nan")  # Surrogate loss
+            rl_func_dict = {"PPO": ppo_loss, "TRAD": trad_loss}
+            self.rl_func = rl_func_dict[rl_loss_type]
+
+            if logstd_exploration_bias != 0.0 and isinstance(self.distribution, DiagonalGaussian):
+                logging.info("logstd_bias:{}".format(logstd_exploration_bias))
+                grad_biased_dist_vars = \
+                    self.distribution.gen_exploration_biased_dist_info(
+                        self.dist_vars,
+                        scale=logstd_exploration_bias)
+                self.biased_new_log_pi = self.distribution.log_likelihood_sym(self.action_n, grad_biased_dist_vars)
+                self.exploration_biased_rl_loss = \
+                    self.rl_func(self.biased_new_log_pi,
+                                 tf.maximum(self.advant, 0.0),
+                                 self.old_log_pi)
+            else:
+                self.exploration_biased_rl_loss = 0.0
+            self.rl_loss = self.rl_func(self.new_log_pi, self.advant, self.old_log_pi) \
+                           + self.exploration_biased_rl_loss
+
+
 
             # Sampled loss of the policy
-
-            self.trad_loss = - tf.reduce_mean(self.new_likelihood_sym * self.advant)
-            log_ppo_max_ratio = np.log(1.0 + self.PPO_eps)
-            log_ppo_min_ratio = np.log(1.0 - self.PPO_eps)
-            clipped_new_likelihoold = tf.clip_by_value(self.new_likelihood_sym,
-                                                       self.old_likelihood + log_ppo_min_ratio,
-                                                       self.old_likelihood + log_ppo_max_ratio)
-            self.ppo_trad_loss = tf.check_numerics(
-                -tf.reduce_mean(tf.minimum(self.new_likelihood_sym * self.advant,
-                                           clipped_new_likelihoold * self.advant)),
-                "ppo_trad nan")
             if self.use_wasserstein:
                 assert isinstance(self.distribution, DiagonalGaussian)
                 self.wassersteins = self.distribution.wasserstein_sampled_sym(self.old_vars, self.dist_vars)
@@ -186,11 +191,10 @@ class MultiNetwork(object):
                 self.kl = tf.reduce_mean(self.kls)
                 self.loss_sampled = self.mean_loglike
 
-            ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_likelihood_sym
-            self.ent = tf.reduce_sum(ent_n) / self.batch_size_float
-            self.rl_losses = {"PPO": self.ppo_surr, "TRAD": self.trad_loss, "PPO_TRAD": self.ppo_trad_loss}
+            ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_log_pi
+            self.ent = tf.reduce_mean(ent_n)
+
             self.regulation_loss = self.distribution.regulation_loss(self.dist_vars)
-            self.losses = [self.ppo_surr, self.kl, self.ent]
             self.reset_exp = self.distribution.reset_exp(self.interm_vars)
             if self.is_switcher_with_init_len:
                 self.switch_prob = tf.sigmoid(self.full_logits[:, 1:2])

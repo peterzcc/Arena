@@ -45,7 +45,7 @@ def main():
         paths[k] = stats.select("{}/{}".format(envname, k), start=start, stop=end).values
 
     # df_stats = ({k: pd.DataFrame(paths[k]) for k in STATS_KEYS})
-    # old_logpi = batch_run_forward(self.policy.old_likelihood, feed=feed, N=times.size, session=self.session)
+    # old_logpi = batch_run_forward(self.policy.old_log_pi, feed=feed, N=times.size, session=self.session)
     # df_stats["old_logpi"] = pd.DataFrame(old_logpi)
 
     # dirs = ["."] if args.dir == "" else args.dir

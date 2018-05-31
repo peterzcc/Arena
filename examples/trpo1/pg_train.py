@@ -109,7 +109,7 @@ def main():
                         help='gae lambda')
     parser.add_argument('--gamma', required=False, default=0.995, type=float,
                         help='gae lambda')
-    parser.add_argument('--stdbias', required=False, default=1.0, type=float,
+    parser.add_argument('--stdbias', required=False, default=0.0, type=float,
                         help='policy std bias')
     parser.add_argument('--withimg', default=False, type=str2bool, nargs='?',
                         const=True, )
