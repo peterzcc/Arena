@@ -176,8 +176,9 @@ class MultiNetwork(object):
                                  self.old_log_pi)
             else:
                 self.exploration_biased_rl_loss = 0.0
+            self.critic_exp_var = tf.placeholder(dtype=tf.float32, name="critic_exp_var")
             self.rl_loss = self.rl_func(self.new_log_pi, self.advant, self.old_log_pi) \
-                           + self.exploration_biased_rl_loss
+                           + self.critic_exp_var * self.exploration_biased_rl_loss
 
 
 

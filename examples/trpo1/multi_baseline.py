@@ -133,6 +133,8 @@ class MultiBaseline(object):
             self.opt = tf.train.AdamOptimizer(learning_rate=self.lr)
             self.train = self.opt.minimize(self.final_loss, aggregation_method=tf.AggregationMethod.DEFAULT,
                                            var_list=self.var_list)
+            self.exp_var_running_mean = 0.0
+            self.exp_var_alpha = 0.8
 
         self.debug_mode = True
 
@@ -141,18 +143,22 @@ class MultiBaseline(object):
         vary = np.var(y)
         return np.nan if vary == 0 else 1 - np.var(y - ypred) / vary
 
+    def one_sub_mse_over_var(self, mse, y):
+        vary = np.var(y)
+        return 1 - mse / (vary + 1e-6)
+
     def print_loss(self, feed, extra=""):
         mse = \
             run_batched([self.real_mse],
                         feed=feed, N=feed[self.y].shape[0],
                         session=self.session,
                         minibatch_size=self.minibatch_size)[0]
-        # ypred = self.session.run(self.net, feed_dict=feed)
-        ypred = batch_run_forward(self.net, feed=feed, N=feed[self.time_input].shape[0], session=self.session,
-                                  minibatch_size=self.minibatch_size)
-        ex_var = self.explained_var(ypred, feed[self.y])
+        # ypred = batch_run_forward(self.net, feed=feed, N=feed[self.time_input].shape[0], session=self.session,
+        #                           minibatch_size=self.minibatch_size)
+        ex_var = self.one_sub_mse_over_var(mse, feed[self.y])
         # logging.debug("vf:\n mse:{}\texplained_var:{}".format(mse, ex_var))
-        return "vf_{}:\t {}_mse:{} \tex_var:{}".format(self.name, extra, mse, ex_var)
+        values = [self.name, extra, mse, ex_var]
+        return "vf_{}:\t {}_mse:{} \tex_var:{}".format(*values), values
 
     def fit(self, feed, update_mode="full", num_pass=1, pid=None):
 
@@ -180,7 +186,11 @@ class MultiBaseline(object):
                                                             self.new_std: self.curr_std_value})
 
         if self.debug_mode and (pid is None or pid == 0):
-            old_msg = self.print_loss(feed, extra="old")
+            old_msg, old_values = self.print_loss(feed, extra="old")
+            exp_var_this_epoch = old_values[-1]
+            self.exp_var_running_mean = \
+                self.exp_var_alpha * self.exp_var_running_mean \
+                + (1 - self.exp_var_alpha) * exp_var_this_epoch
         else:
             old_msg = ""
 
@@ -200,7 +210,7 @@ class MultiBaseline(object):
                     break
 
         if self.debug_mode and (pid is None or pid == 0):
-            new_msg = self.print_loss(feed, extra="new")
+            new_msg, _ = self.print_loss(feed, extra="new")
             logging.debug("\n{}\n{}".format(old_msg, new_msg))
 
     def predict(self, path):

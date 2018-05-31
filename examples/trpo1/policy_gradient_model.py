@@ -298,6 +298,9 @@ class PolicyGradientModel(ModelWithCritic):
         self._train_loop_thread.start()
         self._log_msg = "{}:\n".format(self.name)
 
+        # extra feed parameters
+        self._feed_parameters = {}
+
     def _log(self, msg):
         self._log_msg += msg + "\n"
 
@@ -463,6 +466,7 @@ class PolicyGradientModel(ModelWithCritic):
                 self.critic.img_enabled: img_enabled,
                 self.policy.st_enabled: st_enabled,
                 self.policy.img_enabled: img_enabled,
+                **dist_vars
                 }
 
         feed_critic = {self.critic.state_input: state_input,
@@ -479,10 +483,7 @@ class PolicyGradientModel(ModelWithCritic):
             feed[self.policy.hrl_meta_input] = hrl_meta_input
             feed[self.critic.hrl_meta_input] = hrl_meta_input
             feed_critic[self.critic.hrl_meta_input] = hrl_meta_input
-        # action_dist_means_n = concat([path["mean"] for path in aggre_paths])
-        # action_dist_logstds_n = concat([path["log_std"] for path in aggre_paths])
 
-        feed.update({**dist_vars})
         no_ter_train = False
         if no_ter_train and self.is_switcher_with_init_len:
             is_root_decision = action_n != 0
@@ -497,6 +498,7 @@ class PolicyGradientModel(ModelWithCritic):
                 for k, v in df_stats.items():
                     stats.put("{}/{}".format(self.name, k),
                               v, format="table", append=True)
+        self._feed_parameters[self.policy.critic_exp_var] = self.critic.exp_var_running_mean
 
         return feed, feed_critic, extra
 
@@ -533,18 +535,18 @@ class PolicyGradientModel(ModelWithCritic):
                                     num_samples,
                                     self.session,
                                     minibatch_size=self.minibatch_size,
-                                    extra_input={})
+                                    extra_input=self._feed_parameters)
         if self.debug:
             self._log("{0}_surr: {1}\t{0}_kl: {2}\t{0}_ent: {3}".format(tag, surr, kl, ent))
         return surr, kl, ent
 
-    def fit_acktr(self, feed, num_samples, pid=None):
+    def fit_acktr(self, feed, num_samples, pid=None, feed_parameters={}):
         target_kl_value = self.f_target_kl(self.n_update)
-        verbose = self.debug and (pid is None or pid == 0)
+        verbose = self.debug  #and (pid is None or pid == 0)
 
         _, _, _ = self.print_stat(feed, num_samples, tag="old")
 
-        _ = self.session.run(self.k_update_op, feed_dict=feed)
+        _ = self.session.run(self.k_update_op, feed_dict={**feed, **self._feed_parameters})
 
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
 
@@ -562,10 +564,14 @@ class PolicyGradientModel(ModelWithCritic):
         else:
             if verbose: self._log("kl just right!")
 
-    def fit_pg(self, feed, num_samples, pid=None):
+    def fit_pg(self, feed, num_samples, pid=None, feed_parameters={}):
 
         target_kl_value = self.f_target_kl(self.n_update) if self.f_target_kl is not None else None
         _, _, _ = self.print_stat(feed, num_samples, tag="old")
+        self._feed_parameters.update({self.p_sym_step_size: self.p_step_size,
+                                      self.p_beta: self.p_beta_value,
+                                      self.target_kl_sym: target_kl_value
+                                      })
         for pass_i in range(self.pg_npass):
             if self.multi_update:
                 ids = np.random.permutation(np.arange(num_samples))
@@ -575,19 +581,16 @@ class PolicyGradientModel(ModelWithCritic):
                     this_feed = {k: v[slc] for k, v in feed.items()}
                     _ = self.session.run(self.p_accum_op,
                                          feed_dict={**this_feed,
-                                                    self.p_sym_step_size: self.p_step_size,
-                                                    self.p_beta: self.p_beta_value, })
+                                                    **self._feed_parameters})
                     g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
-                                                 feed_dict={self.p_sym_step_size: self.p_step_size,
-                                                            self.p_beta: self.p_beta_value, })
+                                                 feed_dict=self._feed_parameters)
             else:
+
                 _ = tf_run_batched(self.p_accum_op, feed, num_samples, self.session,
                                    minibatch_size=self.minibatch_size,
-                                   extra_input={self.target_kl_sym: target_kl_value,
-                                                self.p_beta: self.p_beta_value})
+                                   extra_input=self._feed_parameters)
                 g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
-                                             feed_dict={self.p_sym_step_size: self.p_step_size,
-                                                        self.p_beta: self.p_beta_value, })
+                                             feed_dict=self._feed_parameters)
 
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
         if self.debug:
