@@ -273,7 +273,8 @@ class DiagonalGaussian(ProbType):
         old_means = old_dist_info_vars["mean"]
         old_log_stds = old_dist_info_vars["logstd"]
         new_means = new_dist_info_vars["mean"]
-        mean_sample = tf.random_normal(tf.shape(new_means))
+        mean_sample = tf.random_normal(tf.shape(new_means), mean=0.0,
+                                       stddev=logstd_sample_dev)
         new_log_stds = new_dist_info_vars["logstd"]
         old_std = tf.exp(old_log_stds)
         new_std = tf.exp(new_log_stds)
