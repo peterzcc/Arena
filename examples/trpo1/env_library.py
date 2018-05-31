@@ -286,7 +286,7 @@ def gen_env_func(env_name, withimg, T=1000):
             init_noise = float(env_name[len(NOISE):])
             env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                   f_gen_obj=x_forward_obj,
-                                  forward_scale=0.0,
+                                  forward_scale=1.0,
                                   reset_goal_prob=0,
                                   init_noise=init_noise,
                                   constraint_height=False)
