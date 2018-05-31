@@ -180,7 +180,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
         regulation_k = 50.0
-        self.regulation_loss = 0.0  # if regulation_k == 0.0 else regulation_k * self.policy.regulation_loss
+        self.regulation_loss = 0.0 if regulation_k == 0.0 else regulation_k * self.policy.regulation_loss
         self.fit_policy = None
 
         self.rl_loss = self.policy.rl_loss
