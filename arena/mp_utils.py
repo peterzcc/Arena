@@ -12,7 +12,7 @@ class MpCtxManager(object):
     @staticmethod
     def get_mp_ctx():
         if MpCtxManager.CTX is None:
-            MpCtxManager.CTX = mp.get_context('forkserver')
+            MpCtxManager.CTX = mp.get_context('spawn')
         return MpCtxManager.CTX
 
 class ProcessState(Enum):
