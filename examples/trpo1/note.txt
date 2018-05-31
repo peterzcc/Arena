@@ -82,7 +82,7 @@ CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move1d --rl-method PG
 10 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move1d --rl-method PG --nactor 20 --batch-size 10000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss TRAD_WASS  --kl 0.0001 --load-dir models_target --switcher-length 25
 54 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env move1d --rl-method PG --nactor 20 --batch-size 10000 --withimg 1 --nfeat 30 --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --npret -1 --ent-k 0.01 --loss TRAD_WASS  --kl 0.0003 --load-dir models_target --switcher-length 25
 CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env dynamic2d --rl-method PG --nactor 20 --batch-size 20480 --withimg 1 --nfeat 30 --load-dir models --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-start 150  --switcher-length 25 --npret -1  --loss TRAD --ent-k 0.01 --switcher-k 1.0  --lr 0.0003
-disprun python3.6 ../../plot.py --dir ../exp_23 ../exp_24 ../exp_25 ../exp_26 --label 0.0001 0.0003 0.001 0.003
+disprun python3.6 ~/Arena/examples/trpo1/plot.py --dir ../exp_23 ../exp_24 ../exp_25 ../exp_26 --label 0.0001 0.0003 0.001 0.003
 python3.6 $M2WS/Arena/examples/trpo1/visualize_log.py --dataname std
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname mean_r_t --extra move0 move1 move2 move3 move4 move5 move6 move7 -w200
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std
@@ -93,6 +93,7 @@ CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nac
 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 32 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.002  --norm-gae 0 --loss TRAD_WASS
 CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 32 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.002  --norm-gae 0 --loss TRAD_WASS
 CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 32 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.002  --norm-gae 0 --loss TRAD_WASS
+disprun python3.6 ~/Arena/examples/trpo1/plot.py --dir ../exp_15 ../exp_16 ../exp_25 ../exp_26 --label 0.0001 0.0003 0.001 0.003
 
 1mux3
 dead CUDA_VISIBLE_DEVICES=0,1,2 disprun python3.6 pg_train.py --env task8train --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.002 --load-leaf 0 --train-leaf 1 --train-decider 0 --train-switcher 0  --switcher-length 200 --npret 75000  --loss TRAD_WASS --lr 0.001 --kl 0.0003

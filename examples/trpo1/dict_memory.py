@@ -414,7 +414,7 @@ class DictMemory(object):
     def normalize_scale(self, paths):
         alladv = paths["advantage"]  # np.concatenate([path["advantage"] for path in paths])
         # Standardize advantage
-        scale = (alladv ** 2).mean()
+        scale = np.sqrt((alladv ** 2).mean())
 
         # for path in paths:
         #     path["advantage"] = (path["advantage"] - mean) / (std + 1e-6)
