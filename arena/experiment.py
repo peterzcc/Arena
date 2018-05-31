@@ -1,11 +1,11 @@
+import multiprocessing as mp
 import gym
 # from arena.agents.test_mp_agent import Agent
 from arena.actuator import Actuator
-from arena.mp_utils import ProcessState, force_map, FastPipe, RenderOption, MultiFastPipe
+from arena.mp_utils import ProcessState, force_map, FastPipe, RenderOption, MultiFastPipe, MpCtxManager
 from time import time
 import logging
 import os
-import multiprocessing as mp
 import threading as thd
 import numpy as np
 import ctypes
@@ -16,9 +16,8 @@ from gym.spaces import Discrete, Box
 import signal
 import sys
 import pandas as pd
-
-
-
+from multiprocessing import process
+from arena.games.cust_control import make_env
 
 def space_to_np(space):
     if isinstance(space, Discrete):
@@ -29,13 +28,23 @@ def space_to_np(space):
         raise ValueError("Unsupported arg")
 
 
+def actuator_thread(env_args, stats_tx, acts_rx,
+                    cmd_signal, episode_data_q,
+                    global_t, act_id=0, render_option=None):
+    this_actuator = Actuator(env_args, stats_tx, acts_rx,
+                             cmd_signal, episode_data_q,
+                             global_t, act_id,
+                             render_option=render_option
+                             )
+    this_actuator.run_loop()
+
 class Experiment(object):
     """Class for automatically running parallel AI agents
 
 
     """
     def __init__(self,
-                 f_create_env,
+                 env_args,
                  f_create_agent,
                  f_create_shared_params,
                  stats_file_dir=None,
@@ -88,19 +97,15 @@ class Experiment(object):
 
         self.single_process_mode = single_process_mode
 
-        if single_process_mode == False:
-            self.render_lock = mp.Lock()
-        else:
-            self.render_lock = None
-
         # 1. Store variables
-        env = f_create_env()
+        env, env_info = make_env(**env_args)
+        mp_ctx = MpCtxManager.get_mp_ctx()
         if single_process_mode:
             self.process_type = thd.Thread
             self.queue_type = queue.Queue
         else:
-            self.process_type = mp.Process
-            self.queue_type = mp.Queue
+            self.process_type = mp_ctx.Process
+            self.queue_type = mp_ctx.Queue
         self.observation_space = env.observation_space
         self.action_space = env.action_space
         self.info_sample = {}
@@ -108,12 +113,12 @@ class Experiment(object):
             self.info_sample = env.info_sample
         finally:
             pass
-        self.f_create_env = f_create_env
+        self.env_args = env_args
         self.f_create_agent = f_create_agent
         self.shared_params = f_create_shared_params()
-        self.is_learning = mp.Value(ctypes.c_bool, lock=False)
+        self.is_learning = mp_ctx.Value(ctypes.c_bool, lock=False)
         self.is_learning.value = True
-        self.global_t = mp.Value(ctypes.c_int, lock=True)
+        self.global_t = mp_ctx.Value(ctypes.c_int, lock=True)
         self.global_t.value = 0
         self.actuator_processes = []
         self.actuator_channels = []
@@ -153,22 +158,12 @@ class Experiment(object):
             raise ValueError("Not all processes have stopped")
 
     def create_actor_learner_processes(self, num_actor):
-        def actuator_thread(func_get_env, stats_tx, acts_rx,
-                            cmd_signal, episode_data_q,
-                            global_t, act_id=0):
-            this_actuator = Actuator(func_get_env, stats_tx, acts_rx,
-                                     cmd_signal, episode_data_q,
-                                     global_t, act_id,
-                                     render_option=RenderOption.lookup(self.render_option),
-                                     render_lock=self.render_lock)
-            this_actuator.run_loop()
-
         agents = []
 
         def agent_run_thread(agent, pid):
             agent.run_loop()
 
-        from multiprocessing import process
+
         if not os.path.exists("./tmp"):
             os.mkdir("./tmp")
         process.current_process()._config['tempdir'] = "./tmp"
@@ -193,13 +188,14 @@ class Experiment(object):
             this_actuator_process = \
                 self.process_type(
                     target=actuator_thread,
-                    args=(self.f_create_env,
+                    args=(self.env_args,
                           stats_pipe,
                           action_pipe,
                           self.actuator_channels[process_id],
                           self.episode_q,
                           self.global_t,
-                          process_id))
+                          process_id,
+                          RenderOption.lookup(self.render_option)))
             this_actuator_process.daemon = True
             self.actuator_processes.append(this_actuator_process)
             agent = self.f_create_agent(self.observation_space,
@@ -240,8 +236,8 @@ class Experiment(object):
         # logging.warning("agents terminated")
         for f in Experiment.f_terminate:
             f()
-        for t in threading.enumerate():
-            logging.warning('ACTIVE: %s', t.getName())
+        # for t in threading.enumerate():
+        #     logging.warning('ACTIVE: %s', t.getName())
         logging.warning("finished cleaning")
         sys.exit()
 
@@ -250,6 +246,7 @@ class Experiment(object):
 
         self.num_actor = num_actor
         # Where should we put the creation of actor/learners?
+
         self.create_actor_learner_processes(num_actor)
 
         for actuator in self.actuator_processes:

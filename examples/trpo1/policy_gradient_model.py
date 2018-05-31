@@ -598,14 +598,14 @@ class PolicyGradientModel(ModelWithCritic):
                                                1.5 / 2 * (kl_new / target_kl_value) * self.p_beta_value)
                 if self.p_beta_value > self.p_beta_max / 1.2:
                     self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / 1.5)
-                self._log('beta -> %{} \t step_size -> %{}'.format(self.p_beta_value, self.p_step_size))
+                self._log('beta -> {} \t step_size -> {}'.format(self.p_beta_value, self.p_step_size))
             elif kl_new < target_kl_value / 2:
                 self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / 1.5)
                 if self.p_beta_value < 1.2 * self.p_beta_min:
                     self.p_step_size = np.minimum(self.p_max_step_size, 1.5 * self.p_step_size)
-                self._log('beta -> %{} \t step_size -> %{}'.format(self.p_beta_value, self.p_step_size))
+                self._log('beta -> {} \t step_size -> {}'.format(self.p_beta_value, self.p_step_size))
             else:
-                self._log('beta OK = %{} \t step_size OK = %{}'.format(self.p_beta_value, self.p_step_size))
+                self._log('beta OK = {} \t step_size OK = {}'.format(self.p_beta_value, self.p_step_size))
 
     def fit_critic(self, feed_critic, pid=None):
         self.critic_lock.acquire_write()

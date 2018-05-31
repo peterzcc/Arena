@@ -5,13 +5,14 @@ import queue
 from arena.mp_utils import ProcessState, RenderOption
 import logging
 from gym.monitoring import VideoRecorder
-import cv2
+from arena.games.cust_control import make_env
+
+
 class Actuator(object):
-    def __init__(self, func_get_env, stats_tx, acts_rx,
+    def __init__(self, env_args, stats_tx, acts_rx,
                  cmd_signal, episode_data_q,
-                 global_t, act_id=0, render_option=RenderOption.off,
-                 render_lock=None):
-        self.env = func_get_env(render_lock=render_lock, pid=act_id)
+                 global_t, act_id=0, render_option=RenderOption.off):
+        self.env, env_info = make_env(**env_args, pid=act_id)
         self.stats_tx = stats_tx
         self.acts_rx = acts_rx
         self.signal = cmd_signal
@@ -32,6 +33,9 @@ class Actuator(object):
         if self.render_option == RenderOption.record:
             self.video_encoder = VideoRecorder(self.env, path="./video_thd{}.mp4".format(self.id))
 
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+        # formatter = logging.Formatter('%(asctime)s %(message)s')
         # logging.debug("Actuator: {} initialized".format(self.id))
 
     def reset(self):

@@ -6,6 +6,17 @@ import ctypes
 import logging
 
 
+class MpCtxManager(object):
+    CTX = None
+
+    @staticmethod
+    def get_mp_ctx():
+        if MpCtxManager.CTX is None:
+            MpCtxManager.CTX = mp.get_context('spawn')
+        return MpCtxManager.CTX
+
+
+
 class ProcessState(Enum):
     terminate = 0
     start = 1
@@ -80,7 +91,7 @@ class FastPipe(Pipe):
             self.var_dict[k] = this_var
             self.dtype_dict[k] = this_dtype
             self.shape_dict[k] = this_shape
-        self.event_signal = mp.Event()
+        self.event_signal = MpCtxManager.get_mp_ctx().Event()
         self.event_signal.clear()
         self.npdata = None
 
@@ -128,7 +139,7 @@ class MultiFastPipe(FastPipe):
                 self.var_dict[k][i] = this_var
                 self.dtype_dict[k][i] = this_dtype
                 self.shape_dict[k][i] = this_shape
-        self.event_signal = mp.Event()
+        self.event_signal = MpCtxManager.get_mp_ctx().Event()
         self.event_signal.clear()
         self.npdata = None
 

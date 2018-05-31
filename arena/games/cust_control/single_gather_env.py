@@ -1,16 +1,8 @@
-import math
-import os.path as osp
-import tempfile
-import xml.etree.ElementTree as ET
-from ctypes import byref
-import ctypes
-from ctypes import pointer, byref
 import numpy as np
-from custom_ant import CustomAnt
 from gym import utils
 from gym.envs.mujoco import mujoco_env
 from mujoco_py import MjModel, MjViewer, mjcore, \
-    mjextra, glfw
+    glfw
 from mujoco_py.mjlib import mjlib
 from ctypes import byref
 import ctypes

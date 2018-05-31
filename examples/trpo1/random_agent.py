@@ -4,14 +4,11 @@ import sys
 import os
 import numpy as np
 import gym
-from gym import wrappers
-from custom_ant import CustomAnt
-from arena.games.complex_wrapper import ComplexWrapper
-from single_gather_env import SingleGatherEnv
-from gather_env import GatherEnv
+from arena.games.cust_control.single_gather_env import SingleGatherEnv
 from pg_train import random_cont_direction
 from gym.monitoring import VideoRecorder
-from arena.video_encoder import VideoEncoder
+
+
 class RandomAgent(object):
     """The world's simplest agent!"""
 
@@ -74,7 +71,6 @@ if __name__ == '__main__':
     episode_count = 1000
     reward = 0
     done = False
-    import cv2
 
     while True:
         ob = env.reset()

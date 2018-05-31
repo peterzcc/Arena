@@ -1,29 +1,17 @@
-import os
+import multiprocessing as mp
 
 import numpy as np
-from arena.games.gym_wrapper import GymWrapper
-from arena.games.complex_wrapper import ComplexWrapper
 from arena.experiment import Experiment
-import gym
 from gym.spaces import Box, Discrete
 import argparse
 from batch_agent import BatchUpdateAgent
-from async_agent import AsyncAgent
-from hrl_agent import HrlAgent
 from flexible_hrl_agent import FlexibleHrlAgent
 import logging
-from custom_ant import CustomAnt
-from gather_env import GatherEnv
-from maze_env import MazeEnv
-from custom_pend import CustomPend
-from single_gather_env import SingleGatherEnv, SimpleSingleGatherEnv
-import sys
 import os
-from collections import OrderedDict
-from tf_utils import aggregate_feature, concat_feature, concat_without_task, str2bool
+from tf_utils import aggregate_feature, concat_feature, str2bool
 import subprocess
 from tensorflow.python.client import device_lib
-from env_library import gen_env_func
+from arena.games.cust_control.env_library import make_env
 
 BATH_SIZE = 10000
 
@@ -157,12 +145,12 @@ def main():
     # final_factor = 0.01
     test_length = 0
 
-    import multiprocessing
-    render_lock = multiprocessing.Lock()
-    barrier = multiprocessing.Barrier(num_actors)
     append_image = args.withimg
 
-    f_create_env, full_tasks, is_fake_hrl = gen_env_func(args.env, args.withimg, T)
+    _, env_info = make_env(args.env, args.withimg, T)
+    env_args = dict(env_name=args.env, withimg=args.withimg, T=T)
+    full_tasks = env_info["full_tasks"]
+    is_fake_hrl = env_info["is_fake_hrl"]
 
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
@@ -235,7 +223,7 @@ def main():
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
-        sample_env = f_create_env()
+        sample_env, env_info = make_env(**env_args)
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
         sample_env.env.close()
@@ -421,8 +409,8 @@ def main():
 
     f_create_params = pg_shared_params if len(full_tasks) == 1 else flexible_hrl_shared_params
 
-    single_process_mode = True if append_image else False
-    experiment = Experiment(f_create_env, f_create_agent,
+    single_process_mode = False  # True if append_image else False
+    experiment = Experiment(env_args, f_create_agent,
                             f_create_params, single_process_mode=single_process_mode, render_option=args.render,
                             log_episodes=True)
     logging.info("run arges: {}".format(args))

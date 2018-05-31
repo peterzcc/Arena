@@ -119,10 +119,8 @@ disprun python3.6 ~/Arena/examples/trpo1/plot.py --dir ../exp_50 ../exp_54 ../ex
 
 
 local :
-python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss PPO_WASS
-
-python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0
-.002 --loss PPO_WASS
+python3.6 pg_train.py --env move0 --rl-method PG --nactor 32 --batch-size 4096 --withimg 1 --nfeat 1 --load-model 0 --kl 0.001 --vlr 0.002 --norm-gae 0 --loss TRAD_WASS
+python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 32 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.002 --norm-gae 0 --loss TRAD_WASS
 
 record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env simplemove1d --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record --load-dir exp_7

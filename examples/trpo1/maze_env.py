@@ -1,19 +1,11 @@
 import math
-import os.path as osp
 import tempfile
 import xml.etree.ElementTree as ET
-from ctypes import byref
 
 import numpy as np
-from custom_ant import CustomAnt
+from arena.games.cust_control.custom_ant import CustomAnt
 from gym import utils
 from gym.envs.mujoco import mujoco_env
-from mujoco_py import MjModel, MjViewer, mjcore, \
-    mjextra, glfw
-from mujoco_py.mjlib import mjlib
-from ctypes import byref
-import ctypes
-from threading import Lock
 
 
 def line_intersect(pt1, pt2, ptA, ptB):
