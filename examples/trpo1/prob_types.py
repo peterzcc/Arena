@@ -210,12 +210,26 @@ class DiagonalGaussian(ProbType):
     # def gen_dist_info(self, mean, log_std):
     #     return dict(mean=mean, log_std=log_std)
 
-    def gen_exploration_biased_dist_info(self, dist_info_vars, scale=0.0):
+    def gen_exploration_biased_dist_info(self, dist_info_vars):
         mean = dist_info_vars["mean"]
         mean_no_grad = tf.stop_gradient(mean)
+        original_log_std = dist_info_vars["logstd"]
+        # logstd_value = tf.stop_gradient(dist_info_vars["logstd"])
+        # logstd_with_lower_bound = tf.maximum(original_log_std, logstd_value)
+        positive_grad_logstd = scale_positive_gradient_op(original_log_std)
+        return dict(mean=mean_no_grad, logstd=positive_grad_logstd)
+
+    def fixed_std_dist_info(self, dist_info_vars):
+        mean = dist_info_vars["mean"]
         original_log_stds = dist_info_vars["logstd"]
-        grad_scaled_log_stds = scale_positive_gradient_op(original_log_stds, scale=scale)
-        return dict(mean=mean_no_grad, logstd=grad_scaled_log_stds)
+        logstd_no_grad = tf.stop_gradient(original_log_stds)
+        return dict(mean=mean, logstd=logstd_no_grad)
+
+    def fixed_mean_dist_info(self, dist_info_vars):
+        mean = dist_info_vars["mean"]
+        fixed_mean = tf.stop_gradient(mean)
+        logstd = dist_info_vars["logstd"]
+        return dict(mean=fixed_mean, logstd=logstd)
 
     def reset_exp(self, interm_vars, std=0.1):
         param = interm_vars["logstd_param"]

@@ -167,18 +167,26 @@ class MultiNetwork(object):
                 logging.info("logstd_bias:{}".format(logstd_exploration_bias))
                 grad_biased_dist_vars = \
                     self.distribution.gen_exploration_biased_dist_info(
-                        self.dist_vars,
-                        scale=logstd_exploration_bias)
+                        self.dist_vars)
                 self.biased_new_log_pi = self.distribution.log_likelihood_sym(self.action_n, grad_biased_dist_vars)
                 self.exploration_biased_rl_loss = \
+                    logstd_exploration_bias * \
                     self.rl_func(self.biased_new_log_pi,
                                  tf.maximum(self.advant, 0.0),
                                  self.old_log_pi)
+                self.critic_exp_var = tf.placeholder(dtype=tf.float32, name="critic_exp_var")
+                std_fixed_logpi = self.distribution.log_likelihood_sym(
+                    self.action_n, self.distribution.fixed_std_dist_info(self.dist_vars))
+                mean_fixed_logpi = self.distribution.log_likelihood_sym(
+                    self.action_n, self.distribution.fixed_mean_dist_info(self.dist_vars)
+                )
+                self.rl_loss = self.rl_func(std_fixed_logpi, self.advant, self.old_log_pi) \
+                               + self.critic_exp_var * (
+                                       self.rl_func(mean_fixed_logpi, self.advant, self.old_log_pi)
+                                       + self.exploration_biased_rl_loss)
             else:
-                self.exploration_biased_rl_loss = 0.0
-            self.critic_exp_var = tf.placeholder(dtype=tf.float32, name="critic_exp_var")
-            self.rl_loss = self.rl_func(self.new_log_pi, self.advant, self.old_log_pi) \
-                           + self.critic_exp_var * self.exploration_biased_rl_loss
+                self.rl_loss = self.rl_func(self.new_log_pi, self.advant, self.old_log_pi)
+
 
 
 

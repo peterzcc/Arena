@@ -13,10 +13,10 @@ tf.set_random_seed(seed)
 dtype = tf.float32
 
 
-def scale_positive_gradient_op(x, scale=0.1):
+def scale_positive_gradient_op(x):
     @tf.RegisterGradient("ScalePositive")
     def _const_mul_grad(unused_op, grad):
-        return (scale * tf.cast(grad < 0.0, tf.float32)) * grad
+        return tf.minimum(grad, 0.0)
 
     g = tf.get_default_graph()
     with g.gradient_override_map({"Identity": "ScalePositive"}):
