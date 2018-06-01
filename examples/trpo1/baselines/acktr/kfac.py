@@ -3,6 +3,7 @@ import numpy as np
 import re
 from baselines.acktr.kfac_utils import *
 from functools import reduce
+import logging
 
 KFAC_OPS = ['MatMul', 'Conv2D', 'BiasAdd']
 KFAC_DEBUG = False
@@ -13,6 +14,7 @@ class KfacOptimizer():
                  full_stats_init=False, cold_iter=100, cold_lr=None, async=False, async_stats=False, epsilon=1e-2,
                  stats_decay=0.95, blockdiag_bias=False, channel_fac=False, factored_damping=False, approxT2=False,
                  use_float64=False, weight_decay_dict={}, max_grad_norm=0.5, use_wasserstein=False):
+        logging.debug("kfac args:\n {}".format(locals()))
         self.max_grad_norm = max_grad_norm
         self._lr = learning_rate
         self._momentum = momentum

@@ -152,7 +152,7 @@ class PolicyGradientModel(ModelWithCritic):
         WASS_POSTFIX = "_WASS"
         self.loss_type = loss_type[:-len(WASS_POSTFIX)] if loss_type.endswith(WASS_POSTFIX) else loss_type
 
-        use_wasserstein = (self.mode == "PG" and loss_type.endswith(WASS_POSTFIX))
+        use_wasserstein = loss_type.endswith(WASS_POSTFIX)
 
         self.policy = MultiNetwork(scope=self.name + "_policy",
                                    observation_space=self.ob_space,

@@ -43,6 +43,7 @@ class MultiNetwork(object):
                  use_wasserstein=False,
                  logstd_sample_dev=1.0
                  ):
+        logging.debug("network args:\n {}".format(locals()))
         self.comb_method = comb_method
         self.is_switcher_with_init_len = is_switcher_with_init_len
         self.initializer = initializer
@@ -175,16 +176,20 @@ class MultiNetwork(object):
                     self.rl_func(self.biased_new_log_pi,
                                  tf.maximum(self.advant, 0.0),
                                  self.old_log_pi)
-
-                std_fixed_logpi = self.distribution.log_likelihood_sym(
-                    self.action_n, self.distribution.fixed_std_dist_info(self.dist_vars))
-                mean_fixed_logpi = self.distribution.log_likelihood_sym(
-                    self.action_n, self.distribution.fixed_mean_dist_info(self.dist_vars)
-                )
-                self.rl_loss = self.rl_func(std_fixed_logpi, self.advant, self.old_log_pi) \
-                               + self.critic_exp_var * (
-                                       self.rl_func(mean_fixed_logpi, self.advant, self.old_log_pi)
-                                       + self.exploration_biased_rl_loss)
+                scale_std_grad_by_exp_var = False
+                if scale_std_grad_by_exp_var:
+                    std_fixed_logpi = self.distribution.log_likelihood_sym(
+                        self.action_n, self.distribution.fixed_std_dist_info(self.dist_vars))
+                    mean_fixed_logpi = self.distribution.log_likelihood_sym(
+                        self.action_n, self.distribution.fixed_mean_dist_info(self.dist_vars)
+                    )
+                    self.rl_loss = self.rl_func(std_fixed_logpi, self.advant, self.old_log_pi) \
+                                   + self.critic_exp_var * (
+                                           self.rl_func(mean_fixed_logpi, self.advant, self.old_log_pi)
+                                           + self.exploration_biased_rl_loss)
+                else:
+                    self.rl_loss = self.rl_func(self.new_log_pi, self.advant, self.old_log_pi) \
+                                   + self.exploration_biased_rl_loss
             else:
                 self.rl_loss = self.rl_func(self.new_log_pi, self.advant, self.old_log_pi)
 

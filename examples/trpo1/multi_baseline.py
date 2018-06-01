@@ -23,6 +23,7 @@ class MultiBaseline(object):
                  cnn_trainable=True,
                  f_build_cnn=None,
                  is_switcher_with_init_len=0):
+        logging.debug("critic args:\n {}".format(locals()))
         self.session = session
         self.max_iter = max_iter
         self.l2_k = 1e-4
