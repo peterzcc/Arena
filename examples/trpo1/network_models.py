@@ -162,6 +162,7 @@ class MultiNetwork(object):
             self.p_l2 = tf.add_n([tf.nn.l2_loss(v) for v in self.var_list])
             rl_func_dict = {"PPO": ppo_loss, "TRAD": trad_loss}
             self.rl_func = rl_func_dict[rl_loss_type]
+            self.critic_exp_var = tf.placeholder(dtype=tf.float32, name="critic_exp_var")
 
             if logstd_exploration_bias != 0.0 and isinstance(self.distribution, DiagonalGaussian):
                 logging.info("logstd_bias:{}".format(logstd_exploration_bias))
@@ -174,7 +175,7 @@ class MultiNetwork(object):
                     self.rl_func(self.biased_new_log_pi,
                                  tf.maximum(self.advant, 0.0),
                                  self.old_log_pi)
-                self.critic_exp_var = tf.placeholder(dtype=tf.float32, name="critic_exp_var")
+
                 std_fixed_logpi = self.distribution.log_likelihood_sym(
                     self.action_n, self.distribution.fixed_std_dist_info(self.dist_vars))
                 mean_fixed_logpi = self.distribution.log_likelihood_sym(
