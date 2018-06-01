@@ -48,7 +48,7 @@ cwd = os.getcwd()
 
 def main():
     parser = argparse.ArgumentParser(description='Script to test the network on cartpole swingup.')
-    parser.add_argument('--lr', required=False, default=0.0001, type=float,
+    parser.add_argument('--lr', required=False, default=0.001, type=float,
                         help='learning rate of the choosen optimizer')
     parser.add_argument('--npass', required=False, type=int, default=1,
                         help='num pass')
@@ -172,7 +172,7 @@ def main():
 
     if args.kl is None:
         f_target_kl = None
-    elif args.loss.endswith("WASS"):
+    elif args.loss.endswith("_WASS"):
         logging.info("Using decreasing learning rate")
         initial_kl = 0.001
         final_kl = args.kl
