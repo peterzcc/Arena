@@ -172,6 +172,20 @@ def main():
 
     if args.kl is None:
         f_target_kl = None
+    elif args.loss.endswith("WASS"):
+        logging.info("Using decreasing learning rate")
+        initial_kl = 0.001
+        final_kl = args.kl
+        decreasing_period_t_step = 15e7
+        decreasingg_period_n = decreasing_period_t_step / args.batch_size
+        log_power = (1.0 / decreasingg_period_n) * np.log(final_kl / initial_kl)
+        logging.info("wass decreasing power:{}".format(np.exp(log_power)))
+
+        def exp_decreasing_kl(n_update):
+            this_kl = initial_kl * np.exp(log_power * np.minimum(n_update, decreasingg_period_n))
+            return this_kl
+
+        f_target_kl = exp_decreasing_kl
     else:
         f_target_kl = const_kl
 
