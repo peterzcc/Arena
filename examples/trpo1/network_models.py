@@ -200,11 +200,12 @@ class MultiNetwork(object):
             if self.use_wasserstein:
                 assert isinstance(self.distribution, DiagonalGaussian)
                 self.logstd_sample_dev = logstd_sample_dev
-                self.wassersteins = self.distribution.wasserstein_sampled_sym(
+                self.wassersteins_sampled = self.distribution.wasserstein_sampled_sym(
                     self.old_vars, self.dist_vars,
                     logstd_sample_dev=self.logstd_sample_dev)
+                self.wassersteins = self.distribution.wasserstein_sym(self.old_vars, self.dist_vars)
                 self.kl = tf.reduce_mean(self.wassersteins)
-                self.loss_sampled = self.kl
+                self.loss_sampled = tf.reduce_mean(self.wassersteins_sampled)
             else:
                 self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
                 self.kl = tf.reduce_mean(self.kls)
