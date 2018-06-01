@@ -31,6 +31,8 @@ tf.set_random_seed(seed)
 
 dtype = tf.float32
 STATS_KEYS = ['mean', 'logstd', 'advantage', 'baseline', 'return', 'action']
+KEY_ACKTR = ['ACKTR']
+
 
 class PolicyGradientModel(ModelWithCritic):
     def __init__(self, observation_space, action_space,
@@ -191,7 +193,12 @@ class PolicyGradientModel(ModelWithCritic):
             self.rl_loss = self.rl_loss + self.switcher_cost_k + self.policy.switcher_cost
         self.final_loss = self.rl_loss + self.ent_loss + self.regulation_loss
         if should_train:
-            if self.mode == "ACKTR":
+            if self.mode.startswith("ACKTR"):
+                use_adam = False
+                if len(mode) > len(KEY_ACKTR):
+                    if self.mode[len(KEY_ACKTR):] == "ADAM":
+                        use_adam = True
+
                 self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
                 k_min_stepsize = np.float32(1e-8)
                 k_max_stepsize = np.float32(1e0)
@@ -210,7 +217,7 @@ class PolicyGradientModel(ModelWithCritic):
                                                   epsilon=1e-2, stats_decay=0.99,
                                                   async=True, cold_iter=1,
                                                   weight_decay_dict={}, max_grad_norm=None,
-                                                  use_wasserstein=use_wasserstein)
+                                                  use_adam=use_adam)
 
                 self.k_final_loss = self.final_loss
 

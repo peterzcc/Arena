@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" -- bash
 
 CUDA_VISIBLE_DEVICES=3 xvfb-run -a -s "-screen 0 1400x900x24 +extension RANDR" python3 trpo_test.py --nactor 20 --batch-size 20000
@@ -81,29 +82,25 @@ disprun python3.6 ~/Arena/examples/trpo1/plot.py -w20
 CUDA_VISIBLE_DEVICES=0,1,2
 0mux5
 #not flat acktr wass
-CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss TRAD_WASS --stdbias 0.003
-CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss TRAD_WASS --stdbias 0.01
-CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss TRAD_WASS --stdbias 0.03
-CUDA_VISIBLE_DEVICES=3 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --loss TRAD_WASS --stdbias 0.1
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.000001 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.000003 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.00001 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=3 disprun python3.6 pg_train.py --env flatmove1d --rl-method ACKTR --nactor 16 --batch-size 2048 --withimg 1 --nfeat 16 --load-model 0 --kl 0.00003 --vlr 0.001 --loss TRAD_WASS
 
 
 1mux1
 #extra loss weighted by adv
-#96 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.002 --norm-gae 0 --loss TRAD_WASS --stdbias 0.1
-#100 CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.002 --norm-gae 0 --loss TRAD_WASS --stdbias 0.3
-#101 CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.002 --norm-gae 0 --loss TRAD_WASS --stdbias 1.0
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_96 ../exp_100 ../exp_101 --label 0.1 0.3 1.0
-disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir ../exp_96 ../exp_100 ../exp_101 --label 0.1 0.3 1.0
-disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname kl
 
 5
 wass acktr correct sampling
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --loss TRAD_WASS
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001 --loss TRAD_WASS
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD_WASS
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --loss TRAD_WASS
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0000003 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.000001 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.000003 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00001 --vlr 0.001 --loss TRAD_WASS
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --loss TRAD_WASS
 
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_14 ../exp_15 ../exp_16 ../exp_17 --label 1e-4 3e-4 1e-3 3e-3
+disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname kl --dir ../exp_14 ../exp_15 ../exp_16 ../exp_17 --label 1e-4 3e-4 1e-3 3e-3
 
 3mux1
 

@@ -9,11 +9,11 @@ KFAC_OPS = ['MatMul', 'Conv2D', 'BiasAdd']
 KFAC_DEBUG = False
 
 
-class KfacOptimizer():
+class KfacOptimizer(object):
     def __init__(self, learning_rate=0.01, momentum=0.9, clip_kl=0.01, kfac_update=2, stats_accum_iter=60,
                  full_stats_init=False, cold_iter=100, cold_lr=None, async=False, async_stats=False, epsilon=1e-2,
                  stats_decay=0.95, blockdiag_bias=False, channel_fac=False, factored_damping=False, approxT2=False,
-                 use_float64=False, weight_decay_dict={}, max_grad_norm=0.5, use_wasserstein=False):
+                 use_float64=False, weight_decay_dict={}, max_grad_norm=0.5, use_adam=False):
         logging.debug("kfac args:\n {}".format(locals()))
         self.max_grad_norm = max_grad_norm
         self._lr = learning_rate
@@ -57,7 +57,7 @@ class KfacOptimizer():
         self.stats = {}
         self.stats_eigen = {}
 
-        self.use_wasserstein = use_wasserstein
+        self._use_adam = use_adam
 
     def getFactors(self, g, varlist):
         graph = tf.get_default_graph()
@@ -905,7 +905,7 @@ class KfacOptimizer():
 
                     u = tf.cond(tf.greater(self.factor_step,
                                            tf.convert_to_tensor(0)), getKfacGradOp, gradOp)
-                    if not self.use_wasserstein:
+                    if not self._use_adam:
 
                         optim = tf.train.MomentumOptimizer(
                             self._lr * (1. - self._momentum), self._momentum)
