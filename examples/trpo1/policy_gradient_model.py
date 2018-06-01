@@ -286,6 +286,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.load_old_model = load_old_model
         self.should_reset_exp = reset_exp
         self.parallel_predict = parallel_predict
+        assert (self.batch_size % self.num_actors == 0 if parallel_predict else True)
         self.savestats = savestats
         self.has_reset_fix_ter_weight = False
         self.const_action = const_action

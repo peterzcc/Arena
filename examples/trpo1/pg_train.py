@@ -267,7 +267,7 @@ def main():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
         import tensorflow as tf
-        sample_env = f_create_env()
+        sample_env, _ = make_env(**env_args)
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
         sample_env.env.close()
