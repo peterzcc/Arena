@@ -1,6 +1,6 @@
 from arena.agents import Agent
 # from trpo_model import TrpoModel
-from policy_gradient_model import PolicyGradientModel
+# from policy_gradient_model import PolicyGradientModel
 import numpy as np
 import logging
 from dict_memory import DictMemory
@@ -25,8 +25,8 @@ class FlexibleHrlAgent(Agent):
 
         assert shared_params is not None
         # self.param_lock = shared_params["lock"]
-        self.decider: PolicyGradientModel = shared_params["models"]["decider"]
-        self.switcher: PolicyGradientModel = shared_params["models"]["switcher"]
+        self.decider = shared_params["models"]["decider"]
+        self.switcher = shared_params["models"]["switcher"]
         self.sub_policies = shared_params["models"]["leafs"]
         self.sub_pol_act_t = 0
         self.memory: DictMemory = shared_params["memory"]

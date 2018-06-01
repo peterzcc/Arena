@@ -15,7 +15,6 @@ import threading
 from gym.spaces import Discrete, Box
 import signal
 import sys
-import pandas as pd
 from multiprocessing import process
 from arena.games.cust_control import make_env
 
@@ -31,12 +30,16 @@ def space_to_np(space):
 def actuator_thread(env_args, stats_tx, acts_rx,
                     cmd_signal, episode_data_q,
                     global_t, act_id=0, render_option=None):
-    this_actuator = Actuator(env_args, stats_tx, acts_rx,
-                             cmd_signal, episode_data_q,
-                             global_t, act_id,
-                             render_option=render_option
-                             )
-    this_actuator.run_loop()
+    # trick to reduce gpu
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    import tensorflow as tf
+    with tf.device('/cpu:0'):
+        this_actuator = Actuator(env_args, stats_tx, acts_rx,
+                                 cmd_signal, episode_data_q,
+                                 global_t, act_id,
+                                 render_option=render_option
+                                 )
+        this_actuator.run_loop()
 
 class Experiment(object):
     """Class for automatically running parallel AI agents
@@ -115,7 +118,8 @@ class Experiment(object):
             pass
         self.env_args = env_args
         self.f_create_agent = f_create_agent
-        self.shared_params = f_create_shared_params()
+        self.f_create_shared_params = f_create_shared_params
+        self.shared_params = None  # f_create_shared_params()
         self.is_learning = mp_ctx.Value(ctypes.c_bool, lock=False)
         self.is_learning.value = True
         self.global_t = mp_ctx.Value(ctypes.c_int, lock=True)
@@ -175,15 +179,19 @@ class Experiment(object):
             observation_sample = space_to_np(self.observation_space)
             obs_type = FastPipe
         action_sample = space_to_np(self.action_space)
+        stats_pipes = []
+        action_pipes = []
 
         for process_id in range(num_actor):
             self.actuator_channels.append(self.queue_type())
             obs_pipe = obs_type({"observation": observation_sample})
             action_pipe = FastPipe({"action": action_sample})
+            action_pipes.append(action_pipe)
             feedback_sample = {"reward": 0.0, "done": False}
             feedback_sample.update(self.info_sample)
             feedback_pipe = FastPipe(feedback_sample)
             stats_pipe = [obs_pipe, feedback_pipe]
+            stats_pipes.append(stats_pipe)
 
             this_actuator_process = \
                 self.process_type(
@@ -198,6 +206,13 @@ class Experiment(object):
                           RenderOption.lookup(self.render_option)))
             this_actuator_process.daemon = True
             self.actuator_processes.append(this_actuator_process)
+        for actuator in self.actuator_processes:
+            actuator.start()
+        logging.info("actuators started")
+        self.shared_params = self.f_create_shared_params()
+        for process_id in range(num_actor):
+            stats_pipe = stats_pipes[process_id]
+            action_pipe = action_pipes[process_id]
             agent = self.f_create_agent(self.observation_space,
                                         self.action_space,
                                         self.shared_params,
@@ -207,6 +222,7 @@ class Experiment(object):
                                         self.global_t,
                                         process_id)
             agents.append(agent)
+
         for process_id in range(num_actor):
             this_agent_thread = \
                 thd.Thread(
@@ -215,6 +231,8 @@ class Experiment(object):
                 )
             this_agent_thread.daemon = True
             self.agent_threads.append(this_agent_thread)
+        for agent in self.agent_threads:
+            agent.start()
 
     def interrupt(self, signal, frame):
         force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
@@ -248,13 +266,6 @@ class Experiment(object):
         # Where should we put the creation of actor/learners?
 
         self.create_actor_learner_processes(num_actor)
-
-        for actuator in self.actuator_processes:
-            actuator.start()
-
-        for agent in self.agent_threads:
-            agent.start()
-
 
         epoch_num = 0
         epoch_reward = 0

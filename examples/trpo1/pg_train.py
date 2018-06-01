@@ -4,37 +4,18 @@ import numpy as np
 from arena.experiment import Experiment
 from gym.spaces import Box, Discrete
 import argparse
-from batch_agent import BatchUpdateAgent
-from flexible_hrl_agent import FlexibleHrlAgent
+
 import logging
 import os
-from tf_utils import aggregate_feature, concat_feature, str2bool
+
 import subprocess
-from tensorflow.python.client import device_lib
 from arena.games.cust_control.env_library import make_env
 
 BATH_SIZE = 10000
 
 
 # np.set_printoptions(precision=4)
-class GpuManager(object):
-    GPU_DEVICES = None
-    CURRENT_DEVICE_ID = 0
 
-    @staticmethod
-    def find_available_gpus():
-        local_device_protos = device_lib.list_local_devices()
-        GpuManager.GPU_DEVICES = [x.name for x in local_device_protos if x.device_type == 'GPU']
-
-    @staticmethod
-    def get_a_gpu_and_change():
-        num_gpu = len(GpuManager.GPU_DEVICES)
-        if num_gpu == 0:
-            return '/cpu:0'
-        this_gpu = GpuManager.GPU_DEVICES[GpuManager.CURRENT_DEVICE_ID]
-        GpuManager.CURRENT_DEVICE_ID = (GpuManager.CURRENT_DEVICE_ID + 1) % num_gpu
-        logging.info("current device: {}".format(this_gpu))
-        return this_gpu
 def get_git_revision_short_hash():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
 
@@ -55,7 +36,13 @@ def exp_moving_value(x1, x2, t1, t2, t):
     return x1 * (x2 / x1) ** ((t - t1) / (t2 - t1))
 
 
-
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 cwd = os.getcwd()
 
@@ -155,6 +142,8 @@ def main():
     def f_create_agent(observation_space, action_space,
                        shared_params, stats_rx, acts_tx,
                        is_learning, global_t, pid):
+        from batch_agent import BatchUpdateAgent
+        from flexible_hrl_agent import FlexibleHrlAgent
         if len(full_tasks) == 1:
             return BatchUpdateAgent(
                 observation_space, action_space,
@@ -223,6 +212,7 @@ def main():
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
+        from tf_utils import aggregate_feature, concat_feature
         sample_env, env_info = make_env(**env_args)
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
@@ -267,6 +257,7 @@ def main():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
         import tensorflow as tf
+        from tf_utils import aggregate_feature, concat_feature
         sample_env, _ = make_env(**env_args)
         observation_space = sample_env.observation_space
         action_space = sample_env.action_space
@@ -276,6 +267,7 @@ def main():
 
         #comb_methd = concat_without_task if feat_sup else comb_methd
         session = create_session()
+        from gpu_manager import GpuManager
         GpuManager.find_available_gpus()
 
         decider_action_space = Discrete(len(full_tasks) - 1)

@@ -1,7 +1,7 @@
 from arena.memory import AcMemory
 from arena.agents import Agent
 # from trpo_model import TrpoModel
-from policy_gradient_model import PolicyGradientModel
+# from policy_gradient_model import PolicyGradientModel
 import numpy as np
 import logging
 from dict_memory import DictMemory
@@ -24,7 +24,7 @@ class BatchUpdateAgent(Agent):
 
         assert shared_params is not None
         # self.param_lock = shared_params["lock"]
-        self.policy: PolicyGradientModel = shared_params["models"][0]
+        self.policy = shared_params["models"][0]
         self.memory: DictMemory = shared_params["memory"]
 
         self.num_epoch = 0

@@ -4,7 +4,6 @@ import multiprocessing as mp
 import queue
 from arena.mp_utils import ProcessState, RenderOption
 import logging
-from gym.monitoring import VideoRecorder
 from arena.games.cust_control import make_env
 
 
@@ -31,6 +30,7 @@ class Actuator(object):
         self.gb_t = global_t
         self.video_encoder = None
         if self.render_option == RenderOption.record:
+            from gym.monitoring import VideoRecorder
             self.video_encoder = VideoRecorder(self.env, path="./video_thd{}.mp4".format(self.id))
 
         root = logging.getLogger()
