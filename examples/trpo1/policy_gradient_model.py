@@ -194,10 +194,10 @@ class PolicyGradientModel(ModelWithCritic):
         self.final_loss = self.rl_loss + self.ent_loss + self.regulation_loss
         if should_train:
             if self.mode.startswith("ACKTR"):
-                use_adam = False
-                if len(mode) > len(KEY_ACKTR):
-                    if self.mode[len(KEY_ACKTR):] == "ADAM":
+                if self.mode.endswith("ADAM"):
                         use_adam = True
+                else:
+                    use_adam = False
 
                 self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
                 k_min_stepsize = np.float32(1e-8)
