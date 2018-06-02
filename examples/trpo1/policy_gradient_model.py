@@ -114,6 +114,8 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.n_imgfeat = n_imgfeat if n_imgfeat is not None else self.ob_space[0].shape[0]
         self.comb_method = comb_method  # aggregate_feature#
+        # extra feed parameters
+        self._feed_parameters = {}
 
         cnn_trainable = True
         if n_imgfeat < 0:
@@ -210,8 +212,10 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_increase_step = tf.assign(self.k_stepsize, tf.minimum(k_max_stepsize, self.k_stepsize * 1.5))
 
                 self.k_momentum = 0.9
+                clip_kl = True if self.target_kl_initial is not None else False
                 self.k_optim = kfac.KfacOptimizer(learning_rate=self.k_stepsize,
                                                   cold_lr= self.k_stepsize * (1 - self.k_momentum),
+                                                  clip_kl=clip_kl,
                                                   momentum=self.k_momentum,
                                                   kfac_update=2,
                                                   epsilon=1e-2, stats_decay=0.99,
@@ -306,8 +310,7 @@ class PolicyGradientModel(ModelWithCritic):
         self._train_loop_thread.start()
         self._log_msg = "{}:\n".format(self.name)
 
-        # extra feed parameters
-        self._feed_parameters = {}
+
 
     def _log(self, msg):
         self._log_msg += msg + "\n"
@@ -549,7 +552,13 @@ class PolicyGradientModel(ModelWithCritic):
         return surr, kl, ent
 
     def fit_acktr(self, feed, num_samples, pid=None, feed_parameters={}):
-        target_kl_value = self.f_target_kl(self.n_update)
+        if self.f_target_kl is not None:
+            target_kl_value = self.f_target_kl(self.n_update)
+            self._log("target_kl:{}".format(target_kl_value))
+            self._feed_parameters[self.k_optim.var_clip_kl] = target_kl_value
+        else:
+            target_kl_value = np.nan
+            self._log("not using trust region")
         verbose = self.debug  #and (pid is None or pid == 0)
 
         _, _, _ = self.print_stat(feed, num_samples, tag="old")
@@ -557,20 +566,20 @@ class PolicyGradientModel(ModelWithCritic):
         _ = self.session.run(self.k_update_op, feed_dict={**feed, **self._feed_parameters})
 
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
-
-        kl_target_ratio = kl_new / target_kl_value
-        if kl_target_ratio > 4.0:
-            if verbose: self._log("kl too high")
-            self.session.run(self.k_decrease_large_step,
-                             feed_dict={self.k_adjust_ratio: 0.75 * kl_target_ratio})
-        elif kl_target_ratio > 2.0:
-            if verbose: self._log("kl too high")
-            self.session.run(self.k_decrease_step)
-        elif kl_target_ratio < 0.5:
-            if verbose: self._log("kl too low")
-            self.session.run(self.k_increase_step)
-        else:
-            if verbose: self._log("kl just right!")
+        if self.f_target_kl is not None:
+            kl_target_ratio = kl_new / target_kl_value
+            if kl_target_ratio > 4.0:
+                if verbose: self._log("kl too high")
+                self.session.run(self.k_decrease_large_step,
+                                 feed_dict={self.k_adjust_ratio: 0.75 * kl_target_ratio})
+            elif kl_target_ratio > 2.0:
+                if verbose: self._log("kl too high")
+                self.session.run(self.k_decrease_step)
+            elif kl_target_ratio < 0.5:
+                if verbose: self._log("kl too low")
+                self.session.run(self.k_increase_step)
+            else:
+                if verbose: self._log("kl just right!")
 
     def fit_pg(self, feed, num_samples, pid=None, feed_parameters={}):
 

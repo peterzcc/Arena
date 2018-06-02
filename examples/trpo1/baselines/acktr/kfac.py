@@ -10,7 +10,7 @@ KFAC_DEBUG = False
 
 
 class KfacOptimizer(object):
-    def __init__(self, learning_rate=0.01, momentum=0.9, clip_kl=0.01, kfac_update=2, stats_accum_iter=60,
+    def __init__(self, learning_rate=0.01, momentum=0.9, clip_kl=True, kfac_update=2, stats_accum_iter=60,
                  full_stats_init=False, cold_iter=100, cold_lr=None, async=False, async_stats=False, epsilon=1e-2,
                  stats_decay=0.95, blockdiag_bias=False, channel_fac=False, factored_damping=False, approxT2=False,
                  use_float64=False, weight_decay_dict={}, max_grad_norm=0.5, use_adam=False):
@@ -30,7 +30,7 @@ class KfacOptimizer(object):
         self._use_float64 = use_float64
         self._factored_damping = factored_damping
         self._cold_iter = cold_iter
-        if cold_lr == None:
+        if cold_lr is None:
             # good heuristics
             self._cold_lr = self._lr  # * 3.
         else:
@@ -51,6 +51,7 @@ class KfacOptimizer(object):
         self.stats_step = tf.Variable(
             0, name='KFAC/stats_step', trainable=False)
         self.vFv = tf.Variable(0., name='KFAC/vFv', trainable=False)
+        self.var_clip_kl = tf.placeholder(tf.float32, name='KFAC/vFv')
 
         self.factors = {}
         self.param_vars = []
@@ -803,18 +804,21 @@ class KfacOptimizer(object):
             vg += local_vg
 
         # recale everything
-        if KFAC_DEBUG:
-            print('apply vFv clipping')
+        if self._clip_kl:
+            if KFAC_DEBUG:
+                print('apply vFv clipping')
 
-        scaling = tf.minimum(1., tf.sqrt(
-            self._clip_kl / vg))  #vg is the vFv?, why scale with minimum 1.0? #TODO: figure out this
-        if KFAC_DEBUG:
-            scaling = tf.Print(scaling, [tf.convert_to_tensor(
-                'clip: '), scaling, tf.convert_to_tensor(' vFv: '), vg])
-        with tf.control_dependencies([tf.assign(self.vFv, vg)]):
+            scaling = tf.minimum(1., tf.sqrt(
+                self.var_clip_kl / vg))  # vg is the vFv?, why scale with minimum 1.0? #TODO: figure out this
+            if KFAC_DEBUG:
+                scaling = tf.Print(scaling, [tf.convert_to_tensor(
+                    'clip: '), scaling, tf.convert_to_tensor(' vFv: '), vg])
+            with tf.control_dependencies([tf.assign(self.vFv, vg)]):
+                updatelist = [grad_dict[var] for var in varlist]
+                for i, item in enumerate(updatelist):
+                    updatelist[i] = scaling * item
+        else:
             updatelist = [grad_dict[var] for var in varlist]
-            for i, item in enumerate(updatelist):
-                updatelist[i] = scaling * item
 
         return updatelist
 

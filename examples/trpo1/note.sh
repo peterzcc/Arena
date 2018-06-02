@@ -79,6 +79,7 @@ python3.6 $M2WS/Arena/examples/trpo1/visualize_log.py --dataname std
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname mean_r_t --extra move0 move1 move2 move3 move4 move5 move6 move7 -w200
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w20
+tmux -L s2 new -s 2
 
 CUDA_VISIBLE_DEVICES=0,1,2 ./contact_czeng_if_you_need_gpu.sh
 0mux5
@@ -86,7 +87,7 @@ CUDA_VISIBLE_DEVICES=0,1,2 ./contact_czeng_if_you_need_gpu.sh
 dead CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.000003 --vlr 0.001 --loss TRAD_WASS
 dead CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00001 --vlr 0.001 --loss TRAD_WASS
 CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --loss TRAD_WASS
-CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001 --loss TRAD_WASS
+dead CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001 --loss TRAD_WASS
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_61 ../exp_62 ../exp_63 ../exp_64 --label 3e-5 1e-4 3e-4 1e-3
 
 1mux1
