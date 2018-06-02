@@ -204,7 +204,7 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
                 k_min_stepsize = np.float32(1e-8)
                 k_max_stepsize = np.float32(1e0)
-                self.k_adjust_ratio = tf.placeholder(tf.float32, "adjust ratio")
+                self.k_adjust_ratio = tf.placeholder(tf.float32, shape=None, name="adjust_ratio")
                 self.k_decrease_large_step = tf.assign(self.k_stepsize,
                                                        tf.maximum(k_min_stepsize,
                                                                   (1.0 / self.k_adjust_ratio ** 0.5) * self.k_stepsize))
