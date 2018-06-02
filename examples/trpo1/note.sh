@@ -97,6 +97,7 @@ CUDA_VISIBLE_DEVICES=3 disprun python3.6 pg_train.py --env flatcont2d --rl-metho
 CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0003 --vlr 0.002 --loss TRAD --lr 0.001 --stdbias 0.0001
 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0003 --vlr 0.002 --loss TRAD --lr 0.001 --stdbias 0.001
 CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0003 --vlr 0.002 --loss TRAD --lr 0.001 --stdbias 0.01
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0003 --vlr 0.002 --loss TRAD --lr 0.001 --stdbias 0.1
 
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_65 ../exp_66 ../exp_69 --label 0.001 0.003 0.01
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir ../exp_65 ../exp_66 ../exp_69 --label 0.001 0.003 0.01
