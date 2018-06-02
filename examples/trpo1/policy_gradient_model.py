@@ -207,9 +207,12 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_adjust_ratio = tf.placeholder(tf.float32)
                 self.k_decrease_large_step = tf.assign(self.k_stepsize,
                                                        tf.maximum(k_min_stepsize,
-                                                                  (1.0 / self.k_adjust_ratio) * self.k_stepsize))
-                self.k_decrease_step = tf.assign(self.k_stepsize, tf.maximum(k_min_stepsize, self.k_stepsize / 1.5))
-                self.k_increase_step = tf.assign(self.k_stepsize, tf.minimum(k_max_stepsize, self.k_stepsize * 1.5))
+                                                                  (1.0 / np.sqrt(
+                                                                      self.k_adjust_ratio)) * self.k_stepsize))
+                self.k_decrease_step = tf.assign(self.k_stepsize,
+                                                 tf.maximum(k_min_stepsize, self.k_stepsize / np.sqrt(2.)))
+                self.k_increase_step = tf.assign(self.k_stepsize,
+                                                 tf.minimum(k_max_stepsize, self.k_stepsize * np.sqrt(2.)))
 
                 self.k_momentum = 0.9
                 clip_kl = True if self.target_kl_initial is not None else False
@@ -571,7 +574,7 @@ class PolicyGradientModel(ModelWithCritic):
             if kl_target_ratio > 4.0:
                 if verbose: self._log("kl too high")
                 self.session.run(self.k_decrease_large_step,
-                                 feed_dict={self.k_adjust_ratio: 0.75 * kl_target_ratio})
+                                 feed_dict={self.k_adjust_ratio: kl_target_ratio})
             elif kl_target_ratio > 2.0:
                 if verbose: self._log("kl too high")
                 self.session.run(self.k_decrease_step)
@@ -615,14 +618,14 @@ class PolicyGradientModel(ModelWithCritic):
         if self.f_target_kl is not None:
             if kl_new > target_kl_value * 2:
                 self.p_beta_value = np.minimum(self.p_beta_max,
-                                               1.5 / 2 * (kl_new / target_kl_value) * self.p_beta_value)
+                                               np.sqrt(kl_new / target_kl_value) * self.p_beta_value)
                 if self.p_beta_value > self.p_beta_max / 1.2:
-                    self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / 1.5)
+                    self.p_step_size = np.maximum(self.p_min_step_size, self.p_step_size / np.sqrt(2.0))
                 self._log('beta -> {} \t step_size -> {}'.format(self.p_beta_value, self.p_step_size))
             elif kl_new < target_kl_value / 2:
-                self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / 1.5)
+                self.p_beta_value = np.maximum(self.p_beta_min, self.p_beta_value / np.sqrt(2.0))
                 if self.p_beta_value < 1.2 * self.p_beta_min:
-                    self.p_step_size = np.minimum(self.p_max_step_size, 1.5 * self.p_step_size)
+                    self.p_step_size = np.minimum(self.p_max_step_size, np.sqrt(2.0) * self.p_step_size)
                 self._log('beta -> {} \t step_size -> {}'.format(self.p_beta_value, self.p_step_size))
             else:
                 self._log('beta OK = {} \t step_size OK = {}'.format(self.p_beta_value, self.p_step_size))
