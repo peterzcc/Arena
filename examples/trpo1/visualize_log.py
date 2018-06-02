@@ -85,7 +85,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
     #     plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)
     # else:
     #     plt.plot(np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
-    log_scale_names = ["kl"]
+    log_scale_names = ["kl", "std"]
     if dataname in log_scale_names:
         ys = np.array(np.log10(np.array(loss_list).astype(np.float32) + 1e-6))
     else:
