@@ -5,7 +5,7 @@ from tf_utils import GetFlat, SetFromFlat, flatgrad, var_shape, linesearch, cg, 
     aggregate_feature, select_st, explained_variance_batched, tf_run_batched, batch_run_forward, MiniBatchAccumulator
 # from baseline import Baseline
 from multi_baseline import MultiBaseline
-from prob_types import DiagonalGaussian, Categorical
+from prob_types import DiagonalGaussian, Categorical, RobustMixtureGaussian
 from network_models import MultiNetwork
 import numpy as np
 import random
@@ -69,7 +69,8 @@ class PolicyGradientModel(ModelWithCritic):
                  reset_exp=False,
                  const_action=None,
                  policy_logstd_grad_bias=0.0,
-                 logstd_sample_dev=1.0
+                 logstd_sample_dev=1.0,
+                 use_mix=False
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -148,7 +149,10 @@ class PolicyGradientModel(ModelWithCritic):
                                     lr=critic_lr,
                                     name=self.name)
         if hasattr(self.act_space, "low"):
-            self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
+            if use_mix:
+                self.distribution = RobustMixtureGaussian(dim=self.act_space.low.shape[0])
+            else:
+                self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
         else:
             self.distribution = Categorical(num_cat=self.act_space.n)
 
@@ -228,7 +232,7 @@ class PolicyGradientModel(ModelWithCritic):
                 self.k_final_loss = self.final_loss
 
                 self.k_update_op, self.k_q_runner = self.k_optim.minimize(self.k_final_loss,
-                                                                          self.policy.mean_loglike,
+                                                                          self.policy.loss_sampled,
                                                                           var_list=self.policy.var_list)
                 self.k_enqueue_threads = []
                 self.k_coord = tf.train.Coordinator()

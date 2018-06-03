@@ -147,8 +147,7 @@ class MultiNetwork(object):
                 assert isinstance(self.distribution, Categorical)
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(logits=self.full_logits)
-            self.mean_loglike = - tf.reduce_mean(
-                self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
+
 
             new_log_pi = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
 
@@ -198,24 +197,28 @@ class MultiNetwork(object):
 
             # Sampled loss of the policy
             if self.use_wasserstein:
-                assert isinstance(self.distribution, DiagonalGaussian)
+                # assert isinstance(self.distribution, DiagonalGaussian)
                 self.logstd_sample_dev = logstd_sample_dev
                 self.wassersteins_sampled = self.distribution.wasserstein_sampled_sym(
-                    self.old_vars, self.dist_vars,
+                    self.old_vars, self.dist_vars, self.interm_vars,
                     logstd_sample_dev=self.logstd_sample_dev)
-                self.wassersteins = self.distribution.wasserstein_sym(self.old_vars, self.dist_vars)
+                self.wassersteins = self.distribution.wasserstein_sym(self.old_vars,
+                                                                      self.dist_vars)
                 self.kl = tf.reduce_mean(self.wassersteins)
                 self.loss_sampled = tf.reduce_mean(self.wassersteins_sampled)
             else:
                 self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
                 self.kl = tf.reduce_mean(self.kls)
+                self.mean_loglike = - tf.reduce_mean(
+                    self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
                 self.loss_sampled = self.mean_loglike
 
-            ent_n = self.distribution.entropy(self.dist_vars)  # - self.new_log_pi
-            self.ent = tf.reduce_mean(ent_n)
+            self.ent = tf.reduce_mean(self.distribution.entropy(self.dist_vars))  # - self.new_log_pi
+
+            self.reset_exp = self.distribution.reset_exp(self.interm_vars)
 
             self.regulation_loss = self.distribution.regulation_loss(self.dist_vars)
-            self.reset_exp = self.distribution.reset_exp(self.interm_vars)
+
             if self.is_switcher_with_init_len:
                 self.switch_prob = tf.sigmoid(self.full_logits[:, 1:2])
                 self.switcher_cost = tf.reduce_mean(self.switch_prob)
