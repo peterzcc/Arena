@@ -115,6 +115,10 @@ def main():
                         help='num img feat')
     parser.add_argument('--save-model', required=False, type=int, default=10,
                         help='save_model')
+    parser.add_argument('--decrease-with-initial', required=False, default=None, type=float,
+                        help='initial wass')
+    parser.add_argument('--wass-decrease-period', required=False, default=15.e6, type=float,
+                        help='wass decrease period')
 
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
     parser.add_argument("--savestats", default=False, type=str2bool, nargs='?', const=True, help='savestats')
@@ -172,14 +176,19 @@ def main():
 
     if args.kl is None:
         f_target_kl = None
-    elif args.loss.endswith("_WASS"):
-        logging.info("Using decreasing learning rate")
-        initial_kl = 0.001
+    elif args.decrease_with_initial is not None:
+
+        initial_kl = args.decrease_with_initial
         final_kl = args.kl
-        decreasing_period_t_step = 15e7
+        decreasing_period_t_step = args.wass_decrease_period
         decreasingg_period_n = decreasing_period_t_step / args.batch_size
         log_power = (1.0 / decreasingg_period_n) * np.log(final_kl / initial_kl)
-        logging.info("wass decreasing power:{}".format(np.exp(log_power)))
+        logging.warning(
+            "Using decreasing learning rate, from {} to {} in {} steps".format(
+                initial_kl,
+                final_kl,
+                decreasingg_period_n
+            ))
 
         def exp_decreasing_kl(n_update):
             this_kl = initial_kl * np.exp(log_power * np.minimum(n_update, decreasingg_period_n))
