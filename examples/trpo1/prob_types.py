@@ -38,7 +38,8 @@ _EPSILON = 1e-6
 
 def gaussian_loglikelihood(x_var, means, log_stds):
     zs = (x_var - means) * tf.exp(-log_stds)
-    return - tf.reduce_sum(log_stds, -1) - \
+    log_det_std = tf.reduce_sum(log_stds, -1)
+    return - log_det_std + tf.stop_gradient(log_det_std) - \
            0.5 * tf.reduce_sum(tf.square(zs), -1) - \
            0.5 * means.get_shape()[-1].value * np.log(2 * np.pi)
 
@@ -371,9 +372,8 @@ class RobustMixtureGaussian(ProbType):
         main_log_likelihood = dummy_gaussian.log_likelihood_sym(x_var, dist_info_vars)
         distrobust_info_vars = self._distrobust_info_vars_from_main(dist_info_vars)
         distrobust_log_likelihood = dummy_gaussian.log_likelihood_sym(x_var, distrobust_info_vars)
-        final_log_likelihood = tf.log(
-            self.main_prob * tf.exp(main_log_likelihood)
-            + self.exploration_prob * tf.exp(distrobust_log_likelihood))
+        final_log_likelihood = tf.log(tf.exp(main_log_likelihood + np.log(self.main_prob))
+                                      + tf.exp(distrobust_log_likelihood + np.log(self.exploration_prob)))
         return final_log_likelihood
 
     def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars):
@@ -403,7 +403,7 @@ class RobustMixtureGaussian(ProbType):
     def entropy(self, dist_info):
         log_stds = dist_info[KEY_LOGSTD]
         return tf.reduce_sum(log_stds, 1) + 0.5 * np.log(2 * np.pi * np.e) * self.dim
-    
+
     def reset_exp(self, interm_vars, std=0.1):
         param = interm_vars["logstd_param"]
         return tf.assign(param, np.log(np.ones(param.get_shape().as_list()) * std))
