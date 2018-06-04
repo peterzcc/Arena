@@ -372,8 +372,11 @@ class RobustMixtureGaussian(ProbType):
         main_log_likelihood = dummy_gaussian.log_likelihood_sym(x_var, dist_info_vars)
         distrobust_info_vars = self._distrobust_info_vars_from_main(dist_info_vars)
         distrobust_log_likelihood = dummy_gaussian.log_likelihood_sym(x_var, distrobust_info_vars)
-        final_log_likelihood = tf.log(tf.exp(main_log_likelihood + np.log(self.main_prob))
-                                      + tf.exp(distrobust_log_likelihood + np.log(self.exploration_prob)))
+        main_logp = main_log_likelihood + np.log(self.main_prob)
+        distrobust_logp = distrobust_log_likelihood + np.log(self.exploration_prob)
+        offset = tf.maximum(main_logp, distrobust_logp)
+        final_log_likelihood = offset + tf.log(tf.exp(main_logp - offset)
+                                               + tf.exp(distrobust_logp - offset))
         return final_log_likelihood
 
     def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars):
