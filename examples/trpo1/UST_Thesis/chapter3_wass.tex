@@ -1,0 +1,47 @@
+\section{Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization mehod }
+As is reported in \cite{henderson2017matters}, the result of the current state-of-art deep reinforcement learning methods for continuous control, including TRPO, ACKTR, PPO and DDPG are hard to be reproduced, due to they're heavily influenced by a variety of factors including random seed, neural network architecture, activation functions in neural network and software implementation. This means that the state-of-art methods are lack of stability in the agent's final performance and robustness to minor change in parameters. That has greatly diminishes the reliability of contemporary deep reinforcement learning methods.
+
+We propose a new policy optimization method, namely Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization (W-KTR). We claim that the proposed method outperform other state-of-art methods in terms of agent's final performance, total training time and reproducibility.
+
+The proposed W-KTR method focus on the problem scope of deep reinforcement learning for continuous control, specifically robot control problems. The action of these environments usually stands for mechanics-related physical quantity, such as motor torque and target motor phase. However, the traditional KL-divergence based algorithms are not suitable for these problems. Because the KL-divergence cannot represent the "deviation of policy" of the problem well, because a small perturbation in the mean value of a policy will lead to a large KL-divergence when the variance  is small. 
+
+Therefore, we propose to use another criteria, which is the Wasserstein metric, to measure the deviation of the policy updates.  We reformulate the trust region policy optimization problem as follows:
+\begin{equation}
+    \begin{aligned}
+&    \underset{\theta}{\text{maximize}} 
+&& J(\theta) \\
+& \text{subject to } 
+&& \overline{W_2}(\pi_{\theta_{old}},\pi_\theta) \leq \delta_{W}\end{aligned}
+\end{equation}
+where $ \overline{W_2}(\pi_{\theta_{old}},\pi_\theta)$ is the average Wasserstein-2 metric between the old policy and the current policy.
+
+The Wasserstein-2 metric is defined by the following equation \cite{villani2003topics}:
+\begin{equation}
+    W_2(P,Q) = 
+    \inf_{\Gamma \in \mathbb{P}(X \sim P, Y \sim Q)}
+    \mathbb{E}_{X,Y \sim \Gamma} \left[ \lVert X-Y \rVert_2^2 \right]^{1/2}
+\end{equation}
+where $\mathbb{P}(X \sim P, Y \sim Q)$ is the set of all joint distribution of $X,Y$ with marginals $P,Q$ respectively.
+
+Specifically, when $P$ and $Q$ are Gaussian distributions with mean $m_1,m_2$ and covariance matrix $\Sigma_1$ and $\Sigma_2$, the squared value of Wasserstein-2 distance $W_2^2(.)$ is defined as the following equation~\cite{chafai} :
+\begin{equation}
+    W_2^2(P,Q) = \Vert m_1-m_2\Vert_2^2 +\mathrm{Tr}\left(\Sigma_1+\Sigma_2-2(\Sigma_1^{1/2}\Sigma_2\Sigma_1^{1/2})^{1/2}\right)
+\end{equation}
+
+The problem is solved by performing gradient updates iteratively following the natural gradient with the Rianmanian metric as $W_2$ metric:
+
+\begin{equation}
+    s=H_\theta\left( \overline{W_2^2}(\pi_{old},\pi) \right)^{-1}g := A^{-1}g
+\end{equation}
+
+We use the approximation of the Rianmanian metric tensor A:
+
+\begin{equation}
+    A \approx \mathbb{E}_{s_t} \left[
+    \nabla_\theta W_2^2(\pi_{old},\pi) \left(\nabla_\theta W_2^2(\pi_{old},\pi) \right)^T
+    \right]
+\end{equation}
+
+The solution of $s$ is then computed using Kronecker-factor approximation technique~\cite{wu2017scalable}.
+
+The policy is then updated following the gradient direction $s$ with ADAM stochastic optimization algorithm~\cite{kingma2014adam}. The step size is adjusted in an adaptive manner according to the resulting $W_2$ distance at each training step.

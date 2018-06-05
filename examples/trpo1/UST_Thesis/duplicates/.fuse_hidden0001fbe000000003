@@ -1,0 +1,46 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand*\HyPL@Entry[1]{}
+\@input{1_title.aux}
+\HyPL@Entry{0<</S/r>>}
+\@writefile{toc}{\contentsline {chapter}{Title Page}{i}{Doc-Start}}
+\@input{2_authorization.aux}
+\@writefile{toc}{\contentsline {chapter}{Authorization Page}{ii}{Doc-Start}}
+\@input{3_signature.aux}
+\@writefile{toc}{\contentsline {chapter}{Signature Page}{iii}{Doc-Start}}
+\@input{4_dedicate.aux}
+\@input{5_acknowledgement.aux}
+\@writefile{toc}{\contentsline {chapter}{Acknowledgments}{v}{Doc-Start}}
+\@writefile{toc}{\contentsline {chapter}{Table of Contents}{vi}{Doc-Start}}
+\@writefile{toc}{\contentsline {chapter}{List of Figures}{viii}{Doc-Start}}
+\@writefile{toc}{\contentsline {chapter}{List of Tables}{ix}{Doc-Start}}
+\@input{abstract.aux}
+\@writefile{toc}{\contentsline {chapter}{Abstract}{x}{Doc-Start}}
+\@input{chapter1.aux}
+\HyPL@Entry{10<</S/D>>}
+\@writefile{toc}{\contentsline {chapter}{Abbreviations}{1}{Doc-Start}}
+\@input{chapter2.aux}
+\@input{chapter3.aux}
+\@input{chapter5.aux}
+\@input{chapter6.aux}
+\bibstyle{IEEEtran}
+\@input{reference.aux}
+\@input{publication.aux}
+\@input{appendix1.aux}
+\@writefile{toc}{\contentsline {chapter}{Reference}{18}{chapter.4}}
+\@writefile{toc}{\contentsline {chapter}{Publication}{18}{chapter.4}}
+\@writefile{toc}{\contentsline {chapter}{Appendix}{18}{chapter.4}}

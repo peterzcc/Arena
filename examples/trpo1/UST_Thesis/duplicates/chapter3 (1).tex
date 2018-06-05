@@ -1,0 +1,83 @@
+%!TEX program = xelatex
+%!TEX root = ./thesis.tex
+\chapter{Methodology}
+\input{chapter3_envs.tex}
+\input{chapter3_wass.tex}
+\section{Hierarchical reinforcement learning architecture}
+We propose to solve the reinforcement learning problem by a two-level hierarchical model. 
+
+The hierarchical model consists of a top-level decider agent and a set of bottom-level actuator agents. The actuator agents' policies are trained from the source task environments. 
+
+The decider agent takes an action at every time-step. It may either decide which source-task sub-policy should be executed, or simply skip and continue current sub-policy. Therefore, assume there are $a$ sub-policies, the action space of the root agent is an $(a+1)$-discrete action space.
+
+The observation space of the root agent consists of 2 parts, original observation (motion-sensor observation, image observation) and meta observation. The meta observation indicates the current sub-policy being executed.
+
+The selected leaf agent executes the corresponding sub-policy and computes the primary actions the agent should take for the original environment.
+
+ The overalll decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
+
+\begin{algorithm}
+\caption{The decider agent mechanism}\label{hrl_decision_proc}
+\begin{algorithmic}%[1]
+\Function{deciderAct}{self,$s_t$}
+\State $a_{decider} \sim \pi_{decider}(s_t)$
+ \If{$a_{decider} \neq 0$}
+ \State $self.currentActuator \gets self.allA
+ctuators[a_{decider}-1]$
+ \EndIf
+\State $a_{actuator} \gets self.currentActuator.act(s_t)$
+\State \Return $a_{actuator}$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\section{Generalized advantage estimation for hierarchical reinforcement learning agents}
+
+
+% \section{Ensuring robustness on the transferred source-task policy}
+% It is likely that the state distribution of the target task could be different from the source task environments even if the state-transition dynamics are the same. As a result, the source-task sub-policy may have bad performance in the target environment if it is not robust enough.
+
+% \subsection{Domain randomization~\cite{tobin2017domain}}
+% The first solution to the problem is to introduce more variance in the initial-state distribution when training the sub-policy in the source environment. However, this method may not guarantee the robustness.
+% \subsection{Train the subpolicies from scratch in the target environment with true source-task reward functions}
+% Training the subpolicies from scratch in the target tasks can avoid the problem of transfer learning. However, the method is not efficient and not applicable to general target tasks.
+% \subsection{Fine-tuning the trained subpolicies using the true source-task reward functions}
+% Another method can be training the source-task policy in the target environment with a fixed uniform root agent. That will require the reward function of the source environments to be known when training in the target environment.
+
+% \subsection{Fine-tuning the subpolicies using a trained Q-function}
+% A proposal is to train a Q-function during the training of the source task, and then fine-tune the policy using the trained Q-function and V-function when learning the target task. This method would require the learned Q-function to be sufficiently robust.
+
+% \subsection{Training extra subpolicies to handle subpolicy switching}
+% One way to deal with the problem is to fix the subpolicies and train an extra subpolicy that is executed between the switch of the policies
+
+% \section{Automatic Learning of the termination policy of source-task sub-policies}
+
+
+% \subsection{Model architecture}
+% The architecture of the full root policy is shown in the below equations:
+
+% \begin{equation}
+%     c = k_{c}\sigma(\pi_{c}(s)+w_i(b_i-t_{ex}))
+% \end{equation}
+% \begin{equation}
+%     \pi_{final} = (1-c)(\pi(s))
+% \end{equation}
+     
+
+% In the equations, $c$ denotes the probability to continue the currently executed sub-policy, which is a Sigmoid function. $\pi_{c}(s)$ is a neural network model that takes the observation as input. When $\pi_{c}(s)$ is small and $w_i$ is large, the termination policy will basically be a fixed length termination criteria with length $b_i$.
+
+
+% The root agent terminates the current sub-policy with probability (1-c) and makes the decision according to $\pi(s)$.
+
+% \subsection{Loss function}
+% A penalty should be added to the original loss function in the policy gradient algorithm. The objective is to make the decision points of the root agent sparse.
+
+% A proposal is to use the sum-of-likelihood value of the "continue" action. The problem of this loss is that it will be influenced largely by the values near 0.
+
+% An alternative is to add penalty if the root agent doesn't change the sub-policy to be executed although it terminates the original sub-policy and makes the decision again. However, this makes the objective non-stationary.
+
+% \subsection{Coordination between the termination policy training and decision policy training}
+
+% It is obvious that a trainable termination policy introduces an extra source of complexity. Simultaneous training on the root decision policy and termination policy may not work.
+
+% A proposed method is to initialize the fixed length termination policy initially, then train the two models in an alternating manner.

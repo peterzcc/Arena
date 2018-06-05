@@ -1,0 +1,50 @@
+\contentsline {chapter}{Title Page}{i}{Doc-Start}
+\contentsline {chapter}{Authorization Page}{ii}{Doc-Start}
+\contentsline {chapter}{Signature Page}{iii}{Doc-Start}
+\contentsline {chapter}{Acknowledgments}{v}{Doc-Start}
+\contentsline {chapter}{Table of Contents}{vi}{Doc-Start}
+\contentsline {chapter}{List of Figures}{ix}{Doc-Start}
+\contentsline {chapter}{List of Tables}{x}{Doc-Start}
+\contentsline {chapter}{Abstract}{xi}{Doc-Start}
+\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}
+\contentsline {section}{\numberline {1.1}Overview}{1}{section.1.1}
+\contentsline {section}{\numberline {1.2}Background}{1}{section.1.2}
+\contentsline {subsection}{\numberline {1.2.1}Reinforcement Learning (RL)}{1}{subsection.1.2.1}
+\contentsline {subsection}{\numberline {1.2.2}Hierarchical reinforcement learning based on transferred policies from easy tasks}{2}{subsection.1.2.2}
+\contentsline {section}{\numberline {1.3}Scope of study}{3}{section.1.3}
+\contentsline {subsection}{\numberline {1.3.1}Multi-modality state space}{3}{subsection.1.3.1}
+\contentsline {subsection}{\numberline {1.3.2}Sparse reward function}{3}{subsection.1.3.2}
+\contentsline {subsection}{\numberline {1.3.3}Assumption on hierarchical relationship of tasks}{4}{subsection.1.3.3}
+\contentsline {section}{\numberline {1.4}Research Questions}{5}{section.1.4}
+\contentsline {chapter}{Abbreviations}{1}{Doc-Start}
+\contentsline {chapter}{\numberline {2}Related works}{6}{chapter.2}
+\contentsline {section}{\numberline {2.1}Policy Gradient Methods}{6}{section.2.1}
+\contentsline {subsection}{\numberline {2.1.1}Trust Region Policy Optimization}{7}{subsection.2.1.1}
+\contentsline {subsection}{\numberline {2.1.2}Kronecker-factored Trust Region}{7}{subsection.2.1.2}
+\contentsline {subsection}{\numberline {2.1.3}Proximal Policy Gradient Method}{8}{subsection.2.1.3}
+\contentsline {subsection}{\numberline {2.1.4}Other Methods in Deep Reinforcement Learning for Continuous Control}{9}{subsection.2.1.4}
+\contentsline {section}{\numberline {2.2}Option framework}{9}{section.2.2}
+\contentsline {section}{\numberline {2.3}Modular hierarchical architecture}{10}{section.2.3}
+\contentsline {section}{\numberline {2.4}Learning a hierarchical model by multi-task training}{10}{section.2.4}
+\contentsline {section}{\numberline {2.5}Goal-directed behaviour learning method}{11}{section.2.5}
+\contentsline {section}{\numberline {2.6}Strategic Attentive Writer}{11}{section.2.6}
+\contentsline {chapter}{\numberline {3}Methodology}{13}{chapter.3}
+\contentsline {section}{\numberline {3.1}TODO: Target Environments}{13}{section.3.1}
+\contentsline {subsection}{\numberline {3.1.1}Ant-based environments}{13}{subsection.3.1.1}
+\contentsline {subsubsection}{Summary of Environments}{13}{section*.1}
+\contentsline {subsubsection}{Dynamic2D environment}{14}{section*.2}
+\contentsline {subsubsection}{Reach2D environment}{14}{section*.3}
+\contentsline {subsection}{\numberline {3.1.2}TODO: Robot manipulation environments}{14}{subsection.3.1.2}
+\contentsline {section}{\numberline {3.2}Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization mehod }{14}{section.3.2}
+\contentsline {section}{\numberline {3.3}Efficient Exploration Through Exceptional Advantage Regularization}{15}{section.3.3}
+\contentsline {section}{\numberline {3.4}Efficient Exploration Through Robust Concentric Mixture Gaussian Policy}{17}{section.3.4}
+\contentsline {section}{\numberline {3.5}Hierarchical reinforcement learning architecture}{17}{section.3.5}
+\contentsline {section}{\numberline {3.6}Generalized advantage estimation for hierarchical reinforcement learning agents}{18}{section.3.6}
+\contentsline {chapter}{\numberline {4}Experiments}{20}{chapter.4}
+\contentsline {section}{\numberline {4.1}Solution to the basic environment: \textit {move0}}{20}{section.4.1}
+\contentsline {section}{\numberline {4.2}Flat solution to a simple Multi-Modality environment: \textit {move1d}}{21}{section.4.2}
+\contentsline {chapter}{\numberline {5}Discussion}{26}{chapter.5}
+\contentsline {chapter}{Reference}{27}{chapter.5}
+\contentsline {chapter}{\numberline {A}Appendix 1}{30}{appendix.A}
+\contentsline {chapter}{Publication}{30}{chapter*.4}
+\contentsline {chapter}{Appendix}{30}{chapter*.4}

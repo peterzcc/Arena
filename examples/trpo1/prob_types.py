@@ -375,7 +375,7 @@ class RobustMixtureGaussian(ProbType):
         distrobust_logstd_param = self.get_distrobust_logstd_from_main_logstd(logstd_param)
         _, distrobust_stdn = self.get_stdn_from_logstd_param(distrobust_logstd_param, nsample)
         sample_distrobust = tf.distributions.Normal(loc=mean_n, scale=distrobust_stdn).sample()
-        sample = self.main_prob * sample_main + self.exploration_prob * sample_distrobust
+        sample = self.main_prob * sample_main + self.exploration_prob * sample_distrobust  # TODO
         return dist_vars, old_dist_vars, sample, interm_vars
 
     def _distrobust_info_vars_from_main(self, distmain_info_vars):

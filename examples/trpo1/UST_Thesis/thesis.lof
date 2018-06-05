@@ -1,0 +1,11 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Performance of move0 W-KTR agent with diferent hyper-parameter $\delta _W^2$, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 200 episodes}}{21}{figure.4.1}
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Performance of move0 PPO agent with diferent hyper-parameter $\delta _{kl}$, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 200 episodes}}{22}{figure.4.2}
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Performance of move0 PPO agent with diferent hyper-parameter $learning rate$, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 200 episodes}}{23}{figure.4.3}
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Performance of move1d ACKTR agent with diferent hyper-parameter $learning rate$, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 20 episodes}}{24}{figure.4.4}
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Performance of move1d W-KTR agent with hyper-parameter $\delta _W^2= 0.0001$, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 20 episodes}}{25}{figure.4.5}
+\addvspace {10\p@ }
+\addvspace {10\p@ }

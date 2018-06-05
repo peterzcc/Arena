@@ -1,0 +1,117 @@
+%!TEX program = xelatex
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{thesis}
+\usepackage{lmodern}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage[left=2.5cm,top=2.5cm,right=2.5cm,bottom=2.5cm]{geometry}
+\usepackage{nomencl}
+\makenomenclature
+\renewcommand{\nomname}{ABBREVIATIONS}
+
+\usepackage{amsmath}
+\usepackage{ amssymb }
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{float}
+% \usepackage{hyperref}
+% \usepackage{paralist}
+% \usepackage[parfill]{parskip}
+\usepackage{listings}
+% \usepackage{xcolor}
+\graphicspath{ {images/} }
+
+\usepackage{tocloft}
+\usepackage{algorithm}
+% \usepackage{algorithmicx}
+% \usepackage{algorithmic}
+\usepackage[noend]{algpseudocode}
+
+\renewcommand{\cftchapfont}{}
+\renewcommand{\cftchappagefont}{}
+\renewcommand{\cftdot}{}
+
+\newcommand{\thesistitle}{Hierarchical Reinforcement Learning for Multi-modal Continuous Control Environments with Sparse Rewards}
+\newcommand{\thesisauthor}{Zeng Cancheng}
+\newcommand{\programname}{Master of Philosophy in Computer Engineering and Science}
+\newcommand{\departmentname}{Department of Computer Science and Engineering, HKUST}
+\newcommand{\thesisdate}{TODO 2018}
+\newcommand{\signdate}{TODO 2018}
+\newcommand{\thesisdegree}{MPhil}
+\newcommand{\dedicate}{\textit{TODO Somebody}}
+\newcommand{\supervisorinfo}{Prof. Dit-Yan Yeung, Thesis Supervisor \\ Department of Computer Science and Engineering}
+\newcommand{\depheadinfo}{TODO head}
+
+
+
+% \tracingall
+\begin{document}
+
+\pagenumbering{roman}
+\pagestyle{plain}
+\setcounter{page}{1}
+\addcontentsline{toc}{chapter}{Title Page}
+\include{1_title}
+
+\newpage
+\addcontentsline{toc}{chapter}{Authorization Page}
+\include{2_authorization}
+
+\newpage
+\addcontentsline{toc}{chapter}{Signature Page}
+\include{3_signature}
+
+\newpage
+\include{4_dedicate}
+
+\newpage
+\addcontentsline{toc}{chapter}{Acknowledgments}
+\include{5_acknowledgement}
+
+\newpage
+\addcontentsline{toc}{chapter}{Table of Contents}
+\tableofcontents
+
+\newpage
+\addcontentsline{toc}{chapter}{List of Figures}
+\listoffigures
+
+\newpage
+\addcontentsline{toc}{chapter}{List of Tables}
+\listoftables
+
+\newpage
+\addcontentsline{toc}{chapter}{Abstract}
+\include{abstract}
+
+\newpage
+\addcontentsline{toc}{chapter}{Abbreviations}
+\printnomenclature[1in]
+
+\newpage
+\pagenumbering{arabic}
+\pagestyle{plain}
+\setcounter{page}{1}
+\include{chapter1}
+\include{chapter2}
+\include{chapter3}
+\include{chapter4}
+\include{chapter5}
+\include{chapter6}
+
+\newpage
+\addcontentsline{toc}{chapter}{Reference}
+\bibliographystyle{IEEEtran}
+\include{reference}
+
+\newpage
+\addcontentsline{toc}{chapter}{Publication}
+\include{publication}
+
+\newpage
+\addcontentsline{toc}{chapter}{Appendix}
+\appendix
+\include{appendix1}
+
+\end{document}

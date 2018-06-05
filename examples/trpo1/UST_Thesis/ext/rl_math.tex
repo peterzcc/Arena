@@ -1,0 +1,78 @@
+% GENL MATH
+\newcommand{\Real}{\mathbb{R}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\minimize}{minimize}
+\DeclareMathOperator*{\maximize}{maximize}
+\newcommand{\half}{\frac{1}{2}}
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand{\given}[1][]{\:#1\vert\:}
+\newcommand{\suchthat}{\:\vert\:}
+\newcommand{\grad}{\nabla}
+\newcommand{\evalat}[1]{\big\rvert_{#1}}
+
+% STATISTICS
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\Ea}[1]{\E\left[#1\right]}
+\newcommand{\Eb}[2]{\E_{#1}\left[#2\right]}
+\newcommand{\Vara}[1]{\Var\left[#1\right]}
+\newcommand{\Varb}[2]{\Var_{#1}\left[#2\right]}
+\newcommand{\lone}[1]{\norm{#1}_1}
+
+% DELIMITERS
+% \newcommand{\lrbrack}[1]{\left[#1\right]}
+% \newcommand{\lrbrace}[1]{\left\{#1\right\}}
+% \newcommand{\lrparen}[1]{\left(#1\right)}
+
+% NORMS
+\DeclarePairedDelimiter{\norm}{\|}{\|}
+\DeclarePairedDelimiter{\abs}{|}{|}
+\newcommand{\pospart}[1]{\abs{#1}^+}
+\DeclarePairedDelimiter{\lrbrack}{[}{]}
+\DeclarePairedDelimiter{\lrbrace}{ \{ }{ \} }
+\DeclarePairedDelimiter{\lrparen}{(}{)}
+\DeclarePairedDelimiter{\lrang}{\langle}{\rangle}
+\newcommand{\infnorm}[1]{\norm{#1}_{\infty}}
+\newcommand{\normone}[1]{\norm{#1}_1}
+
+% MDP
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\adv}{\mathbb{A}}
+\newcommand{\rhopi}{\rho_{\pi}}
+\newcommand{\Qpi}{\ensuremath{Q^{\pi}}}
+\newcommand{\Api}{\ensuremath{A^{\pi}}}
+\newcommand{\Vpi}{\ensuremath{V^{\pi}}}
+\newcommand{\Qstar}{\ensuremath{Q^{*}}}
+\newcommand{\Astar}{\ensuremath{A^{*}}}
+\newcommand{\Vstar}{\ensuremath{V^{*}}}
+
+% POLILCY
+\newcommand{\piold}{\pi_{old}}
+\newcommand{\pinew}{\pi_{new}}
+\newcommand{\thold}{\theta_{old}}
+\newcommand{\thnew}{\theta_{new}}
+\newcommand{\tilth}{\tilde{\theta}}
+\newcommand{\pith}{\pi_{\theta}}
+\newcommand{\pitilth}{\pi_{\tilth}}
+\newcommand{\gradth}{\grad_{\theta}}
+
+% DIVERGENCE
+\newcommand{\kl}[2]{D_{KL}(#1 \ \| \ #2)}
+\newcommand{\tv}[2]{D_{TV}(#1 \ \| \ #2)}
+
+% MISC
+\newcommand{\tdlam}{TD($\lambda$)}
+\newcommand{\tdzero}{TD($0$)}
+\newcommand{\tdone}{TD($1$)}
+\newcommand{\lstdlam}{LSTD($\lambda$)}
+\newcommand{\lstdzero}{LSTD($0$)}
+\newcommand{\lstdone}{LSTD($1$)}
+\newcommand{\brmlam}{BRM($\lambda$)}
+\newcommand{\brmzero}{BRM($0$)}
+\newcommand{\brmone}{BRM($1$)}
+\newcommand{\lspelam}{LSPE($\lambda$)}
+\newcommand{\lspezero}{LSPE($0$)}
+\newcommand{\lspeone}{LSPE($1$)}

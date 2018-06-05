@@ -1,0 +1,141 @@
+%!TEX program = xelatex
+%!TEX root = ./thesis.tex
+\chapter{Related works}
+\section{Policy Gradient Methods}
+Policy gradient mothod is a class of reinforcement learning methods that solve the problem by optimizing a parametrized policy model $\pi_\theta (a|s), a\in A, s\in S$, so that the expected return:
+$$
+    J(\theta) = \mathbb{E}\big[\sum_{t=0}^T\gamma^t r_t \big]
+$$
+is maximized, where $\gamma$ is a discount factor and $T$ is the episode length.
+
+Policy gradient methods maximize the expected return iteratively by esitimating the gradient $g := \nabla  \mathbb{E}\big[\sum_{t=0}^T\gamma^t r_t \big]$ , which has the form \cite{schulman2015high}:
+\begin{equation} g = \mathbb{E}_{t,s_t,a_t} \big[
+\Psi_t \frac{\nabla_\theta \pi_\theta(a_t|s_t) }{\pi_\theta(a_t|s_t)}
+\big]
+=\mathbb{E}_{t,s_t,a_t} \big[
+\Psi_t \nabla_\theta \log \pi_\theta(a_t|s_t) 
+\big]
+\label{pg_def}\end{equation}
+
+
+$\Psi_t$ may be one of the following:
+\begin{enumerate}
+    \item $\sum_{t=0}^{\infty} r_t$ expected total return
+    \item $\sum_{t'=t}^{\infty} r_t$ expected return following $a_t$
+    \item $\sum_{t'=t}^{\infty} [r_t - b(s_t)]$
+    \item $Q_\pi (s_t, a_t)$
+    \item $A_\pi (s_t, a_t)$
+    \item $ \hat{A}_t^{(1)}:=  \delta_t = r_t + V_\pi (s_{t+1}) - V_\pi (s_{t})$ : 1-step TD residual
+    \item $ \hat{A}_t^{(2)} :=  \delta_t + \gamma \delta_{t+1}= r_t +\gamma r_{t+1} + \gamma^2 V_\pi (s_{t+2}) - V_\pi (s_{t})$ : 2-step TD residual
+    \item $\hat{A}_t^{(k)} := \sum_{l=0}^{k-1} \gamma^{l} \delta_{t+l} =   r_t + \gamma r_{t+1} + \dots + \gamma^{k-1} r_{t+k-1} + \gamma^{k} V(s_{t+k}) -V(s_t)$ : k-step TD residual
+    \item $GAE(\lambda) = \frac{1}{(1+\lambda+\lambda^2+\dots)} \big(\hat{A}_t^{(1)} + \lambda \hat{A}_t^{(2)}+ \lambda^2 \hat{A}_t^{(3)} +\dots \big) 
+    \approx \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}$ , where $\lambda \in [0,1]$ : the generalized advantage estimator proposed by \cite{schulman2015high}
+\end{enumerate}
+Several optimization method for updating the policy parameters given the policy gradient have been proposed. The following section will discuss some state=of-art methods.
+\subsection{Trust Region Policy Optimization}
+The method proposed by \cite{schulman2015trust}, namely Trust Region Policy Optimization (TRPO) is one of the early works in deep reinforcement learning for continuous control. The method formulates the policy optimization problem as a constraint optimization problem:
+\begin{equation}
+    \begin{aligned}
+&    \underset{\theta}{\text{maximize}} 
+&& J(\theta) \\
+& \text{subject to } 
+&& \overline{D_{KL}}(\pi_{\theta_{old}}\|\pi_\theta) \leq \delta_{KL}\label{trpo_obj}\end{aligned}
+\end{equation}
+where $\pi_{\theta_{old}}$ is the old policy parameter before performing  parameter update, and $\overline{D_{KL}}$ is the average KL divergence over the samples, $\delta_{KL}$ is the hyper-parameter that control the step size of updates.
+
+The method solves this problem through 4 steps. The first step computes $g$ following the Equation \ref{pg_def}. 
+The second step computes the Riemannian metric tensor of the parameter space of the policy model $A = H_{\theta}\left(\overline{D_{KL}}(\pi_{\theta_{old}}\|\pi_\theta)\right)$ , where $H_{\theta}(.)$ denotes the Hessian matrix with respect to $\theta$. 
+The third step obtains which is the natural gradientupdate direction $s=A^{-1}g$ by solving $g=As$ through the conjugate gradient algorithm.
+The fourth step computes the maximum step-size $\beta= \sqrt{2\delta_{KL}/s^TAs}$ and performs a line search to ensure the improvement of the objective function.
+
+The method is able to solve some primary robot control tasks in \cite{openaigym} within a few number of training samples. However, both the computation of the Hessian matrix and the conjugate gradient algorithm are too expensive for deep neural network models.
+
+\subsection{Kronecker-factored Trust Region}
+The work of \cite{wu2017scalable} proposes to reduce the computation time solving the natural gradient by Kronecker-factored approximation method.
+The Fisher Information Matrix $F=\mathbb{E}[\nabla_\theta L \nabla_\theta L^T]$, where $L=\log\pi(a|s)$ is used here to approximate the Riemannian metric tensor.
+The matrix is approximated by:
+\begin{equation*}
+    F=\mathbb{E}[\nabla_\theta L \nabla_\theta L^T] = \mathbb{E}[aa^T \otimes \nabla_s L \nabla_s L^T ] 
+    \approx \mathbb{E}[aa^T] \otimes \mathbb{E}[\nabla_s L \nabla_s L^T ] 
+\end{equation*}
+where $a$ is the input activation vector corresponding to the neural network weight parameters and $s$ is the corresponding preactivation vector,
+The natural gradient is then solved by:
+\begin{equation}
+    s=A^{-1}g \approx F^{-1}g \approx \left(\mathbb{E}[aa^T] \otimes \mathbb{E}[\nabla_s L \nabla_s L^T ] \right)^{-1}g = \mathbb{E}[aa^T]^{-1} g  \mathbb{E}[\nabla_s L \nabla_s L^T ]^{-1}
+\end{equation}
+The proposed method further speeds up the optimization by reusing recently computed statistic matrices in the previous steps and performing asynchronous computation, and finally achieves a computation time comparable to ordinary gradient decent algorithms.
+The method manages to computationally efficiently perform trust region natural policy gradient optimization without sacrificing the reinforcement learning performance.
+
+\subsection{Proximal Policy Gradient Method}
+The author of \cite{schulman2017proximal} proposed a first-order policy optimization method, namely proximal policy gradient with clipping (PPO). The method clips the surrogate objective according to the following equation:
+\begin{equation}
+    L_{CLIP}(\theta) = \mathbb{E} \left[ \min\big(r_t(\theta) A_t , \mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)A_t)\big) \right]
+\end{equation}
+where $r_t(\theta) = \pi_\theta / \pi_{\theta_{old}}$ is the likelihood ratio of the current policy over the sample policy, and $\epsilon \in [0,1]$ is a hyperparameter. 
+
+The algorithm performs minibatch stochastic optimization at each batch of collected agent's experience, for a number of epochs. Therefore it is actually an off-policy method since the policy has already deviated from the sampling policy once updated for the first minibatch.
+
+The method can achieve a relatively fast improvement rate in the early phase (within 1 million training steps) of training in several continuous control environments. However, the method is more difficult to tune compared to trust region methods, and might become increasingly unstable in the late phase of training. The method might also converge too early and stuck at a local minimum point, because updating the parameter too many times on a single batch might lead to overfitting.
+
+\subsection{Other Methods in Deep Reinforcement Learning for Continuous Control}
+Other methods related to deep reinforcement learning for continuous control include the Deep Deterministic Policy Gradient Method (DDPG)~\cite{lillicrap2015continuous}, Actor-Critic with Experience Replay (ACER)~\cite{wang2016sample}, and Trust-PCL~\cite{nachum2017trust}. These methods are first order off-policy algorithm, and are not the focus of our study because they're not reported to significantly outperform the above mentioned methods in terms of training time, final performance and stability.
+
+\section{Option framework}
+The work of \cite{sutton1999between} is among the earliest studies of hierarchical reinforcement learning, which uses the notion of \textit{option} to define the partial policies / subroutines. An option consists of a policy $\pi$, a termination condition $\beta$ and an input set $I$ that indicates whether the partial policy is available at the current state. Once an option is executed, then actions are chosen according to \(\pi\) until \(\beta(s)\) outputs a termination signal. 
+
+An option is Markov if its policy is Markov. Semi-Markov options, on the other hand, are options whose policies are based on the entire history since the option was initiated. Semi-Markov options include options that terminates after a specific number of time steps, which could be particularly useful when considering policies over options.
+
+A policy over options \(\mu \) selects option \(o\) in state \(s\) with probability \(\mu(s,o\).
+
+A concept of multi-step model is proposed as a generalization of single-step models. For any option \(o\), let \(E(o,s,t\) denote the event of the option $o$ initialized in state $s$ at time $t$. Then the reward of the multi-step model is defined as:
+\[ R(s,o)=E\{r_{t+1}+\gamma r_{t+2}+\ldots+\gamma^{t+\tau} r_{t+\tau} \lvert E(o,s,t\} \]
+where $t+\tau$ is the termination time of $o$. The state transition model for the option is:
+\[P(s' \lvert s,o)=\sum_{\tau=1}^{\infty} p(s',\tau) \gamma^\tau \]
+for all states \(s' \in S \), where \( p(s',\tau) \) denotes the probability that the option terminates after \(\tau\) steps and results in the state \(s'\).
+
+A generalized form of the Bellman optimality equation is then proposed:
+\begin{equation}
+    V_O^*(s) = \max_{o \in O_s} \big[ R(s,o)+\sum_{s'}P(s' \lvert s,o) V_O^*(s') \big]
+\end{equation}
+% The optimal policies over options are in general suboptimal policies in the original MDP when some of the primitive actions are not available as 1-step options.
+In conclusion, this work proposes a formulation of hierarchical reinforcement learning and connects it to SMDP theory. The authors also propose the method for training the policy over options. However, the question on how the hierarchy of options are developed are not answered.
+
+\section{Modular hierarchical architecture}
+The work of \cite{heess2016learning} is among the first studies that applies hierarchical reinforcement learning on robot continuous control problems. They propose a two-level hierarchical agent architecture, where there is a high-level policy and a low-level policy. The high-level policy outputs a modulation signal which the low level agent then takes as part of its input. They train the hierarchical agent in a pretraining-transfer manner, where the low-level policy is trained in a simple task first, and the high level agent policy is then trained in the target task. The proposed method achieves reasonable performance on a few realistic robot control tasks. However, the hierarchical relationships between the two agent, including the pre-training task definition and modulation model, need to be manually predefined. This involves a large amount of domain-specific engineering and cannot be applied to general tasks.
+
+\section{Learning a hierarchical model by multi-task training} 
+Another work~\cite{frans2017meta}, namely meta learning shared hierarchies, proposes a two-level hierarchical reinforcement learning agent as well as a optimization algorithm. There is one high level policy and several low level policies. The high level policy make decisions at fixed intervals, which selects the corresponding low level policy to be executed. 
+
+The method trains the high level policy and the low level policies simultaneously.  However, the agent is trained for different tasks in parallel with different high level policy parameters but shared low level policy parameters. Both the high level policy and the low level policy are trained on the original reward function of the corresponding task. The method achieves good performance in several simple control environments. However the tasks are actually simplified version of the control tasks in \cite{duan2016benchmarking}. 
+
+The method predefines the temporal relationship between the high level policy and low level policy. Apart from that, the training of the low level policy extremely relies on a near-optimal high level policy, which is not possible to be obtained without a set of good low level polices.
+
+Therefore, this method not only needs domain-specific design, but is also in-feasible for general realistic environments.
+
+
+% \section{Hindsight Experience Replay}
+% The work of~\cite{andrychowicz2017hindsight} generate actuator policies and there corresponding termination predicate policies based on the definition of subgoals. The subgoals are generated by heuristic functions of a target state. TODO
+
+% \section{Scheduled Auxiliary Control}
+% The work of \cite{riedmiller2018learning} proposes the method of scheduled auxiliary control. The method generates partial policy by a given set of simple auxiliary tasks, whose reward signals are generated based on heuristic functions of the sensor activation. The method also assume a constant execution length of the actuator policies. TODO
+\section{Goal-directed behaviour learning method}
+Several works~\cite{riedmiller2018learning}, ~\cite{andrychowicz2017hindsight} have tried to solve sparse-reward robot control environments through the learning of auxiliary tasks, which are defined by reaching specific states, namely "goals".
+
+A representative work is ~\cite{riedmiller2018learning}, namely Scheduled Auxiliary Control. The method proposes a two-level hierarchical reinforcement learning agent, which consists of one high level policy and a predefined number (K) of low level policies. The low level policies are trained in auxiliary MDPs based on predefined goal states.
+
+The reward function of a auxiliary task with goal state $g$ is defined as:
+\begin{equation}
+ r_g(s,a)= 
+    \begin{cases}
+    \delta_g(s),& \text{if } d(s,g)\\
+    0,              & \text{else}
+\end{cases}
+\end{equation}
+
+The method first train the low level policies in their corresponding auxiliary MDPs, then train the high level policy according to SMDP theory.
+
+The method manage to solve several challenging robot control tasks. However, the method heavily relies on the design of goal states, which is involves domain-specific engineering and is infeasible in tasks with high-dimensional states.
+
+
+\section{Strategic Attentive Writer}
+The work of ~\cite{vezhnevets2016strategic} proposes a method that can learn macro-actions, which are open-loop partial policies with flexible length of execution. The method is not scalable to realistic problems due to the lack of closed-loop control. However, one contribution of the work is that it proposes a model that can learn high-level, temporally abstracted macro-actions of varying length in an end-to-end manner.

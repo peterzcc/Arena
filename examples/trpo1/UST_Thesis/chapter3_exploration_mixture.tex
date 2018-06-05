@@ -1,0 +1,20 @@
+\section{Efficient Exploration Through Robust Concentric Mixture Gaussian Policy}
+Apart from the EAR method for exploration, we propose to use an alternative probability distribution type, namely Concentric Mixture Gaussian, instead of a diagonal Gaussian policy.
+
+The proposed policy distribution, namely Robust Concentric Mixture Gaussian (RCMG) Policy, is a mixture of two Gaussian distributions:
+\begin{align}
+\pi (a|s) = (1-\alpha_{ex})\mathcal{N}(\mu,\Sigma) + \alpha_{ex} \mathcal{N}(\mu,q_{ex}\Sigma)
+\end{align}
+where the constant $\alpha_{ex}$ is the weight of second distribution, which for example can be set at $0.05$, and the constant $q_{ex}>1$, for example $q_{ex}=5$,  controls the standard deviation of the second deviation.
+%TODO loglikelihood
+
+Although the KL divergence between the two RCMG policy doesn't have a analytical form, the Wasserstein-2 distance between two RCMG policy can be given by:
+\begin{align}&W_2(\pi_{0}(a|\mu_0,\Sigma_0), \pi_{1}(a|\mu_1,\Sigma_1) =  \\ \nonumber
+& \ \ \ \ (1-\alpha_{ex})
+W_2\big(\mathcal{N}(\mu_0,\Sigma_0), \mathcal{N}(\mu_1,\Sigma_1)\big)
++ \alpha_{ex} W_2\big(\mathcal{N}(\mu_0,q_{ex}\Sigma_0), \mathcal{N}(\mu_1,q_{ex}\Sigma_1)\big)
+\end{align}
+
+%TODO advantage
+The RCMG policy is much more robust than an ordinary Gaussian policy because it has much longer tails.
+

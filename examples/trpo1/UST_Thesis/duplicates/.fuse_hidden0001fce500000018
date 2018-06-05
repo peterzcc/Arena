@@ -1,0 +1,44 @@
+\BOOKMARK [0][-]{Doc-Start}{Title Page}{}% 1
+\BOOKMARK [0][-]{Doc-Start}{Authorization Page}{}% 2
+\BOOKMARK [0][-]{Doc-Start}{Signature Page}{}% 3
+\BOOKMARK [0][-]{Doc-Start}{Acknowledgments}{}% 4
+\BOOKMARK [0][-]{Doc-Start}{Table of Contents}{}% 5
+\BOOKMARK [0][-]{Doc-Start}{List of Figures}{}% 6
+\BOOKMARK [0][-]{Doc-Start}{List of Tables}{}% 7
+\BOOKMARK [0][-]{Doc-Start}{Abstract}{}% 8
+\BOOKMARK [0][-]{Doc-Start}{Abbreviations}{}% 9
+\BOOKMARK [0][-]{chapter.1}{Introduction}{}% 10
+\BOOKMARK [1][-]{section.1.1}{Overview}{chapter.1}% 11
+\BOOKMARK [1][-]{section.1.2}{Background}{chapter.1}% 12
+\BOOKMARK [2][-]{subsection.1.2.1}{Reinforcement Learning \(RL\)}{section.1.2}% 13
+\BOOKMARK [2][-]{subsection.1.2.2}{Hierarchical reinforcement learning based on transferred policies from easy tasks}{section.1.2}% 14
+\BOOKMARK [1][-]{section.1.3}{Scope of study}{chapter.1}% 15
+\BOOKMARK [2][-]{subsection.1.3.1}{Multi-modality state space}{section.1.3}% 16
+\BOOKMARK [2][-]{subsection.1.3.2}{Sparse reward function}{section.1.3}% 17
+\BOOKMARK [2][-]{subsection.1.3.3}{Assumption on hierarchical relationship of tasks}{section.1.3}% 18
+\BOOKMARK [1][-]{section.1.4}{Research Questions}{chapter.1}% 19
+\BOOKMARK [0][-]{chapter.2}{Related works}{}% 20
+\BOOKMARK [1][-]{section.2.1}{Policy Gradient Methods}{chapter.2}% 21
+\BOOKMARK [2][-]{subsection.2.1.1}{Trust Region Policy Optimization}{section.2.1}% 22
+\BOOKMARK [2][-]{subsection.2.1.2}{Kronecker-factored Trust Region}{section.2.1}% 23
+\BOOKMARK [2][-]{subsection.2.1.3}{Proximal Policy Gradient Method}{section.2.1}% 24
+\BOOKMARK [2][-]{subsection.2.1.4}{Other Methods in Deep Reinforcement Learning for Continuous Control}{section.2.1}% 25
+\BOOKMARK [1][-]{section.2.2}{Option framework}{chapter.2}% 26
+\BOOKMARK [1][-]{section.2.3}{Modular hierarchical architecture}{chapter.2}% 27
+\BOOKMARK [1][-]{section.2.4}{Learning a hierarchical model by multi-task training}{chapter.2}% 28
+\BOOKMARK [1][-]{section.2.5}{Goal-directed behaviour learning method}{chapter.2}% 29
+\BOOKMARK [1][-]{section.2.6}{Strategic Attentive Writer}{chapter.2}% 30
+\BOOKMARK [0][-]{chapter.3}{Methodology}{}% 31
+\BOOKMARK [1][-]{section.3.1}{TODO: Target Environments}{chapter.3}% 32
+\BOOKMARK [2][-]{subsection.3.1.1}{Ant-based environments}{section.3.1}% 33
+\BOOKMARK [2][-]{subsection.3.1.2}{TODO: Robot manipulation environments}{section.3.1}% 34
+\BOOKMARK [1][-]{section.3.2}{Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization mehod }{chapter.3}% 35
+\BOOKMARK [1][-]{section.3.3}{Hierarchical reinforcement learning architecture}{chapter.3}% 36
+\BOOKMARK [0][-]{chapter.4}{Experiments}{}% 37
+\BOOKMARK [1][-]{section.4.1}{Solution to the basic environment: move0}{chapter.4}% 38
+\BOOKMARK [1][-]{section.4.2}{Flat solution to a simple Multi-Modality environment: move1d}{chapter.4}% 39
+\BOOKMARK [0][-]{chapter.5}{Discussion}{}% 40
+\BOOKMARK [0][-]{chapter.5}{Reference}{}% 41
+\BOOKMARK [0][-]{chapter*.4}{Publication}{}% 42
+\BOOKMARK [0][-]{chapter*.4}{Appendix}{}% 43
+\BOOKMARK [0][-]{appendix.A}{Appendix 1}{}% 44
