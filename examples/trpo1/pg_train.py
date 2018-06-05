@@ -121,6 +121,8 @@ def main():
                         help='wass decrease period')
     parser.add_argument('--use-mix', default=False, type=str2bool, nargs='?',
                         const=True, )
+    parser.add_argument('--normalize-wass', default=False, type=str2bool, nargs='?',
+                        const=True, )
 
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
     parser.add_argument("--savestats", default=False, type=str2bool, nargs='?', const=True, help='savestats')
@@ -233,7 +235,8 @@ def main():
                                 savestats=args.savestats,
                                 policy_logstd_grad_bias=args.stdbias,
                                 logstd_sample_dev=args.stddev,
-                                use_mix=args.use_mix)
+                                use_mix=args.use_mix,
+                                normalize_wass=args.normalize_wass)
 
     def pg_shared_params():
         from policy_gradient_model import PolicyGradientModel

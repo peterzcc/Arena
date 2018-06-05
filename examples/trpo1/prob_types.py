@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from tf_utils import scale_positive_gradient_op
-
+import logging
 class ProbType(object):
     def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
         pass
@@ -152,8 +152,10 @@ KEY_MEAN = "mean"
 KEY_LOGSTD = "logstd"
 
 class DiagonalGaussian(ProbType):
-    def __init__(self, dim):
+    def __init__(self, dim, normalize_wass=False):
+        logging.debug("gaussian params:{}".format(locals()))
         self._dim = dim
+        self.normalize_wass = normalize_wass
 
     @property
     def dim(self):
@@ -249,6 +251,9 @@ class DiagonalGaussian(ProbType):
         old_std = tf.exp(old_log_stds)
         new_std = tf.exp(new_log_stds)
         wasserstein_terms = tf.square(old_means - new_means) + tf.square(old_std - new_std)
+        if self.normalize_wass:
+            logging.debug("using normalized wass")
+            wasserstein_terms = wasserstein_terms / (0.5 * old_std ** 2 + 0.5 * new_std ** 2)
 
         return tf.reduce_sum(wasserstein_terms, axis=-1)
 
@@ -267,6 +272,9 @@ class DiagonalGaussian(ProbType):
                                       stddev=logstd_sample_dev)
         wasserstein_terms = tf.square(new_means + mean_sample - old_means) + tf.square(
             new_std + std_sample - old_std)
+        if self.normalize_wass:
+            logging.debug("using normalized wass")
+            wasserstein_terms = wasserstein_terms / (0.5 * old_std ** 2 + 0.5 * new_std ** 2)
 
         return tf.reduce_sum(wasserstein_terms, axis=-1)
 
@@ -311,7 +319,8 @@ class DiagonalGaussian(ProbType):
 
 
 class RobustMixtureGaussian(ProbType):
-    def __init__(self, dim, exploration_prob=0.05, max_std=1.0, std_ratio=5, ):
+    def __init__(self, dim, exploration_prob=0.05, max_std=1.0, std_ratio=5., ):
+        logging.debug("mixture params:{}".format(locals()))
         self.dim = dim
         self.exploration_prob = exploration_prob
         self.max_std = max_std

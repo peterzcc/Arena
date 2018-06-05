@@ -70,7 +70,8 @@ class PolicyGradientModel(ModelWithCritic):
                  const_action=None,
                  policy_logstd_grad_bias=0.0,
                  logstd_sample_dev=1.0,
-                 use_mix=False
+                 use_mix=False,
+                 normalize_wass=False
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -152,7 +153,8 @@ class PolicyGradientModel(ModelWithCritic):
             if use_mix:
                 self.distribution = RobustMixtureGaussian(dim=self.act_space.low.shape[0])
             else:
-                self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0])
+                self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0],
+                                                     normalize_wass=normalize_wass)
         else:
             self.distribution = Categorical(num_cat=self.act_space.n)
 
