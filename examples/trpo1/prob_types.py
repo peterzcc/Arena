@@ -322,7 +322,8 @@ class DiagonalGaussian(ProbType):
 
 
 class RobustMixtureGaussian(ProbType):
-    def __init__(self, dim, exploration_prob=0.05, max_std=1.0, std_ratio=4., clip=False, normalize_wass=False):
+    def __init__(self, dim,
+                 exploration_prob=0.05, max_std=1.0, std_ratio=4., clip=False, normalize_wass=False):
         logging.debug("mixture params:{}".format(locals()))
         self.dim = dim
         self.exploration_prob = exploration_prob
@@ -366,7 +367,7 @@ class RobustMixtureGaussian(ProbType):
 
         logstd_param = tf.get_variable("logstd", (self.dim,), tf.float32,
                                        tf.constant_initializer(
-                                           value=np.log(1. / self.std_ratio)))  # Variance on outputs
+                                           value=np.log(0.25)))  # Variance on outputs
         logstd_n, std_n = self.get_stdn_from_logstd_param(logstd_param, nsample)
         old_dist_vars = dict(mean=old_mean_n, logstd=old_logstd_n)
         dist_vars = dict(mean=mean_n, logstd=logstd_n)
@@ -375,7 +376,10 @@ class RobustMixtureGaussian(ProbType):
         distrobust_logstd_param = self.get_distrobust_logstd_from_main_logstd(logstd_param)
         _, distrobust_stdn = self.get_stdn_from_logstd_param(distrobust_logstd_param, nsample)
         sample_distrobust = tf.distributions.Normal(loc=mean_n, scale=distrobust_stdn).sample()
-        sample = self.main_prob * sample_main + self.exploration_prob * sample_distrobust  # TODO
+        component_sample = tf.cast(
+            tf.distributions.Categorical(probs=[self.main_prob, self.exploration_prob]).sample(tf.shape(sample_main)),
+            tf.float32)
+        sample = (1. - component_sample) * sample_main + component_sample * sample_distrobust
         return dist_vars, old_dist_vars, sample, interm_vars
 
     def _distrobust_info_vars_from_main(self, distmain_info_vars):

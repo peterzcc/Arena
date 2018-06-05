@@ -56,12 +56,15 @@ Define the TD residual $\dv_{t_i}$ for $i=0,1, \dots$by:
 \end{align}
 Then the k-step advantage estimation is given by:
 \begin{alignat}{2}
-\hata_{t_i}^{(1)} & \defeq   \dv_{{t_i}} 
+\hata_{t_i}^{(1)} 
+& \defeq   \dv_{{t_i}} 
  &&=-V(s_{t_i}) + \bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} V(s_{t_{i+1}})\\
 \hata_{t_i}^{(2)} 
 &\defeq \dv_{t_i} + \gamma^{t_{i+1}-t_i} \dv_{t_{i+1}} 
-&&= -V(s_{t_i}) +\bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} \bar{r}_{t_{i+1}} + \gamma^{t_{i+2}-t_i} V(t_{i+2}) 
-\hata_t^{(3)} &\defeq \dv_{t} + \gamma \dv_{t+1} + \gamma^2 \dv_{t+2} &&= -V(s_t) + r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \gamma^3 V(s_{t+3}) \label{a3}
+&&= -V(s_{t_i}) +\bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} \bar{r}_{t_{i+1}} + \gamma^{t_{i+2}-t_i} V(t_{i+2}) \\
+\hata_t^{(3)} 
+&\defeq \dv_{t} + \gamma \dv_{t+1} + \gamma^2 \dv_{t+2} 
+&&= -V(s_t) + r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \gamma^3 V(s_{t+3}) \label{a3}
 \end{alignat}
 \begin{align}
 \begin{split}

@@ -12,6 +12,7 @@
 
 \usepackage{amsmath}
 \usepackage{ amssymb }
+\usepackage{mathtools}
 \usepackage{graphicx}
 \usepackage{url}
 \usepackage{float}
@@ -31,7 +32,9 @@
 \renewcommand{\cftchapfont}{}
 \renewcommand{\cftchappagefont}{}
 \renewcommand{\cftdot}{}
-
+\input{ext/bold_symbols}
+\input{ext/bold_greek_symbols}
+\input{ext/rl_math}
 \newcommand{\thesistitle}{Hierarchical Reinforcement Learning for Multi-modal Continuous Control Environments with Sparse Rewards}
 \newcommand{\thesisauthor}{Zeng Cancheng}
 \newcommand{\programname}{Master of Philosophy in Computer Engineering and Science}
@@ -42,6 +45,51 @@
 \newcommand{\dedicate}{\textit{TODO Somebody}}
 \newcommand{\supervisorinfo}{Prof. Dit-Yan Yeung, Thesis Supervisor \\ Department of Computer Science and Engineering}
 \newcommand{\depheadinfo}{TODO head}
+
+
+\newcommand{\ts}{\textsuperscript}
+\newcommand{\cseq}{(c_0, c_1, \dots)}
+\newcommand{\Av}{A^V}
+\newcommand{\gamlam}{\gamma \lambda}
+\newcommand{\wtrue}{\bw_{\mathrm{true}}}
+\newcommand{\dv}{\delta^V}
+\newcommand{\dvpi}{\delta^{\Vpi}}
+\newcommand{\Ctotal}{C}
+\newcommand{\hatq}{\hat{Q}}
+\newcommand{\hatqk}{\hat{Q}^{k}}
+\newcommand{\hatqlam}{\hat{Q}^{\lambda}}
+\newcommand{\hata}{\hat{A}}
+\newcommand{\hatak}{\hat{A}^{k}}
+\newcommand{\hatalam}{\hat{A}^{\mathrm{GAE(\gamma,\lambda)}}}
+\newcommand{\conv}{\ast}
+\newcommand{\ccorr}{\star}
+\newcommand{\cconj}[1]{\overline{#1}}
+\newcommand{\lamstep}{\bu^{\gamma\lambda}}
+\newcommand{\old}{_{\text{old}}}
+\newcommand{\successors}[1]{\sigma(#1)}
+\newcommand{\manuscript}{manuscript}
+\newcommand{\bbb}[1]{\indent$\bullet$ #1\\}
+\newcommand{\variance}{\mathrm{Variance}}
+\newcommand{\bias}{\mathrm{Bias}}
+\newcommand{\ntraj}{N_{\mathrm{traj}}}
+\newcommand{\MSE}{\mathrm{MSE}}
+\newcommand{\phold}{\phi_{\text{old}}}
+\newcommand{\skipforicml}[1]{}
+\newcommand{\delay}{l}
+\newcommand{\meankl}[1]{{\ensuremath \overline D_{\rm KL}^{#1}}}
+\newcommand{\bgrad}{\bg^{\gamma}}
+\newcommand{\Apigam}{A^{\pi,\gamma}}
+\newcommand{\Qpigam}{Q^{\pi,\gamma}}
+\newcommand{\Vpigam}{V^{\pi,\gamma}}
+\newcommand{\hatqgam}{\hat{Q}^{\gamma}}
+\newcommand{\tilr}{\tilde{r}}
+\newcommand{\resp}{\chi}
+\newcommand{\Vhat}{\hat{V}}
+\newcommand{\bofpast}{b_t(s_{0:t},a_{0:t-1})}
+\newcommand{\qofall}{Q_t(s_{0:\infty},a_{0:\infty})}
+\newcommand{\just}{$\gamma$-just}
+\newcommand{\GAE}{\mathrm{GAE}}
+\renewcommand{\bg}{g}
 
 
 
