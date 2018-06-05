@@ -88,11 +88,6 @@ disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir .
 
 CUDA_VISIBLE_DEVICES=0,1,2 ./contact_czeng_if_you_need_gpu.sh
 0mux1
-dead CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR_ADAM --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.00003 --vlr 0.001 --npass 2 --loss TRAD_WASS --use-mix true --decrease-with-initial 0.005 --wass-decrease-period 5e6
-dead CUDA_VISIBLE_DEVICES=2 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR_ADAM --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0003 --vlr 0.001 --npass 2 --loss TRAD_WASS --use-mix true --decrease-with-initial 0.005 --wass-decrease-period 5e6
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_19 ../exp_18  --label 3e-5 3e-4
-disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir ../exp_19 ../exp_18  --label 3e-5 3e-4
-
 
 
 1mux1
@@ -124,7 +119,7 @@ CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM 
 
 
 local:
-python3.6 pg_train.py --env flatcont2d --rl-method ACKTR_ADAM --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD_WASS --use-mix true --decrease-with-initial 0.01 --wass-decrease-period 30e6
+python3.6 pg_train.py --env flatcont2d --rl-method ACKTR_ADAM --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD_WASS --use-mix true
 
 record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env simplemove1d --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record --load-dir exp_7

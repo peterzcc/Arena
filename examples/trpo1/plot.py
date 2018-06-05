@@ -49,6 +49,8 @@ def main():
             x = x[:max_id]
             y = y[:max_id]
         plt.plot(x, y, linewidth=0.5)
+        x1, x2, y1, y2 = plt.axis()
+        plt.axis((x1, x2, np.maximum(y1, -1000.), y2))
     if labels[0] is not None:
         plt.legend(labels, loc='best')
     plt.savefig('vis_train' + '.pdf', bbox_inches='tight')

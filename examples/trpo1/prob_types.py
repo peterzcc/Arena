@@ -39,7 +39,7 @@ _EPSILON = 1e-6
 def gaussian_loglikelihood(x_var, means, log_stds):
     zs = (x_var - means) * tf.exp(-log_stds)
     log_det_std = tf.reduce_sum(log_stds, -1)
-    return - log_det_std + tf.stop_gradient(log_det_std) - \
+    return - log_det_std - \
            0.5 * tf.reduce_sum(tf.square(zs), -1) - \
            0.5 * means.get_shape()[-1].value * np.log(2 * np.pi)
 
@@ -243,6 +243,9 @@ class DiagonalGaussian(ProbType):
         log_stds = dist_info_vars[KEY_LOGSTD]
         return gaussian_loglikelihood(x_var, means, log_stds)
 
+    def norm_wass(self, wass, old_std, new_std):
+        return wass / (0.5 * old_std ** 2 + 0.5 * tf.stop_gradient(new_std) ** 2)
+
     def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
         old_means = old_dist_info_vars[KEY_MEAN]
         old_log_stds = old_dist_info_vars[KEY_LOGSTD]
@@ -253,7 +256,7 @@ class DiagonalGaussian(ProbType):
         wasserstein_terms = tf.square(old_means - new_means) + tf.square(old_std - new_std)
         if self.normalize_wass:
             logging.debug("using normalized wass")
-            wasserstein_terms = wasserstein_terms / (0.5 * old_std ** 2 + 0.5 * new_std ** 2)
+            wasserstein_terms = self.norm_wass(wasserstein_terms, old_std, new_std)
 
         return tf.reduce_sum(wasserstein_terms, axis=-1)
 
@@ -274,7 +277,7 @@ class DiagonalGaussian(ProbType):
             new_std + std_sample - old_std)
         if self.normalize_wass:
             logging.debug("using normalized wass")
-            wasserstein_terms = wasserstein_terms / (0.5 * old_std ** 2 + 0.5 * new_std ** 2)
+            wasserstein_terms = self.norm_wass(wasserstein_terms, old_std, new_std)
 
         return tf.reduce_sum(wasserstein_terms, axis=-1)
 
@@ -319,12 +322,14 @@ class DiagonalGaussian(ProbType):
 
 
 class RobustMixtureGaussian(ProbType):
-    def __init__(self, dim, exploration_prob=0.05, max_std=1.0, std_ratio=5., ):
+    def __init__(self, dim, exploration_prob=0.05, max_std=1.0, std_ratio=4., clip=False, normalize_wass=False):
         logging.debug("mixture params:{}".format(locals()))
         self.dim = dim
         self.exploration_prob = exploration_prob
         self.max_std = max_std
         self.std_ratio = std_ratio
+        self.clip = clip
+        self.normalize_wass = normalize_wass
 
     @property
     def main_prob(self):
@@ -338,14 +343,16 @@ class RobustMixtureGaussian(ProbType):
         return logstd_n, std_n
 
     def get_distrobust_logstd_from_main_logstd(self, logstd):
-        distrobust_logstd = tf.minimum(np.log(self.max_std).astype(np.float32),
-                                       logstd + np.log(self.std_ratio))
+        distrobust_logstd = logstd + np.log(self.std_ratio)
+        if self.clip:
+            distrobust_logstd = tf.minimum(distrobust_logstd, np.log(self.max_std))
         return distrobust_logstd
 
     def get_distrobust_std_from_main_std(self, std):
-        distrobust_logstd = tf.minimum(float(self.max_std),
-                                       std * float(self.std_ratio))
-        return distrobust_logstd
+        distrobust_std = std * float(self.std_ratio)
+        if self.clip:
+            distrobust_std = tf.minimum(distrobust_std, self.max_std)
+        return distrobust_std
 
     def create_dist_vars(self, last_layer, dtype=tf.float32):
         old_mean_n = tf.placeholder(dtype, shape=(None, self.dim),
@@ -358,7 +365,8 @@ class RobustMixtureGaussian(ProbType):
         nsample = tf.shape(mean_n)[0]
 
         logstd_param = tf.get_variable("logstd", (self.dim,), tf.float32,
-                                       tf.zeros_initializer())  # Variance on outputs
+                                       tf.constant_initializer(
+                                           value=np.log(1. / self.std_ratio)))  # Variance on outputs
         logstd_n, std_n = self.get_stdn_from_logstd_param(logstd_param, nsample)
         old_dist_vars = dict(mean=old_mean_n, logstd=old_logstd_n)
         dist_vars = dict(mean=mean_n, logstd=logstd_n)
@@ -388,6 +396,9 @@ class RobustMixtureGaussian(ProbType):
                                                + tf.exp(distrobust_logp - offset))
         return final_log_likelihood
 
+    def norm_wass(self, wass, old_std, new_std):
+        return wass / (0.5 * old_std ** 2 + 0.5 * tf.stop_gradient(new_std) ** 2)
+
     def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars):
         dummy_gaussian = DiagonalGaussian(self.dim)
         old_distrobust_info_vars = self._distrobust_info_vars_from_main(old_dist_info_vars)
@@ -395,6 +406,12 @@ class RobustMixtureGaussian(ProbType):
         main_wass = dummy_gaussian.wasserstein_sym(old_dist_info_vars, new_dist_info_vars)
         distroobust_wass = dummy_gaussian.wasserstein_sym(old_distrobust_info_vars, new_distrobust_info_vars)
         final_wass = self.main_prob * main_wass + self.exploration_prob * distroobust_wass
+
+        if self.normalize_wass:
+            logging.debug("using normalized wass")
+            final_wass = self.norm_wass(final_wass,
+                                        tf.exp(old_dist_info_vars[KEY_LOGSTD]),
+                                        tf.exp(new_dist_info_vars[KEY_LOGSTD]))
         return final_wass
 
     def wasserstein_sampled_sym(self, old_dist_info_vars, new_dist_info_vars,
@@ -410,6 +427,11 @@ class RobustMixtureGaussian(ProbType):
             {"std": self.get_distrobust_std_from_main_std(interim_vars["std"])},
             logstd_sample_dev)
         final_wass = self.main_prob * main_wass + self.exploration_prob * distroobust_wass
+        if self.normalize_wass:
+            logging.debug("using normalized wass")
+            final_wass = self.norm_wass(final_wass,
+                                        tf.exp(old_dist_info_vars[KEY_LOGSTD]),
+                                        tf.exp(new_dist_info_vars[KEY_LOGSTD]))
         return final_wass
 
     def entropy(self, dist_info):
@@ -419,3 +441,6 @@ class RobustMixtureGaussian(ProbType):
     def reset_exp(self, interm_vars, std=0.1):
         param = interm_vars["logstd_param"]
         return tf.assign(param, np.log(np.ones(param.get_shape().as_list()) * std))
+
+    def regulation_loss(self, dist_info):
+        return 0.
