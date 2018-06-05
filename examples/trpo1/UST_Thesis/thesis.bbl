@@ -23,6 +23,15 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{heess2016learning}
+N.~Heess, G.~Wayne, Y.~Tassa, T.~Lillicrap, M.~Riedmiller, and D.~Silver,
+  ``Learning and transfer of modulated locomotor controllers,'' \emph{arXiv
+  preprint arXiv:1610.05182}, 2016, \url{https://arxiv.org/pdf/1610.05182}.
+
+\bibitem{frans2017meta}
+K.~Frans, J.~Ho, X.~Chen, P.~Abbeel, and J.~Schulman, ``Meta learning shared
+  hierarchies,'' \emph{arXiv preprint arXiv:1710.09767}, 2017.
+
 \bibitem{mnih2015human}
 V.~Mnih, K.~Kavukcuoglu, D.~Silver, A.~A. Rusu, J.~Veness, M.~G. Bellemare,
   A.~Graves, M.~Riedmiller, A.~K. Fidjeland, G.~Ostrovski \emph{et~al.},
@@ -100,15 +109,6 @@ R.~S. Sutton, D.~Precup, and S.~Singh, ``Between mdps and semi-mdps: A
   framework for temporal abstraction in reinforcement learning,''
   \emph{Artificial intelligence}, vol. 112, no.~1, pp. 181--211, 1999.
 
-\bibitem{heess2016learning}
-N.~Heess, G.~Wayne, Y.~Tassa, T.~Lillicrap, M.~Riedmiller, and D.~Silver,
-  ``Learning and transfer of modulated locomotor controllers,'' \emph{arXiv
-  preprint arXiv:1610.05182}, 2016, \url{https://arxiv.org/pdf/1610.05182}.
-
-\bibitem{frans2017meta}
-K.~Frans, J.~Ho, X.~Chen, P.~Abbeel, and J.~Schulman, ``Meta learning shared
-  hierarchies,'' \emph{arXiv preprint arXiv:1710.09767}, 2017.
-
 \bibitem{riedmiller2018learning}
 M.~Riedmiller, R.~Hafner, T.~Lampe, M.~Neunert, J.~Degrave, T.~Van~de Wiele,
   V.~Mnih, N.~Heess, and J.~T. Springenberg, ``Learning by playing-solving
@@ -121,6 +121,26 @@ M.~Andrychowicz, D.~Crow, A.~Ray, J.~Schneider, R.~Fong, P.~Welinder,
   replay,'' in \emph{Advances in Neural Information Processing Systems}, 2017,
   pp. 5055--5065,
   \url{http://papers.nips.cc/paper/7090-hindsight-experience-replay.pdf}.
+
+\bibitem{mankowitz2018unicorn}
+D.~J. Mankowitz, A.~{\v{Z}}{\'\i}dek, A.~Barreto, D.~Horgan, M.~Hessel,
+  J.~Quan, J.~Oh, H.~van Hasselt, D.~Silver, and T.~Schaul, ``Unicorn:
+  Continual learning with a universal, off-policy agent,'' \emph{arXiv preprint
+  arXiv:1802.08294}, 2018.
+
+\bibitem{vezhnevets2017feudal}
+A.~S. Vezhnevets, S.~Osindero, T.~Schaul, N.~Heess, M.~Jaderberg, D.~Silver,
+  and K.~Kavukcuoglu, ``Feudal networks for hierarchical reinforcement
+  learning,'' \emph{arXiv preprint arXiv:1703.01161}, 2017.
+
+\bibitem{shu2017hierarchical}
+T.~Shu, C.~Xiong, and R.~Socher, ``Hierarchical and interpretable skill
+  acquisition in multi-task reinforcement learning,'' \emph{arXiv preprint
+  arXiv:1712.07294}, 2017.
+
+\bibitem{andreas2016modular}
+J.~Andreas, D.~Klein, and S.~Levine, ``Modular multitask reinforcement learning
+  with policy sketches,'' \emph{arXiv preprint arXiv:1611.01796}, 2016.
 
 \bibitem{vezhnevets2016strategic}
 A.~Vezhnevets, V.~Mnih, S.~Osindero, A.~Graves, O.~Vinyals, J.~Agapiou
