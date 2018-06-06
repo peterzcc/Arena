@@ -111,15 +111,16 @@ disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_10 ../exp_11
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir ../exp_10 ../exp_11 ../exp_7 ../exp_8 ../exp_9 --label de3e-5 de1e-4 1e-4 3e-4 1e-3
 
 5
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001 --npass 2 --loss TRAD_WASS --normalize-wass 1
-CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001 --npass 2 --loss TRAD_WASS --normalize-wass 1
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.001 --npass 2 --loss TRAD_WASS --normalize-wass 1
+CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.01 --vlr 0.001 --npass 2 --loss TRAD_WASS --normalize-wass 1
 CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --npass 2 --loss TRAD_WASS --normalize-wass 1
 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD_WASS --normalize-wass 1
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w50 --dir ../exp_25 ../exp_26 ../exp_27 ../exp_28 --label 3e-4 1e-3 3e-3 1e-2
 
 
 
 local:
-python3.6 pg_train.py --env flatcont2d --rl-method ACKTR_ADAM --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD_WASS --use-mix true
+python3.6 pg_train.py --env flatcont2d --rl-method ACKTR_ADAM --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --lr 0.0001 --vlr 0.001 --npass 2 --loss TRAD_WASS --use-mix true
 
 record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env simplemove1d --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record --load-dir exp_7

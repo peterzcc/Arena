@@ -1,4 +1,7 @@
+%!TEX program = xelatex
+%!TEX root = ./thesis.tex
 \section{Hierarchical Reinforcement Learning Methods}
+%TODO: provide a informative overview on HRL methods
 \subsection{Option framework}
 The work of \cite{sutton1999between} is among the earliest studies of hierarchical reinforcement learning, which uses the notion of \textit{option} to define the partial policies / subroutines. An option consists of a policy $\pi$, a termination condition $\beta$ and an input set $I$ that indicates whether the partial policy is available at the current state. Once an option is executed, then actions are chosen according to \(\pi\) until \(\beta(s)\) outputs a termination signal. 
 
