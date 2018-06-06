@@ -88,7 +88,7 @@ disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir .
 
 CUDA_VISIBLE_DEVICES=0,1,2 ./contact_czeng_if_you_need_gpu.sh
 0mux1
-
+CUDA_VISIBLE_DEVICES=0 disprun python3.6 pg_train.py --env dynamic2d5 --rl-method ACKTR --nactor 20 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_target --load-model 0 --vlr 0.002 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-start 150  --switcher-length 25 --npret -1  --loss TRAD --ent-k 0.01 --switcher-k 0.1  --kl 0.001
 
 1mux1
 
