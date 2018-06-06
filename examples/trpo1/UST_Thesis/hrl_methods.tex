@@ -2,6 +2,25 @@
 %!TEX root = ./thesis.tex
 \section{Hierarchical Reinforcement Learning Methods}
 %TODO: provide a informative overview on HRL methods
+
+The paradigm of hierarchical reinforcement learning focuses on solving challenging reinforcement learning problems through temporal abstraction~\cite{barto2003recent}. A hierarchical reinforcement learning agent's decisions invoke temporally extended activities instead of taking primary actions, so that it does not need to make decision at every time step. 
+
+The history of hierarchical reinforcement learning study can be dated back to late 1990s. Many methods have been proposed in the past 20 years, including option framework~\cite{sutton1999between}, hierarchies of abstract machines~\cite{parr1998reinforcement}, and MAXQ value function decomposition~\cite{dietterich2000hierarchical}.
+
+Any hierarchical reinforcement learning method needs to solve 2 problems. First is to define and learn the temporally extended activities, which are low-level closed-loop partial policies. Second is to learn the decision scheduling of the low-level partial policies, including the selection of the partial policies and the scheduling of these decision points.
+
+Many paradigms have been proposed to solve the first problem. The ideal formulation is for the agent to directly discover low-level policies that could be reused. However, this formulation has make the problem infeasible although some methods have been proposed~\cite{mcgovern2001automatic},~\cite{hengst2002discovering} in some special cases. 
+
+The most widely applied formulation is to manually define the low-level policies, or their corresponding MDPs. The problem is that this formulation basically relies on intensive domain-specific design, and manually defining them may not be feasible for real-world challenging environments.
+
+Another popular formulation is to propose a set of auxiliary tasks to define and train the low-level policies. However, the method of proposing auxiliary tasks is only feasible in some special cases and its development needs domain-specific engineering. 
+
+Finally, this thesis assumes the low-level policies are trained in a set of given source tasks that are primary problems. This formulation is general in the sense that the target problem can be solved as long as it can be decomposed into executing a series of some source task policies.
+
+The solution to the first part of the second problem, which is learning to select among low-level policies, has been thoroughly studied since the work of~\cite{sutton1999between}. However, the second part, which is to schedule the decision points, have not been solved for general environments. The most popular choice is to schedule decision points at fixed predefined periods, which is inflexible.
+
+The following sections, will discuss the related hierarchical reinforcement learning methods in details.
+
 \subsection{Option framework}
 The work of \cite{sutton1999between} is among the earliest studies of hierarchical reinforcement learning, which uses the notion of \textit{option} to define the partial policies / subroutines. An option consists of a policy $\pi$, a termination condition $\beta$ and an input set $I$ that indicates whether the partial policy is available at the current state. Once an option is executed, then actions are chosen according to \(\pi\) until \(\beta(s)\) outputs a termination signal. 
 

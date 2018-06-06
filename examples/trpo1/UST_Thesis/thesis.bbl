@@ -44,6 +44,10 @@ D.~Silver, A.~Huang, C.~J. Maddison, A.~Guez, L.~Sifre, G.~Van Den~Driessche,
   ``Mastering the game of go with deep neural networks and tree search,''
   \emph{Nature}, vol. 529, no. 7587, pp. 484--489, 2016.
 
+\bibitem{heinrich2016deep}
+J.~Heinrich and D.~Silver, ``Deep reinforcement learning from self-play in
+  imperfect-information games,'' \emph{arXiv preprint arXiv:1603.01121}, 2016.
+
 \bibitem{duan2016benchmarking}
 Y.~Duan, X.~Chen, R.~Houthooft, J.~Schulman, and P.~Abbeel, ``Benchmarking deep
   reinforcement learning for continuous control,'' in \emph{International
@@ -108,6 +112,24 @@ O.~Nachum, M.~Norouzi, K.~Xu, and D.~Schuurmans, ``Trust-pcl: An off-policy
 R.~S. Sutton, D.~Precup, and S.~Singh, ``Between mdps and semi-mdps: A
   framework for temporal abstraction in reinforcement learning,''
   \emph{Artificial intelligence}, vol. 112, no.~1, pp. 181--211, 1999.
+
+\bibitem{parr1998reinforcement}
+R.~Parr and S.~J. Russell, ``Reinforcement learning with hierarchies of
+  machines,'' in \emph{Advances in neural information processing systems},
+  1998, pp. 1043--1049.
+
+\bibitem{dietterich2000hierarchical}
+T.~G. Dietterich, ``Hierarchical reinforcement learning with the maxq value
+  function decomposition,'' \emph{J. Artif. Intell. Res.(JAIR)}, vol.~13, pp.
+  227--303, 2000.
+
+\bibitem{mcgovern2001automatic}
+A.~McGovern and A.~G. Barto, ``Automatic discovery of subgoals in reinforcement
+  learning using diverse density,'' 2001.
+
+\bibitem{hengst2002discovering}
+B.~Hengst, ``Discovering hierarchy in reinforcement learning with hexq,'' in
+  \emph{ICML}, vol.~2, 2002, pp. 243--250.
 
 \bibitem{riedmiller2018learning}
 M.~Riedmiller, R.~Hafner, T.~Lampe, M.~Neunert, J.~Degrave, T.~Van~de Wiele,

@@ -14,11 +14,8 @@ The decider agent takes an action at every time-step. It may either decide which
 
 The observation space of the root agent consists of 2 parts, original statn (motion-sensor observation, image observation) and the meta state. The meta observation state the current sub-policy being executed and the number of time-steps since the last decision has been made.
 
-Empirically, the decider agent is parameterized by two policy networks, $\theta_s$ and $\theta_d$. The network $\theta_s$, namely switcher network, outputs a binary action that decides whether the agent should simply continue using the current acting actuator policy, or switch to another policy based on the current state. The agent
-
-The network $\theta_d$, namely decider network, outputs an $n_a$-discrete action space, that select the acting agent
-
-The selected leaf agent executes the corresponding sub-policy and computes the primary actions the agent should take for the original environment.
+Empirically, the decider agent is parameterized by two policy networks, $\theta_s$ and $\theta_d$. The network $\theta_s$, namely switcher network, outputs a binary action that decides whether the agent should simply continue using the current acting actuator policy, or make the full decision based on the current state. 
+The network $\theta_d$, namely decider network, outputs an $n_a$-discrete action space, that select the acting actuator agent. 
 
  The overalll decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
 
@@ -38,7 +35,7 @@ ctuators[a_{decider}-1]$
 \end{algorithm}
 
 
-\section{Generalized advantage estimation for hierarchical reinforcement learning agents}
+\section{Generalized advantage estimation for the decider agent}
 We propose a generalized advantage estimation method for decider agents hierarchical reinforcement learning agents. 
 
 Assume that a decider agent makes decisions at time $t_1,t_2,\dots$, then the execution length of the decisions are $l_i = t_{i+1} - t_i, i=1,2,\dots$.
@@ -102,4 +99,11 @@ The normalized generalized advantage estimater is then given by:
 = \frac{\hata_{t_i}^{GAE_{unorm}(\lambda)}}{\sum_{b=0}^{k-1} \lambda^{t_{i+b}-t_i}}
 \end{align}
 However, the unormalized GAE estimator is usually used in practice instead of the normalized one, with a postprocessing step of batch normalization to adjust the scale of the advantages. This pratical method usually lead to large advantage scales for experience data at the beginning of the episodes and small scales for the experience data near episode ends.
+
+\section{Training of the switcher agent}
+We train the switcher agent using a flat reinforcement learning method according to the return of the target task, because it needs to make decisions at every time step. However, we add an extra loss so that the switcher network will tend to reduce the number of decision points of the decision network:
+\begin{align}
+J'(\theta_s) = J'(\theta_s) + \mathbb{E}[\pi_s(s)]
+\end{align}
+Where $\pi_s$ is the output of the switcher network.
 

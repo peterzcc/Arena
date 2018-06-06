@@ -23,62 +23,59 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: reference.bib
-Repeated entry---line 21 of file reference.bib
- : @article{andreas2016modular
- :                            ,
-I'm skipping whatever remains of this entry
-Repeated entry---line 121 of file reference.bib
+Repeated entry---line 128 of file reference.bib
  : @article{mankowitz2018unicorn
  :                              ,
 I'm skipping whatever remains of this entry
-Repeated entry---line 254 of file reference.bib
+Repeated entry---line 261 of file reference.bib
  : @article{vezhnevets2017feudal
  :                              ,
 I'm skipping whatever remains of this entry
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
+Warning--empty journal in mcgovern2001automatic
 
 Done.
-You've used 28 entries,
+You've used 33 entries,
             4087 wiz_defined-function locations,
-            981 strings with 13681 characters,
-and the built_in function-call counts, 19551 in all, are:
-= -- 1435
-> -- 713
-< -- 104
-+ -- 368
-- -- 152
-* -- 939
-:= -- 2896
-add.period$ -- 56
-call.type$ -- 28
-change.case$ -- 30
-chr.to.int$ -- 246
-cite$ -- 28
-duplicate$ -- 1449
-empty$ -- 1577
-format.name$ -- 178
-if$ -- 4513
+            1005 strings with 14364 characters,
+and the built_in function-call counts, 22957 in all, are:
+= -- 1713
+> -- 774
+< -- 135
++ -- 404
+- -- 160
+* -- 1088
+:= -- 3403
+add.period$ -- 66
+call.type$ -- 33
+change.case$ -- 35
+chr.to.int$ -- 324
+cite$ -- 34
+duplicate$ -- 1698
+empty$ -- 1868
+format.name$ -- 189
+if$ -- 5314
 int.to.chr$ -- 0
-int.to.str$ -- 28
-missing$ -- 302
-newline$ -- 110
-num.names$ -- 28
-pop$ -- 795
+int.to.str$ -- 33
+missing$ -- 339
+newline$ -- 125
+num.names$ -- 33
+pop$ -- 884
 preamble$ -- 2
 purify$ -- 0
 quote$ -- 2
-skip$ -- 1459
+skip$ -- 1733
 stack$ -- 0
-substring$ -- 608
-swap$ -- 1085
-text.length$ -- 22
+substring$ -- 795
+swap$ -- 1276
+text.length$ -- 27
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 28
-warning$ -- 0
-while$ -- 64
-width$ -- 30
-write$ -- 271
-(There were 3 error messages)
+type$ -- 33
+warning$ -- 1
+while$ -- 81
+width$ -- 35
+write$ -- 315
+(There were 2 error messages)

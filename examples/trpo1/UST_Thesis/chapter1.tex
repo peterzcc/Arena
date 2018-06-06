@@ -1,16 +1,16 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
-%TODOL think about the organization again
+
 \chapter{Introduction}
 \section{Overview}
-% TODO: elaborate
-Deep reinforcement learning methods have gained much attention from researchers and the public since the recent advances such as DQN~\cite{mnih2015human} and AlphaGo~\cite{silver2016mastering}. The method of deep reinforcement learning combine deep neural network models and reinforcement learning algorithms, enabling the potential for solving general control problems in fully autonomous manner. 
-However, the application of contemporary deep reinforcement learning methods are still limited to a finite class of problems. The reinforcement learning problem either has a fully known model like the Go game, or has to be problems with low complexity like Atari game \cite{mnih2015human} or primary robot control tasks \cite{duan2016benchmarking}. The real-world robot control problems are far from being solved without labour-intensive domain specific engineering.
+Deep reinforcement learning methods have become popular in the machine learning field in the recent years. Through the combination of deep neural network models and reinforcement learning theory, advances in deep reinforcement learning have achieved human level control performance in playing Atari games \cite{mnih2015human}, mastered the board game GO \cite{silver2016mastering}, learned to play Texas Hold'em pokers \cite{heinrich2016deep}, and learned to solve simple robot control tasks \cite{duan2016benchmarking}.
 
-In this study, we propose a hierarchical reinforcement learning method that can learn to solve increasingly complex tasks in several realistic robot control environments.
+However, the capability of reinforcement learning is still very limited. The end-to-end deep reinforcement learning methods are not able to solve general real-world challenging problems, such as playing the StarCraft games, controlling industrial assembly robots and making stock trading decisions. The contemporary end-to-end deep reinforcement learning methods have been able to handle simple tasks with unknown environment dynamics, or relatively complex environments that have known models. The real-world problems, however, usually have uncertain dynamics, noisy observation space and relative complex task logics. The study on improving the capability of deep reinforcement learning is thus still an important issue.
 
+In this study, we investigate a set of challenging robot control environments and propose several methods that can solve the tasks.
+%TODO polish
 \section{Background}
-% TODO: finish
+
 \subsection{Reinforcement Learning (RL)}
 Reinforcement learning~\cite{sutton1998reinforcement} is learning a policy (map from situations to actions) in order to maximize a numerical reward signal. The learner must discover the optimal policy by trying them. Reinforcement learning is different from supervised learning that the learner is not provided any labelled examples by any knowledgeable external supervisor. Reinforcement learning is also different from unsupervised learning, whose objective is finding hidden structures in unlabeled data.
 
@@ -25,7 +25,7 @@ $$ V_\pi(s_t) = \mathbb{E}_{a_{t},s_{t+1},a_{t+1},\ldots}
 
 $$ A_\pi (s,a) = Q_\pi (s,a) - V_\pi (s), \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0 $$
 
-
+%TODO: think about where I can put this section
 \subsection{Hierarchical reinforcement learning based on transferred policies from easy tasks}\label{sec_hier_trans}
 
 This study focus on a class of reinforcement learning problems, where the objective is to solve a \textit{target task } given a set of trained \textit{source tasks}. The policies that can solve the source tasks, namely the \textit{actuator policies}, are available for the agent. It is known that target task can be solved by a sequential execution of a subset of the source-task policies. The agent needs to learn a \textit{scheduler policy}, which chooses the source-task policy to be executed and decides when to switch the currently running source-task policy.
