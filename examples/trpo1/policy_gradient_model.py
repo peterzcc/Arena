@@ -206,7 +206,11 @@ class PolicyGradientModel(ModelWithCritic):
                         use_adam = True
                 else:
                     use_adam = False
-
+                if isinstance(self.distribution, RobustMixtureGaussian) and not use_wasserstein:
+                    self.k_adjust_tolerance_steps = 3
+                else:
+                    self.k_adjust_tolerance_steps = 1
+                self.k_error_count = 0
                 self.k_stepsize = tf.Variable(initial_value=np.float32(lr), name='stepsize')
                 k_min_stepsize = np.float32(1e-8)
                 k_max_stepsize = np.float32(1e-1)
@@ -559,6 +563,20 @@ class PolicyGradientModel(ModelWithCritic):
             self._log("{0}_surr: {1}\t{0}_kl: {2}\t{0}_ent: {3}".format(tag, surr, kl, ent))
         return surr, kl, ent
 
+    def acktr_update_error_count(self, ratio):
+        if ratio > 2.0:
+            if self.k_error_count >= 0:
+                self.k_error_count += 1
+            else:
+                self.k_error_count = 0
+        elif ratio < 0.5:
+            if self.k_error_count <= 0:
+                self.k_error_count -= 1
+            else:
+                self.k_error_count = 0
+        else:
+            self.k_error_count = 0
+
     def fit_acktr(self, feed, num_samples, pid=None, feed_parameters={}):
         if self.f_target_kl is not None:
             target_kl_value = self.f_target_kl(self.n_update)
@@ -575,19 +593,22 @@ class PolicyGradientModel(ModelWithCritic):
 
         _, kl_new, _ = self.print_stat(feed, num_samples, tag="new")
         if self.f_target_kl is not None:
-            kl_target_ratio = kl_new / target_kl_value
-            if kl_target_ratio > 4.0:
-                if verbose: self._log("kl too high")
-                self.session.run(self.k_decrease_large_step,
-                                 feed_dict={self.k_adjust_ratio: kl_target_ratio})
-            elif kl_target_ratio > 2.0:
-                if verbose: self._log("kl too high")
-                self.session.run(self.k_decrease_step)
-            elif kl_target_ratio < 0.5:
-                if verbose: self._log("kl too low")
-                self.session.run(self.k_increase_step)
-            else:
-                if verbose: self._log("kl just right!")
+            kl_real2target_ratio = kl_new / target_kl_value
+            self.acktr_update_error_count(kl_real2target_ratio)
+            if verbose: self._log("kl error count:{}\t/{}".format(self.k_error_count, self.k_adjust_tolerance_steps))
+            if np.abs(self.k_error_count) >= self.k_adjust_tolerance_steps:
+                if kl_real2target_ratio > 4.0:
+                    if verbose: self._log("kl too high")
+                    self.session.run(self.k_decrease_large_step,
+                                     feed_dict={self.k_adjust_ratio: kl_real2target_ratio})
+                elif kl_real2target_ratio > 2.0:
+                    if verbose: self._log("kl too high")
+                    self.session.run(self.k_decrease_step)
+                elif kl_real2target_ratio < 0.5:
+                    if verbose: self._log("kl too low")
+                    self.session.run(self.k_increase_step)
+                else:
+                    if verbose: self._log("kl just right!")
 
     def fit_pg(self, feed, num_samples, pid=None, feed_parameters={}):
 

@@ -36,12 +36,20 @@ class ProbType(object):
 _EPSILON = 1e-6
 
 
-def gaussian_loglikelihood(x_var, means, log_stds):
-    zs = (x_var - means) * tf.exp(-log_stds)
-    log_det_std = tf.reduce_sum(log_stds, -1)
-    return - log_det_std - \
-           0.5 * tf.reduce_sum(tf.square(zs), -1) - \
+def gaussian_loglikelihood(x_var, means, log_stds=None, stds=None):
+    if log_stds is not None:
+        zs = (x_var - means) * tf.exp(-log_stds)
+        log_det_std = tf.reduce_sum(log_stds, -1)
+        log_pi = - log_det_std - \
+                 0.5 * tf.reduce_sum(tf.square(zs), -1) - \
            0.5 * means.get_shape()[-1].value * np.log(2 * np.pi)
+    else:
+        log_pi = - tf.reduce_sum(tf.log(stds), axis=1) - 0.5 * tf.log(
+            2.0 * np.pi) * means.get_shape()[-1].value - 0.5 * tf.reduce_sum(
+            tf.square(means - x_var) / (tf.square(stds)),
+            axis=1)
+    return log_pi
+
 
 def categorical_crossentropy(output, labels, from_logits=False):
     """Categorical crossentropy with integer targets.
@@ -107,12 +115,12 @@ class Categorical(ProbType):
         sample = tf.distributions.Categorical(logits=logits).sample()
         return dist_vars, old_dist_vars, sample, interm_vars
 
-    def log_likelihood_sym(self, x_var, dist_info_vars):
+    def log_likelihood_sym(self, x_var, dist_info_vars, interim_vars=None):
         one_hot_actions = tf.one_hot(x_var, self.n)
         logp = -tf.nn.softmax_cross_entropy_with_logits(logits=dist_info_vars["logits"], labels=one_hot_actions)
         return logp
 
-    def kl_sym(self, old_dist_info_vars, new_dist_info_vars):
+    def kl_sym(self, old_dist_info_vars, new_dist_info_vars, interim_vars=None):
         old_l = old_dist_info_vars["logits"]
         new_l = new_dist_info_vars["logits"]
         old_dist = tf.distributions.Categorical(logits=old_l)
@@ -137,8 +145,8 @@ class Categorical(ProbType):
         dist = tf.distributions.Categorical(logits=dist_info["logits"])
         return dist.sample()
 
-    def kf_loglike(self, action_n, dist_vars, interm_vars):
-        return self.log_likelihood_sym(action_n, dist_vars)
+    # def kf_loglike(self, action_n, dist_vars, interm_vars):
+    #     return self.log_likelihood_sym(action_n, dist_vars)
 
     def reset_exp(self, interm_vars, exploration=0.1):
         return tf.Print(tf.constant(0.0), [], "not implemented")
@@ -210,7 +218,8 @@ class DiagonalGaussian(ProbType):
         param = interm_vars["logstd_param"]
         return tf.assign(param, np.log(np.ones(param.get_shape().as_list()) * std))
 
-    def kl_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
+    def kl_sym(self, old_dist_info_vars, new_dist_info_vars,
+               action_n=None, interim_vars=None, epsilon=1e-8):
         old_means = old_dist_info_vars[KEY_MEAN]
         old_log_stds = old_dist_info_vars[KEY_LOGSTD]
         new_means = new_dist_info_vars[KEY_MEAN]
@@ -232,21 +241,26 @@ class DiagonalGaussian(ProbType):
         return tf.reduce_sum(
             numerator / denominator + new_log_stds - old_log_stds, -1)
 
-    def log_likelihood_sym(self, x_var, dist_info_vars):
+    def log_likelihood_sym(self, x_var, dist_info_vars, interim_vars=None):
         """
         \frac{1}{(2\pi)^{\frac{n}{2}}\sigma_\theta}exp(-(\frac{a-\mu_{\pi_\theta}}{2\sigma_\theta})^2)
         :param x_var:
         :param dist_info_vars:
         :return:
         """
-        means = dist_info_vars[KEY_MEAN]
-        log_stds = dist_info_vars[KEY_LOGSTD]
-        return gaussian_loglikelihood(x_var, means, log_stds)
+        if interim_vars is None:
+            means = dist_info_vars[KEY_MEAN]
+            log_stds = dist_info_vars[KEY_LOGSTD]
+            return gaussian_loglikelihood(x_var, means, log_stds=log_stds)
+        else:
+            means = dist_info_vars[KEY_MEAN]
+            stds = interim_vars["std"]
+            return gaussian_loglikelihood(x_var, means, stds=stds)
 
     def norm_wass(self, wass, old_std, new_std):
         return wass / (0.5 * old_std ** 2 + 0.5 * tf.stop_gradient(new_std) ** 2)
 
-    def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars, epsilon=1e-8):
+    def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars, action_n=None, epsilon=1e-8):
         old_means = old_dist_info_vars[KEY_MEAN]
         old_log_stds = old_dist_info_vars[KEY_LOGSTD]
         new_means = new_dist_info_vars[KEY_MEAN]
@@ -261,7 +275,7 @@ class DiagonalGaussian(ProbType):
         return tf.reduce_sum(wasserstein_terms, axis=-1)
 
     def wasserstein_sampled_sym(self, old_dist_info_vars,
-                                new_dist_info_vars, interim_vars,
+                                new_dist_info_vars, interim_vars, action_n=None,
                                 logstd_sample_dev=1.0):
         old_means = old_dist_info_vars[KEY_MEAN]
         old_log_stds = old_dist_info_vars[KEY_LOGSTD]
@@ -303,18 +317,18 @@ class DiagonalGaussian(ProbType):
         log_stds = dist_info[KEY_LOGSTD]
         return tf.reduce_sum(tf.square(tf.maximum(log_stds, 0.0)))
 
-    def log_likelihood_from_std(self, action_n, mean_n, std_n):
-        logprob_n = - tf.reduce_sum(tf.log(std_n), axis=1) - 0.5 * tf.log(
-            2.0 * np.pi) * self.dim - 0.5 * tf.reduce_sum(
-            tf.square(mean_n - action_n) / (tf.square(std_n)),
-            axis=1)
-        return logprob_n
-
-    def kf_loglike(self, action_n, dist_vars, interm_vars):
-        mean_n = dist_vars[KEY_MEAN]
-        std_n = interm_vars["std"]
-        logprob_n = self.log_likelihood_from_std(action_n, mean_n, std_n)
-        return logprob_n
+    # def log_likelihood_from_std(self, action_n, mean_n, std_n):
+    #     logprob_n = - tf.reduce_sum(tf.log(std_n), axis=1) - 0.5 * tf.log(
+    #         2.0 * np.pi) * self.dim - 0.5 * tf.reduce_sum(
+    #         tf.square(mean_n - action_n) / (tf.square(std_n)),
+    #         axis=1)
+    #     return logprob_n
+    #
+    # def kf_loglike(self, action_n, dist_vars, interm_vars):
+    #     mean_n = dist_vars[KEY_MEAN]
+    #     std_n = interm_vars["std"]
+    #     logprob_n = self.log_likelihood_from_std(action_n, mean_n, std_n)
+    #     return logprob_n
 
     @property
     def dist_info_keys(self):
@@ -355,6 +369,16 @@ class RobustMixtureGaussian(ProbType):
             distrobust_std = tf.minimum(distrobust_std, self.max_std)
         return distrobust_std
 
+    def _get_sample(self, mean_n, std_n):
+        sample_main = tf.distributions.Normal(loc=mean_n, scale=std_n).sample()
+        distrobust_stdn = self.get_distrobust_std_from_main_std(std_n)
+        sample_distrobust = tf.distributions.Normal(loc=mean_n, scale=distrobust_stdn).sample()
+        component_sample = tf.cast(
+            tf.distributions.Categorical(probs=[self.main_prob, self.exploration_prob]).sample(tf.shape(sample_main)),
+            tf.float32)
+        sample = (1. - component_sample) * sample_main + component_sample * sample_distrobust
+        return sample
+
     def create_dist_vars(self, last_layer, dtype=tf.float32):
         old_mean_n = tf.placeholder(dtype, shape=(None, self.dim),
                                     name="oldaction_dist_means")
@@ -372,27 +396,30 @@ class RobustMixtureGaussian(ProbType):
         old_dist_vars = dict(mean=old_mean_n, logstd=old_logstd_n)
         dist_vars = dict(mean=mean_n, logstd=logstd_n)
         interm_vars = dict(std=std_n, logstd_param=logstd_param)
-        sample_main = tf.distributions.Normal(loc=mean_n, scale=std_n).sample()
-        distrobust_logstd_param = self.get_distrobust_logstd_from_main_logstd(logstd_param)
-        _, distrobust_stdn = self.get_stdn_from_logstd_param(distrobust_logstd_param, nsample)
-        sample_distrobust = tf.distributions.Normal(loc=mean_n, scale=distrobust_stdn).sample()
-        component_sample = tf.cast(
-            tf.distributions.Categorical(probs=[self.main_prob, self.exploration_prob]).sample(tf.shape(sample_main)),
-            tf.float32)
-        sample = (1. - component_sample) * sample_main + component_sample * sample_distrobust
+        sample = self._get_sample(mean_n, std_n)
         return dist_vars, old_dist_vars, sample, interm_vars
 
-    def _distrobust_info_vars_from_main(self, distmain_info_vars):
+    def _distrobust_info_vars_from_main(self, distmain_info_vars, interim_vars=None):
+
         distrobust_info_vars = {KEY_MEAN: distmain_info_vars[KEY_MEAN]}
         distrobust_info_vars[KEY_LOGSTD] = \
             self.get_distrobust_logstd_from_main_logstd(distmain_info_vars[KEY_LOGSTD])
-        return distrobust_info_vars
+        if interim_vars is None:
+            return distrobust_info_vars
+        else:
+            interim_vars = {"std": self.get_distrobust_std_from_main_std(interim_vars["std"])}
+            return distrobust_info_vars, interim_vars
 
-    def log_likelihood_sym(self, x_var, dist_info_vars):
+    def log_likelihood_sym(self, x_var, dist_info_vars, interim_vars=None):
         dummy_gaussian = DiagonalGaussian(self.dim)
-        main_log_likelihood = dummy_gaussian.log_likelihood_sym(x_var, dist_info_vars)
+        main_log_likelihood = dummy_gaussian.log_likelihood_sym(x_var, dist_info_vars, interim_vars=interim_vars)
         distrobust_info_vars = self._distrobust_info_vars_from_main(dist_info_vars)
-        distrobust_log_likelihood = dummy_gaussian.log_likelihood_sym(x_var, distrobust_info_vars)
+        if interim_vars is not None:
+            distrobust_interim_vars = {"std": self.get_distrobust_std_from_main_std(interim_vars["std"])}
+        else:
+            distrobust_interim_vars = None
+        distrobust_log_likelihood = dummy_gaussian.log_likelihood_sym(
+            x_var, distrobust_info_vars, interim_vars=distrobust_interim_vars)
         main_logp = main_log_likelihood + np.log(self.main_prob)
         distrobust_logp = distrobust_log_likelihood + np.log(self.exploration_prob)
         offset = tf.maximum(main_logp, distrobust_logp)
@@ -403,7 +430,7 @@ class RobustMixtureGaussian(ProbType):
     def norm_wass(self, wass, old_std, new_std):
         return wass / (0.5 * old_std ** 2 + 0.5 * tf.stop_gradient(new_std) ** 2)
 
-    def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars):
+    def wasserstein_sym(self, old_dist_info_vars, new_dist_info_vars, action_n=None):
         dummy_gaussian = DiagonalGaussian(self.dim)
         old_distrobust_info_vars = self._distrobust_info_vars_from_main(old_dist_info_vars)
         new_distrobust_info_vars = self._distrobust_info_vars_from_main(new_dist_info_vars)
@@ -437,6 +464,16 @@ class RobustMixtureGaussian(ProbType):
                                         tf.exp(old_dist_info_vars[KEY_LOGSTD]),
                                         tf.exp(new_dist_info_vars[KEY_LOGSTD]))
         return final_wass
+
+    def kl_sym(self, old_dist_info_vars, new_dist_info_vars, action_n=None, interim_vars=None):
+        old_log_pi = self.log_likelihood_sym(action_n, old_dist_info_vars, interim_vars=None)
+        new_log_pi = self.log_likelihood_sym(
+            action_n,  # self._get_sample(mean_n=new_dist_info_vars[KEY_MEAN], std_n=interim_vars["std"]),
+            new_dist_info_vars,
+            interim_vars
+        )
+        kl_sampled = old_log_pi - new_log_pi
+        return kl_sampled
 
     def entropy(self, dist_info):
         log_stds = dist_info[KEY_LOGSTD]

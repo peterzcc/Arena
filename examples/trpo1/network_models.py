@@ -148,11 +148,12 @@ class MultiNetwork(object):
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
                     self.distribution.create_dist_vars(logits=self.full_logits)
 
-
-            new_log_pi = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars)
+            new_log_pi = self.distribution.log_likelihood_sym(self.action_n, self.dist_vars,
+                                                              interim_vars=self.interm_vars)
 
             self.new_log_pi = tf.check_numerics(new_log_pi, "new logpi nan")
-            self.old_log_pi = tf.check_numerics(self.distribution.log_likelihood_sym(self.action_n, self.old_vars),
+            self.old_log_pi = tf.check_numerics(self.distribution.log_likelihood_sym(self.action_n, self.old_vars,
+                                                                                     interim_vars=self.interm_vars),
                                                 "old logpi nan")
 
             self.var_list = tf.trainable_variables(this_scope.name)
@@ -207,10 +208,11 @@ class MultiNetwork(object):
                 self.kl = tf.reduce_mean(self.wassersteins)
                 self.loss_sampled = tf.reduce_mean(self.wassersteins_sampled)
             else:
-                self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars)
+                self.kls = self.distribution.kl_sym(self.old_vars, self.dist_vars, interim_vars=self.interm_vars,
+                                                    action_n=self.action_n)
                 self.kl = tf.reduce_mean(self.kls)
                 self.mean_loglike = - tf.reduce_mean(
-                    self.distribution.kf_loglike(self.action_n, self.dist_vars, self.interm_vars))
+                    self.distribution.log_likelihood_sym(self.action_n, self.dist_vars, interim_vars=self.interm_vars))
                 self.loss_sampled = self.mean_loglike
 
             self.ent = tf.reduce_mean(self.distribution.entropy(self.dist_vars))  # - self.new_log_pi
