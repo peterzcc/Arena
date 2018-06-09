@@ -120,7 +120,7 @@ class Categorical(ProbType):
         logp = -tf.nn.softmax_cross_entropy_with_logits(logits=dist_info_vars["logits"], labels=one_hot_actions)
         return logp
 
-    def kl_sym(self, old_dist_info_vars, new_dist_info_vars, interim_vars=None):
+    def kl_sym(self, old_dist_info_vars, new_dist_info_vars, interim_vars=None, action_n=None):
         old_l = old_dist_info_vars["logits"]
         new_l = new_dist_info_vars["logits"]
         old_dist = tf.distributions.Categorical(logits=old_l)
