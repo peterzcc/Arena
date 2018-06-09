@@ -124,7 +124,6 @@ class KfacOptimizer(object):
                     if len(bInputsList) > 0:
                         bTensor = bInputsList[0]
                         bTensorShape = fpropOp.outputs[0].get_shape()
-                        print("{} rank is {}".format(bTensor.name, bTensor.get_shape()))
                         if len(bTensor.get_shape()) > 0 and bTensor.get_shape()[0].value == None:
                             bTensor.set_shape(bTensorShape)
                         bTensors.append(bTensor)

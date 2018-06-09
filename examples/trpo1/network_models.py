@@ -135,10 +135,12 @@ class MultiNetwork(object):
                     self.fixed_prob_ter_logit = tf.get_variable("fix_ter_prob",
                                                                 initializer=tf.constant(logit(0.01),
                                                                                         dtype=tf.float32),
-                                                                dtype=tf.float32)
+                                                                dtype=tf.float32,
+                                                                trainable=False)
 
                     self.fixed_ter_weight = tf.get_variable("fix_ter_w", initializer=tf.constant(0.0, dtype=tf.float32),
-                                                            dtype=tf.float32)
+                                                            dtype=tf.float32,
+                                                            trainable=False)
                     final_terlogit = self.fixed_ter_weight * self.fixed_prob_ter_logit + \
                                      (1 - self.fixed_ter_weight) * time_logit
 
