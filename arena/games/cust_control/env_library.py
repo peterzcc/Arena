@@ -137,6 +137,8 @@ def get_current_and_joint_tasks(env_name):
 
 
 def get_initial_state_paths(env_name, initial_state_dir):
+    if initial_state_dir is None:
+        return None, None
     current_env_name, other_tasks = get_current_and_joint_tasks(env_name)
     if other_tasks is not None:
         sample_initial_states_from_paths = ["{}/{}.h5".format(initial_state_dir, e) for e in other_tasks]

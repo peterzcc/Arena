@@ -101,7 +101,9 @@ class Experiment(object):
         self.single_process_mode = single_process_mode
 
         # 1. Store variables
-        env, env_info = make_env(**env_args)
+        sample_env_args = env_args.copy()
+        sample_env_args["initial_state_dir"] = None
+        sample_env, env_info = make_env(**sample_env_args)
         mp_ctx = MpCtxManager.get_mp_ctx()
         if single_process_mode:
             self.process_type = thd.Thread
@@ -109,11 +111,11 @@ class Experiment(object):
         else:
             self.process_type = mp_ctx.Process
             self.queue_type = mp_ctx.Queue
-        self.observation_space = env.observation_space
-        self.action_space = env.action_space
+        self.observation_space = sample_env.observation_space
+        self.action_space = sample_env.action_space
         self.info_sample = {}
         try:
-            self.info_sample = env.info_sample
+            self.info_sample = sample_env.info_sample
         finally:
             pass
         self.env_args = env_args

@@ -143,9 +143,15 @@ def main():
 
     append_image = args.withimg
 
-    _, env_info = make_env(args.env, args.withimg, T)
     env_args = dict(env_name=args.env, withimg=args.withimg, T=T,
                     initial_state_dir=args.initial_state_dir)
+    sample_env_args = env_args.copy()
+    sample_env_args["initial_state_dir"] = None
+    sample_env, env_info = make_env(**sample_env_args)
+    observation_space = sample_env.observation_space
+    action_space = sample_env.action_space
+    sample_env.env.close()
+
     full_tasks = env_info["full_tasks"]
     is_fake_hrl = env_info["is_fake_hrl"]
 
@@ -256,10 +262,7 @@ def main():
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
         from tf_utils import aggregate_feature, concat_feature
-        sample_env, env_info = make_env(**env_args)
-        observation_space = sample_env.observation_space
-        action_space = sample_env.action_space
-        sample_env.env.close()
+
         n_imgfeat = args.nfeat if append_image else 0
         comb_methd = concat_feature if append_image else aggregate_feature
 
@@ -303,10 +306,6 @@ def main():
         from dict_memory import DictMemory
         import tensorflow as tf
         from tf_utils import aggregate_feature, concat_feature
-        sample_env, _ = make_env(**env_args)
-        observation_space = sample_env.observation_space
-        action_space = sample_env.action_space
-        sample_env.env.close()
         n_imgfeat = args.nfeat if append_image else 0
         comb_methd = concat_feature if append_image else aggregate_feature
 
