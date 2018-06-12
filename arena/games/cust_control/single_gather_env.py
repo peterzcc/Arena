@@ -357,6 +357,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.rot_angle = None
         self.constraint_height = constraint_height
         self._reset_objects()
+        self.initial_state = None
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
         utils.EzPickle.__init__(self)
 
@@ -450,10 +451,16 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             ])
 
     def reset_model(self):
-        qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq,
-                                                       low=-0.1, high=0.1)
-        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * self.init_noise
-        self.set_state(qpos, qvel)
+        if self.initial_state is None:
+            qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq,
+                                                           low=-0.1, high=0.1)
+            qvel = self.init_qvel + self.np_random.randn(self.model.nv) * self.init_noise
+            self.set_state(qpos, qvel)
+            self.initial_state = None
+        else:
+            qpos = self.initial_state[:self.model.nq]
+            qvel = self.initial_state[self.model.nq:]
+            self.set_state(qpos, qvel)
         return self._get_obs()
 
     def _get_viewer(self, visible=True, init_height=500, init_width=500):

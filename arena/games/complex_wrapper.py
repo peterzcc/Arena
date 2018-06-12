@@ -181,6 +181,9 @@ class ComplexWrapper(object):
     def close(self):
         self.env.close()
 
+    def sample_initial_state(self):
+        pass
+
     def reset(self):
         observation = self.env_reset()
         self.total_steps += self.episode_steps
