@@ -9,6 +9,11 @@ from collections import OrderedDict
 
 DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
 
+INITIAL_STATE_SHAPE = (27,)
+
+INITIAL_STATE_MAX_NUM = 2 ** 20
+
+
 
 def x_forward_obj():
     return np.array((1, 0))
@@ -62,64 +67,113 @@ def x_for_back():
     return DIRECTIONS[choice, :]
 
 
-cwd = os.path.dirname(os.path.realpath(__file__))  # os.getcwd()
+task1d = OrderedDict(move0=x_forward_obj, move1=x_backward_obj)
+hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
+task4 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
+                    move2=x_up_obj, move3=x_down_obj)
+task8 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
+                    move2=x_up_obj, move3=x_down_obj,
+                    move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
+
+dir_funcs_task8 = list(task8.values())
 
 
-def make_env(env_name, withimg, T=1000, pid=0):
+def random_direction8():
+    choice = np.random.randint(0, len(dir_funcs_task8))
+    return dir_funcs_task8[choice]()
+
+
+hrl_move2d8 = OrderedDict(move2d8=random_direction8, **task8)
+
+hrl_move2d = OrderedDict(move2d=random_direction, **task4
+                         )
+hrl2 = OrderedDict(reach2d=random_direction,
+                   move0=x_forward_obj, move1=x_backward_obj,
+                   move2=x_up_obj, move3=x_down_obj
+                   )
+hrl_dimage = OrderedDict(moves2d=random_direction,
+                         moves0=x_forward_obj, moves1=x_backward_obj,
+                         moves2=x_up_obj, moves3=x_down_obj
+                         )
+hrl_changing_goal = OrderedDict(dynamic2d=random_direction,
+                                move0=x_forward_obj, move1=x_backward_obj,
+                                move2=x_up_obj, move3=x_down_obj
+                                )
+hrl_dynamic2d5 = OrderedDict(dynamic2d5=random_direction,
+                             **task4)
+hrl_task8train = OrderedDict(task8train=random_direction8,
+                             **task8)
+hrl_dynamic2d5task8 = OrderedDict(dynamic2d5task8=random_direction8,
+                                  **task8)
+hrl_c1 = OrderedDict(reachc1=random_direction,
+                     move0=x_forward_obj, move1=x_backward_obj,
+                     move2=x_up_obj, move3=x_down_obj
+                     )
+hrl_c05 = OrderedDict(reachc05=random_direction,
+                      move0=x_forward_obj, move1=x_backward_obj,
+                      move2=x_up_obj, move3=x_down_obj
+                      )
+hrl_fake = OrderedDict(**{"cartpole_hrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
+hrl_up_for = OrderedDict(move_up_for=up_for, move0=x_forward_obj, move2=x_up_obj)
+hrl_simple1d = OrderedDict(simplehrl1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
+
+hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
+                      reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
+                      move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
+                      dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train)
+joint_training_tasks = {"task4": task4, "task8": task8}
+
+
+def get_current_and_joint_tasks(env_name):
+    splitted_envs = env_name.split("_")
+    if len(splitted_envs) > 1:
+        current_env_name = splitted_envs[0]
+        full_joint_training_tasks = joint_training_tasks[splitted_envs[1]]
+        other_tasks = [k for k in full_joint_training_tasks.keys() if k != current_env_name]
+    else:
+        current_env_name = env_name
+        other_tasks = None
+    return current_env_name, other_tasks
+
+
+def get_initial_state_paths(env_name, initial_state_dir):
+    current_env_name, other_tasks = get_current_and_joint_tasks(env_name)
+    if other_tasks is not None:
+        sample_initial_states_from_paths = ["{}/{}.h5".format(initial_state_dir, e) for e in other_tasks]
+    else:
+        sample_initial_states_from_paths = None
+    current_initial_state_path = "{}/{}.h5".format(initial_state_dir, current_env_name)
+    return current_initial_state_path, sample_initial_states_from_paths
+
+
+def save_data_to_initial_state(saved_data):
+    if saved_data.ndims == 2:
+        pos_size = [saved_data.shape[0], 2]
+    elif saved_data.ndims == 1:
+        pos_size = 2
+    else:
+        pos_size = None
+        raise ValueError("observation size illegal")
+    x_y_position = np.random.uniform(low=-0.1, high=0.1, size=pos_size)
+    initial_q = np.concatenate([x_y_position, np.take(saved_data, np.arange(0, 13), axis=-1)], axis=-1)
+    initial_v = np.take(saved_data, np.arange(13, saved_data.shape[-1]), axis=-1)
+    return initial_q, initial_v
+
+
+def obs_to_saved_data(observation):
+    state_obs = observation[0]
+    v_q_state = np.take(state_obs, np.arange(2, 15 + 14), axis=-1)
+    return v_q_state
+
+
+def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
+    cwd = os.path.dirname(os.path.realpath(__file__))  # os.getcwd()
     append_image = withimg
     feat_sup = False
-    task1d = OrderedDict(move0=x_forward_obj, move1=x_backward_obj)
-    hrl0 = OrderedDict(move1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
-    task4 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
-                        move2=x_up_obj, move3=x_down_obj)
-    task8 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
-                        move2=x_up_obj, move3=x_down_obj,
-                        move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
 
-    dir_funcs_task8 = list(task8.values())
-
-    def random_direction8():
-        choice = np.random.randint(0, len(dir_funcs_task8))
-        return dir_funcs_task8[choice]()
-
-    hrl_move2d8 = OrderedDict(move2d8=random_direction8, **task8)
-
-    hrl_move2d = OrderedDict(move2d=random_direction, **task4
-                             )
-    hrl2 = OrderedDict(reach2d=random_direction,
-                       move0=x_forward_obj, move1=x_backward_obj,
-                       move2=x_up_obj, move3=x_down_obj
-                       )
-    hrl_dimage = OrderedDict(moves2d=random_direction,
-                             moves0=x_forward_obj, moves1=x_backward_obj,
-                             moves2=x_up_obj, moves3=x_down_obj
-                             )
-    hrl_changing_goal = OrderedDict(dynamic2d=random_direction,
-                                    move0=x_forward_obj, move1=x_backward_obj,
-                                    move2=x_up_obj, move3=x_down_obj
-                                    )
-    hrl_dynamic2d5 = OrderedDict(dynamic2d5=random_direction,
-                                 **task4)
-    hrl_task8train = OrderedDict(task8train=random_direction8,
-                                 **task8)
-    hrl_dynamic2d5task8 = OrderedDict(dynamic2d5task8=random_direction8,
-                                      **task8)
-    hrl_c1 = OrderedDict(reachc1=random_direction,
-                         move0=x_forward_obj, move1=x_backward_obj,
-                         move2=x_up_obj, move3=x_down_obj
-                         )
-    hrl_c05 = OrderedDict(reachc05=random_direction,
-                          move0=x_forward_obj, move1=x_backward_obj,
-                          move2=x_up_obj, move3=x_down_obj
-                          )
-    hrl_fake = OrderedDict(**{"cartpole_hrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
-    hrl_up_for = OrderedDict(move_up_for=up_for, move0=x_forward_obj, move2=x_up_obj)
-    hrl_simple1d = OrderedDict(simplehrl1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
-
-    hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
-                          reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
-                          move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
-                          dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train)
+    current_task, other_tasks = get_current_and_joint_tasks(env_name)
+    _, sample_initial_states_from_paths = get_initial_state_paths(env_name, initial_state_dir)
+    env_name = current_task
 
     full_tasks = [env_name]
     NOISE = "NOISE"
@@ -275,11 +329,17 @@ def make_env(env_name, withimg, T=1000, pid=0):
         env = gym.make(env_name)
 
     dummy_image = False
+    # if other_tasks is not None and initial_state_dir is not None:
+    #     sample_initial_states_from_paths = ["{}/{}.h5".format(initial_state_dir, e) for e in other_tasks]
+    # else:
+    #     sample_initial_states_from_paths = None
     final_env = ComplexWrapper(env, max_episode_length=T,
                                append_image=append_image, rgb_to_gray=True,
                                visible_state_ids=range(env.observation_space.shape[0]),
                                num_frame=1,
-                               dummy_image=dummy_image)
+                               dummy_image=dummy_image,
+                               sample_initial_states_from_paths=sample_initial_states_from_paths
+                               )
 
     is_fake_hrl = env_name == list(hrl_fake.keys())[0]
     return final_env, {"full_tasks": full_tasks, "is_fake_hrl": is_fake_hrl},

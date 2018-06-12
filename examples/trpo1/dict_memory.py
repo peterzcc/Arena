@@ -69,7 +69,9 @@ class DictMemory(object):
                  f_critic={},
                  num_leafs=0,
                  num_actors=1,
-                 f_check_batch=None):
+                 f_check_batch=None,
+                 initial_state_path=None):
+        logging.debug("dict memory args:\n {}".format(locals()))
         self.gamma = gamma
         self.lam = lam
         self.normalize = normalize
@@ -97,6 +99,19 @@ class DictMemory(object):
 
         self.leaf_info_keys = None
         self.scale_adv = False
+
+        self.initial_state_path = initial_state_path
+        if self.initial_state_path is not None:
+            from arena.ermemory import H5Ermemory
+            from arena.games.cust_control.env_library \
+                import INITIAL_STATE_SHAPE, INITIAL_STATE_MAX_NUM, obs_to_saved_data
+            self.state_recorder = H5Ermemory(shape=INITIAL_STATE_SHAPE, path=self.initial_state_path,
+                                             read_only=False,
+                                             max_size=INITIAL_STATE_MAX_NUM)
+            self.obs_to_saved_data = obs_to_saved_data
+        else:
+            self.state_recorder = None
+            self.obs_to_saved_data = None
 
     def append_state(self, observation, action, info, pid=0,
                      leaf_id=None, leaf_action=None, leaf_model_info=None, curr_time_step=None):
@@ -578,6 +593,10 @@ class DictMemory(object):
                 else:
                     leaf_data[l] = None
             result["leaf_data"] = leaf_data
+
+        # save state data
+        if self.initial_state_path is not None:
+            self.state_recorder.insert(self.obs_to_saved_data(obs))
         return result
 
         # def reset(self):

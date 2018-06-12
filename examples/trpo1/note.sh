@@ -111,6 +111,9 @@ disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname kl --dir ..
 local:
 python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --npass 2 --loss TRAD --use-mix true
 
+python3.6 pg_train.py --env move0_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
+python3.6 pg_train.py --env move1_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
+
 record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env simplemove1d --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record --load-dir exp_7
 

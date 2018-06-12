@@ -15,7 +15,7 @@ class ComplexWrapper(object):
                  append_image=False, visible_state_ids=None,
                  s_transform=lambda x, t: x, num_frame=1,
                  dummy_image=False,
-                 render_lock=None):
+                 sample_initial_states_from_paths=None, ):
         # args = locals()
         # logging.debug("Environment args:\n {}".format(args))
         self.env = env
@@ -39,7 +39,6 @@ class ComplexWrapper(object):
         self.dummy_imagge = dummy_image
         self.s_transform = s_transform
         self.num_frame = num_frame
-        self.render_lock = render_lock
         if append_image:
             sample_image = self.render(mode="rgb_array")
             image_shape = sample_image.shape
@@ -90,12 +89,22 @@ class ComplexWrapper(object):
         self.episode_steps = 0
         self.total_steps = 0
 
+        self.sample_initial_states_from_paths = sample_initial_states_from_paths
+        if self.sample_initial_states_from_paths is not None:
+            from arena.ermemory import H5Ermemory
+            from arena.games.cust_control.env_library \
+                import INITIAL_STATE_SHAPE, INITIAL_STATE_MAX_NUM, save_data_to_initial_state
+            self.initial_state_datasets = [H5Ermemory(shape=INITIAL_STATE_SHAPE, path=p,
+                                                      read_only=True,
+                                                      max_size=INITIAL_STATE_MAX_NUM)
+                                           for p in self.sample_initial_states_from_paths]
+            self.save_data_to_initial_state = save_data_to_initial_state
+        else:
+            self.initial_state_datasets = None
+            self.save_data_to_initial_state = None
+
     def render(self, mode='human', close=False):
-        if self.render_lock is not None:
-            self.render_lock.acquire()
         result = self.env.render(mode=mode, close=close)
-        if self.render_lock is not None:
-            self.render_lock.release()
         return result
 
     def preprocess_observation(self, obs):
@@ -171,7 +180,6 @@ class ComplexWrapper(object):
 
         self.episode_steps += 1
 
-
         if self.episode_steps >= self.max_episode_length:
             full_info.update({"terminated": True})  # let the clipped episode be terminated
             final_done = True
@@ -189,6 +197,11 @@ class ComplexWrapper(object):
         pass
 
     def reset(self):
+        if self.sample_initial_states_from_paths is not None:
+            task = np.random.randint(len(self.initial_state_datasets) + 1) - 1
+            if task >= 0:
+                initial_state = self.initial_state_datasets[task].sample(1)
+                self._set_env_initial_state(initial_state)
         observation = self.env_reset()
         self.total_steps += self.episode_steps
         self.episode_steps = 0

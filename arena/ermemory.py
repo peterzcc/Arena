@@ -1,6 +1,7 @@
 import numpy as np
 import h5py
 import os
+import logging
 
 
 class Ermemory(object):
@@ -26,14 +27,16 @@ class H5Ermemory(Ermemory):
         self.path = path
         self.data_count = 0
         self.data_top = 0
-        self.use_existing = read_only
+        self.read_only = read_only
         self.sample_cache = None
         self.sample_cache_top = 0
+        self.has_obtained_data = False
         self.cache_size = cache_size
-        if not self.use_existing:
+        if not self.read_only:
             with h5py.File(self.path, 'w') as f:
                 if max_size is not None:
                     f.create_dataset("data", shape=[max_size, *shape], dtype=dtype)
+                    logging.debug("creating dataset:{}".format(path))
                 else:
                     raise NotImplementedError
                 self._push_count(f)
@@ -41,6 +44,8 @@ class H5Ermemory(Ermemory):
             if os.path.exists(self.path):
                 with h5py.File(self.path, 'r') as f:
                     self._pull_count(f)
+            # else:
+            #     logging.warning("path {} not exist!".format(path))
         super(H5Ermemory, self).__init__(shape, dtype, max_size)
 
     def sample(self, n):
@@ -51,7 +56,11 @@ class H5Ermemory(Ermemory):
             self.prepare_sample(self.cache_size)
             if self.sample_cache is None:
                 return None
+        if not self.has_obtained_data:
+            logging.info("has obtained data from {}".format(self.path))
+            self.has_obtained_data = True
         result = self.sample_cache[self.sample_cache_top:(self.sample_cache_top + n)]
+        result = result[0] if n == 1 else result
         self.sample_cache_top += n
         return result
 

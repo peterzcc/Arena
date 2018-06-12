@@ -123,6 +123,7 @@ def main():
                         const=True, )
     parser.add_argument('--normalize-wass', default=False, type=str2bool, nargs='?',
                         const=True, )
+    parser.add_argument('--initial-state-dir', default=None, type=str, help='initial state directory')
 
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
     parser.add_argument("--savestats", default=False, type=str2bool, nargs='?', const=True, help='savestats')
@@ -143,7 +144,8 @@ def main():
     append_image = args.withimg
 
     _, env_info = make_env(args.env, args.withimg, T)
-    env_args = dict(env_name=args.env, withimg=args.withimg, T=T)
+    env_args = dict(env_name=args.env, withimg=args.withimg, T=T,
+                    initial_state_dir=args.initial_state_dir)
     full_tasks = env_info["full_tasks"]
     is_fake_hrl = env_info["is_fake_hrl"]
 
@@ -238,7 +240,19 @@ def main():
                                 use_mix=args.use_mix,
                                 normalize_wass=args.normalize_wass)
 
+    def create_dict_shared_params():
+        if args.initial_state_dir is not None:
+            from arena.games.cust_control.env_library import get_initial_state_paths
+            initial_state_path, other_path = get_initial_state_paths(args.env, args.initial_state_dir)
+            logging.info("initial state path: {}".format(initial_state_path))
+            logging.info("other state path: {}".format(other_path))
+        else:
+            initial_state_path = None
+        dict_memory_shared_params = dict(initial_state_path=initial_state_path)
+        return dict_memory_shared_params
+
     def pg_shared_params():
+        dict_memory_shared_params = create_dict_shared_params()
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
         from tf_utils import aggregate_feature, concat_feature
@@ -279,10 +293,12 @@ def main():
                             timestep_limit=T,
                             f_critic={"decider": model.compute_critic},
                             num_actors=num_actors,
-                            f_check_batch=model.check_batch_finished)
+                            f_check_batch=model.check_batch_finished,
+                            **dict_memory_shared_params)
         return {"models": [model], "memory": memory}
 
     def flexible_hrl_shared_params():
+        dict_memory_shared_params = create_dict_shared_params()
         from policy_gradient_model import PolicyGradientModel
         from dict_memory import DictMemory
         import tensorflow as tf
@@ -424,7 +440,8 @@ def main():
                                       },
                             num_leafs=len(full_tasks) - 1,
                             num_actors=num_actors,
-                            f_check_batch=decider_model.check_batch_finished, )
+                            f_check_batch=decider_model.check_batch_finished,
+                            **dict_memory_shared_params)
 
         return {"models": models, "memory": memory}
 
