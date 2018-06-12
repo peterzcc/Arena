@@ -178,6 +178,10 @@ class ComplexWrapper(object):
 
         return final_observation, final_reward, final_done, full_info
 
+    def _set_env_initial_state(self, s):
+        assert hasattr(self.env, "initial_state")
+        self.env.initial_sate = s
+
     def close(self):
         self.env.close()
 
