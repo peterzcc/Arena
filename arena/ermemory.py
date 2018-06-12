@@ -33,7 +33,7 @@ class H5Ermemory(Ermemory):
         self.has_obtained_data = False
         self.cache_size = cache_size
         if not self.read_only:
-            with h5py.File(self.path, 'w') as f:
+            with h5py.File(self.path, 'w', swmr=True) as f:
                 if max_size is not None:
                     f.create_dataset("data", shape=[max_size, *shape], dtype=dtype)
                     logging.debug("creating dataset:{}".format(path))
@@ -42,7 +42,7 @@ class H5Ermemory(Ermemory):
                 self._push_count(f)
         else:
             if os.path.exists(self.path):
-                with h5py.File(self.path, 'r') as f:
+                with h5py.File(self.path, 'r', swmr=True) as f:
                     self._pull_count(f)
             # else:
             #     logging.warning("path {} not exist!".format(path))
@@ -92,7 +92,7 @@ class H5Ermemory(Ermemory):
 
     def prepare_sample(self, n):
         if os.path.exists(self.path):
-            with h5py.File(self.path, 'r') as f:
+            with h5py.File(self.path, 'r', swmr=True) as f:
                 self._pull_count(f)
                 if self.data_count < n:
                     self.sample_cache = None
@@ -111,7 +111,7 @@ class H5Ermemory(Ermemory):
         if self.data_top + n > self.max_count:
             self.data_top = 0
         slc = np.s_[self.data_top:(self.data_top + n)]
-        with h5py.File(self.path, 'r+') as f:
+        with h5py.File(self.path, 'r+', swmr=True) as f:
             self._push_data(x, slc, n, f)
             self.data_count = min(self.max_count, self.data_count + n)
             self._push_count(f)
