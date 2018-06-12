@@ -113,6 +113,11 @@ python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-siz
 python3.6 pg_train.py --env move0_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
 python3.6 pg_train.py --env move1_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
 
+for _pane in $(tmux list-windows -F '#I'); do
+    tmux send-keys -t ${_pane} "Enter"
+done
+
+tmux send-keys -t 0 "echo 'OK'"
 record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env simplemove1d --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record --load-dir exp_7
 
