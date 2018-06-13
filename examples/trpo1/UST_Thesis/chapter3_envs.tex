@@ -1,39 +1,28 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
-\section{TODO: Target Environments}\label{sec_env}
-%TODO: elaborate the target environment
-\subsection{Ant-based environments}
-\subsubsection{Summary of Environments}
-The source environments and target environments are summarized in table \ref{table_ant_envs}.
+\section{Target Environments}\label{sec_env}
+\subsection{Summary of environment design}
+We propose a set of reinforcement learning tasks that are suitable for studies in our target problem of multi-modality and sparse environments. The agents' physical systems are consistent with the 3D robot control environments in OpenAI Gym~\cite{openaigym}, while the external environments and reward functions of the target tasks are different from the original environments in OpenAI Gym. There are three kinds of 3D robot agents in OpenAI Gym: Ant, Humanoid and Swimmer. The "Ant" agent is a quadruped robot with 8-dimensional action space, the "Humanoid" agent is a humanoid robot with 16-dimensional action space, and the "Swimmer" agent is a worm-like robot with 2-dimensinoal action space.  The three agents are showed in Figure~\ref{fig_agent_ant}, Figure~\ref{fig_agent_humanoid} and Figure~\ref{fig_agent_swimmer}.
+
+We will mainly focus on target environments based on the "Ant" agent, because the agent has the capability of solving a rich variety of high-level tasks, while the agent's primary control tasks are reasonably challenging. 
+Compared to the "Ant" agent, the "Swimmer" agent is too simple and its capability of solving more challenging tasks is limited. The "Humanoid" agent's  on the other hand, has a much more unstable physical system compared to "Ant". 
+\begin{figure}[H]
+	\includegraphics[width=0.5\textwidth]{images/agent_ant.png}
+	\centering
+	\caption{The "Ant" agent}
+\end{figure}\label{fig_agent_ant}
+
+\begin{figure}[H]
+	\includegraphics[width=0.5\textwidth]{images/agent_humanoid.png}
+	\centering
+	\caption{The "Humanoid" agent}
+\end{figure}\label{fig_agent_humanoid}
+\begin{figure}[H]
+	\includegraphics[width=0.5\textwidth]{images/agent_swimmer.png}
+	\centering
+	\caption{The "Swimmer" agent}
+\end{figure}\label{fig_agent_swimmer}
+%To provide a consistent comparison with other studies, the development of 
+\input{chapter3_env_ant.tex}
 
 
-\begin{table}[h]
-
-\begin{center}
-\begin{tabular}{|c|p{3cm}|p{4cm}|p{4cm}|}
-\hline
-Task name & Goal & Reward  &  Description \\
-\hline\hline
-move0 & velocity: $g_0=(1,0)$ &$ v_g+1-c_p-c_c$  & move toward east direction \\
-\hline
-move1 & velocity: $g_1=(-1,0)$ &$ v_g+1-c_p-c_c$  & move toward west direction \\
-\hline
-move2 & velocity: $g_2=(0,1)$ &$ v_g+1-c_p-c_c$  & move toward north direction \\
-\hline
-move3 & velocity: $g_3=(0,-1)$ &$ v_g+1-c_p-c_c$  & move toward south direction \\ 
-\hline 
-move1d & velocity: $\{g_0,g_1\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled goal direction \\ \hline
-move2d & velocity: $\{g_0,g_1,g_2,g_3\}$ &$ v_g+1-c_p-c_c$  & there are 4 possible goal directions compared to move1d \\ \hline
-dynamic2d & velocity: $\{g_0,g_1,g_2,g_3\}$ &$ v_g+1-c_p-c_c$  & the goal direction is reset with probability 0.01 \\ \hline
-reach2d & position: $\{g_0,g_1,g_2,g_3\}$ & I(The agent's distance to the goal position is within 0.5)$-0.01$  & move to a specific location instead of a direction\\ \hline
-
-\hline
-\end{tabular}
-\end{center}
- \caption{Summary of Ant-based environments}
-\end{table}\label{table_ant_envs}
-
-
-\subsubsection{Dynamic2D environment}
-\subsubsection{Reach2D environment}
-\subsection{TODO: Robot manipulation environments}

@@ -37,21 +37,21 @@ if __name__ == '__main__':
     # You can set the level to logging.DEBUG or logging.WARN if you
     # want to change the amount of output.
     logger.setLevel(logging.INFO)
-    # DIRECTIONS = np.array([(1., 0), (0, 1.), (-1., 0), (0, -1.)])
-    ANGLES = [0, np.pi / 4, - np.pi / 4]
-    DIRECTIONS = np.array([(np.cos(a), np.sin(a)) for a in ANGLES])
 
-
-    def random_3direction():
-        choice = np.random.randint(0, 3)
-        return DIRECTIONS[choice, :]
-
-
-    cwd = os.getcwd()
-    env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml",
-                          f_gen_obj=random_cont_direction,
-                          use_sparse_reward=True,
-                          obj_dist=1.0)
+    # ANGLES = [0, np.pi / 4, - np.pi / 4]
+    # DIRECTIONS = np.array([(np.cos(a), np.sin(a)) for a in ANGLES])
+    #
+    #
+    # def random_3direction():
+    #     choice = np.random.randint(0, 3)
+    #     return DIRECTIONS[choice, :]
+    #
+    #
+    # cwd = os.getcwd()
+    # env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml",
+    #                       f_gen_obj=random_cont_direction,
+    #                       use_sparse_reward=True,
+    #                       obj_dist=1.0)
     outdir = './random-agent-results'
 
     # env = GatherEnv()
@@ -60,6 +60,7 @@ if __name__ == '__main__':
     # directory, including one with existing data -- all monitor files
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
+    env = gym.make(args.env_id)
 
     # env = wrappers.Monitor(env, directory=outdir, force=True)
     # env = ComplexWrapper(env, max_episode_length=1000,

@@ -60,7 +60,7 @@ class H5Ermemory(Ermemory):
             if self.sample_cache is None:
                 return None
         if not self.has_obtained_data:
-            logging.info("has obtained data from {}".format(self.path))
+            # logging.info("has obtained data from {}".format(self.path))
             self.has_obtained_data = True
         result = self.sample_cache[self.sample_cache_top:(self.sample_cache_top + n)]
         result = result[0] if n == 1 else result

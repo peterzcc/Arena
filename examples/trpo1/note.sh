@@ -97,8 +97,11 @@ CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move5_task8 --rl-method ACKTR
 CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move6_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
 CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move7_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
 
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w50 --dir ../exp_64 ../exp_60 ../exp_61 ../exp_58 ../exp_59 ../exp_57 ../exp_63 ../exp_62
+
 
 1mux1
+CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env dynamic2d5 --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_target --vlr 0.001 --npass 2 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-start 0  --switcher-length 25 --npret -1  --loss TRAD --ent-k 0.01 --switcher-k 0.0  --lr 0.0001
 
 5
 
