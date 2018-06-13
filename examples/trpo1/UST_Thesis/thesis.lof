@@ -6,7 +6,8 @@
 \contentsline {figure}{\numberline {3.1}{\ignorespaces The "Ant" agent}}{18}{figure.3.1}
 \contentsline {figure}{\numberline {3.2}{\ignorespaces The "Humanoid" agent}}{18}{figure.3.2}
 \contentsline {figure}{\numberline {3.3}{\ignorespaces The "Swimmer" agent}}{18}{figure.3.3}
+\contentsline {figure}{\numberline {3.4}{\ignorespaces A sample image observation of the target environments}}{19}{figure.3.4}
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {4.1}{\ignorespaces Performance of agents with different weight on exceptional advantage regularization, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 32 episodes}}{28}{figure.4.1}
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Performance of agents with different weight on exceptional advantage regularization, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 32 episodes}}{29}{figure.4.1}
 \addvspace {10\p@ }
 \addvspace {10\p@ }

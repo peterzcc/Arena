@@ -198,7 +198,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.rl_loss = self.policy.rl_loss
         if self.is_switcher_with_init_len:
             self.switcher_cost_k = switcher_cost_k
-            self.rl_loss = self.rl_loss + self.switcher_cost_k + self.policy.switcher_cost
+            self.rl_loss = self.rl_loss + self.switcher_cost_k * self.policy.switcher_cost
         self.final_loss = self.rl_loss + self.ent_loss + self.regulation_loss
         if should_train:
             if self.mode.startswith("ACKTR"):
