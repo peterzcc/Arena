@@ -37,45 +37,45 @@ I'm skipping whatever remains of this entry
 Warning--empty journal in mcgovern2001automatic
 
 Done.
-You've used 33 entries,
+You've used 34 entries,
             4087 wiz_defined-function locations,
-            1005 strings with 14364 characters,
-and the built_in function-call counts, 22957 in all, are:
-= -- 1713
-> -- 774
+            1009 strings with 14527 characters,
+and the built_in function-call counts, 23385 in all, are:
+= -- 1746
+> -- 787
 < -- 135
-+ -- 404
-- -- 160
-* -- 1088
-:= -- 3403
-add.period$ -- 66
-call.type$ -- 33
-change.case$ -- 35
++ -- 410
+- -- 163
+* -- 1107
+:= -- 3478
+add.period$ -- 68
+call.type$ -- 34
+change.case$ -- 36
 chr.to.int$ -- 324
-cite$ -- 34
-duplicate$ -- 1698
-empty$ -- 1868
-format.name$ -- 189
-if$ -- 5314
+cite$ -- 35
+duplicate$ -- 1736
+empty$ -- 1907
+format.name$ -- 193
+if$ -- 5410
 int.to.chr$ -- 0
-int.to.str$ -- 33
-missing$ -- 339
-newline$ -- 125
-num.names$ -- 33
-pop$ -- 884
+int.to.str$ -- 34
+missing$ -- 346
+newline$ -- 128
+num.names$ -- 34
+pop$ -- 904
 preamble$ -- 2
 purify$ -- 0
 quote$ -- 2
-skip$ -- 1733
+skip$ -- 1765
 stack$ -- 0
-substring$ -- 795
-swap$ -- 1276
+substring$ -- 796
+swap$ -- 1297
 text.length$ -- 27
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 33
+type$ -- 34
 warning$ -- 1
-while$ -- 81
-width$ -- 35
-write$ -- 315
+while$ -- 82
+width$ -- 36
+write$ -- 323
 (There were 2 error messages)

@@ -39,12 +39,19 @@
 \contentsline {section}{\numberline {3.5}Hierarchical reinforcement learning architecture}{25}{section.3.5}
 \contentsline {section}{\numberline {3.6}Generalized advantage estimation for the decider agent}{26}{section.3.6}
 \contentsline {section}{\numberline {3.7}Training of the switcher agent}{27}{section.3.7}
-\contentsline {chapter}{\numberline {4}Experiments}{28}{chapter.4}
-\contentsline {section}{\numberline {4.1}Experiments on the basic source tasks}{28}{section.4.1}
-\contentsline {section}{\numberline {4.2}Experiment on the flat reinforcement learning solution to multi-modality tasks}{31}{section.4.2}
-\contentsline {subsection}{\numberline {4.2.1}Discussion on conventional flat reinforcement learning methods}{31}{subsection.4.2.1}
-\contentsline {subsection}{\numberline {4.2.2}Experiment on exceptional advantage regularization}{32}{subsection.4.2.2}
-\contentsline {subsection}{\numberline {4.2.3}Experiment on the Robust Concentric Mixture Gaussian Policy}{40}{subsection.4.2.3}
-\contentsline {section}{\numberline {4.3}Hierarchical reinforcement learning methods for multi-modality and sparse environments}{42}{section.4.3}
-\contentsline {chapter}{\numberline {5}Discussion}{44}{chapter.5}
-\contentsline {chapter}{Reference}{45}{chapter.5}
+\contentsline {section}{\numberline {3.8}Efficient training of actuator policies}{28}{section.3.8}
+\contentsline {subsection}{\numberline {3.8.1}Domain randomization by cross-sampling initial states}{28}{subsection.3.8.1}
+\contentsline {chapter}{\numberline {4}Experiments}{29}{chapter.4}
+\contentsline {section}{\numberline {4.1}Experiments on the basic source tasks}{29}{section.4.1}
+\contentsline {section}{\numberline {4.2}Experiment on the flat reinforcement learning solution to multi-modality tasks}{32}{section.4.2}
+\contentsline {subsection}{\numberline {4.2.1}Discussion on conventional flat reinforcement learning methods}{32}{subsection.4.2.1}
+\contentsline {subsection}{\numberline {4.2.2}Experiment on exceptional advantage regularization}{33}{subsection.4.2.2}
+\contentsline {subsection}{\numberline {4.2.3}Experiment on the Robust Concentric Mixture Gaussian Policy}{41}{subsection.4.2.3}
+\contentsline {section}{\numberline {4.3}Hierarchical reinforcement learning methods for multi-modality and sparse environments}{43}{section.4.3}
+\contentsline {subsection}{\numberline {4.3.1}Training of actuator agents}{44}{subsection.4.3.1}
+\contentsline {subsubsection}{Domain randomization by cross-sampling initial states}{44}{section*.1}
+\contentsline {subsection}{\numberline {4.3.2}Training of decider agents}{44}{subsection.4.3.2}
+\contentsline {subsubsection}{Training of decision policy}{44}{section*.2}
+\contentsline {subsubsection}{Training of switcher policy}{44}{section*.3}
+\contentsline {chapter}{\numberline {5}Discussion}{46}{chapter.5}
+\contentsline {chapter}{Reference}{47}{chapter.5}

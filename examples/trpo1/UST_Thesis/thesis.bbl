@@ -190,4 +190,8 @@ D.~CHAFAÏ, ``Wasserstein distance between two gaussians.'' [Online].
 D.~P. Kingma and J.~Ba, ``Adam: A method for stochastic optimization,''
   \emph{arXiv preprint arXiv:1412.6980}, 2014.
 
+\bibitem{tobin2017domain}
+J.~Tobin, W.~Zaremba, and P.~Abbeel, ``Domain randomization and generative
+  models for robotic grasping,'' \emph{arXiv preprint arXiv:1710.06425}, 2017.
+
 \end{thebibliography}
