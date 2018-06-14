@@ -1,6 +1,6 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
-\section{Efficient Exploration Through Exceptional Advantage Regularization}
+\section{Efficient Exploration Through Exceptional Advantage Regularization}\label{sec_method_expadv_reg}
 One of the major reasons that multi-modality robot environments are challenging is because the features in different modalities have different complexities.
 
 In the target case, where there are two modality: the locomotion state vector and the image input, the agent is very likely to get stuck at a local minimum after having learned the features of the locomotion state vectors while haven't learned the image features. However, the policy is at a much lower entropy at the phase when the agent starts to learn image features.

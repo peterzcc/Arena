@@ -4,8 +4,8 @@
 \contentsline {chapter}{Acknowledgments}{v}{Doc-Start}
 \contentsline {chapter}{Table of Contents}{vi}{Doc-Start}
 \contentsline {chapter}{List of Figures}{ix}{Doc-Start}
-\contentsline {chapter}{List of Tables}{x}{Doc-Start}
-\contentsline {chapter}{Abstract}{xi}{Doc-Start}
+\contentsline {chapter}{List of Tables}{xi}{Doc-Start}
+\contentsline {chapter}{Abstract}{xii}{Doc-Start}
 \contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}
 \contentsline {section}{\numberline {1.1}Overview}{1}{section.1.1}
 \contentsline {section}{\numberline {1.2}Background}{2}{section.1.2}
@@ -40,11 +40,9 @@
 \contentsline {section}{\numberline {3.6}Generalized advantage estimation for the decider agent}{26}{section.3.6}
 \contentsline {section}{\numberline {3.7}Training of the switcher agent}{27}{section.3.7}
 \contentsline {chapter}{\numberline {4}Experiments}{28}{chapter.4}
-\contentsline {section}{\numberline {4.1}Experiments on the "move0" task}{28}{section.4.1}
-\contentsline {subsection}{\numberline {4.1.1}W-KTR method}{28}{subsection.4.1.1}
-\contentsline {section}{\numberline {4.2}Experiment on exceptional advantage regularization}{28}{section.4.2}
-\contentsline {chapter}{\numberline {5}Discussion}{31}{chapter.5}
-\contentsline {chapter}{Reference}{32}{chapter.5}
-\contentsline {chapter}{\numberline {A}Appendix 1}{36}{appendix.A}
-\contentsline {chapter}{Publication}{36}{chapter*.1}
-\contentsline {chapter}{Appendix}{36}{chapter*.1}
+\contentsline {section}{\numberline {4.1}Experiments on the basic source tasks}{28}{section.4.1}
+\contentsline {section}{\numberline {4.2}Experiment on the flat reinforcement learning solution to multi-modality tasks}{31}{section.4.2}
+\contentsline {subsection}{\numberline {4.2.1}Discussion on conventional flat reinforcement learning methods}{31}{subsection.4.2.1}
+\contentsline {subsection}{\numberline {4.2.2}Experiment on exceptional advantage regularization}{33}{subsection.4.2.2}
+\contentsline {chapter}{\numberline {5}Discussion}{34}{chapter.5}
+\contentsline {chapter}{Reference}{35}{chapter.5}
