@@ -114,14 +114,14 @@ CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0_task8 --rl-method ACKTR
 
 
 2mux1
-
+"CUDA_VISIBLE_DEVICES=${i_gpu} python3.6 pg_train.py --env move${i_task}_task8 --rl-method ACKTR_ADAM --nactor 32 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD --initial-state-dir data_initial2
+"
 
 
 local:
-python3.6 pg_train.py --env flatcont2d --rl-method ACKTR --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.0001 --vlr 0.001 --npass 2 --loss TRAD --use-mix true
+python3.6 ~/Arena/examples/trpo1/plot.py -w20 --dir ../exp_20 ../exp_21 ../exp_22 --label 1e-5 3e-5 1e-4
 
-python3.6 pg_train.py --env move0_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-python3.6 pg_train.py --env move1_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
+
 
 for _pane in $(tmux list-windows -F '#I'); do
     tmux send-keys -t ${_pane} "Enter"
