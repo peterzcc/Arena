@@ -47,13 +47,14 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
     for line in loss_file:
         m = re.search(regex, line)
         # t = re.search('Epoch:([+-]?[0-9]*[.]?[0-9]+)', line)
-        t = re.search('t: ([+-]?[0-9]*[.]?[0-9]+)', line)
+        t = re.search('^t: ([+-]?[0-9]*[.]?[0-9]+)', line)
         if t is not None:
             current_t = t.group(1)
             # out_file.write("@" + str(current_t) + "\n")
             # timestep_list.append(num_steps)
         if m is not None:
             loss = m.groupdict()["target"]
+            out_file.write("@" + str(current_t) + "\n")
             # out_file.write(str(loss) + "\n")
             timestep_list.append(current_t)
             loss_list.append(loss)
