@@ -122,7 +122,7 @@ local:
 WS=
 python3.6 ${WS}/plot.py -w20 --dir ../rec_0403_move1_fail ../rec_0403_move2 --label run1 run2
 
-cd $WS/rec_dy2/rec_180528_statlogs/exp_63
+cd $WS/rec_180612_mix_flatmovecont2d/exp_39
 disprun python3.6 $WS/visualize_log.py --dataname std
 
 
