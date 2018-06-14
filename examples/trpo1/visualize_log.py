@@ -54,11 +54,11 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
             # timestep_list.append(num_steps)
         if m is not None:
             loss = m.groupdict()["target"]
-            out_file.write("@" + str(current_t) + "\n")
+            # out_file.write("@" + str(current_t) + "\n")
             # out_file.write(str(loss) + "\n")
             timestep_list.append(current_t)
             loss_list.append(loss)
-    t_array = np.array(timestep_list, dtype=np.float32) #/ 1000000
+    t_array = np.array(timestep_list, dtype=np.float32) / 1000000
     loss_list = np.array(loss_list, dtype=np.float32)
     # if mode == 0:
     #     plt.plot(list(range(len(loss_list) - starting_point)), loss_list[starting_point:], '.', markersize=1.0)
