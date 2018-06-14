@@ -43,8 +43,8 @@
 \contentsline {section}{\numberline {4.1}Experiments on the "move0" task}{28}{section.4.1}
 \contentsline {subsection}{\numberline {4.1.1}W-KTR method}{28}{subsection.4.1.1}
 \contentsline {section}{\numberline {4.2}Experiment on exceptional advantage regularization}{28}{section.4.2}
-\contentsline {chapter}{\numberline {5}Discussion}{30}{chapter.5}
-\contentsline {chapter}{Reference}{31}{chapter.5}
-\contentsline {chapter}{\numberline {A}Appendix 1}{35}{appendix.A}
-\contentsline {chapter}{Publication}{35}{chapter*.1}
-\contentsline {chapter}{Appendix}{35}{chapter*.1}
+\contentsline {chapter}{\numberline {5}Discussion}{31}{chapter.5}
+\contentsline {chapter}{Reference}{32}{chapter.5}
+\contentsline {chapter}{\numberline {A}Appendix 1}{36}{appendix.A}
+\contentsline {chapter}{Publication}{36}{chapter*.1}
+\contentsline {chapter}{Appendix}{36}{chapter*.1}
