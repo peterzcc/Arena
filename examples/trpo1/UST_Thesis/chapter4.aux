@@ -6,25 +6,35 @@
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
 \@writefile{toc}{\contentsline {section}{\numberline {4.1}Experiments on the basic source tasks}{28}{section.4.1}}
-\newlabel{fig_acktr_reprod}{{4.1}{28}{Experiments on the basic source tasks}{figure.4.1}{}}
-\newlabel{fig_acktr_mom_tune}{{4.1}{28}{Experiments on the basic source tasks}{figure.4.2}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4.1}{\ignorespaces Inconsistent performance produced by ACKTR agents with the same parameters but different runs. The vertical axis is the total return averaged over the recent 20 episodes and the horizontal axis is the number of million time-steps}}{29}{figure.4.1}}
+\newlabel{fig_acktr_reprod}{{4.1}{29}{Inconsistent performance produced by ACKTR agents with the same parameters but different runs. The vertical axis is the total return averaged over the recent 20 episodes and the horizontal axis is the number of million time-steps}{figure.4.1}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4.2}{\ignorespaces Performance of ACKTR agents with different KL-divergence constraints. All the agents are trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 200 episodes and the horizontal axis is the number of million time-steps}}{29}{figure.4.2}}
-\newlabel{fig_wass_const_tune}{{4.1}{30}{Experiments on the basic source tasks}{figure.4.3}{}}
+\newlabel{fig_acktr_mom_tune}{{4.2}{29}{Performance of ACKTR agents with different KL-divergence constraints. All the agents are trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 200 episodes and the horizontal axis is the number of million time-steps}{figure.4.2}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4.3}{\ignorespaces Performance of W-KTR agents with different W2-metric constraints. All the agents are trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 200 episodes and the horizontal axis is the number of million time-steps}}{30}{figure.4.3}}
-\newlabel{fig_wass_decay}{{4.1}{30}{Experiments on the basic source tasks}{figure.4.4}{}}
+\newlabel{fig_wass_const_tune}{{4.3}{30}{Performance of W-KTR agents with different W2-metric constraints. All the agents are trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 200 episodes and the horizontal axis is the number of million time-steps}{figure.4.3}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4.4}{\ignorespaces Performance of a W-KTR agent with a decaying W2-metric from 0.02 to 0.00003 in the first 15 million time-steps. The agent is trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 200 episodes and the horizontal axis is the number of million time-steps}}{31}{figure.4.4}}
+\newlabel{fig_wass_decay}{{4.4}{31}{Performance of a W-KTR agent with a decaying W2-metric from 0.02 to 0.00003 in the first 15 million time-steps. The agent is trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 200 episodes and the horizontal axis is the number of million time-steps}{figure.4.4}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4.2}Experiment on the flat reinforcement learning solution to multi-modality tasks}{31}{section.4.2}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2.1}Discussion on conventional flat reinforcement learning methods}{31}{subsection.4.2.1}}
-\newlabel{rec_ent_reg}{{4.2.1}{32}{Discussion on conventional flat reinforcement learning methods}{figure.4.5}{}}
-\newlabel{rec_std_ent_reg}{{4.2.1}{32}{Discussion on conventional flat reinforcement learning methods}{figure.4.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2.2}Experiment on exceptional advantage regularization}{32}{subsection.4.2.2}}
-\newlabel{rec_adv_reg}{{4.2.2}{32}{Experiment on exceptional advantage regularization}{figure.4.7}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4.5}{\ignorespaces Performance of agents with different weight on entropy regularization term, the horizontal axis is the number of million timesteps and the vertical axis is the total episode reward averaged over the last 32 episodes}}{33}{figure.4.5}}
+\newlabel{rec_ent_reg}{{4.5}{33}{Performance of agents with different weight on entropy regularization term, the horizontal axis is the number of million timesteps and the vertical axis is the total episode reward averaged over the last 32 episodes}{figure.4.5}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4.6}{\ignorespaces Logarithm of average standard deviation of the policy of agents in Figure\nobreakspace  {}\ref  {rec_ent_reg}, the horizontal axis is the number of million timesteps.}}{34}{figure.4.6}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4.7}{\ignorespaces Performance of agents with different weight on exceptional advantage regularization, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 32 episodes}}{35}{figure.4.7}}
+\newlabel{rec_std_ent_reg}{{4.6}{34}{Logarithm of average standard deviation of the policy of agents in Figure~\ref {rec_ent_reg}, the horizontal axis is the number of million timesteps}{figure.4.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.7}{\ignorespaces Performance of ACKTR agent on the "moveg2" task, the horizontal axis is the number of million timesteps and the vertical axis is the total episode reward averaged over the last 20 episodes}}{35}{figure.4.7}}
+\newlabel{rec_stat_moveg2}{{4.7}{35}{Performance of ACKTR agent on the "moveg2" task, the horizontal axis is the number of million timesteps and the vertical axis is the total episode reward averaged over the last 20 episodes}{figure.4.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.8}{\ignorespaces The avearge reward per time-step of ACKTR agent on the "moveg2" task, the horizontal axis is the number of training batches}}{35}{figure.4.8}}
+\newlabel{rec_stat_moveg2_meanrt}{{4.8}{35}{The avearge reward per time-step of ACKTR agent on the "moveg2" task, the horizontal axis is the number of training batches}{figure.4.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.9}{\ignorespaces The distribution of advantage values of the ACKTR agent at batch 0 on the "moveg2" task, the horizontal axis is the log-likelihood value}}{36}{figure.4.9}}
+\newlabel{vis_stats_0}{{4.9}{36}{The distribution of advantage values of the ACKTR agent at batch 0 on the "moveg2" task, the horizontal axis is the log-likelihood value}{figure.4.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.10}{\ignorespaces The distribution of advantage values of the ACKTR agent at batch 300 on the "moveg2" task, the horizontal axis is the log-likelihood value}}{37}{figure.4.10}}
+\newlabel{vis_stats_3000}{{4.10}{37}{The distribution of advantage values of the ACKTR agent at batch 300 on the "moveg2" task, the horizontal axis is the log-likelihood value}{figure.4.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.11}{\ignorespaces The distribution of advantage values of the ACKTR agent at batch 4900 on the "moveg2" task, the horizontal axis is the log-likelihood value}}{38}{figure.4.11}}
+\newlabel{vis_stats_4900}{{4.11}{38}{The distribution of advantage values of the ACKTR agent at batch 4900 on the "moveg2" task, the horizontal axis is the log-likelihood value}{figure.4.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4.12}{\ignorespaces Performance of agents with different weight on exceptional advantage regularization, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 32 episodes}}{39}{figure.4.12}}
+\newlabel{rec_adv_reg}{{4.12}{39}{Performance of agents with different weight on exceptional advantage regularization, the x-axis is the number of million timesteps and the y-axis is the total episode reward averaged over the last 32 episodes}{figure.4.12}{}}
 \@setckpt{chapter4}{
-\setcounter{page}{36}
+\setcounter{page}{40}
 \setcounter{equation}{0}
 \setcounter{enumi}{9}
 \setcounter{enumii}{0}
@@ -39,7 +49,7 @@
 \setcounter{subsubsection}{0}
 \setcounter{paragraph}{0}
 \setcounter{subparagraph}{0}
-\setcounter{figure}{7}
+\setcounter{figure}{12}
 \setcounter{table}{0}
 \setcounter{NAT@ctr}{0}
 \setcounter{Item}{9}

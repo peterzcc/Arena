@@ -52,8 +52,8 @@ The work of \cite{heess2016learning} is among the first studies that applies hie
 		high-level controller has access to all observations (yellow and red). While both controllers observe sensory
 		input at the world-clock frequency, the modulatory con-
 		trol signal from the high-level is updated every K
-		steps (here K = 2)}
-\end{figure}\label{review_moduler_arch}
+		steps (here K = 2)}\label{review_moduler_arch}
+\end{figure}
 The hierarchical agent is characterized by a policy $\pi$ with parameter $\theta$. The policy is defined by the composition of the high-level controller $F_H$ and low-level controller $F_L$. The low-level controller is a feed-forward neural network that maps the preprocessed curre
 nt state $o(s)$ and the control signal from the high-level controller $c$ to the policy output.
 \begin{align}
@@ -81,8 +81,8 @@ The detailed structure of the agent is shown in Figure~\ref{review_mlsh_arch}. T
 	\centering
 	\caption{The agent setup of the modulated controller~\cite{frans2017meta},$\theta$ represents the master policy, which selects
 		a sub-policy to be active. In the diagram, $\phi_3$ is the active sub-policy, and actions are taken according
-		to its output.}
-\end{figure}\label{review_mlsh_arch}
+		to its output.}\label{review_mlsh_arch}
+\end{figure}
 The agent is trained in the following manner: First a task is sampled $M$ is sampled and the parameter $\theta$ is re-initialized randomly. Then there is a warmup phase, where only $\theta$ is trained to achieve optimal. Then the agent enters the joint update phase, where both $\theta$ and $\phi$ are updated simutaneously.
 The method achieves good performance in several control environments. Including a moving-bandit Ant-robot task, a Ant-robot maze navigation task and an obstacle course task. However the tasks are actually simplified version of the control tasks in \cite{duan2016benchmarking}, where the state of the Ant-robot is periodically reset to prevent episode termination due to the falling over of Ant. That largely reduces the difficulty on learning the locomotion skills of agents. It is not clear whether the method will perform well on the original version of the Ant-robot environment.
 The major limitation is that the method relies on a warm up period to learn a high-level agent's policy. However, the authors didn't provide a method to learn the high-level agent's policy $\theta$ at first task, where the parameters $\phi$ are also randomly initialized.

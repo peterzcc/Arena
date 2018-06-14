@@ -119,10 +119,12 @@ CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0_task8 --rl-method ACKTR
 
 
 local:
+WS=
 python3.6 ${WS}/plot.py -w20 --dir ../rec_0403_move1_fail ../rec_0403_move2 --label run1 run2
 
-cd $WS/rec_180609_ent_reg/exp_44
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w20 --dir ../exp_27 ../exp_28 --label w=3e-3 w=1e-2
+cd $WS/rec_dy2/rec_180528_statlogs/exp_63
+disprun python3.6 $WS/visualize_log.py --dataname std
+
 
 for _pane in $(tmux list-windows -F '#I'); do
     tmux send-keys -t ${_pane} "Enter"

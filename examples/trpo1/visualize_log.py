@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-def get_loss(dir, mode=None, name="", extra_str="move1"):
+def get_loss(dir, mode=None, name="", extra_str="move1", use_epoch=False):
     """
     Plot visualization graph
     Usage: - logfile: log file
@@ -46,8 +46,10 @@ def get_loss(dir, mode=None, name="", extra_str="move1"):
     current_t = 0
     for line in loss_file:
         m = re.search(regex, line)
-        # t = re.search('Epoch:([+-]?[0-9]*[.]?[0-9]+)', line)
-        t = re.search('^t: ([+-]?[0-9]*[.]?[0-9]+)', line)
+        if use_epoch:
+            t = re.search('Epoch:([+-]?[0-9]*[.]?[0-9]+)', line)
+        else:
+            t = re.search('^t: ([+-]?[0-9]*[.]?[0-9]+)', line)
         if t is not None:
             current_t = t.group(1)
             # out_file.write("@" + str(current_t) + "\n")
@@ -108,8 +110,8 @@ def main():
                         help='Path of output file.')
     parser.add_argument('--dataname', required=False, type=str, default="",
                         help='Path of output file.')
-    # parser.add_argument('-s', '--starting_point', required=False, type=int, default=1,
-    #                     help='Starting point of curve.')
+    parser.add_argument('-e', '--e', required=False, type=int, default=0,
+                        help='use epoch')
     parser.add_argument('-m', '--mode', required=False, type=int, default=None,
                         help='mode')
     parser.add_argument('--t', '-t', required=False, type=float, default=None,
@@ -127,7 +129,7 @@ def main():
     elif len(dirs) != 1 and len(extra_names) == 1:
         extra_names = extra_names * len(dirs)
     for data_dir, extra_name in zip(dirs, extra_names):
-        x, y = get_loss(data_dir, args.mode, args.dataname, extra_str=extra_name)
+        x, y = get_loss(data_dir, args.mode, args.dataname, extra_str=extra_name, use_epoch=args.e)
         if args.width != 1:
             y = pd.Series(y).rolling(args.width, center=False, min_periods=args.width).mean()
         if args.t is not None:
