@@ -43,6 +43,6 @@
 \contentsline {section}{\numberline {4.1}Experiments on the basic source tasks}{28}{section.4.1}
 \contentsline {section}{\numberline {4.2}Experiment on the flat reinforcement learning solution to multi-modality tasks}{31}{section.4.2}
 \contentsline {subsection}{\numberline {4.2.1}Discussion on conventional flat reinforcement learning methods}{31}{subsection.4.2.1}
-\contentsline {subsection}{\numberline {4.2.2}Experiment on exceptional advantage regularization}{33}{subsection.4.2.2}
-\contentsline {chapter}{\numberline {5}Discussion}{34}{chapter.5}
-\contentsline {chapter}{Reference}{35}{chapter.5}
+\contentsline {subsection}{\numberline {4.2.2}Experiment on exceptional advantage regularization}{32}{subsection.4.2.2}
+\contentsline {chapter}{\numberline {5}Discussion}{36}{chapter.5}
+\contentsline {chapter}{Reference}{37}{chapter.5}
