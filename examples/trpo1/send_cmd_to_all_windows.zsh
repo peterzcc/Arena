@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-initial_data_dir=data_initial2
+initial_data_dir=data_initial
 rm -r ${initial_data_dir}
 mkdir ${initial_data_dir}
 for  ((i=1; i<=8; i++)); do
