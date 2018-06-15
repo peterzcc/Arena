@@ -88,16 +88,6 @@ disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname std --dir .
 
 CUDA_VISIBLE_DEVICES=0,1,2 ./contact_czeng_if_you_need_gpu.sh
 0mux1
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move1_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move2_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move3_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move4_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move5_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move6_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move7_task8 --rl-method ACKTR_ADAM --nactor 16 --batch-size 4096 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --loss TRAD --initial-state-dir data_initial
-
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_64 ../exp_60 ../exp_61 ../exp_58 ../exp_59 ../exp_57 ../exp_63 ../exp_62 --label 0 1 2 3 4 5 6 7
 
 
 1mux1
