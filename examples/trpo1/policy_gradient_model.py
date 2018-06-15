@@ -751,6 +751,8 @@ class PolicyGradientModel(ModelWithCritic):
 
                 if self.should_update_critic:
                     self.critic_update_executor.submit(self.fit_critic, feed_critic, pid)
+        else:
+            self._log("Not training this epoch")
         self.increment_n_update()
         self._drop_log()
         if Experiment.is_terminated:
