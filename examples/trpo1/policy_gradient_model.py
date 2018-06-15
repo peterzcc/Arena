@@ -692,6 +692,7 @@ class PolicyGradientModel(ModelWithCritic):
         else:
             current_return = Experiment.global_return.value
             other_min_return = min(Experiment.other_global_returns)
+            self._log("other_min_return: {}".format(other_min_return))
             diff = current_return - other_min_return
             if self.waiting_for_other_actuators:
                 if diff < 0:
