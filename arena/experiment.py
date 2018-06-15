@@ -9,14 +9,13 @@ import os
 import threading as thd
 import numpy as np
 import ctypes
-import datetime
 import queue
-import threading
 from gym.spaces import Discrete, Box
 import signal
 import sys
 from multiprocessing import process
 from arena.games.cust_control import make_env
+
 
 def space_to_np(space):
     if isinstance(space, Discrete):
@@ -41,7 +40,14 @@ def actuator_thread(env_args, stats_tx, acts_rx,
                                  )
         this_actuator.run_loop()
 
+
 class Experiment(object):
+    EXP_NAME = "exp_unknown"
+    global_return = None
+    is_terminated = False
+    f_terminate = []
+    stats_path = None
+    other_global_returns = None
     """Class for automatically running parallel AI agents
 
 
@@ -104,13 +110,13 @@ class Experiment(object):
         sample_env_args = env_args.copy()
         sample_env_args["initial_state_dir"] = None
         sample_env, env_info = make_env(**sample_env_args)
-        mp_ctx = MpCtxManager.get_mp_ctx()
+        self.mp_ctx = MpCtxManager.get_mp_ctx()
         if single_process_mode:
             self.process_type = thd.Thread
             self.queue_type = queue.Queue
         else:
-            self.process_type = mp_ctx.Process
-            self.queue_type = mp_ctx.Queue
+            self.process_type = self.mp_ctx.Process
+            self.queue_type = self.mp_ctx.Queue
         self.observation_space = sample_env.observation_space
         self.action_space = sample_env.action_space
         self.info_sample = {}
@@ -122,10 +128,14 @@ class Experiment(object):
         self.f_create_agent = f_create_agent
         self.f_create_shared_params = f_create_shared_params
         self.shared_params = None  # f_create_shared_params()
-        self.is_learning = mp_ctx.Value(ctypes.c_bool, lock=False)
+        self.is_learning = self.mp_ctx.Value(ctypes.c_bool, lock=False)
         self.is_learning.value = True
-        self.global_t = mp_ctx.Value(ctypes.c_int, lock=True)
+        self.global_t = self.mp_ctx.Value(ctypes.c_int, lock=True)
         self.global_t.value = 0
+        Experiment.global_return = self.mp_ctx.Value(ctypes.c_float, lock=True)
+        Experiment.global_return.value = 0.
+        self.global_return_has_initialized = False
+        self.global_return_alpha = 0.95
         self.actuator_processes = []
         self.actuator_channels = []
         self.agent_threads = []
@@ -141,11 +151,6 @@ class Experiment(object):
 
         signal.signal(signal.SIGINT, self.interrupt)
         self.dead_locked = False
-
-    EXP_NAME = "exp_unknown"
-    is_terminated = False
-    f_terminate = []
-    stats_path = None
 
     def terminate_all_actuators(self):
         force_map(lambda x: x.put(ProcessState.stop), self.actuator_channels)
@@ -310,6 +315,13 @@ class Experiment(object):
             epoch_reward += episode_reward
             with self.global_t.get_lock():
                 self.global_t.value += episode_count
+            with Experiment.global_return.get_lock():
+                if not self.global_return_has_initialized:
+                    Experiment.global_return.value = episode_reward
+                    self.global_return_has_initialized = True
+                else:
+                    Experiment.global_return.value = self.global_return_alpha * Experiment.global_return.value \
+                                                     + (1. - self.global_return_alpha) * episode_reward
 
             # current_time = time()
             # fps = episode_count / (current_time - start_times[pid])

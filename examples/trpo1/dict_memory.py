@@ -70,7 +70,8 @@ class DictMemory(object):
                  num_leafs=0,
                  num_actors=1,
                  f_check_batch=None,
-                 initial_state_path=None):
+                 initial_state_path=None,
+                 other_paths=None):
         logging.debug("dict memory args:\n {}".format(locals()))
         self.gamma = gamma
         self.lam = lam
@@ -108,9 +109,16 @@ class DictMemory(object):
             self.state_recorder = H5Ermemory(shape=INITIAL_STATE_SHAPE, path=self.initial_state_path,
                                              read_only=False,
                                              max_size=INITIAL_STATE_MAX_NUM)
+            self.state_readers = []
+            for file in other_paths:
+                this_reader = H5Ermemory(shape=INITIAL_STATE_SHAPE, path=file,
+                                         read_only=True,
+                                         max_size=INITIAL_STATE_MAX_NUM)
+                self.state_readers.append(this_reader)
             self.obs_to_saved_data = obs_to_saved_data
         else:
             self.state_recorder = None
+            self.state_readers = []
             self.obs_to_saved_data = None
 
     def append_state(self, observation, action, info, pid=0,
@@ -195,11 +203,11 @@ class DictMemory(object):
             self.num_epoch += 1
             logging.info("\n\n\n\nName: {}".format(Experiment.EXP_NAME))
             logging.info(
-                'Epoch:%d \nt: %d\nNum steps: %d\nNum traj:%d\nte:%f\nt_ex:%f\n' \
+                'Epoch:%d \nt: %d\t#steps: %d\tave_R:%f\tte:%f\tt_ex:%f\n' \
                 % (self.num_epoch,
                    self.global_t,
                    time_count,
-                   episode_count,
+                   Experiment.global_return.value,
                    run_time,
                    extract_time
                    ))
@@ -596,7 +604,8 @@ class DictMemory(object):
 
         # save state data
         if self.initial_state_path is not None:
-            self.state_recorder.insert(self.obs_to_saved_data(obs))
+            self.state_recorder.insert(self.obs_to_saved_data(obs), ave_R=Experiment.global_return.value)
+            Experiment.other_global_returns = [state_reader.get_ave_R() for state_reader in self.state_readers]
         return result
 
         # def reset(self):

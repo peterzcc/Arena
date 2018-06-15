@@ -2,7 +2,7 @@ import numpy as np
 import h5py
 import os
 import logging
-
+import time
 
 class Ermemory(object):
     def __init__(self, shape, dtype=np.float32, max_size=None):
@@ -13,17 +13,21 @@ class Ermemory(object):
     def sample(self, n):
         pass
 
+    def get_ave_R(self):
+        pass
+
     def prepare_sample(self, n):
         pass
 
-    def insert(self, x):
+    def insert(self, x, ave_R=None):
         pass
 
 
 class H5Ermemory(Ermemory):
     def __init__(self, shape, path, read_only,
                  cache_size=32,
-                 dtype=np.float32, max_size=None):
+                 dtype=np.float32, max_size=None,
+                 read_delay=10.):
         self.path = path
         self.data_count = 0
         self.data_top = 0
@@ -32,11 +36,14 @@ class H5Ermemory(Ermemory):
         self.sample_cache_top = 0
         self.has_obtained_data = False
         self.cache_size = cache_size
+        self.read_delay = read_delay
+        self.file_first_exist_time = None
         if not self.read_only:
             f = h5py.File(self.path, 'w', libver='latest')
             if max_size is not None:
                 f.create_dataset("data", shape=(max_size, *shape), dtype=dtype)
                 f["data"].attrs['n'] = self.data_count
+                f["data"].attrs['ave_R'] = 0.
                 f.swmr_mode = True
                 logging.debug("creating dataset:{}".format(path))
             else:
@@ -44,12 +51,24 @@ class H5Ermemory(Ermemory):
             self._push_count(f)
             self.f = f
         else:
-            if os.path.exists(self.path):
-                with h5py.File(self.path, 'r', swmr=True, libver='latest') as f:
-                    self._pull_count(f)
-            # else:
-            #     logging.warning("path {} not exist!".format(path))
+            self.f = None
+
         super(H5Ermemory, self).__init__(shape, dtype, max_size)
+
+    def check_file_existane_and_wait_if_first_appears(self):
+        if self.has_obtained_data:
+            return True
+        if os.path.exists(self.path):
+            if self.file_first_exist_time is None:
+                self.file_first_exist_time = time.clock()
+                return False
+            elif time.clock() < self.file_first_exist_time + self.read_delay:
+                return False
+            else:
+                self.has_obtained_data = True
+                return True
+        else:
+            return False
 
     def sample(self, n):
         if self.sample_cache is None \
@@ -59,9 +78,6 @@ class H5Ermemory(Ermemory):
             self.prepare_sample(self.cache_size)
             if self.sample_cache is None:
                 return None
-        if not self.has_obtained_data:
-            # logging.info("has obtained data from {}".format(self.path))
-            self.has_obtained_data = True
         result = self.sample_cache[self.sample_cache_top:(self.sample_cache_top + n)]
         result = result[0] if n == 1 else result
         self.sample_cache_top += n
@@ -76,14 +92,19 @@ class H5Ermemory(Ermemory):
         dst.read_direct(data, source_sel=slc)
         return data
 
+    def _get_ave_R(self, f):
+        return f["data"].attrs['ave_R']
+
     def _push_data(self, data, slc, n, f):
         dst: h5py.Dataset = f["data"]
         dst.write_direct(data, source_sel=np.s_[0:n], dest_sel=slc)
-        dst.flush()
         return data
 
     def _push_count(self, f):
         f["data"].attrs['n'] = self.data_count
+
+    def _save_ave_R(self, f, ave_R):
+        f["data"].attrs['ave_R'] = ave_R
 
     def _data_count(self, f):
         return f["data"].attrs['n']
@@ -93,8 +114,16 @@ class H5Ermemory(Ermemory):
         choices.sort()
         return choices
 
+    def get_ave_R(self):
+        if self.check_file_existane_and_wait_if_first_appears():
+            with h5py.File(self.path, 'r', swmr=True, libver='latest') as f:
+                ave_R = self._get_ave_R(f)
+                return ave_R
+        else:
+            return None
+
     def prepare_sample(self, n):
-        if os.path.exists(self.path):
+        if self.check_file_existane_and_wait_if_first_appears():
             with h5py.File(self.path, 'r', swmr=True, libver='latest') as f:
                 self._pull_count(f)
                 if self.data_count < n:
@@ -109,7 +138,7 @@ class H5Ermemory(Ermemory):
             self.sample_cache = None
             return None
 
-    def insert(self, x):
+    def insert(self, x, ave_R=None):
         n = x.shape[0]
         if self.data_top + n > self.max_count:
             self.data_top = 0
@@ -120,6 +149,15 @@ class H5Ermemory(Ermemory):
         self.data_count = min(self.max_count, self.data_count + n)
         self._push_count(f)
         self.data_top += n
+
+        if ave_R is not None:
+            self._save_ave_R(f, ave_R)
+        self.f.flush()
+
+    def close(self):
+        if self.f is not None:
+            self.f.close()
+
 
 
 def main():

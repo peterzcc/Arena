@@ -102,7 +102,6 @@ class ComplexWrapper(object):
         else:
             self.initial_state_datasets = None
             self.save_data_to_initial_state = None
-        self.first_read = True
 
     def render(self, mode='human', close=False):
         result = self.env.render(mode=mode, close=close)
@@ -199,9 +198,6 @@ class ComplexWrapper(object):
 
     def reset(self):
         if self.sample_initial_states_from_paths is not None:
-            if self.first_read:
-                time.sleep(10)
-                self.first_read = False
             task = np.random.randint(len(self.initial_state_datasets) + 1) - 1
             if task >= 0:
                 initial_state = self.initial_state_datasets[task].sample(1)

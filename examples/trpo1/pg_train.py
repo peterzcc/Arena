@@ -249,12 +249,14 @@ def main():
     def create_dict_shared_params():
         if args.initial_state_dir is not None:
             from arena.games.cust_control.env_library import get_initial_state_paths
-            initial_state_path, other_path = get_initial_state_paths(args.env, args.initial_state_dir)
+            initial_state_path, other_paths = get_initial_state_paths(args.env, args.initial_state_dir)
             logging.info("initial state path: {}".format(initial_state_path))
-            logging.info("other state path: {}".format(other_path))
+            logging.info("other state path: {}".format(other_paths))
         else:
             initial_state_path = None
-        dict_memory_shared_params = dict(initial_state_path=initial_state_path)
+            other_paths = None
+        dict_memory_shared_params = dict(initial_state_path=initial_state_path,
+                                         other_paths=other_paths)
         return dict_memory_shared_params
 
     def pg_shared_params():

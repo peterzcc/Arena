@@ -71,7 +71,8 @@ class PolicyGradientModel(ModelWithCritic):
                  policy_logstd_grad_bias=0.0,
                  logstd_sample_dev=1.0,
                  use_mix=False,
-                 normalize_wass=False
+                 normalize_wass=False,
+                 joint_training_return_diff=1000.
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -321,6 +322,9 @@ class PolicyGradientModel(ModelWithCritic):
         self._train_loop_thread = threading.Thread(target=self._train_loop)
         self._train_loop_thread.start()
         self._log_msg = "{}:\n".format(self.name)
+
+        self.joint_training_return_diff = joint_training_return_diff
+        self.waiting_for_other_actuators = False
 
 
 
@@ -680,6 +684,23 @@ class PolicyGradientModel(ModelWithCritic):
         result = self._train_finish_queue.get(block=True)
         assert result == 0
 
+    def check_if_wait_for_other_actuators(self):
+        if Experiment.other_global_returns is None \
+                or None in Experiment.other_global_returns \
+                or len(Experiment.other_global_returns) == 0:
+            self.waiting_for_other_actuators = False
+        else:
+            current_return = Experiment.global_return.value
+            other_min_return = min(Experiment.other_global_returns)
+            diff = current_return - other_min_return
+            if self.waiting_for_other_actuators:
+                if diff < 0:
+                    self.waiting_for_other_actuators = False
+                    self._log("resumed training")
+            elif diff > self.joint_training_return_diff:
+                self.waiting_for_other_actuators = True
+                self._log("start waiting for other actuators")
+
     def train(self, paths, pid=None):
         if self.const_action is not None:
             return
@@ -697,11 +718,12 @@ class PolicyGradientModel(ModelWithCritic):
         if paths is not None:
             feed, feed_critic, extra_data = self.concat_paths(paths)
             mean_t_reward = extra_data["reward"].mean()
-            self._log("name: {0} mean_r_t: {1:.4f}".format(self.name, mean_t_reward))
+            self._log("name: {} mean_r_t: {}".format(self.name, mean_t_reward))
         else:
             feed, mean_t_reward, feed_critic = None, None, None
 
-        if self.should_train and self.f_train_this_epoch(self.n_update):
+        self.check_if_wait_for_other_actuators()
+        if self.should_train and self.f_train_this_epoch(self.n_update) and not self.waiting_for_other_actuators:
 
             if Experiment.is_terminated:
                 self.clean()
