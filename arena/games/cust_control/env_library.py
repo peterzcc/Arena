@@ -125,7 +125,7 @@ hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hr
                       reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
                       move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
                       dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train,
-                      dynamic2d5task8_joint=hrl_dynamic2d5task8joint)
+                      dynamic2d5task8joint=hrl_dynamic2d5task8joint)
 joint_training_tasks = {"task4": task4, "task8": task8}
 
 

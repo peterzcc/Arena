@@ -94,11 +94,11 @@ disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_1 ../exp_3 .
 
 1mux1
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env dynamic2d5task8 --rl-method PG --nactor 32 --batch-size 40960 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 100 --npret -1  --loss TRAD --ent-k 0.01
+CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 40960 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 100 --npret -1  --loss TRAD --ent-k 0.01
 
-CUDA_VISIBLE_DEVICES=1,2,3,0 disprun python3.6 pg_train.py --env dynamic2d5task8 --rl-method PG --nactor 32 --batch-size 40960 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 100 --npret -1  --loss TRAD --ent-k 0.01
+CUDA_VISIBLE_DEVICES=1,2,3,0 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 40960 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 100 --npret -1  --loss TRAD --ent-k 0.01
 
-CUDA_VISIBLE_DEVICES=3,0,1,2 disprun python3.6 pg_train.py --env dynamic2d5task8 --rl-method PG --nactor 32 --batch-size 40960 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.001 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 100 --npret -1  --loss TRAD --ent-k 0.01
+CUDA_VISIBLE_DEVICES=3,0,1,2 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 40960 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.001 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 100 --npret -1  --loss TRAD --ent-k 0.01
 5
 
 
