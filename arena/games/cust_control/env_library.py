@@ -74,7 +74,9 @@ task4 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
 task8 = OrderedDict(move0=x_forward_obj, move1=x_backward_obj,
                     move2=x_up_obj, move3=x_down_obj,
                     move4=v_11, move5=v_n1n1, move6=v_1n1, move7=v_n11)
-
+task_8_joint = OrderedDict(move0_task8=x_forward_obj, move1_task8=x_backward_obj,
+                           move2_task8=x_up_obj, move3_task8=x_down_obj,
+                           move4_task8=v_11, move5_task8=v_n1n1, move6_task8=v_1n1, move7_task8=v_n11)
 dir_funcs_task8 = list(task8.values())
 
 
@@ -105,6 +107,8 @@ hrl_task8train = OrderedDict(task8train=random_direction8,
                              **task8)
 hrl_dynamic2d5task8 = OrderedDict(dynamic2d5task8=random_direction8,
                                   **task8)
+hrl_dynamic2d5task8joint = OrderedDict(dynamic2d5task8joint=random_direction8,
+                                       **task_8_joint)
 hrl_c1 = OrderedDict(reachc1=random_direction,
                      move0=x_forward_obj, move1=x_backward_obj,
                      move2=x_up_obj, move3=x_down_obj
@@ -120,7 +124,8 @@ hrl_simple1d = OrderedDict(simplehrl1d=x_for_back, move0=x_forward_obj, move1=x_
 hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
                       reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
                       move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
-                      dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train)
+                      dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train,
+                      dynamic2d5task8_joint=hrl_dynamic2d5task8joint)
 joint_training_tasks = {"task4": task4, "task8": task8}
 
 
@@ -243,7 +248,7 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               subtask_dirs=subtask_dirs,
                               use_internal_reward=False,
                               constraint_height=False)
-    elif env_name == "dynamic2d5task8":
+    elif env_name in ["dynamic2d5task8", "dynamic2d5task8joint"]:
         subtask_dirs = np.stack([v() for (k, v) in list(task8.items())], axis=0)
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                               f_gen_obj=random_direction8,
