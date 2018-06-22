@@ -58,7 +58,6 @@ class FlexibleHrlAgent(Agent):
             self.batch_start_time = time.time()
 
 
-
         if self.current_policy_id is None:
             decision, decider_model_info = self.decider.predict(observation, pid=self.id)
             self.current_policy_id = decision

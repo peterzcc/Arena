@@ -562,10 +562,6 @@ class DictMemory(object):
             decider_data.update(**decider_gae)
             result.update(decider_data=decider_data)
 
-            # flat_gae_info = self.compute_gae_for_path(switcher_data, f_critic=self.f_critic["decider"],
-            #                                           normalize=self.normalize)
-
-            # del agg_paths["id"]
             splitted_paths = {}
             for k in agg_paths.keys():
                 if k == OBSERVATION:

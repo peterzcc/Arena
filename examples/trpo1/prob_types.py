@@ -137,6 +137,14 @@ class Categorical(ProbType):
         wasserstein = tf.reduce_sum(tf.abs(old_dist.probs - new_dist.probs) / 2, axis=-1)
         return wasserstein
 
+    def regulation_loss(self, dist_info, min_prob=0.005):
+        logits = dist_info["logits"]
+        logits_logsumexp = tf.reduce_logsumexp(logits, axis=-1)
+        min_logit = tf.reduce_min(logits, axis=-1)
+        min_logprob = min_logit - logits_logsumexp
+        reg_loss = tf.minimum(np.log(min_prob) - min_logprob, 0.)
+        return reg_loss
+
     def entropy(self, dist_info):
         dist = tf.distributions.Categorical(logits=dist_info["logits"])
         return dist.entropy()
