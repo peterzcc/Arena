@@ -117,12 +117,12 @@ hrl_c05 = OrderedDict(reachc05=random_direction,
                       move0=x_forward_obj, move1=x_backward_obj,
                       move2=x_up_obj, move3=x_down_obj
                       )
-hrl_fake = OrderedDict(**{"cartpole_hrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
+hrl_fake = OrderedDict(**{"cartpolehrl": "", "CartPole-v1_0": "", "CartPole-v1_1": ""})
 hrl_up_for = OrderedDict(move_up_for=up_for, move0=x_forward_obj, move2=x_up_obj)
 hrl_simple1d = OrderedDict(simplehrl1d=x_for_back, move0=x_forward_obj, move1=x_backward_obj)
 
 hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hrl_changing_goal,
-                      reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpole_hrl=hrl_fake,
+                      reachc1=hrl_c1, reachc05=hrl_c05, moves2d=hrl_dimage, cartpolehrl=hrl_fake,
                       move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
                       dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train,
                       dynamic2d5task8joint=hrl_dynamic2d5task8joint)
@@ -307,7 +307,7 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               f_gen_obj=task8["move4"],
                               forward_scale=10.0,
                               reset_goal_prob=0, )
-    elif env_name == "cartpole_hrl":
+    elif env_name == "cartpolehrl":
         env = gym.make("CartPole-v1")
     elif env_name in hrl_up_for:
         subtask_dirs = np.stack([v() for (k, v) in list(hrl_root_tasks[env_name].items())[1:]], axis=0)

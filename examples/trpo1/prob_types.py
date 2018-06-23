@@ -142,7 +142,7 @@ class Categorical(ProbType):
         logits_logsumexp = tf.reduce_logsumexp(logits, axis=-1)
         min_logit = tf.reduce_min(logits, axis=-1)
         min_logprob = min_logit - logits_logsumexp
-        reg_loss = tf.minimum(np.log(min_prob) - min_logprob, 0.)
+        reg_loss = tf.maximum(np.log(min_prob) - min_logprob, 0.)
         return reg_loss
 
     def entropy(self, dist_info):
