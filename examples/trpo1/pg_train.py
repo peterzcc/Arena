@@ -293,6 +293,7 @@ def main():
                                     parallel_predict=True,
                                     should_train=args.train_decider,
                                     save_model=args.save_model,
+                                    is_decider=True,
                                     **policy_shared_params)
         memory = DictMemory(gamma=args.gamma, lam=args.lam, normalize=args.norm_gae,
                             timestep_limit=T,

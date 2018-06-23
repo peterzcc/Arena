@@ -175,7 +175,7 @@ class MultiBaseline(object):
 
         update_scale = True
         if update_scale:
-            beta = 0.95
+            beta = 1.0
             new_mu = feed[self.y].mean()
             new_sigma = feed[self.y].std()
             if self.curr_mean_value is None:

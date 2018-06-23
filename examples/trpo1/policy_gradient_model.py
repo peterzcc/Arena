@@ -72,7 +72,8 @@ class PolicyGradientModel(ModelWithCritic):
                  logstd_sample_dev=1.0,
                  use_mix=False,
                  normalize_wass=False,
-                 joint_training_return_diff=1000.
+                 joint_training_return_diff=1000.,
+                 regulation_k=50.0
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -192,7 +193,7 @@ class PolicyGradientModel(ModelWithCritic):
         self.target_kl_sym = tf.placeholder(shape=[], dtype=tf.float32, name="target_kl")
         self.ent_k = ent_k
         self.ent_loss = 0 if self.ent_k == 0 else -self.ent_k * self.policy.ent
-        regulation_k = 50.0
+
         self.regulation_loss = 0.0 if regulation_k == 0.0 else regulation_k * self.policy.regulation_loss
         self.fit_policy = None
 
@@ -708,7 +709,7 @@ class PolicyGradientModel(ModelWithCritic):
         if paths is not None and self.is_decider:
             self._log("root at t\t{}".format(self.n_update))
             norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
-            self._log("pi:{}".format(np.mean(np.exp(norm_logits), axis=0)))
+            self._log("pi:{}".format(np.min(np.exp(norm_logits), axis=0)))
         if self.is_switcher_with_init_len:
             self._log("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
 
