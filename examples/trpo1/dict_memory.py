@@ -572,28 +572,31 @@ class DictMemory(object):
                     splitted_paths[k] = valid_split(agg_paths[k], full_leaf_splits)
 
             for l in range(self.num_leafs):
-                this_paths = {}
-                is_this_leaf = full_leaf_ids == l
-                num_data = np.count_nonzero(is_this_leaf)
-                if num_data > 0:
-                    for k in splitted_paths.keys():
-                        if k == OBSERVATION:
-                            this_paths[k] = [None] * len(splitted_paths[k])
-                            leaf_data[l][k] = [None] * len(splitted_paths[k])
-                            for i in range(len(splitted_paths[k])):
-                                this_paths[k][i] = list(compress(splitted_paths[k][i], is_this_leaf))
-                                leaf_data[l][k][i] = np.concatenate(this_paths[k][i])
-                        else:
-                            this_paths[k] = list(compress(splitted_paths[k], is_this_leaf))
-                            leaf_data[l][k] = np.concatenate(this_paths[k])
-                    lens = list(map(len, this_paths[TIMES]))
-                    leaf_data[l][SPLITS] = np.cumsum(lens)
-                    leaf_data[l][TERMINATED] = full_leaf_terms[is_this_leaf]
-                    if train_sub:
-                        results = self.compute_gae_for_path(leaf_data[l], rewards=this_paths[REWARD],
-                                                            f_critic=self.f_critic["leafs"][l],
-                                                            normalize=self.normalize)
-                        leaf_data[l].update(**results)
+                if train_sub:
+                    this_paths = {}
+                    is_this_leaf = full_leaf_ids == l
+                    num_data = np.count_nonzero(is_this_leaf)
+                    if num_data > 0:
+                        for k in splitted_paths.keys():
+                            if k == OBSERVATION:
+                                this_paths[k] = [None] * len(splitted_paths[k])
+                                leaf_data[l][k] = [None] * len(splitted_paths[k])
+                                for i in range(len(splitted_paths[k])):
+                                    this_paths[k][i] = list(compress(splitted_paths[k][i], is_this_leaf))
+                                    leaf_data[l][k][i] = np.concatenate(this_paths[k][i])
+                            else:
+                                this_paths[k] = list(compress(splitted_paths[k], is_this_leaf))
+                                leaf_data[l][k] = np.concatenate(this_paths[k])
+                        lens = list(map(len, this_paths[TIMES]))
+                        leaf_data[l][SPLITS] = np.cumsum(lens)
+                        leaf_data[l][TERMINATED] = full_leaf_terms[is_this_leaf]
+                        if train_sub:
+                            results = self.compute_gae_for_path(leaf_data[l], rewards=this_paths[REWARD],
+                                                                f_critic=self.f_critic["leafs"][l],
+                                                                normalize=self.normalize)
+                            leaf_data[l].update(**results)
+                    else:
+                        leaf_data[l] = None
                 else:
                     leaf_data[l] = None
             result["leaf_data"] = leaf_data
