@@ -108,7 +108,7 @@ class Categorical(ProbType):
             assert last_layer is not None
             logits = tf.layers.dense(last_layer, self.n,
                                      kernel_initializer=tf.variance_scaling_initializer(
-                                         scale=1.0, mode="fan_avg", distribution="normal", dtype=dtype))
+                                         scale=0.01, mode="fan_avg", distribution="normal", dtype=dtype))
         old_dist_vars = dict(logits=old_logits)
         dist_vars = dict(logits=logits)
         interm_vars = dict(logits=logits)
