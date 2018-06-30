@@ -124,7 +124,7 @@ class MultiNetwork(object):
                     self.distribution.create_dist_vars(self.fc_layers[-1])
             else:
                 root_logits = tf.layers.dense(self.fc_layers[-1], 1,
-                                              kernel_initializer=self.initializer())
+                                              kernel_initializer=self.initializer()) * 0.01
                 max_length = self.is_switcher_with_init_len - 0.5
                 with tf.variable_scope("switch_model") as time_scope:
                     self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),

@@ -108,8 +108,7 @@ disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname subpolicy_l
 
 
 2mux1
-CUDA_VISIBLE_DEVICES=0,1 disprun python3.6 pg_train.py --env dynamic2d5 --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_target --vlr 0.001 --npass 2 --minibatch-size 128 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-start 0  --switcher-length 25 --npret -1  --loss TRAD --ent-k 0.01 --switcher-k 0.0  --lr 0.0001
-CUDA_VISIBLE_DEVICES=1,0 disprun python3.6 pg_train.py --env dynamic2d5 --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_target --vlr 0.001 --npass 2 --minibatch-size 128 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-start 0  --switcher-length 25 --npret -1  --loss TRAD --ent-k 0.01 --switcher-k 0.03  --lr 0.0001
+CUDA_VISIBLE_DEVICES=0,1 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_target --vlr 0.001 --npass 2 --minibatch-size 128 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-start 0  --switcher-length 25 --npret -1 --multi-update 1 --norm-gae 0  --loss PPO --ent-k 0.01 --switcher-k 0.01  --lr 0.0001
 
 local:
 WS=
