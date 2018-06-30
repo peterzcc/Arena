@@ -706,8 +706,8 @@ class PolicyGradientModel(ModelWithCritic):
     def train(self, paths, pid=None):
         if self.const_action is not None:
             return
-        if paths is not None and self.is_decider:
-            self._log("root at t\t{}".format(self.n_update))
+        if paths is not None and isinstance(self.distribution, Categorical):
+            self._log("{} at t\t{}".format(self.name, self.n_update))
             norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
             self._log("pi:{}".format(np.min(np.exp(norm_logits), axis=0)))
         if self.is_switcher_with_init_len:
