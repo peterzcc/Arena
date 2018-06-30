@@ -36,11 +36,11 @@
 \contentsline {section}{\numberline {3.2}Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization mehod }{20}{section.3.2}
 \contentsline {section}{\numberline {3.3}Efficient Exploration Through Exceptional Advantage Regularization}{23}{section.3.3}
 \contentsline {section}{\numberline {3.4}Efficient Exploration Through Robust Concentric Mixture Gaussian Policy}{24}{section.3.4}
-\contentsline {section}{\numberline {3.5}Hierarchical reinforcement learning architecture}{25}{section.3.5}
-\contentsline {section}{\numberline {3.6}Generalized advantage estimation for the decider agent}{26}{section.3.6}
-\contentsline {section}{\numberline {3.7}Training of the switcher agent}{27}{section.3.7}
-\contentsline {section}{\numberline {3.8}Efficient training of actuator policies}{28}{section.3.8}
-\contentsline {subsection}{\numberline {3.8.1}Domain randomization by cross-sampling initial states}{28}{subsection.3.8.1}
+\contentsline {section}{\numberline {3.5}Efficient training of actuator policies}{25}{section.3.5}
+\contentsline {subsection}{\numberline {3.5.1}Domain randomization by cross-sampling initial states}{25}{subsection.3.5.1}
+\contentsline {section}{\numberline {3.6}Hierarchical reinforcement learning architecture}{26}{section.3.6}
+\contentsline {section}{\numberline {3.7}Generalized advantage estimation for the decider agent}{27}{section.3.7}
+\contentsline {section}{\numberline {3.8}Training of the switcher agent}{28}{section.3.8}
 \contentsline {chapter}{\numberline {4}Experiments}{29}{chapter.4}
 \contentsline {section}{\numberline {4.1}Experiments on the basic source tasks}{29}{section.4.1}
 \contentsline {section}{\numberline {4.2}Experiment on the flat reinforcement learning solution to multi-modality tasks}{32}{section.4.2}
