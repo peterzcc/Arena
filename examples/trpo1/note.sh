@@ -90,25 +90,21 @@ CUDA_VISIBLE_DEVICES=0,2 ./contact_czeng_if_you_need_gpu.sh
 CUDA_VISIBLE_DEVICES=0,3 ./attack_gpu.sh
 
 0mux1
-
+CUDA_VISIBLE_DEVICES=1,0 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
+CUDA_VISIBLE_DEVICES=1,0 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
+CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
 
 
 1mux1
-CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 5120 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --vlr 0.001 --npass 2 --minibatch-size 128 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-start 0  --switcher-length 50 --npret -1  --loss TRAD --switcher-k 0.01 --norm-gae 0  --lr 0.0001
-CUDA_VISIBLE_DEVICES=3,0,1,2 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 5120 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --vlr 0.001 --npass 2 --minibatch-size 128 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-start 0  --switcher-length 50 --npret -1  --loss TRAD --switcher-k 0.01 --norm-gae 0  --lr 0.0003
-CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 5120 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --vlr 0.001 --npass 2 --minibatch-size 128 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-start 0  --switcher-length 50 --npret -1  --loss TRAD --switcher-k 0.01 --norm-gae 0  --lr 0.001
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_29 ../exp_30 ../exp_31 --label 1e-4 3e-4 1e-3
-disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname subpolicy_len  --dir ../exp_29 ../exp_30 ../exp_31 --label 1e-4 3e-4 1e-3
-
-5
 
 
 2mux1
 CUDA_VISIBLE_DEVICES=0,1 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO
 CUDA_VISIBLE_DEVICES=0,1 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO
-CUDA_VISIBLE_DEVICES=1,0 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO
+dead CUDA_VISIBLE_DEVICES=1,0 disprun python3.6 pg_train.py --env dynamic2d5task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO
 
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_7 ../exp_8 --label 1e-4 1e-3
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_4 ../exp_18 ../exp_19 --label 3e-5 1e-4 3e-4
+disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname subpolicy_len --dir ../exp_4 ../exp_18 ../exp_19 --label 3e-5 1e-4 3e-4
 
 local:
 WS=
@@ -116,7 +112,7 @@ python3.6 ${WS}/plot.py -w20 --dir ../rec_0403_move1_fail ../rec_0403_move2 --la
 
 python3.6 pg_train.py --env CartPole-v1 --norm-gae 0 --rl-method PG --nactor 16 --batch-size 9600 --withimg 0 --nfeat 0 --load-model 0 --vlr 0.001 --npass 1 --minibatch-size 128 --lr 0.0001 --load-leaf 0 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 1 --npret -1  --loss TRAD
 
-
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_35
 tmux send-keys -t 0 "echo 'OK'"
 record:
 CUDA_VISIBLE_DEVICES="" python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 400 --withimg 1 --env simplemove1d --nfeat 30 --load-model 1 --no-train 1 --save-model 0 --render record --load-dir exp_7

@@ -97,9 +97,9 @@ The normalized generalized advantage estimater is then given by:
 However, the unormalized GAE estimator is usually used in practice instead of the normalized one, with a postprocessing step of batch normalization to adjust the scale of the advantages. This pratical method usually lead to large advantage scales for experience data at the beginning of the episodes and small scales for the experience data near episode ends.
 
 \section{Training of the switcher agent}
-We train the switcher agent using a flat reinforcement learning method according to the return of the target task, because it needs to make decisions at every time step. However, we add an extra loss so that the switcher network will tend to reduce the number of decision points of the decision network:
+We train the switcher agent using a flat reinforcement learning method according to the return of the target task. However, an extra loss term is added so that the switcher network will be encouraged to produce less termination signals.
 \begin{align}
 J'(\theta_s) = J'(\theta_s) + \mathbb{E}[\pi_s(s)]
 \end{align}
-Where $\pi_s$ is the output of the switcher network.
+Where $\pi_s$ is the output of the switcher network. The second term is the expected frequency that the switcher network produces the output $1$, which indicates the termination of the current actuator policy.
 
