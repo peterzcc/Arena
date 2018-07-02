@@ -268,20 +268,31 @@ class PolicyGradientModel(ModelWithCritic):
                         self.p_kl_loss = 0.0
                     self.pg_loss = self.final_loss + self.p_kl_loss
 
-                    self.p_grads = tf.gradients(self.pg_loss, self.policy.var_list)
+                    self.p_raw_grads = tf.gradients(self.pg_loss, self.policy.var_list)
+                    if self.multi_update:
+                        p_full_grads = self.p_raw_grads
+                        self.p_grads_accumulator = None
+                        self.p_accum_op = None
 
-                    self.p_grads_accumulator = MiniBatchAccumulator(self.p_grads)
-                    self.p_accum_op = self.p_grads_accumulator.gen_accum_op(self.p_grads)
+                    else:
+                        self.p_grads_accumulator = MiniBatchAccumulator(self.p_raw_grads)
+                        self.p_accum_op = self.p_grads_accumulator.gen_accum_op(self.p_raw_grads)
+                        p_full_grads = self.p_grads_accumulator.accum_var
 
                     if max_grad_norm is not None:
-                        p_final_grads, self.g_norm = tf.clip_by_global_norm(self.p_grads_accumulator.accum_var,
+                        p_final_grads, self.g_norm = tf.clip_by_global_norm(p_full_grads,
                                                                             max_grad_norm)
                     else:
-                        p_final_grads = self.p_grads_accumulator.accum_var
-                    p_grads_var = [(g, v) for g, v in zip(p_final_grads, self.policy.var_list)]
-                    p_apply_grad = self.pg_optim.apply_gradients(p_grads_var)
-                    self.p_apply_reset_accum = \
-                        self.p_grads_accumulator.gen_apply_reset_op(p_apply_grad)
+                        p_final_grads = p_full_grads
+                    grad_var_tuples = [(g, v) for g, v in zip(p_final_grads, self.policy.var_list)]
+                    apply_grad_op = self.pg_optim.apply_gradients(grad_var_tuples)
+                    if self.multi_update:
+                        self.update_op = apply_grad_op
+                        self.p_apply_reset_accum = None
+                    else:
+                        self.update_op = None
+                        self.p_apply_reset_accum = \
+                            self.p_grads_accumulator.gen_apply_reset_op(apply_grad_op)
 
                 self.fit_policy = self.fit_pg
             else:
@@ -628,14 +639,15 @@ class PolicyGradientModel(ModelWithCritic):
             if self.multi_update:
                 ids = np.random.permutation(np.arange(num_samples))
                 for start in range(0, num_samples, self.minibatch_size):
-                    end = start + self.minibatch_size if num_samples - start < 2 * self.minibatch_size else num_samples
+                    end = min(start + self.minibatch_size, num_samples)
                     slc = ids[start:end]
                     this_feed = {k: v[slc] for k, v in feed.items()}
-                    _ = self.session.run(self.p_accum_op,
+                    _ = self.session.run(self.update_op,
                                          feed_dict={**this_feed,
                                                     **self._feed_parameters})
-                    g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
-                                                 feed_dict=self._feed_parameters)
+                    g_norm = 0.
+                    # g_norm, _ = self.session.run([self.g_norm, self.p_apply_reset_accum],
+                    #                              feed_dict=self._feed_parameters)
             else:
 
                 _ = tf_run_batched(self.p_accum_op, feed, num_samples, self.session,
