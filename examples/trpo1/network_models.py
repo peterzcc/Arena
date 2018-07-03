@@ -127,7 +127,7 @@ class MultiNetwork(object):
                                               kernel_initializer=self.initializer()) * 0.01
                 max_length = self.is_switcher_with_init_len - 0.5
                 with tf.variable_scope("switch_model") as time_scope:
-                    self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(10.0),
+                    self.time_weight = tf.get_variable(name="time_weight", initializer=tf.constant(0.5),
                                                        trainable=False)
                     self.time_offset = tf.get_variable(name="time_offset", initializer=tf.constant(max_length),
                                                        trainable=False)
