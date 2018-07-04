@@ -50,5 +50,6 @@
 \contentsline {section}{\numberline {4.3}Hierarchical reinforcement learning methods for multi-modality and sparse environments}{44}{section.4.3}
 \contentsline {subsection}{\numberline {4.3.1}Training the actuator agents with domain randomization by cross-sampling initial states}{45}{subsection.4.3.1}
 \contentsline {subsection}{\numberline {4.3.2}Training the decider agent}{48}{subsection.4.3.2}
-\contentsline {chapter}{\numberline {5}Discussion}{50}{chapter.5}
-\contentsline {chapter}{Reference}{51}{chapter.5}
+\contentsline {subsubsection}{Decision policy training}{48}{section*.1}
+\contentsline {chapter}{\numberline {5}Discussion}{51}{chapter.5}
+\contentsline {chapter}{Reference}{52}{chapter.5}

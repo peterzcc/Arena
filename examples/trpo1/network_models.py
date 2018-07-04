@@ -27,6 +27,7 @@ def ppo_loss(new_logpi, advant, old_logpi=None, ppo_eps=0.2):
     ppo_surrs = tf.minimum(surr_n, clipped_surr)
     return - tf.reduce_mean(ppo_surrs)
 
+
 class MultiNetwork(object):
     def __init__(self, scope, observation_space, action_space,
                  n_imgfeat=1, extra_feaatures=[], st_enabled=None, img_enabled=None,
@@ -41,7 +42,8 @@ class MultiNetwork(object):
                  logstd_exploration_bias=0.0,
                  rl_loss_type="TRAD",
                  use_wasserstein=False,
-                 logstd_sample_dev=1.0
+                 logstd_sample_dev=1.0,
+                 fix_length_weight=1.0,
                  ):
         logging.debug("network args:\n {}".format(locals()))
         self.comb_method = comb_method
@@ -144,7 +146,7 @@ class MultiNetwork(object):
                     final_terlogit = self.fixed_ter_weight * self.fixed_prob_ter_logit + \
                                      (1 - self.fixed_ter_weight) * time_logit
 
-                self.full_logits = logits_from_ter_categorical(root_logits, final_terlogit,
+                self.full_logits = logits_from_ter_categorical(root_logits, fix_length_weight * final_terlogit,
                                                                is_initial_step=self.hrl_meta_input[:, 2:3])
                 assert isinstance(self.distribution, Categorical)
                 self.dist_vars, self.old_vars, self.sampled_action, self.interm_vars = \
