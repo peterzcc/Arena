@@ -26,5 +26,5 @@
 \contentsline {figure}{\numberline {4.16}{\ignorespaces Performance of actuator agents with domain randomization by cross-sampling initial states, the x-axis is the number of million time-steps and the y-axis is the total episode reward averaged over the last 200 episodes}}{46}{figure.4.16}
 \contentsline {figure}{\numberline {4.17}{\ignorespaces Performance of actuator agents using "synchronous scheduling of actuator learning" , the x-axis is the number of million time-steps and the y-axis is the total episode reward averaged over the last 200 episodes}}{47}{figure.4.17}
 \contentsline {figure}{\numberline {4.18}{\ignorespaces Decision policy training performance of the task "dynamicg8", the x-axis is the number of million time-steps and the y-axis is the total episode reward averaged over the last 32 episodes}}{48}{figure.4.18}
-\contentsline {figure}{\numberline {4.19}{\ignorespaces }}{49}{figure.4.19}
+\contentsline {figure}{\numberline {4.19}{\ignorespaces Decision policy training performance of the task "reachcont", the x-axis is the number of million time-steps and the y-axis is the total episode reward averaged over the last 200 episodes}}{49}{figure.4.19}
 \addvspace {10\p@ }

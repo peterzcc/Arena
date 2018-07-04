@@ -48,7 +48,7 @@
 \contentsline {subsection}{\numberline {4.2.2}Experiment on exceptional advantage regularization}{34}{subsection.4.2.2}
 \contentsline {subsection}{\numberline {4.2.3}Experiment on the Robust Concentric Mixture Gaussian Policy}{42}{subsection.4.2.3}
 \contentsline {section}{\numberline {4.3}Hierarchical reinforcement learning methods for multi-modality and sparse environments}{44}{section.4.3}
-\contentsline {subsection}{\numberline {4.3.1}Training of actuator agents with Domain randomization by cross-sampling initial states}{45}{subsection.4.3.1}
-\contentsline {subsection}{\numberline {4.3.2}Training of decider agent}{45}{subsection.4.3.2}
+\contentsline {subsection}{\numberline {4.3.1}Training the actuator agents with domain randomization by cross-sampling initial states}{45}{subsection.4.3.1}
+\contentsline {subsection}{\numberline {4.3.2}Training the decider agent}{48}{subsection.4.3.2}
 \contentsline {chapter}{\numberline {5}Discussion}{50}{chapter.5}
 \contentsline {chapter}{Reference}{51}{chapter.5}
