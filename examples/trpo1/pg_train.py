@@ -78,6 +78,9 @@ def main():
                         help='target kl')
     parser.add_argument('--ent-k', required=False, default=0, type=float,
                         help='entropy loss weight')
+
+    parser.add_argument('--regulation-k', required=False, default=50., type=float,
+                        help='regulation loss weight')
     parser.add_argument('--switcher-k', required=False, default=0.01, type=float,
                         help='switcher loss weight')
     parser.add_argument('--switcher-time-weight', required=False, default=1.0, type=float,
@@ -247,7 +250,8 @@ def main():
                                 logstd_sample_dev=args.stddev,
                                 use_mix=args.use_mix,
                                 normalize_wass=args.normalize_wass,
-                                switcher_time_weight=args.switcher_time_weight)
+                                switcher_time_weight=args.switcher_time_weight,
+                                regulation_k=args.regulation_k)
 
     def create_dict_shared_params():
         if args.initial_state_dir is not None:
