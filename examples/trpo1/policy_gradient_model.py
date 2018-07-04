@@ -73,7 +73,8 @@ class PolicyGradientModel(ModelWithCritic):
                  use_mix=False,
                  normalize_wass=False,
                  joint_training_return_diff=1000.,
-                 regulation_k=50.0
+                 regulation_k=50.0,
+                 switcher_time_weight=1.0
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -182,7 +183,8 @@ class PolicyGradientModel(ModelWithCritic):
                                    use_wasserstein=use_wasserstein,
                                    logstd_exploration_bias=policy_logstd_grad_bias,
                                    rl_loss_type=self.loss_type,
-                                   logstd_sample_dev=logstd_sample_dev
+                                   logstd_sample_dev=logstd_sample_dev,
+                                   fix_length_weight=switcher_time_weight
                                    )
         self.executer_net = self.policy
 

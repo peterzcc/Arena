@@ -79,7 +79,9 @@ def main():
     parser.add_argument('--ent-k', required=False, default=0, type=float,
                         help='entropy loss weight')
     parser.add_argument('--switcher-k', required=False, default=0.01, type=float,
-                        help='entropy loss weight')
+                        help='switcher loss weight')
+    parser.add_argument('--switcher-time-weight', required=False, default=1.0, type=float,
+                        help='switcher fixed length weigh')
     parser.add_argument('--lam', required=False, default=0.97, type=float,
                         help='gae lambda')
     parser.add_argument('--gamma', required=False, default=0.995, type=float,
@@ -244,7 +246,8 @@ def main():
                                 policy_logstd_grad_bias=args.stdbias,
                                 logstd_sample_dev=args.stddev,
                                 use_mix=args.use_mix,
-                                normalize_wass=args.normalize_wass)
+                                normalize_wass=args.normalize_wass,
+                                switcher_time_weight=args.switcher_time_weight)
 
     def create_dict_shared_params():
         if args.initial_state_dir is not None:
