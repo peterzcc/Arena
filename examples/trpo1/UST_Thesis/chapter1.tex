@@ -25,14 +25,8 @@ $$ V_\pi(s_t) = \mathbb{E}_{a_{t},s_{t+1},a_{t+1},\ldots}
 
 $$ A_\pi (s,a) = Q_\pi (s,a) - V_\pi (s), \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0 $$
 
-%TODO: think about where I can put this section
-\subsection{Hierarchical reinforcement learning based on transferred policies from easy tasks}\label{sec_hier_trans}
-
-This study focus on a class of reinforcement learning problems, where the objective is to solve a \textit{target task } given a set of trained \textit{source tasks}. The policies that can solve the source tasks, namely the \textit{actuator policies}, are available for the agent. It is known that target task can be solved by a sequential execution of a subset of the source-task policies. The agent needs to learn a \textit{scheduler policy}, which chooses the source-task policy to be executed and decides when to switch the currently running source-task policy.
-
-This paradigm is related to hierarchical reinforcement learning (HRL)~\cite{barto2003recent}, which focuses on learning and utilizing closed-loop partial policy / skills to solve a complex task. However, our case is different from the standard setting of HRL where the agent needs to extract the useful closed-loop partial policy from the original task. However, we focus on extracting and reusing partial policies from other tasks.
-
-This paradigm is also related to transfer learning in reinforcement learning~\cite{taylor2009transfer}, because the source-task policies are reused by the high-level scheduler agent. However, conventional transfer learning paradigms usually don't assume a hierarchical relationship between the target task and the source tasks.
+%%TODO: think about where I can put this section
+%\subsection{Hierarchical reinforcement learning based on transferred policies from a set of source tasks}\label{sec_hier_trans}
 
 
 
@@ -61,15 +55,19 @@ Studies have shown that smooth and informative reward function can generally mak
 However, the reward function of a realistic robot control environment is usually discontinuous and sparse. Reward shaping techniques may improve the reward function, but it usually relies on domain-specific engineering. In our study, we try to solve some realistic robot problems without reward shaping, which essentially indicates the problems have sparse reward functions.
 
 
-\subsection{Assumption on hierarchical relationship of tasks}
-We focus on solving the reinforcement learning setting described in section \ref{sec_hier_trans} . We assume that the agent has already learned the optimal policies for a set of source tasks before solving the target problem, and we also assume that the target task can be solved by executing a subset of the source task policies in according to some "high level policy".
+\subsection{Assumptions on relationship of tasks}
 
-However, we don't pose any other assumption on the relationship between the source tasks and the target task. We don't know whether any specific source task is useful. A source task policy might be useful in some cases, or it could be completely useless. 
-We also don't make assumption on how long an actuator policy should be executed in its term. The scheduler agent need to learn it instead. An actuator policy might be executed for only 1 time-step before the agent switch to another one, or it could be executed for a longer time, or until a specific condition.
+We are particularly interested in a class of reinforcement learning problems, where the objective is to solve a \textit{target task } given a set of trained \textit{source tasks}. The policies that can solve the source tasks, namely the \textit{actuator policies}, are available for the agent. We assume that the target task can be solved by a sequential execution of a subset of the source-task policies. An \textit{decider agent} needs to be trained, which chooses the source-task policy to be executed and decides when to switch between them.
 
-This assumption is the only assumption that is involved in domain-specific design. However, we observe that many real-world complex robot control problems can usually be decomposed to primary tasks. Classical robot control methods also organize the abstract problems (such as trajectory planning) and low level problems (such as model control) in hierarchical structures.
+This paradigm is related to hierarchical reinforcement learning (HRL), which focuses on learning and utilizing closed-loop partial policy / skills to solve a complex task. However, our case is different from the standard setting of HRL where the agent needs to extract the useful closed-loop partial policy from the original task. However, we focus on extracting and reusing partial policies from other tasks.
 
-If this hierarchical task relationship assumption was removed, the problem becomes the fully autonomous hierarchical reinforcement learning problem, where the agents need to learn not only a task structure but also all actuator policies from scratch. This problem is considered in-feasible to solve for general robot control problems~\cite{barto2003recent}.
+This paradigm is also related to transfer learning in reinforcement learning~\cite{taylor2009transfer}, because the source-task policies are reused by the high-level scheduler agent. However, conventional transfer learning paradigms usually don't assume a hierarchical relationship between the target task and the source tasks.
+
+This is the only assumption on the relationship between the source tasks and the target task. It is not known whether any specific source task is useful. A source task policy might be useful in some cases, or it could be completely useless. The minimum execution length of an actuator policy is also unknown. An actuator policy might be executed for only 1 time-step before the agent switch to another one, or it could be executed for the whole episode.
+
+This assumption needs domain-specific design on the selection of source tasks. However, it is common that real-world complex robot control problems can be decomposed to primary tasks. For example, classical robot locomotion methods organize the abstract problems (such as trajectory planning) and low level problems (such as motor control) in hierarchical structures.
+
+If this hierarchical task relationship assumption was removed, the problem becomes the fully autonomous hierarchical reinforcement learning problem, where the agents need to learn not only a task structure but also all actuator policies from scratch. This problem is currently considered in-feasible to solve for general robot control problems~\cite{barto2003recent}.
 
 
 \section{Research Questions}
@@ -78,23 +76,23 @@ If this hierarchical task relationship assumption was removed, the problem becom
 % The questions should be specific that the experiment results and comparison can show the answer clearly, with measurable quantity
 % Specific performance metric
 % just define the proposed tasks and reference it to the later section, state that the tasks are more realistic
-%TODO: more precisely
+
 
 We will propose several reinforcement learning environments for continuous control in section \ref{sec_env} according to the stated scope and assumption. The study will mainly focus on solving the proposed problems.
 The primary research question that we focus on is:
 \begin{center}
-    \textit{Can we develop an agent that can achieve good performance (in terms of total reward) in the reinforcement learning environments defined in section \ref{sec_env} within reasonable training time, with an RL model that doesn't rely on domain-specific techniques (including reward shaping, manual definition of policy hierarchy, manual / heuristic methods to define sub-goals, or manual criteria on the switching of actuator policies)?}
+    \textit{Can we develop an agent that can achieve good performance (in terms of total reward) in the reinforcement learning environments defined in section \ref{sec_env} within reasonable training time, with an RL model that doesn't rely on domain-specific techniques  (including reward shaping, manual definition of policy hierarchy, manual / heuristic methods to define sub-goals, or manual criteria on the switching of actuator policies) given a predefined set of source tasks?}
 \end{center}
 
-We will first answer the question on whether the previous work already solve the problem: \textit{Can the contemporary flat reinforcement learning methods achieve good performance in the proposed environments?}
+We will first answer the question on whether the previous work already solve the problem: \textit{Can the contemporary flat reinforcement learning methods solve the proposed environments?}
 
 
-We will then answer the question on whether our proposed model can solve this:
+We will then answer the question on whether an end-to-end hierarchical reinforcement learning can solve this:
 A model that solves the primary question needs to address two issues: reusing the policies learned in source tasks and solving the target task.
-% TODO First issue can policies for the source perform well
-To solve the first issue, we need to answer the question of "\textit{Can a trained actuator policy achieve a good performance (in terms of the expected total return of the original problem), with or without fine-tuning methods, in a target environment which has different initial state distribution?}".
 
-To address the second issue, we will answer the question of "\textit{Can the target scheduler agent learn the optimal policy given the trained sub-task policies, without any domain-specific design defined previously?}".
+To solve the first issue, we need to answer the question of "\textit{Can a trained actuator policy achieve an acceptable performance (in terms of the expected total return of the original source task), with or without fine-tuning methods, in a target environment, which usually has different initial state distribution?}".
+
+To address the second issue, we will answer the question of "\textit{Can a hierarchical reinforcement learning agent be developed to solve the target tasks defined in \ref{sec_env} given the trained actuators policies, without other domain-specific designs?}".
 
 % \section{Thesis Outline and Contributions}
 % The remainder of this thesis is structured as follows. TODO
