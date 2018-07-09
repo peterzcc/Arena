@@ -112,9 +112,11 @@ disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname subpolicy_l
 CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env reachc05task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00001 --multi-update 1 --norm-gae 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO --regulation-k 0.0 --switcher-k 0.003 --switcher-time-weight 0.0
 CUDA_VISIBLE_DEVICES=3,0,1,2 disprun python3.6 pg_train.py --env reachc05task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00003 --multi-update 1 --norm-gae 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO --regulation-k 0.0 --switcher-k 0.003 --switcher-time-weight 0.0
 dead CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env reachc05task8joint --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO --regulation-k 0.0 --switcher-k 0.003 --switcher-time-weight 0.0
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w1600 --dir ../exp_8 ../exp_9 ../exp_10 --label 1 2 3
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w10000 --dir ../exp_8 ../exp_9 ../exp_10 --label 1 2 3
 disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname subpolicy_len --dir ../exp_8 ../exp_9 ../exp_10 --label 1 2 3
 
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_8
+disprun python3.6 ~/Arena/examples/trpo1/visualize_log.py --dataname subpolicy_len --dir ../exp_8
 
 local:
 
