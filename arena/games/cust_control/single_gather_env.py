@@ -327,6 +327,9 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             use_internal_reward=True,
             subtask_dirs=None,
             constraint_height=True,
+            cam_scale=0.6,
+            obj_max_dist=2.0,  # 2.5
+            regenerate_goals=False,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -358,6 +361,9 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.constraint_height = constraint_height
         self._reset_objects()
         self.initial_state = None
+        self.cam_scale = cam_scale
+        self.obs_max_dist = obj_max_dist
+        self.regenerate_goals = regenerate_goals
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
         utils.EzPickle.__init__(self)
 
@@ -389,29 +395,45 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         rewards = self.forward_scale * forward_reward + internal_reward
         return rewards[0], {"subrewards": rewards[1:]}
 
+    def update_object_position(self, pos):
+        if self.fix_goal:
+            ant_to_object = self.dirs[0] - pos[:2]
+            # dist = np.sqrt(np.sum(ant_to_object ** 2))
+            dist = np.max(np.abs(ant_to_object))
+            if dist >= self.obs_max_dist:
+                obj_pos = pos[:2] + (self.obs_max_dist / dist) * ant_to_object
+            else:
+                obj_pos = self.obj_dist * self.dirs[0]
+            self.object[0:2] = obj_pos
+        else:
+            obj_pos = pos[:2] + self.obj_dist * self.dirs[0]
+            self.object = np.concatenate([obj_pos, (0,)])
+
     def _step(self, action):
         obs, in_rw, done, info_ant = self._ant_step(action)
         if done:
             return self._get_obs(), -10, done, info_ant
         reward = in_rw
 
-        com = self.get_body_com("torso")
-        if not self.fix_goal:
-            obj_pos = com[:2] + self.obj_dist * self.dirs[0]
-            self.object = np.concatenate([obj_pos, (0,)])
+        pos = self.get_body_com("torso")
         if self.use_sparse_reward:
-            if np.sum((com[:2] - self.object[:2]) ** 2) < self.catch_range ** 2:
+            if np.sum((pos[:2] - self.object[:2]) ** 2) < self.catch_range ** 2:
                 reward = 1
-                done = True
-            elif np.max(np.abs(com[:2])) > 5:
-                reward = -10
-                done = True
+                if self.regenerate_goals:
+                    self._reset_objects()
+                else:
+                    done = True
+            # elif np.max(np.abs(com[:2])) > 5:
+            #     reward = -10
+            #     done = True
             else:
                 reward = -0.01
         if self.reset_goal_prob != 0:
             assert not self.fix_goal
             if np.random.rand() < self.reset_goal_prob:
                 self._reset_objects()
+
+        self.update_object_position(pos)
         return obs, reward, done, info_ant
 
     def check_if_ant_crash(self, state, rot_angle):
@@ -472,7 +494,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return self.viewer
 
     def viewer_setup(self):
-        distance = self.model.stat.extent * 0.6  # TODO: verify* 1.5
+        distance = self.model.stat.extent * self.cam_scale  # verify 0.6
         self.viewer.cam.distance = distance
 
 

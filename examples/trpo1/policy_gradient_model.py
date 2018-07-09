@@ -565,7 +565,7 @@ class PolicyGradientModel(ModelWithCritic):
 
     def handle_model_saving(self, mean_t_reward):
         if self.save_model > 0 and self.n_update > self.last_save + self.save_model:
-            if mean_t_reward >= 0.9 * self.best_mean_reward:
+            if mean_t_reward >= min(0.95 * self.best_mean_reward, self.best_mean_reward):
                 self.best_mean_reward = mean_t_reward
                 logging.debug("Saving {} with r: {}".format(self.model_save_path, self.best_mean_reward))
                 self.full_model_saver.save(self.session, self.model_save_path, write_state=False)

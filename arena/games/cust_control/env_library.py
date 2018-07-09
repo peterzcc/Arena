@@ -113,6 +113,8 @@ hrl_reachc1task8joint = OrderedDict(reachc1task8joint=None,
                                     **task_8_joint)
 hrl_reachc05task8joint = OrderedDict(reachc05task8joint=None,
                                      **task_8_joint)
+hrl_reachreg = OrderedDict(reachreg=None,
+                           **task_8_joint)
 hrl_c1 = OrderedDict(reachc1=random_direction,
                      move0=x_forward_obj, move1=x_backward_obj,
                      move2=x_up_obj, move3=x_down_obj
@@ -130,7 +132,7 @@ hrl_root_tasks = dict(move1d=hrl0, move2d=hrl_move2d, reach2d=hrl2, dynamic2d=hr
                       move_up_for=hrl_up_for, simplehrl1d=hrl_simple1d, move2d8=hrl_move2d8,
                       dynamic2d5=hrl_dynamic2d5, dynamic2d5task8=hrl_dynamic2d5task8, task8train=hrl_task8train,
                       dynamic2d5task8joint=hrl_dynamic2d5task8joint, reachc1task8joint=hrl_reachc1task8joint,
-                      reachc05task8joint=hrl_reachc05task8joint)
+                      reachc05task8joint=hrl_reachc05task8joint, reachreg=hrl_reachreg)
 joint_training_tasks = {"task4": task4, "task8": task8}
 
 
@@ -300,6 +302,15 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               catch_range=0.5,
                               obj_dist=1.25,
                               use_sparse_reward=True, )
+    elif env_name == list(hrl_reachreg.keys())[0]:
+        subtask_dirs = np.stack([v() for (k, v) in list(task8.items())], axis=0)
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                              f_gen_obj=random_cont_direction,
+                              subtask_dirs=subtask_dirs,
+                              catch_range=0.75,
+                              obj_dist=1.5,
+                              use_sparse_reward=True,
+                              regenerate_goals=True)
     elif env_name in hrl_dimage:
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                               f_gen_obj=hrl_dimage[env_name],
