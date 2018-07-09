@@ -10,7 +10,7 @@ def read_data(data_dir, dataname, width=1, batch=1):
     data = pd.read_csv('{}/train_log.csv'.format(data_dir))
     y = data[dataname].rolling(width, center=False, min_periods=width).mean()
     x = (1.0 / batch) * data['t'].values / scale
-    print("latest value: {}".format(y[-1]))
+    print("latest value: {}".format(y.iget(-1)))
     return x, y
 
 

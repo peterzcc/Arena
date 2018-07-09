@@ -100,6 +100,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1", use_epoch=False):
     # filename = os.path.basename(logfile)
     # plt.savefig('vis_' + name_list[mode] + '_' + filename + '.pdf', bbox_inches='tight')
     # plt.clf()
+    print("latest value: {}".format(ys[-1]))
     return t_array, ys
 
 def main():
