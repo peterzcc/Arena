@@ -196,6 +196,8 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
     if env_name in hrl_root_tasks:
         full_tasks = hrl_root_tasks[env_name]
 
+    num_frame = 1
+
     if env_name == "custant":
         env = CustomAnt(file_path=cwd + "/cust_ant.xml")
     elif env_name in task8:
@@ -303,6 +305,7 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               obj_dist=1.25,
                               use_sparse_reward=True, )
     elif env_name == list(hrl_reachreg.keys())[0]:
+        num_frame = 3
         subtask_dirs = np.stack([v() for (k, v) in list(task8.items())], axis=0)
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                               f_gen_obj=random_cont_direction,
@@ -372,7 +375,7 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
     final_env = ComplexWrapper(env, max_episode_length=T,
                                append_image=append_image, rgb_to_gray=True,
                                visible_state_ids=range(env.observation_space.shape[0]),
-                               num_frame=1,
+                               num_frame=num_frame,
                                dummy_image=dummy_image,
                                sample_initial_states_from_paths=sample_initial_states_from_paths
                                )
