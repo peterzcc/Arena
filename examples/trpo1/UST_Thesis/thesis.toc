@@ -51,5 +51,5 @@
 \contentsline {subsection}{\numberline {4.3.2}Training the decider agent}{47}{subsection.4.3.2}
 \contentsline {subsubsection}{Phase 1: Decision policy training}{47}{section*.1}
 \contentsline {subsubsection}{Phase 2: Switcher policy training}{47}{section*.2}
-\contentsline {chapter}{\numberline {5}Discussion}{52}{chapter.5}
-\contentsline {chapter}{Reference}{53}{chapter.5}
+\contentsline {chapter}{\numberline {5}Discussion}{54}{chapter.5}
+\contentsline {chapter}{Reference}{55}{chapter.5}

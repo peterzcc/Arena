@@ -60,11 +60,11 @@ The result of the training of the decision policy shows that the hierarchical re
 \subsubsection{Phase 2: Switcher policy training}
 The parameters of the decision policy is fixed in the second phase of the training, while the switcher policy is trained. The switcher policy is re-initialized randomly at the beginning of this phase, so that it outputs a termination signal with a probability around 0.5. This reinitialized switcher policy is different from the switcher policy in phase 1, which outputs a termination signal deterministically after the current actuator policy has been executed for a pre-defined number of steps.
 
-The performance of decider agent during the training of switcher policy on the task "dynamicg8" is shown in Figure~\ref{fig:rec_dynamicg8_switcher}. The decider agent appears to achieve a relatively stable performance during the training of the switcher policy, without any significant degradation from the final performance of phase 1.
+The reinforcement learning performance during the training of switcher policy on the task "dynamicg8" is shown in Figure~\ref{fig:rec_dynamicg8_switcher}. The decider agent appears to achieve a relatively stable performance during the training of the switcher policy, without any significant degradation from the final performance of phase 1.
 
-The average execution length of the actions of decision policies is plotted in Figure~\ref{fig:rec_dynamicg8_avesubt}. The agent manages to find a better switcher policy since the final average execution length becomes around $10$ while it was around $5$ in phase 1. As the result, the decision policy does not need to compute its output as frequently as in phase 1.
+The average execution length of the decision policies is plotted in Figure~\ref{fig:rec_dynamicg8_avesubt}. The agent manages to find a better switcher policy since the final average execution length becomes around $10$ while it was around $5$ in phase 1. As the result, the decision policy does not need to compute its output as frequently as in phase 1.
 
-Therefore, the training of switcher policy as considered to be useful, in the sense that the agent can maintain a good performance and also minimize the number of decisions being made by the decider agent. 
+Therefore, the training of switcher policy as considered to be useful on the task "dynamicg8", in the sense that the agent can maintain a good performance as well as minimize the number of decisions being made by the decider agent. 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{rec_dynamicg8_switcher}
@@ -75,6 +75,26 @@ Therefore, the training of switcher policy as considered to be useful, in the se
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{rec_dynamicg8_avesubt}
-	\caption{Average execution length of the actions of decision policies of the task "dynamicg8", the x-axis is the number of million time-steps and the y-axis is the decision policy's average execution length of the last 2560 timesteps.}
+	\caption{Average execution length of the actions of decision policies of the task "dynamicg8", the x-axis is the number of million time-steps and the y-axis is the decision policy's average execution length of the last batch.}
 	\label{fig:rec_dynamicg8_avesubt}
+\end{figure}
+
+The reinforcement learning performance during the training of switcher policy on the task "dynamicg8" is shown in Figure~\ref{fig:rec_reachcont_switcher}. The final performance has been improved from $0.75$ in the decision policy training to around $0.81$. The training of switcher policy appears to beneficial to the performance of the target task.
+
+The average execution length of the decision policies is plotted in Figure~\ref{fig:rec_dynamicg8_avesubt}. The final average value of the execution length appears to be reduced to $1.6$, compared to $5$ in the decision policy training phase.
+
+Therefore, the switcher policy is able to improve the reinforcement learning performance at the expense of the computation spent on the decision policy being increased.
+
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{rec_reachcont_switcher}
+	\caption{Switcher policy training performance of the task "reachcont", the x-axis is the number of million time-steps and the y-axis is the total episode reward averaged over the last 32 episodes}
+	\label{fig:rec_reachcont_switcher}
+\end{figure}
+
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{rec_reachcont_switcher_subt}
+	\caption{Average execution length of the actions of decision policies of the task "reachcont", the x-axis is the number of million time-steps and the y-axis is the decision policy's average execution length of the last batch.}
+	\label{fig:rec_reachcont_switcher_subt}
 \end{figure}
