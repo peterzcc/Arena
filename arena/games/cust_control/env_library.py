@@ -313,6 +313,7 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               catch_range=0.75,
                               obj_dist=1.5,
                               use_sparse_reward=True,
+                              goal_reward=5.0,
                               regenerate_goals=True)
     elif env_name in hrl_dimage:
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,

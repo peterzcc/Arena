@@ -330,6 +330,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             cam_scale=0.6,
             obj_max_dist=2.0,  # 2.5
             regenerate_goals=False,
+            goal_reward=1.0,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -364,6 +365,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.cam_scale = cam_scale
         self.obs_max_dist = obj_max_dist
         self.regenerate_goals = regenerate_goals
+        self.goal_reward = goal_reward
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
         utils.EzPickle.__init__(self)
 
@@ -418,7 +420,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         pos = self.get_body_com("torso")
         if self.use_sparse_reward:
             if np.sum((pos[:2] - self.object[:2]) ** 2) < self.catch_range ** 2:
-                reward = 1
+                reward = self.goal_reward
                 if self.regenerate_goals:
                     self._reset_objects()
                 else:
