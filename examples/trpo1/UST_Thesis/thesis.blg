@@ -4,7 +4,6 @@ The top-level auxiliary file: thesis.aux
 A level-1 auxiliary file: 1_title.aux
 A level-1 auxiliary file: 2_authorization.aux
 A level-1 auxiliary file: 3_signature.aux
-A level-1 auxiliary file: 4_dedicate.aux
 A level-1 auxiliary file: 5_acknowledgement.aux
 A level-1 auxiliary file: abstract.aux
 A level-1 auxiliary file: chapter1.aux
@@ -23,11 +22,11 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: reference.bib
-Repeated entry---line 128 of file reference.bib
+Repeated entry---line 130 of file reference.bib
  : @article{mankowitz2018unicorn
  :                              ,
 I'm skipping whatever remains of this entry
-Repeated entry---line 261 of file reference.bib
+Repeated entry---line 263 of file reference.bib
  : @article{vezhnevets2017feudal
  :                              ,
 I'm skipping whatever remains of this entry
@@ -37,45 +36,45 @@ I'm skipping whatever remains of this entry
 Warning--empty journal in mcgovern2001automatic
 
 Done.
-You've used 34 entries,
+You've used 35 entries,
             4087 wiz_defined-function locations,
-            1009 strings with 14527 characters,
-and the built_in function-call counts, 23385 in all, are:
-= -- 1746
-> -- 787
+            1014 strings with 14591 characters,
+and the built_in function-call counts, 23754 in all, are:
+= -- 1775
+> -- 791
 < -- 135
-+ -- 410
-- -- 163
-* -- 1107
-:= -- 3478
-add.period$ -- 68
-call.type$ -- 34
-change.case$ -- 36
++ -- 412
+- -- 164
+* -- 1121
+:= -- 3548
+add.period$ -- 70
+call.type$ -- 35
+change.case$ -- 37
 chr.to.int$ -- 324
-cite$ -- 35
-duplicate$ -- 1736
-empty$ -- 1907
-format.name$ -- 193
-if$ -- 5410
+cite$ -- 36
+duplicate$ -- 1767
+empty$ -- 1944
+format.name$ -- 194
+if$ -- 5490
 int.to.chr$ -- 0
-int.to.str$ -- 34
-missing$ -- 346
-newline$ -- 128
-num.names$ -- 34
-pop$ -- 904
+int.to.str$ -- 35
+missing$ -- 353
+newline$ -- 133
+num.names$ -- 35
+pop$ -- 925
 preamble$ -- 2
 purify$ -- 0
 quote$ -- 2
-skip$ -- 1765
+skip$ -- 1792
 stack$ -- 0
-substring$ -- 796
-swap$ -- 1297
+substring$ -- 797
+swap$ -- 1316
 text.length$ -- 27
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 34
+type$ -- 35
 warning$ -- 1
-while$ -- 82
-width$ -- 36
-write$ -- 323
+while$ -- 83
+width$ -- 37
+write$ -- 333
 (There were 2 error messages)

@@ -44,35 +44,41 @@ D.~Silver, A.~Huang, C.~J. Maddison, A.~Guez, L.~Sifre, G.~Van Den~Driessche,
   ``Mastering the game of go with deep neural networks and tree search,''
   \emph{Nature}, vol. 529, no. 7587, pp. 484--489, 2016.
 
-\bibitem{heinrich2016deep}
-J.~Heinrich and D.~Silver, ``Deep reinforcement learning from self-play in
-  imperfect-information games,'' \emph{arXiv preprint arXiv:1603.01121}, 2016.
-
 \bibitem{duan2016benchmarking}
 Y.~Duan, X.~Chen, R.~Houthooft, J.~Schulman, and P.~Abbeel, ``Benchmarking deep
   reinforcement learning for continuous control,'' in \emph{International
   Conference on Machine Learning}, 2016, pp. 1329--1338.
+
+\bibitem{heinrich2016deep}
+J.~Heinrich and D.~Silver, ``Deep reinforcement learning from self-play in
+  imperfect-information games,'' \emph{arXiv preprint arXiv:1603.01121}, 2016.
+
+\bibitem{openai_2018}
+\BIBentryALTinterwordspacing
+OpenAI, ``Openai five,'' Jun 2018. [Online]. Available:
+  \url{https://blog.openai.com/openai-five/}
+\BIBentrySTDinterwordspacing
 
 \bibitem{sutton1998reinforcement}
 R.~S. Sutton and A.~G. Barto, \emph{Reinforcement learning: An
   introduction}.\hskip 1em plus 0.5em minus 0.4em\relax MIT press Cambridge,
   1998, vol.~1, no.~1.
 
-\bibitem{barto2003recent}
-A.~G. Barto and S.~Mahadevan, ``Recent advances in hierarchical reinforcement
-  learning,'' \emph{Discrete Event Dynamic Systems}, vol.~13, no.~4, pp.
-  341--379, 2003.
+\bibitem{wu2017scalable}
+Y.~Wu, E.~Mansimov, R.~B. Grosse, S.~Liao, and J.~Ba, ``Scalable trust-region
+  method for deep reinforcement learning using kronecker-factored
+  approximation,'' in \emph{Advances in Neural Information Processing Systems},
+  2017, pp. 5285--5294.
 
 \bibitem{taylor2009transfer}
 M.~E. Taylor and P.~Stone, ``Transfer learning for reinforcement learning
   domains: A survey,'' \emph{Journal of Machine Learning Research}, vol.~10,
   no. Jul, pp. 1633--1685, 2009.
 
-\bibitem{wu2017scalable}
-Y.~Wu, E.~Mansimov, R.~B. Grosse, S.~Liao, and J.~Ba, ``Scalable trust-region
-  method for deep reinforcement learning using kronecker-factored
-  approximation,'' in \emph{Advances in Neural Information Processing Systems},
-  2017, pp. 5285--5294.
+\bibitem{barto2003recent}
+A.~G. Barto and S.~Mahadevan, ``Recent advances in hierarchical reinforcement
+  learning,'' \emph{Discrete Event Dynamic Systems}, vol.~13, no.~4, pp.
+  341--379, 2003.
 
 \bibitem{schulman2015high}
 J.~Schulman, P.~Moritz, S.~Levine, M.~Jordan, and P.~Abbeel, ``High-dimensional

@@ -97,13 +97,12 @@ CUDA_VISIBLE_DEVICES=0,2 ./contact_czeng_if_you_need_gpu.sh
 CUDA_VISIBLE_DEVICES=0,3 ./attack_gpu.sh
 
 0mux1
+
+1mux1
 CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env reachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
 CUDA_VISIBLE_DEVICES=3,0,1,2 disprun python3.6 pg_train.py --env reachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
 CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env reachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_11 ../exp_12 ../exp_13 --label 1 2 3
-
-1mux1
-
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_1 ../exp_2 ../exp_3 --label 1 2 3
 2mux1
 
 local:
