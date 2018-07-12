@@ -33,19 +33,17 @@ $$ A_\pi (s,a) = Q_\pi (s,a) - V_\pi (s), \text{where } a_t \sim \pi (a_t|s_t), 
 \section{Scope of study}
 Realistic robot control problems in reinforcement learning involves many sources of complexity. However, we are only concerned with some of the typical problems.
 This study focus on a set of reinforcement learning problems with multi-modality state space and continuous action space. We also specifically study some problems with not only the previously mentioned properties, but also with sparse reward functions.
-%TODO revise
+
 \subsection{Multi-modality state space}
 
-The reinforcement learning problems with multi-modality state space refers to the environments whose state space is a combination of signals with different modality.
+The state spaces of a vast majority of the problems in previous reinforcement learning studies are in single-modality, such as a low-dimensional vector of internal game state or locomotion sensor signal, or a single high dimensional image stream. Most recent works in reinforcement learning for continuous control focus on the RL tasks with low-dimensional state input only~\cite{duan2016benchmarking}. Some study~\cite{wu2017scalable} also tried to handle tasks with a single image-input but in limited complexity.
 
-Specifically, the study focus on realistic robot control environments whose state space is a combination of a low-dimensional state sensor and a image sensor observation.
+However, it is more common in real-world environments that a robot agent has multiple types of sensors installed simultaneously. In such case, the state space of the reinforcement learning problem is a combination of input with different modalities. The different modalities in the state space could provide complementary information that cannot be substituted. For a typical robot locomotion problem, the low-dimensional motion sensor input usually provides accurate information about the agent's physical status. The image input, on the other hand, may provide information on the external environments and object relationships. If the motion sensor input is missing, the robot agent would not perform its motor control well, on the other hand, if the image sensor is missing, the robot agent would not know anything about its task and environment.
 
-The low-dimensional state input provides accurate information about the agent's physical system. The image input provides information about the external environment and has a datatype that is in much higher dimension.
 
-Most recent works in reinforcement learning for continuous control focus on the RL tasks with low-dimensional state input only~\cite{duan2016benchmarking}. There are also works ~\cite{wu2017scalable} trying to handle some tasks with image input only, but these image-based tasks are very simple to solve.
+Apart from motion sensor and image sensor, real-world robot agents may have other modalities such as wireless network antenna input, human language instructions and laser sensor. This thesis focus on robot control environments whose state observation consists of a low-dimensional motion sensor signal and an image sensor stream, which is among the most typical cases of real-world robot problems.
 
-However, the proposed multi-modality environment is the most common case in real-world robotic problems, and is considerably more complex and realistic than solving a low-dimensional state input only task or an image only task.
-
+In the context of reinforcement learning, the previously described multi-modality problem is significantly more complex than single-modality problems. The reason is that the feature of image observations is much more difficult to learn than the motion sensor signals. End-to-end reinforcement learning methods would typically prioritize the low-dimensional input in the initial phase of training, and get stuck until the agent is able to extract useful information from the image input.
 
 \subsection{Sparse reward function}
 The problem of sparse / delayed reward signal has been one of the major problems to be tackled in reinforcement learning. Many methods are proposed to solve the sparse reward problem in environments with discrete action spaces. However, the problem is much more difficult for the environments with continuous action spaces, and few works have focused on the class of system. By the time of writing, we haven't seen any method that has been proposed to effectively solve continuous control tasks with sparse rewards.
