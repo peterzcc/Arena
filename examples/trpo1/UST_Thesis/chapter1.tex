@@ -43,29 +43,28 @@ However, it is more common in real-world environments that a robot agent has mul
 
 Apart from motion sensor and image sensor, real-world robot agents may have other modalities such as wireless network antenna input, human language instructions and laser sensor. This thesis focus on robot control environments whose state observation consists of a low-dimensional motion sensor signal and an image sensor stream, which is among the most typical cases of real-world robot problems.
 
-In the context of reinforcement learning, the previously described multi-modality problem is significantly more complex than single-modality problems. The reason is that the feature of image observations is much more difficult to learn than the motion sensor signals. End-to-end reinforcement learning methods would typically prioritize the low-dimensional input in the initial phase of training, and get stuck until the agent is able to extract useful information from the image input.
+In the context of reinforcement learning, the previously described multi-modality problem is significantly more complex than single-modality problems. The reason is that the feature of image observations is much more difficult to learn than the motion sensor signals. End-to-end reinforcement learning methods would typically prioritize the low-dimensional input in the initial phase of training, and get stuck until the agent is able to extract useful information from the image input. The local-minimum problem in this case is more challenging than the cases in supervised learning, because the generation of training samples are also controlled by the agent's acting policy.
 
 \subsection{Sparse reward function}
-The problem of sparse / delayed reward signal has been one of the major problems to be tackled in reinforcement learning. Many methods are proposed to solve the sparse reward problem in environments with discrete action spaces. However, the problem is much more difficult for the environments with continuous action spaces, and few works have focused on the class of system. By the time of writing, we haven't seen any method that has been proposed to effectively solve continuous control tasks with sparse rewards.
+The sparse / delayed reward signal problem has been one of the major problems in reinforcement learning domains for the past 20 years. The reinforcement learning problems with sparse rewards refer to the environments where informative reward signals are very rare. For example, the agent in such environments may just receive a constant negative reward at most timesteps but only receives a positive reward when some specific rare event happens. The agent not be able to learn anything about a good policy if it has not triggered event, or the agent may not be able to improve further if it has already stopped exploring the environment after experienced the informative events. The core problem is how the agent can perform efficient exploration in the environment.
 
-Studies have shown that smooth and informative reward function can generally make the training of reinforcement learning agents easier. Theoretically, any reinforcement learning problems when given a reward function that is good enough.
+Many methods have been proposed to solve the sparse reward problem in environments. However, none of the methods are able to solve the general case. Some of them could only solve special cases of reinforcement learning problems, that are far from practical problems, while the others require a tremendous amount of domain-specific engineering component.
 
-However, the reward function of a realistic robot control environment is usually discontinuous and sparse. Reward shaping techniques may improve the reward function, but it usually relies on domain-specific engineering. In our study, we try to solve some realistic robot problems without reward shaping, which essentially indicates the problems have sparse reward functions.
+A smooth and informative reward function can generally make the training of reinforcement learning agents easier. Theoretically, any reinforcement learning problems when given a reward function that is informative enough could be solved easily by contemporary methods. However, such a reward function itself is rarely accessible in real-world environments. Reward shaping~\cite{ng1999policy} techniques may be used to improve the reward function, but such methods usually also relies on domain-specific engineering. In our study, we try to solve several realistic sparse environments without the application of reward shaping.
 
 
 \subsection{Assumptions on relationship of tasks}
+Apart from the objective to solve sparse multi-modal reinforcement learning problems with end-to-end reinforcement learning problems, we are also particularly interested in a paradigm, where the objective is to solve a \textit{target task } given a set of \textit{source tasks}. The policies that solve the source tasks, namely the \textit{actuator policies}, are available to the agent when it is faced with the target task. We assume that the target task can be solved by a sequential execution of a subset of the actuator policies. An \textit{decider agent} needs to be trained, which controls the scheduling of the actuator policies.
 
-We are particularly interested in a class of reinforcement learning problems, where the objective is to solve a \textit{target task } given a set of trained \textit{source tasks}. The policies that can solve the source tasks, namely the \textit{actuator policies}, are available for the agent. We assume that the target task can be solved by a sequential execution of a subset of the source-task policies. An \textit{decider agent} needs to be trained, which chooses the source-task policy to be executed and decides when to switch between them.
+This paradigm is related to hierarchical reinforcement learning (HRL), which focuses on learning and utilizing closed-loop partial policy / skills to solve a complex task. However, our case is different from the standard setting of HRL. The standard HRL setting assumes that the agent needs to extract the useful closed-loop partial policy from the original target task. However, we focus on extracting and reusing partial policies from other tasks.
 
-This paradigm is related to hierarchical reinforcement learning (HRL), which focuses on learning and utilizing closed-loop partial policy / skills to solve a complex task. However, our case is different from the standard setting of HRL where the agent needs to extract the useful closed-loop partial policy from the original task. However, we focus on extracting and reusing partial policies from other tasks.
+This paradigm is also related to transfer learning in reinforcement learning~\cite{taylor2009transfer}, because the source-task policies are reused by the decider agent to solve another task. However, conventional transfer learning paradigms usually don't pose assumptions on a hierarchical relationship between the target task and the source tasks.
 
-This paradigm is also related to transfer learning in reinforcement learning~\cite{taylor2009transfer}, because the source-task policies are reused by the high-level scheduler agent. However, conventional transfer learning paradigms usually don't assume a hierarchical relationship between the target task and the source tasks.
+This is the only assumption on the relationship between the source tasks and the target task. It is not known whether any specific source task is useful. A source task policy might be useful in some cases, or it could be completely useless. The execution time of an actuator policy is also unknown. An actuator policy might be executed for only 1 time-step before the agent switch to another one, or it might also be executed for the whole episode.
 
-This is the only assumption on the relationship between the source tasks and the target task. It is not known whether any specific source task is useful. A source task policy might be useful in some cases, or it could be completely useless. The minimum execution length of an actuator policy is also unknown. An actuator policy might be executed for only 1 time-step before the agent switch to another one, or it could be executed for the whole episode.
+Since the set of source-task policies is pre-defined and there is no autonomous method in selecting then, the selection of the source tasks is considered a domain-specific design component. However, it is common that real-world complex problems can be decomposed to primary tasks. For example, classical robot locomotion methods organize the abstract problems (such as trajectory planning) and low level problems (such as motor control) in hierarchical structures. Apart from that, it is also common that human beings would decompose the original problem into a series of easier problems when the problem it faced is too complex.
 
-This assumption needs domain-specific design on the selection of source tasks. However, it is common that real-world complex robot control problems can be decomposed to primary tasks. For example, classical robot locomotion methods organize the abstract problems (such as trajectory planning) and low level problems (such as motor control) in hierarchical structures.
-
-If this hierarchical task relationship assumption was removed, the problem becomes the fully autonomous hierarchical reinforcement learning problem, where the agents need to learn not only a task structure but also all actuator policies from scratch. This problem is currently considered in-feasible to solve for general robot control problems~\cite{barto2003recent}.
+If this hierarchical task relationship assumption was not present, the problem would belong to the class of the fully autonomous hierarchical reinforcement learning problem. In this case, the agents need to learn not only a task structure but also all actuator policies from scratch. The solution of such problem is currently considered in-feasible to obtain for general cases~\cite{barto2003recent}.
 
 
 \section{Research Questions}
@@ -76,21 +75,21 @@ If this hierarchical task relationship assumption was removed, the problem becom
 % just define the proposed tasks and reference it to the later section, state that the tasks are more realistic
 
 
-We will propose several reinforcement learning environments for continuous control in section \ref{sec_env} according to the stated scope and assumption. The study will mainly focus on solving the proposed problems.
-The primary research question that we focus on is:
-\begin{center}
-    \textit{Can we develop an agent that can achieve good performance (in terms of total reward) in the reinforcement learning environments defined in section \ref{sec_env} within reasonable training time, with an RL model that doesn't rely on domain-specific techniques  (including reward shaping, manual definition of policy hierarchy, manual / heuristic methods to define sub-goals, or manual criteria on the switching of actuator policies) given a predefined set of source tasks?}
-\end{center}
+We will propose several reinforcement learning environments for continuous control in section \ref{sec_env} according to the stated scope, and the proposed problems will be of the main focus of the study.
+The primary research question that we would like to study is:
 
-We will first answer the question on whether the previous work already solve the problem: \textit{Can the contemporary flat reinforcement learning methods solve the proposed environments?}
+    \textit{Can we develop an agent that can achieve sufficient performance (in terms of total episode reward) in the reinforcement learning environments defined in section \ref{sec_env} within a feasible training time, with an RL model that doesn't rely on domain-specific techniques  (including reward shaping, manual definition of policy hierarchy, manual / heuristic methods to define sub-goals, or manual criteria on the switching of actuator policies), with or without a predefined set of source tasks?}
+
+
+We will first answer the question on whether a hierarchical architecture is necessary: \textit{Can a contemporary flat reinforcement learning method solve the proposed environments?}
 
 
 We will then answer the question on whether an end-to-end hierarchical reinforcement learning can solve this:
-A model that solves the primary question needs to address two issues: reusing the policies learned in source tasks and solving the target task.
+A model that solves the question needs to address two issues: reusing the policies learned in source tasks and solving the target task.
 
-To solve the first issue, we need to answer the question of "\textit{Can a trained actuator policy achieve an acceptable performance (in terms of the expected total return of the original source task), with or without fine-tuning methods, in a target environment, which usually has different initial state distribution?}".
+To solve the first issue, we need to answer the question of "\textit{Can a trained actuator policy achieve an acceptable performance (in terms of the expected total return of the original source task) in a target environment, which might have different initial state distribution?}".
 
-To address the second issue, we will answer the question of "\textit{Can a hierarchical reinforcement learning agent be developed to solve the target tasks defined in \ref{sec_env} given the trained actuators policies, without other domain-specific designs?}".
+To address the second issue, we will answer the question of "\textit{Can a decider agent be developed to solve the target tasks defined in \ref{sec_env} given the trained actuators policies, without other domain-specific designs?}".
 
 % \section{Thesis Outline and Contributions}
 % The remainder of this thesis is structured as follows. TODO

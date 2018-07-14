@@ -5,7 +5,7 @@ Policy gradient mothod is a class of reinforcement learning methods that solve t
 $$
     J(\theta) = \mathbb{E}\big[\sum_{t=0}^T\gamma^t r_t \big]
 $$
-is maximized, where $\gamma$ is a discount factor and $T$ is the episode length.
+is maximized. The constant $\gamma$ is a discount factor and $T$ is the episode length.
 
 Policy gradient methods maximize the expected return iteratively by esitimating the gradient $g := \nabla  \mathbb{E}\big[\sum_{t=0}^T\gamma^t r_t \big]$ , which has the form \cite{schulman2015high}:
 \begin{equation} g = \mathbb{E}_{t,s_t,a_t} \big[
@@ -17,7 +17,7 @@ Policy gradient methods maximize the expected return iteratively by esitimating 
 \label{pg_def}\end{equation}
 
 
-$\Psi_t$ may be one of the following:
+$\Psi_t$ may be one of the following~\cite{schulman2015high}:
 \begin{enumerate}
     \item $\sum_{t=0}^{\infty} r_t$ expected total return
     \item $\sum_{t'=t}^{\infty} r_t$ expected return following $a_t$
@@ -30,7 +30,7 @@ $\Psi_t$ may be one of the following:
     \item $GAE(\lambda) = \frac{1}{(1+\lambda+\lambda^2+\dots)} \big(\hat{A}_t^{(1)} + \lambda \hat{A}_t^{(2)}+ \lambda^2 \hat{A}_t^{(3)} +\dots \big) 
     \approx \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}$ , where $\lambda \in [0,1]$ : the generalized advantage estimator proposed by \cite{schulman2015high}
 \end{enumerate}
-Several optimization method for updating the policy parameters given the policy gradient have been proposed. The following section will discuss some state=of-art methods.
+Several methods for updating the policy parameters given the policy gradient have been proposed. The following section will discuss some state-of-art works.
 \subsection{Trust Region Policy Optimization}
 The method proposed by \cite{schulman2015trust}, namely Trust Region Policy Optimization (TRPO) is one of the early works in deep reinforcement learning for continuous control. The method formulates the policy optimization problem as a constraint optimization problem:
 \begin{equation}
@@ -44,13 +44,13 @@ where $\pi_{\theta_{old}}$ is the old policy parameter before performing  parame
 
 The method solves this problem through 4 steps. The first step computes $g$ following the Equation \ref{pg_def}. 
 The second step computes the Riemannian metric tensor of the parameter space of the policy model $A = H_{\theta}\left(\overline{D_{KL}}(\pi_{\theta_{old}}\|\pi_\theta)\right)$ , where $H_{\theta}(.)$ denotes the Hessian matrix with respect to $\theta$. 
-The third step obtains which is the natural gradientupdate direction $s=A^{-1}g$ by solving $g=As$ through the conjugate gradient algorithm.
+The third step obtains which is the natural gradient update direction $s=A^{-1}g$ by solving $g=As$ through the conjugate gradient algorithm.
 The fourth step computes the maximum step-size $\beta= \sqrt{2\delta_{KL}/s^TAs}$ and performs a line search to ensure the improvement of the objective function.
 
-The method is able to solve some primary robot control tasks in \cite{openaigym} within a few number of training samples. However, both the computation of the Hessian matrix and the conjugate gradient algorithm are too expensive for deep neural network models.
+The method is able to solve some simple robot control tasks in \cite{openaigym} within a few millions of training samples. However, both the computation of the Hessian matrix and the conjugate gradient algorithm are infeasible for a neural network model with nontrivial size.
 
 \subsection{Kronecker-factored Trust Region}
-The work of \cite{wu2017scalable} proposes to reduce the computation time solving the natural gradient by Kronecker-factored approximation method.
+The work of \cite{wu2017scalable} proposes to reduce the computation time solving the natural gradient by Kronecker-factored approximation method. The method is named Actor-critic  Kronecker-factored Trust Region method (ACKTR).
 The Fisher Information Matrix $F=\mathbb{E}[\nabla_\theta L \nabla_\theta L^T]$, where $L=\log\pi(a|s)$ is used here to approximate the Riemannian metric tensor.
 The matrix is approximated by:
 \begin{equation*}
@@ -62,19 +62,20 @@ The natural gradient is then solved by:
 \begin{equation}
     s=A^{-1}g \approx F^{-1}g \approx \left(\mathbb{E}[aa^T] \otimes \mathbb{E}[\nabla_s L \nabla_s L^T ] \right)^{-1}g = \mathbb{E}[aa^T]^{-1} g  \mathbb{E}[\nabla_s L \nabla_s L^T ]^{-1}
 \end{equation}
-The proposed method further speeds up the optimization by reusing recently computed statistic matrices in the previous steps and performing asynchronous computation, and finally achieves a computation time comparable to ordinary gradient decent algorithms.
-The method manages to computationally efficiently perform trust region natural policy gradient optimization without sacrificing the reinforcement learning performance.
+The method further speeds up the optimization by reusing recently computed statistic matrices and also by performing asynchronous computation. The method manages to reduce the computation time so that it is comparable to current first-order gradient decent algorithms.
+The method manages to computationally efficiently perform trust region natural policy gradient optimization without sacrificing the reinforcement learning performance. A remaining problem is that the method is still batch based and has a high memory occupation.
 
 \subsection{Proximal Policy Gradient Method}
-The author of \cite{schulman2017proximal} proposed a first-order policy optimization method, namely proximal policy gradient with clipping (PPO). The method clips the surrogate objective according to the following equation:
+The author of \cite{schulman2017proximal} proposes a first-order policy optimization method, namely proximal policy gradient with clipping (PPO). The method clips the surrogate objective according to the following equation:
 \begin{equation}
     L_{CLIP}(\theta) = \mathbb{E} \left[ \min\big(r_t(\theta) A_t , \mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)A_t)\big) \right]
 \end{equation}
 where $r_t(\theta) = \pi_\theta / \pi_{\theta_{old}}$ is the likelihood ratio of the current policy over the sample policy, and $\epsilon \in [0,1]$ is a hyperparameter. 
 
-The algorithm performs minibatch stochastic optimization at each batch of collected agent's experience, for a number of epochs. Therefore it is actually an off-policy method since the policy has already deviated from the sampling policy once updated for the first minibatch.
+The algorithm performs minibatch stochastic optimization at each epoch of collected agent's experience, for a number of epochs. Therefore it is actually an off-policy method since the policy has already deviated from the sampling policy once updated for the first minibatch in each epoch.
 
-The method can achieve a relatively fast improvement rate in the early phase (within 1 million training steps) of training in several continuous control environments. However, the method is more difficult to tune compared to trust region methods, and might become increasingly unstable in the late phase of training. The method might also converge too early and stuck at a local minimum point, because updating the parameter too many times on a single batch might lead to overfitting.
+%The method can achieve a relatively fast improvement rate in the early phase (within 1 million training steps) of training in several continuous control environments. However, the method is more difficult to tune compared to trust region methods, and might become increasingly unstable in the late phase of training. The method might also converge too early and stuck at a local minimum point, because updating the parameter too many times on a single batch might lead to overfitting.
 
+The advantage of PPO method is that it has both a relatively low time computational complexity and memory complexity. It can achieve a fast convergence rate in terms of the reinforcement learning performance (total episode reward). It also provides some kind of constraint at each epoch so that the policy doesn't deviate too far from the sampling policy. However, the PPO method may focus too much on the convergence rate, and there is not evidence that shows the method could achieve a better final performance.
 \subsection{Other Methods in Deep Reinforcement Learning for Continuous Control}
-Other methods related to deep reinforcement learning for continuous control include the Deep Deterministic Policy Gradient Method (DDPG)~\cite{lillicrap2015continuous}, Actor-Critic with Experience Replay (ACER)~\cite{wang2016sample}, and Trust-PCL~\cite{nachum2017trust}. These methods are first order off-policy algorithm, and are not the focus of our study because they're not reported to significantly outperform the above mentioned methods in terms of training time, final performance and stability.
+Other methods related to deep reinforcement learning for continuous control include the Deep Deterministic Policy Gradient Method (DDPG)~\cite{lillicrap2015continuous}, Actor-Critic with Experience Replay (ACER)~\cite{wang2016sample}, and Trust-PCL~\cite{nachum2017trust}. These methods are first order off-policy algorithm, and are not the focus of our study because no evidence has shown that any off-policy methods to can significantly outperform the above mentioned methods in terms of training time, final performance and stability.

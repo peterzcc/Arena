@@ -70,6 +70,11 @@ Y.~Wu, E.~Mansimov, R.~B. Grosse, S.~Liao, and J.~Ba, ``Scalable trust-region
   approximation,'' in \emph{Advances in Neural Information Processing Systems},
   2017, pp. 5285--5294.
 
+\bibitem{ng1999policy}
+A.~Y. Ng, D.~Harada, and S.~Russell, ``Policy invariance under reward
+  transformations: Theory and application to reward shaping,'' in \emph{ICML},
+  vol.~99, 1999, pp. 278--287.
+
 \bibitem{taylor2009transfer}
 M.~E. Taylor and P.~Stone, ``Transfer learning for reinforcement learning
   domains: A survey,'' \emph{Journal of Machine Learning Research}, vol.~10,
