@@ -1,3 +1,16 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
 \chapter{Discussion}
+This thesis studies reinforcement learning solutions to robot control tasks with multi-modal state space and sparse reward functions.
+
+We have proposed a set of reinforcement learning tasks that have the property of multi-modal state space. Some of them also have sparse reward functions. Control experiments have been done and the results show that the contemporary reinforcement learning algorithms cannot solve the tasks.
+
+We have proposed several techniques that aims to improve the performance of flat reinforcement learning methods on the proposed task. Firstly we propose the Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization (W-KTR) method aiming to improve the learning performance. However, the experiment results on the W-KTR method show that the method does not significantly outperform other contemporary state-of-art methods. We have also proposed two techniques aiming to achieve better exploration performance. The first technique, namely exceptional advantage estimation, has proven to improve the final performance of flat reinforcement learning performance on the task "movecont". The second technique, namely robust concentric Gaussian mixture model, also manages to solve the "movecont" task but is less efficient in term of the number of training samples. 
+
+Although the above mentioned methods improves the performance of flat reinforcement learning methods on these tasks, a long training time and a large of training data is required. Apart from that, tasks with both multi-modal state space and sparse reward functions could hardly be solved by flat reinforcement learning methods. The performance of the proposed method should better be verified in a bigger variety of tasks in future works.
+
+We have also proposed an autonomous hierarchical reinforcement learning framework. The proposed "domain randomization by cross sampling" method have been proven to successfully learn the actuator policies designed in this study. The proposed hierarchical agent was able to achieve a reasonable performance in the task "dynamicg8" and successfully solve the task "reachcont". Both the decision policy and the switcher policy is trained in an end-to-end manner. 
+
+The experiment results in this thesis only show preliminary results on a limited set tasks. The capability of the method on general robot problems also needs to be verified in a bigger variety of problems in future works. The drawback of this hierarchical reinforcement learning framework is that it requires a properly pre-defined set of source tasks. Designing the source-task set is easy for the proposed target tasks, but we are not sure whether the job is feasible in other general robot control tasks. Apart from that, we have not thoroughly investigated how the scheduling of decision policy training and switcher policy training could be designed, and this problem is worth studying in future works.
+
+In conclusion, realistic continuous control tasks with multi-modal state space and sparse reward functions still pose a significant challenge end-to-end flat and hierarchical reinforcement learning methods. Our study proposes novel methods for solving a problem, but an ultimate solution that achieves optimal performance without human intervention is still missing.

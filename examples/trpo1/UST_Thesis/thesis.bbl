@@ -181,10 +181,20 @@ A.~Vezhnevets, V.~Mnih, S.~Osindero, A.~Graves, O.~Vinyals, J.~Agapiou
   \emph{Advances in neural information processing systems}, 2016, pp.
   3486--3494.
 
+\bibitem{roboschool_2018}
+\BIBentryALTinterwordspacing
+OpenAI, ``Roboschool,'' Jun 2018. [Online]. Available:
+  \url{https://blog.openai.com/roboschool/}
+\BIBentrySTDinterwordspacing
+
 \bibitem{henderson2017matters}
 P.~Henderson, R.~Islam, P.~Bachman, J.~Pineau, D.~Precup, and D.~Meger, ``Deep
   reinforcement learning that matters,'' \emph{arXiv preprint
   arXiv:1709.06560}, 2017.
+
+\bibitem{tolstikhin2017wasserstein}
+I.~Tolstikhin, O.~Bousquet, S.~Gelly, and B.~Schoelkopf, ``Wasserstein
+  auto-encoders,'' \emph{arXiv preprint arXiv:1711.01558}, 2017.
 
 \bibitem{villani2003topics}
 C.~Villani, \emph{Topics in optimal transportation}.\hskip 1em plus 0.5em minus

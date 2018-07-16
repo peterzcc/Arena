@@ -1,19 +1,17 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
+\section{Hierarchical reinforcement learning method}
+\subsection{Hierarchical reinforcement learning architecture}
+We propose a two-level hierarchical model to solve the target problems. The hierarchical model consists of a top-level decider agent and a set of bottom-level actuator agents. The actuator agents' policies is a mapping from the state to the primary action space, and are trained in the source-task environments. The actuator policies are fixed during the training of the target task.
 
-\section{Hierarchical reinforcement learning architecture}
-We propose to solve the reinforcement learning problem by a two-level hierarchical model. 
+The decider agent takes an action at every time-step. It may either decide which actuator-policy should be executed, or continue using the current actuator policy that is decided earlier. Therefore, assume there are $n_a$ sub-policies, the action space of the decider agent is actually an $(n_a+1)$-discrete action space. The overalll decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
 
-The hierarchical model consists of a top-level decider agent and a set of bottom-level actuator agents. The actuator agents' policies are trained im the source task environments. 
+The observation space of the decider agent consists of 2 parts, the original multi-modal state and the meta state. The meta state contains information about the current sub-policy being executed and the number of time-steps since the last decision has been made.
 
-The decider agent takes an action at every time-step. It may either decide which actuator-policy should be executed, or simply skip and continue current actuator-policy. Therefore, assume there are $n_a$ sub-policies, the action space of the root agent is an $(n_a+1)$-discrete action space.
+The decider agent is parameterized by two policy networks, $\theta_s$ and $\theta_d$. The network $\theta_s$, namely switcher policy, outputs a scalar value that indicates whether the agent should simply continue using the current acting actuator policy, or terminate the current actuator policy and make the decision on the selection of actuator policy again. 
+The network $\theta_d$, namely the decider policy, outputs an $n_a$-discrete action space. The output of the network represents the decision on the selection of the acting actuator policy. 
 
-The observation space of the root agent consists of 2 parts, original statn (motion-sensor observation, image observation) and the meta state. The meta observation state the current sub-policy being executed and the number of time-steps since the last decision has been made.
 
-Empirically, the decider agent is parameterized by two policy networks, $\theta_s$ and $\theta_d$. The network $\theta_s$, namely switcher network, outputs a binary action that decides whether the agent should simply continue using the current acting actuator policy, or make the full decision based on the current state. 
-The network $\theta_d$, namely decider network, outputs an $n_a$-discrete action space, that select the acting actuator agent. 
-
- The overalll decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
 
 \begin{algorithm}
 \caption{The decider agent mechanism}\label{hrl_decision_proc}
@@ -31,12 +29,12 @@ ctuators[a_{decider}-1]$
 \end{algorithm}
 
 
-\section{Generalized advantage estimation for the decider agent}
-We propose a generalized advantage estimation method for decider agents hierarchical reinforcement learning agents. 
+\subsection{Generalized advantage estimation for the decider agent}
+We propose a generalized advantage estimation method for the decider agent of the proposed hierarchical reinforcement learning model\textsc{s hierarchical reinforcement learning agents}. 
 
-Assume that a decider agent makes decisions at time $t_1,t_2,\dots$, then the execution length of the decisions are $l_i = t_{i+1} - t_i, i=1,2,\dots$.
+Assume that a decider agent makes decisions at time $t_1,t_2,\dots$, then the execution length of the corresponding actuator policies are $l_i = t_{i+1} - t_i, i=1,2,\dots$.
 
-Then the definition of reward of the decider action at $t_i$ is given by:
+The definition of reward of the decider action at $t_i$ is given by:
 \begin{align}
 \bar{r}_{t_i} \defeq
  \sum_{l=0}^{t_{i+1}-t_i-1}
@@ -94,12 +92,12 @@ The normalized generalized advantage estimater is then given by:
 \hata_{t_i}^{GAE(\lambda)}
 = \frac{\hata_{t_i}^{GAE_{unorm}(\lambda)}}{\sum_{b=0}^{k-1} \lambda^{t_{i+b}-t_i}}
 \end{align}
-However, the unormalized GAE estimator is usually used in practice instead of the normalized one, with a postprocessing step of batch normalization to adjust the scale of the advantages. This pratical method usually lead to large advantage scales for experience data at the beginning of the episodes and small scales for the experience data near episode ends.
+However, the unormalized GAE estimator is usually used in practice instead of the normalized one, with a postprocessing step of batch normalization to adjust the scale and bias of the advantages. 
 
-\section{Training of the switcher agent}
-We train the switcher agent using a flat reinforcement learning method according to the return of the target task. However, an extra loss term is added so that the switcher network will be encouraged to produce less termination signals.
+\subsection{Training of the switcher policy}
+We train the switcher agent using a flat reinforcement learning method with respective to the return of the target task. However, an extra loss term is added so that the switcher network will be encouraged to produce termination signals less frequently.
 \begin{align}
 J'(\theta_s) = J'(\theta_s) + \mathbb{E}[\pi_s(s)]
 \end{align}
-Where $\pi_s$ is the output of the switcher network. The second term is the expected frequency that the switcher network produces the output $1$, which indicates the termination of the current actuator policy.
+Where $\pi_s$ is the switcher policy distribution. The second term is the basically expected frequency that the switcher network produces the positive output.
 

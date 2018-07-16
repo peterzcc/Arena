@@ -415,6 +415,7 @@ def main():
                                         session=session,
                                         load_old_model=args.load_leaf,
                                         conv_sizes=(((3, 3), 16, 2), ((3, 3), 16, 2), ((3, 3), 4, 2)),
+                                        # TODO: handle this later
                                         model_load_dir=args.load_dir,
                                         reset_exp=args.reset_exp,
                                         should_train=args.train_leaf,
