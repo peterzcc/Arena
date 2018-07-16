@@ -264,6 +264,11 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               reset_goal_prob=0.005,
                               subtask_dirs=subtask_dirs,
                               use_internal_reward=False)
+    elif env_name == "flatdynamic2d5task8joint":
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                              f_gen_obj=random_direction8,
+                              reset_goal_prob=0.005,
+                              use_internal_reward=False)
     elif env_name == "task8train":
         subtask_dirs = np.stack([v() for (k, v) in list(task8.items())], axis=0)
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
@@ -299,6 +304,12 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               obj_dist=1.25,
                               use_sparse_reward=True, )
     elif env_name == list(hrl_reachc05task8joint.keys())[0]:
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+                              f_gen_obj=random_cont_direction,
+                              catch_range=0.5,
+                              obj_dist=1.25,
+                              use_sparse_reward=True, )
+    elif env_name == "flatreachc05task8joint":
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                               f_gen_obj=random_cont_direction,
                               catch_range=0.5,
