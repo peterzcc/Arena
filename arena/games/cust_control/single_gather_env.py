@@ -398,17 +398,18 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return rewards[0], {"subrewards": rewards[1:]}
 
     def update_object_position(self, pos):
+        target_pos = self.obj_dist * self.dirs[0]
         if self.fix_goal:
-            ant_to_object = self.dirs[0] - pos[:2]
+            ant_to_object = target_pos - pos[:2]
             # dist = np.sqrt(np.sum(ant_to_object ** 2))
             dist = np.max(np.abs(ant_to_object))
             if dist >= self.obs_max_dist:
                 obj_pos = pos[:2] + (self.obs_max_dist / dist) * ant_to_object
             else:
-                obj_pos = self.obj_dist * self.dirs[0]
+                obj_pos = target_pos
             self.object[0:2] = obj_pos
         else:
-            obj_pos = pos[:2] + self.obj_dist * self.dirs[0]
+            obj_pos = pos[:2] + target_pos
             self.object = np.concatenate([obj_pos, (0,)])
 
     def _step(self, action):

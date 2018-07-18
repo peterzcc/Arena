@@ -110,13 +110,12 @@ dead CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env reachreg -
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_1 ../exp_2 ../exp_3  1 2 3
 
 2mux1
-disprun python3.6 pg_train.py --nactor 1 --num-steps 10000 --batch-size 1000 --env reachreg --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --render record  --train-switcher 0 --load-dir models_test --switcher-time-weight 0.0
 
 
 local:
 
 record:
-python3.6 pg_train.py --nactor 1 --num-steps 10000 --batch-size 1000 --env reachreg --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env reachreg --withimg 1 --nfeat 16 --load-model 0 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 
 python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env constdirreachreg --withimg 1 --nfeat 16 --load-model 0 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 
