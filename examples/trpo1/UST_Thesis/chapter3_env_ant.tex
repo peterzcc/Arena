@@ -18,7 +18,7 @@ A basic task, namely "move0", is similar to the "Ant" environment in OpenAI Gym~
 \begin{align}
 r = v_g + 1-c_p-c_c
 \end{align}
-Where $v_g=v \cdot g_0$ is the "forward reward", which rewards the agent for moving toward the target direction. A sphere object presents in the environments at a constant distance from the robot agent to represent the target direction.  $c_p$ is the control cost, which is the power that the agent is consuming, and $c_c$ is the contact cost, which penalizes the agent for collisions. The episode terminates when the agent enters the unrecoverable state of being upside-down, or if the episode length reaches 1000 time-steps.
+where $v_g=v \cdot g_0$ is the "forward reward", which rewards the agent for moving toward the target direction. A sphere object presents in the environments at a constant distance from the robot agent to represent the target direction.  $c_p$ is the control cost, which is the power that the agent is consuming, and $c_c$ is the contact cost, which penalizes the agent for collisions. The episode terminates when the agent enters the unrecoverable state of being upside-down, or if the episode length reaches 1000 time-steps.
 
 Apart from "move0", a set of similar tasks with different target directions are denoted as "move1", "move2", "move3", ..., "move7". This tasks are the same as "move0" except that the goal direction is different. The image observation is actually redundant for all these low-level tasks, because the agent only needs to move toward one specific direction in their corresponding environments.
 

@@ -88,10 +88,10 @@ The experiment result on the performance of an ACKTR agent with different weight
 	\caption{The logarithm of avearge standard deviation of agents with different exceptional advantage regularization weights, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 32 episodes}\label{rec_std_adv_reg}
 \end{figure}
 
-\subsection{Experiment on Robust Concentric Mixture Gaussian Policy Model}
-The effectiveness of robust concentric mixture Gaussian policy agent in exploration of task movecont is tested in this section. We use the same configuration as in section \ref{sec_multi_modal_flat} except that the distribution type is changed to the robust concentric mixture Gaussian policy. We compute empirical estimation of the KL-divergence since there is not closed form solution on it.
+\subsection{Experiment on Robust Concentric Gaussian Mixture Policy Model}
+The effectiveness of robust concentric Gaussian mixture policy agent in exploration of task movecont is tested in this section. We use the same configuration as in section \ref{sec_multi_modal_flat} except that the distribution type is changed to the robust concentric Gaussian mixture policy. We compute empirical estimation of the KL-divergence since there is not closed form solution on it.
 
-The experiment result on the performance of an ACKTR mixture Gaussian policy agent is shown in Figure~\ref{rec_mix}. The mixture Gaussian policy agents have slower rates on performance improvement compared to pure Gaussian policy agents. However, the agent is still able to achieve a good final performance, with a total reward of around 4000.
+The experiment result on the performance of an ACKTR Gaussian mixture policy agent is shown in Figure~\ref{rec_mix}. The Gaussian mixture policy agents have slower rates on performance improvement compared to pure Gaussian policy agents. However, the agent is still able to achieve a good final performance, with a total reward of around 4000.
 
 \begin{figure}[!htbp]
 	\includegraphics[width=\textwidth]{images/rec_180612_mix.pdf}

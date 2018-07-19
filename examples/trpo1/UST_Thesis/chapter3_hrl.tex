@@ -30,7 +30,7 @@ ctuators[a_{decider}-1]$
 
 
 \subsection{Generalized advantage estimation for the decider agent}
-We propose a generalized advantage estimation method for the decider agent of the proposed hierarchical reinforcement learning model\textsc{s hierarchical reinforcement learning agents}. 
+We propose a generalized advantage estimation method for the decider agent of the proposed hierarchical reinforcement learning model. 
 
 Assume that a decider agent makes decisions at time $t_1,t_2,\dots$, then the execution length of the corresponding actuator policies are $l_i = t_{i+1} - t_i, i=1,2,\dots$.
 
@@ -43,30 +43,29 @@ The definition of reward of the decider action at $t_i$ is given by:
 
 Define the TD residual $\dv_{t_i}$ for $i=0,1, \dots$by:
 \begin{align}
-\dv_{t_i} & \defeq -V(s_{t_i}) + \bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} V(s_{t_{i+1}})
+\dv_{t_i} & \defeq   \bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} V(s_{t_{i+1}}) -V(s_{t_i})
 \end{align}
 Then the k-step advantage estimation is given by:
 \begin{alignat}{2}
 \hata_{t_i}^{(1)} 
 & \defeq   \dv_{{t_i}} 
- &&=-V(s_{t_i}) + \bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} V(s_{t_{i+1}})\\
+ &&= \bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} V(s_{t_{i+1}})-V(s_{t_i}) \\
 \hata_{t_i}^{(2)} 
 &\defeq \dv_{t_i} + \gamma^{t_{i+1}-t_i} \dv_{t_{i+1}} 
-&&= -V(s_{t_i}) +\bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} \bar{r}_{t_{i+1}} + \gamma^{t_{i+2}-t_i} V(t_{i+2}) \\
+&&= \bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} \bar{r}_{t_{i+1}} + \gamma^{t_{i+2}-t_i} V(t_{i+2})-V(s_{t_i})  \\
 \hata_t^{(3)} 
 &\defeq \dv_{t} + \gamma \dv_{t+1} + \gamma^2 \dv_{t+2} 
-&&= -V(s_t) + r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \gamma^3 V(s_{t+3}) \label{a3}
+&&=  r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \gamma^3 V(s_{t+3}) -V(s_t)  \label{a3}
 \end{alignat}
 \begin{align}
 \begin{split}
 \hata_{t_i}^{(k)} 
 &\defeq \sum_{d=0}^{k-1} 
 \gamma^{t_{i+d}-t_i} \dv_{t_{i+d}} \\
-&= -V(s_t) 
-+\bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} \bar{r}_{t_{i+1}} 
+&= \bar{r}_{t_i} + \gamma^{t_{i+1}-t_i} \bar{r}_{t_{i+1}} 
 + \dots 
 + \gamma^{t_{i+k-1}-t_i} \bar{r}_{t_{i+k-1}} 
-+ \gamma^{t_{i+k}-t_i} V(s_{t_{i+k}})
++ \gamma^{t_{i+k}-t_i} V(s_{t_{i+k}})-V(s_t) 
 \end{split}
 \end{align}
 We can define the unnormalized generalized advantage estimator as a exponentially-weighted sum of these k-step advantage estimators~\cite{schulman2015high}:

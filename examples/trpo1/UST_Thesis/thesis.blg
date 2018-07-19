@@ -11,7 +11,6 @@ A level-1 auxiliary file: chapter2.aux
 A level-1 auxiliary file: chapter3.aux
 A level-1 auxiliary file: chapter4.aux
 A level-1 auxiliary file: chapter5.aux
-A level-1 auxiliary file: chapter6.aux
 The style file: IEEEtran.bst
 A level-1 auxiliary file: reference.aux
 A level-1 auxiliary file: publication.aux
@@ -38,7 +37,7 @@ Warning--empty journal in mcgovern2001automatic
 Done.
 You've used 38 entries,
             4087 wiz_defined-function locations,
-            1026 strings with 14975 characters,
+            1025 strings with 14963 characters,
 and the built_in function-call counts, 25543 in all, are:
 = -- 1914
 > -- 833

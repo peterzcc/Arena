@@ -32,20 +32,21 @@
 \contentsline {subsection}{\numberline {3.1.2}Detailed Environment Specifications}{20}{subsection.3.1.2}
 \contentsline {section}{\numberline {3.2}Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization Method }{21}{section.3.2}
 \contentsline {section}{\numberline {3.3}Efficient Exploration Through Exceptional Advantage Regularization}{24}{section.3.3}
-\contentsline {section}{\numberline {3.4}Efficient Exploration Through Robust Concentric Mixture Gaussian Policy}{25}{section.3.4}
+\contentsline {section}{\numberline {3.4}Efficient Exploration Through Robust Concentric Gaussian Mixture Policy}{25}{section.3.4}
 \contentsline {section}{\numberline {3.5}Hierarchical Reinforcement Learning method}{26}{section.3.5}
 \contentsline {subsection}{\numberline {3.5.1}Hierarchical Reinforcement Learning Architecture}{26}{subsection.3.5.1}
 \contentsline {subsection}{\numberline {3.5.2}Generalized advantage estimation for the decider agent}{27}{subsection.3.5.2}
 \contentsline {subsection}{\numberline {3.5.3}Training of the Switcher Policy}{28}{subsection.3.5.3}
 \contentsline {section}{\numberline {3.6}Training of the Actuator Policies}{29}{section.3.6}
 \contentsline {subsection}{\numberline {3.6.1}Effective Training of Actuator Policies}{29}{subsection.3.6.1}
-\contentsline {subsection}{\numberline {3.6.2}Domain Randomization by Cross-sampling Initial States}{30}{subsection.3.6.2}
+\contentsline {subsection}{\numberline {3.6.2}Domain Randomization by Cross-sampling Initial States}{29}{subsection.3.6.2}
+\contentsline {subsection}{\numberline {3.6.3}Synchronous Scheduling of Actuator Learning}{30}{subsection.3.6.3}
 \contentsline {chapter}{\numberline {4}Experiments}{31}{chapter.4}
 \contentsline {section}{\numberline {4.1}Experiments on the Basic Task \textit {move0}}{31}{section.4.1}
 \contentsline {section}{\numberline {4.2}Experiment on Flat Reinforcement Learning Solutions to Multi-modality Tasks}{34}{section.4.2}
 \contentsline {subsection}{\numberline {4.2.1}Conventional Flat reinforcement Learning Methods}{34}{subsection.4.2.1}
 \contentsline {subsection}{\numberline {4.2.2}Experiment on Exceptional Advantage Regularization}{35}{subsection.4.2.2}
-\contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Mixture Gaussian Policy Model}{45}{subsection.4.2.3}
+\contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Gaussian Mixture Policy Model}{45}{subsection.4.2.3}
 \contentsline {section}{\numberline {4.3}Hierarchical Reinforcement Learning Methods for Multi-modality and Sparse environments}{46}{section.4.3}
 \contentsline {subsection}{\numberline {4.3.1}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{46}{subsection.4.3.1}
 \contentsline {subsection}{\numberline {4.3.2}Training the Decider Agent}{48}{subsection.4.3.2}
