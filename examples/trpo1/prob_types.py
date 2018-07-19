@@ -98,8 +98,9 @@ def logits_from_ter_categorical(state_logit, meta_logit, is_initial_step):
 
 
 class Categorical(ProbType):
-    def __init__(self, num_cat):
+    def __init__(self, num_cat, min_prob=0.001):
         self.n = num_cat
+        self.min_prob = min_prob
 
     def create_dist_vars(self, last_layer=None, logits=None, dtype=tf.float32):
         old_logits = tf.placeholder(dtype,
@@ -137,12 +138,12 @@ class Categorical(ProbType):
         wasserstein = tf.reduce_sum(tf.abs(old_dist.probs - new_dist.probs) / 2, axis=-1)
         return wasserstein
 
-    def regulation_loss(self, dist_info, min_prob=0.001):
+    def regulation_loss(self, dist_info):
         logits = dist_info["logits"]
         logits_logsumexp = tf.reduce_logsumexp(logits, axis=-1)
         min_logit = tf.reduce_min(logits, axis=-1)
         min_logprob = min_logit - logits_logsumexp
-        reg_loss = tf.square(tf.maximum(np.log(min_prob) - min_logprob, 0.))
+        reg_loss = tf.square(tf.maximum(np.log(self.min_prob) - min_logprob, 0.))
         return reg_loss
 
     def entropy(self, dist_info):

@@ -76,11 +76,13 @@ def main():
                         help='timestep or episode')
     parser.add_argument('--kl', required=False, default=None, type=float,
                         help='target kl')
-    parser.add_argument('--ent-k', required=False, default=0, type=float,
+    parser.add_argument('--ent-k', required=False, default=0., type=float,
                         help='entropy loss weight')
 
-    parser.add_argument('--regulation-k', required=False, default=50., type=float,
+    parser.add_argument('--regulation-k', required=False, default=0., type=float,
                         help='regulation loss weight')
+    parser.add_argument('--min-prob', required=False, default=0.001, type=float,
+                        help='regulation min prob')
     parser.add_argument('--switcher-k', required=False, default=0.01, type=float,
                         help='switcher loss weight')
     parser.add_argument('--switcher-time-weight', required=False, default=1.0, type=float,
@@ -251,7 +253,8 @@ def main():
                                 use_mix=args.use_mix,
                                 normalize_wass=args.normalize_wass,
                                 switcher_time_weight=args.switcher_time_weight,
-                                regulation_k=args.regulation_k)
+                                regulation_k=args.regulation_k,
+                                min_prob=args.min_prob)
 
     def create_dict_shared_params():
         if args.initial_state_dir is not None:

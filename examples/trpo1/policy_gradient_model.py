@@ -74,7 +74,8 @@ class PolicyGradientModel(ModelWithCritic):
                  normalize_wass=False,
                  joint_training_return_diff=1000.,
                  regulation_k=50.0,
-                 switcher_time_weight=1.0
+                 switcher_time_weight=1.0,
+                 min_prob=0.001
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -159,7 +160,7 @@ class PolicyGradientModel(ModelWithCritic):
                 self.distribution = DiagonalGaussian(dim=self.act_space.low.shape[0],
                                                      normalize_wass=normalize_wass)
         else:
-            self.distribution = Categorical(num_cat=self.act_space.n)
+            self.distribution = Categorical(num_cat=self.act_space.n, min_prob=min_prob)
 
         self.theta = None
         WASS_POSTFIX = "_WASS"
@@ -334,7 +335,7 @@ class PolicyGradientModel(ModelWithCritic):
         self._train_paths = None
         self._train_start_queue = queue.Queue(maxsize=1)
         self._train_finish_queue = queue.Queue(maxsize=1)
-        self._train_loop_thread = threading.Thread(target=self._train_loop)
+        self._train_loop_thread = threading.Thread(target=self._train_loop, name="{}_train_loop".format(self.name))
         self._train_loop_thread.start()
         self._log_msg = "{}:\n".format(self.name)
 
@@ -724,7 +725,9 @@ class PolicyGradientModel(ModelWithCritic):
         if paths is not None and isinstance(self.distribution, Categorical):
             self._log("{} at t\t{}".format(self.name, self.n_update))
             norm_logits = paths["logits"] - np.logaddexp.reduce(paths["logits"], axis=1)[:, np.newaxis]
-            self._log("pi:{}".format(np.min(np.exp(norm_logits), axis=0)))
+            action_probs = np.exp(norm_logits)
+            self._log("pi_min:{}".format(np.min(action_probs, axis=0)))
+            self._log("pi_mean:{}".format(np.mean(action_probs, axis=0)))
         if self.is_switcher_with_init_len:
             self._log("ave subt:{}".format(np.mean(paths["observation"][-1][:, 1])))
 

@@ -43,7 +43,7 @@ class MultiNetwork(object):
                  rl_loss_type="TRAD",
                  use_wasserstein=False,
                  logstd_sample_dev=1.0,
-                 fix_length_weight=1.0,
+                 fix_length_weight=1.0
                  ):
         logging.debug("network args:\n {}".format(locals()))
         self.comb_method = comb_method

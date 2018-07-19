@@ -210,7 +210,8 @@ class Experiment(object):
                           self.episode_q,
                           self.global_t,
                           process_id,
-                          RenderOption.lookup(self.render_option)))
+                          RenderOption.lookup(self.render_option))
+                )
             this_actuator_process.daemon = True
             self.actuator_processes.append(this_actuator_process)
         for actuator in self.actuator_processes:
@@ -234,7 +235,8 @@ class Experiment(object):
             this_agent_thread = \
                 thd.Thread(
                     target=agent_run_thread,
-                    args=(agents[process_id], process_id)
+                    args=(agents[process_id], process_id),
+                    name="agent_{}".format(process_id)
                 )
             this_agent_thread.daemon = True
             self.agent_threads.append(this_agent_thread)
@@ -244,14 +246,15 @@ class Experiment(object):
     def interrupt(self, signal, frame):
         force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
         print('You pressed Ctrl+C. Terminating..')
-
-        Experiment.is_terminated = True
         self.terminate()
-        sys.exit()
 
     def terminate(self):
+        Experiment.is_terminated = True
         logging.warning("Experiment terminating")
-        force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
+        try:
+            force_map(lambda x: x.put(ProcessState.terminate), self.actuator_channels)
+        except AssertionError:
+            logging.info("queues already closed")
         # if self.single_process_mode:
         #     for actuator in self.actuator_processes:
         #         actuator.join()
@@ -261,9 +264,36 @@ class Experiment(object):
         # logging.warning("agents terminated")
         for f in Experiment.f_terminate:
             f()
-        # for t in threading.enumerate():
-        #     logging.warning('ACTIVE: %s', t.getName())
-        logging.warning("finished cleaning")
+        terminated = False
+        terminate_verbose = False
+        import time
+        while not terminated:
+            terminated = True
+            threads = thd.enumerate()
+            for t in threads:
+                name = t.getName()
+                if t.is_alive() and name != "MainThread":
+                    if terminate_verbose:
+                        logging.warning('ACTIVE: %s', name)
+                    t.join(timeout=0.1)
+                    terminated = False
+                    if name.startswith("QueueFeederThread"):
+                        try:
+                            if self.queue_type == self.mp_ctx.Queue:
+                                self.episode_q.close()
+                                for q in self.actuator_channels:
+                                    q.close()
+                        except AssertionError:
+                            logging.info("queues already closed")
+            for t in self.actuator_processes:
+                if t.is_alive():
+                    if terminate_verbose:
+                        logging.warning('ACTIVE: %s', t.name)
+                    t.join(timeout=0.1)
+                    t.terminate()
+                    terminated = False
+            time.sleep(0.5)
+        logging.info("finished cleaning")
         sys.exit()
 
     def run_parallelly(self, num_actor, num_epoch, epoch_length,

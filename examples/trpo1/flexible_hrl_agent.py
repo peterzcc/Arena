@@ -7,7 +7,9 @@ from dict_memory import DictMemory
 import time
 import gc
 from ram_util import resident
-import threading
+import threading, queue
+from arena.experiment import Experiment
+
 
 class FlexibleHrlAgent(Agent):
     def __init__(self, observation_space, action_space,
@@ -44,6 +46,16 @@ class FlexibleHrlAgent(Agent):
         self.full_tasks = full_tasks
         self.current_policy_id = None
         self.is_initial_step = 0
+        self._switcher_input_q = queue.Queue(maxsize=1)
+        self._switcher_output_q = queue.Queue(maxsize=1)
+        self._actuator_input_q = queue.Queue(maxsize=1)
+        self._actuator_output_q = queue.Queue(maxsize=1)
+        self._actuator_loop_thread = threading.Thread(target=self._actuator_loop,
+                                                      name="actuator_loop_{}".format(self.id))
+        self._actuator_loop_thread.start()
+        self._switcher_loop_thread = threading.Thread(target=self._switcher_loop,
+                                                      name="switcher_loop_{}".format(self.id))
+        self._switcher_loop_thread.start()
 
     def update_meta_status(self, should_switch):
         self.current_policy_id = None if should_switch else self.current_policy_id
@@ -52,11 +64,28 @@ class FlexibleHrlAgent(Agent):
     def wrap_meta_obs(self, observation):
         return [*observation, np.array([self.current_policy_id, self.sub_pol_act_t, self.is_initial_step])]
 
+    def _switcher_loop(self):
+        while not Experiment.is_terminated:
+            try:
+                wrapped_obs = self._switcher_input_q.get(block=True, timeout=1.0)
+            except queue.Empty:
+                continue
+            should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
+            self._switcher_output_q.put([should_switch, switcher_model_info], block=True)
+
+    def _actuator_loop(self):
+        while not Experiment.is_terminated:
+            try:
+                observation = self._actuator_input_q.get(block=True, timeout=1.0)
+            except queue.Empty:
+                continue
+            action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
+            self._actuator_output_q.put([action, leaf_model_info], block=True)
+
     def act(self, observation):
 
         if self.batch_start_time is None:
             self.batch_start_time = time.time()
-
 
         if self.current_policy_id is None:
             decision, decider_model_info = self.decider.predict(observation, pid=self.id)
@@ -65,9 +94,12 @@ class FlexibleHrlAgent(Agent):
         else:
             decision, decider_model_info = None, None
         wrapped_obs = self.wrap_meta_obs(observation)
-        should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
-
-        action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
+        # should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
+        # action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
+        self._switcher_input_q.put(wrapped_obs, block=True)
+        self._actuator_input_q.put(observation, block=True)
+        should_switch, switcher_model_info = self._switcher_output_q.get(block=True)
+        action, leaf_model_info = self._actuator_output_q.get(block=True)
         self.memory.append_hrl_state(wrapped_obs, should_switch, switcher_model_info, decision, decider_model_info,
                                      self.id,
                                      leaf_id=self.current_policy_id, leaf_action=action,
