@@ -2,12 +2,14 @@
 %!TEX root = ./thesis.tex
 
 \subsection{Detailed Environment Specifications}
-We provide a detailed description of the experiment environments in this section. All of the environments are based on the "Ant" task~\cite{openaigym}. In the original "Ant" task, the agent receives a 111-dimensional state input and produces a 8-dimensional action output. The agent's state consists of a 13-dimensional vector that contains robots pose information, a 14-dimensional vector that represents its velocity information, and a 84-dimensional vector that contains contact force information. The information about the absolute position of the agent is not provided.
+We provide a detailed description of the experiment environments in this section. All of the environments are based on the "Ant" task~\cite{openaigym}. 
 
-For the proposed environments, the agent receives not only the 111-dimensional observation about the robot's locomotion status, but also a $64\times 64\times 1$ dimensional grayscale image observation. A sample image observation is shown in Figure~\ref{fig_ant_imgobs}.
+In the original "Ant" task, the agent receives a 111-dimensional motion sensor input and produces a 8-dimensional action output. The agent's state input consists of a 13-dimensional vector that contains the robot's pose information, a 14-dimensional vector that represents its velocity information, and a 84-dimensional vector that contains contact force information. However, information about the agent's absolute position in the world map is not available.
+
+For the proposed environments, the agent receives not only the 111-dimensional motion sensor input, but also a $64\times 64\times 1$ dimensional grayscale image observation. A sample image observation is shown in Figure~\ref{fig_ant_imgobs}. The image is not in a high resolution but is sufficient for the agent to observe the necessary information for the proposed tasks.
 
 \begin{figure}[H]
-	\includegraphics[width=0.5\textwidth]{images/ant_imgobs.png}
+	\includegraphics{images/ant_imgobs.png}
 	\centering
 	\caption{A sample image observation of the target environments}
 \end{figure}\label{fig_ant_imgobs}

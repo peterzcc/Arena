@@ -13,9 +13,9 @@ The first problem has been studied from different point of views. The ideal prob
 
 The most practical formulation is to manually define the low-level partial policies as well as the scheduling criteria of them. However, it heavily relies on domain-specific engineering, and manual defining a set of predefined low-level partial policies with their scheduling criteria may not be possible. Another popular formulation is to propose a set of auxiliary MDPs to define and train the low-level policies. The partial-policies will also be terminated if the current auxiliary MDP has terminated in the target environment. However, this formulation is also limited to some special cases which are mainly goal-directed discrete environments. 
 
-The formulation of this thesis is the low-level policies could be trained in a set of given source tasks. But the problem of selecting and scheduling them is left to be solved. This formulation can handle many general cases in the sense that the target problem can be solved as long as it can be decomposed into a series of source tasks.
+The formulation of this thesis is the low-level policies could be trained in a set of given source tasks. But the problem of selecting and scheduling them is left to be solved. This formulation can handle many general cases in the sense that the target problem can be solved as long as it can be decomposed into a series of source tasks. The formulation may not be feasible for some complex problems like the board game GO, but a vast majority of real-world problems could be decomposed by a series of simple primary tasks. For example, the task of navigating a robot to a target location can be decomposed to the tasks of moving forward, turning left/right, going downstairs/upstairs, bypassing an obstacle and opening/closing a door. The task of assembling a hardware product can be decomposed to combining two specific components, plugging in the wires, installing the screws and etc.
 
-The solution of learning to select among low-level policies, has been thoroughly studied by SMDP theory since the work of~\cite{sutton1999between}. However, a general solution to the scheduling of the partial policies is still missing.
+The solution of learning to select among low-level policies, has been thoroughly studied by Semi-Markov Decision Process theory since the work of~\cite{sutton1999between}. However, a general solution to the scheduling of the partial policies is still missing.
 
 The following sections, will discuss the related works of hierarchical reinforcement learning methods in details.
 
@@ -44,12 +44,10 @@ The study of \cite{heess2016learning} applies hierarchical reinforcement learnin
 		of the recurrent high-level controller (HL, dark blue) and
 		feedforward low-level controller (LL, green).  The
 		high-level controller has access to all observations (yellow and red). While both controllers observe sensory
-		input at the world-clock frequency, the modulatory con-
-		trol signal from the high-level is updated every K
+		input at the world-clock frequency, the modulatory control signal from the high-level is updated every K
 		steps (here K = 2)}\label{review_moduler_arch}
 \end{figure}
-The hierarchical agent is characterized by a policy $\pi$ with parameter $\theta$. The policy is defined by the composition of the high-level controller $F_H$ and low-level controller $F_L$. The low-level controller is a feed-forward neural network that maps the preprocessed curre
-nt state $o(s)$ and the control signal from the high-level controller $c$ to the policy output.
+The hierarchical agent is characterized by a policy $\pi$ with parameter $\theta$. The policy is defined by the composition of the high-level controller $F_H$ and low-level controller $F_L$. The low-level controller is a feed-forward neural network that maps the preprocessed current state $o(s)$ and the control signal from the high-level controller $c$ to the policy output.
 \begin{align}
 \pi (a| s) = F_L(o(s),c)
 \end{align}
@@ -62,10 +60,10 @@ c_t = f_c(z_{t_r})
 where $t_r$ is the most recent update output of the control signal. A predefined Gaussian noise component is added to the output $c_t$ during the training of the high level controller, so that the agent has a better performance in exploration.
 The training of the hierarchical agent consists of two separate phases: pre-training and transfer. The tasks used for pre-training are relatively simple tasks that facilitate the development of generic locomotion skills. After pre-training, the high-level controller is re-initialized and the weights of low-level controller are frozen. The high-level controller is then trained in the transfer task, which has a sparse reward function.
 
-This method manages to solve a few sparse problems with low-dimensional state inputs, which could not be solved by any flat reinforcement learning methods. The limitation is that the architecture requires heavy problem-specifc engineering components. The observation of the low-level agent $o(s)$ is designed manually. the hierarchical relationships between the two agent, including the definition of pre-training environments and the modulation model are also predefined. Apart from that, the low-level agent can only be executed for a predefined number ($K$) of time-steps before it gets terminated. This design could only be useful in a limited class of problems.
+This method manages to solve a few problems with sparse reward functions and low-dimensional state inputs, which could not be solved by any flat reinforcement learning methods. The limitation is that the architecture requires heavy problem-specifc engineering components. The observation of the low-level agent $o(s)$ is designed manually. the hierarchical relationships between the two agent, including the definition of pre-training environments and the modulation model are also predefined. Apart from that, the low-level agent can only be executed for a predefined number ($K$) of time-steps before it gets terminated. This design could only be useful in a limited class of problems.
 
 \subsection{Hierarchical Reinforcement Learning by Meta-learning}
-Another work~\cite{frans2017meta}, namely meta learning shared hierarchies (MLSH), proposes a metalearning approach for learning hierarchically structured policies.
+Another work~\cite{frans2017meta}, namely meta learning shared hierarchies (MLSH), proposes a meta-learning approach for learning hierarchically structured policies.
 The MLSH method formulates the problem as learning a finite set of MDPs $P_M$ with the same state-action space, with a universal agent architecture. The agent consists of two sets of parameters $(\phi,\theta)$, where $\phi$ is the set of task-independent parameters and $\theta$ is the set of task-specific parameters. The meta-learning objective is to optimize the expected return during the agent's entire lifetime:
 \begin{align}
 \mathrm{maximize}_\phi \mathbb{E}_{M\sim P_M}[R]

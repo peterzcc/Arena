@@ -1,6 +1,6 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {2.1}{\ignorespaces The hierarchical structure of the modulated controller\nobreakspace {}\cite {heess2016learning}, which consists of the recurrent high-level controller (HL, dark blue) and feedforward low-level controller (LL, green). The high-level controller has access to all observations (yellow and red). While both controllers observe sensory input at the world-clock frequency, the modulatory con- trol signal from the high-level is updated every K steps (here K = 2)}}{14}{figure.2.1}
+\contentsline {figure}{\numberline {2.1}{\ignorespaces The hierarchical structure of the modulated controller\nobreakspace {}\cite {heess2016learning}, which consists of the recurrent high-level controller (HL, dark blue) and feedforward low-level controller (LL, green). The high-level controller has access to all observations (yellow and red). While both controllers observe sensory input at the world-clock frequency, the modulatory control signal from the high-level is updated every K steps (here K = 2)}}{14}{figure.2.1}
 \contentsline {figure}{\numberline {2.2}{\ignorespaces The agent setup of the modulated controller\nobreakspace {}\cite {frans2017meta},$\theta $ represents the master policy, which selects a sub-policy to be active. In the diagram, $\phi _3$ is the active sub-policy, and actions are taken according to its output.}}{16}{figure.2.2}
 \addvspace {10\p@ }
 \contentsline {figure}{\numberline {3.1}{\ignorespaces The Ant agent}}{19}{figure.3.1}

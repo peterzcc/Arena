@@ -1,7 +1,7 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
 \section{Policy Gradient Methods}
-Policy gradient mothod is a class of reinforcement learning methods that solve the problem by optimizing a parametrized policy model $\pi_\theta (a|s), a\in A, s\in S$, so that the expected return:
+Policy gradient methods refer to a class of reinforcement learning methods that solve the problem by optimizing a parametrized policy model $\pi_\theta (a|s), a\in A, s\in S$, so that the expected return:
 $$
     J(\theta) = \mathbb{E}\big[\sum_{t=0}^T\gamma^t r_t \big]
 $$
@@ -66,7 +66,7 @@ The method further speeds up the optimization by reusing recently computed stati
 The method manages to computationally efficiently perform trust region natural policy gradient optimization without sacrificing the reinforcement learning performance. A remaining problem is that the method is still batch based and has a high memory occupation.
 
 \subsection{Proximal Policy Gradient Method}
-The author of \cite{schulman2017proximal} proposes a first-order policy optimization method, namely proximal policy gradient with clipping (PPO). The method clips the surrogate objective according to the following equation:
+The author of \cite{schulman2017proximal} proposes a first-order policy optimization method, namely proximal policy optimization (PPO). The method clips the surrogate objective according to the following equation:
 \begin{equation}
     L_{CLIP}(\theta) = \mathbb{E} \left[ \min\big(r_t(\theta) A_t , \mathrm{clip}(r_t(\theta),1-\epsilon,1+\epsilon)A_t)\big) \right]
 \end{equation}

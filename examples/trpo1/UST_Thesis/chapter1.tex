@@ -56,7 +56,7 @@ A smooth and informative reward function can generally make the training of rein
 
 
 \subsection{Assumptions on Relationship of Tasks}
-Apart from the objective to solve sparse multi-modal reinforcement learning problems with end-to-end reinforcement learning problems, we are also particularly interested in a paradigm, where the objective is to solve a \textit{target task } given a set of \textit{source tasks}. The policies that solve the source tasks, namely the \textit{actuator policies}, are available to the agent when it is faced with the target task. We assume that the target task can be solved by a sequential execution of a subset of the actuator policies. An \textit{decider agent} needs to be trained, which controls the scheduling of the actuator policies.
+Apart from the objective to solve sparse multi-modal reinforcement learning problems with end-to-end reinforcement learning problems, we are also particularly interested in a paradigm, where the objective is to solve a \textit{target task } given a set of \textit{source tasks}. The policies that solve the source tasks, namely the \textit{actuator policies}, are available to the agent when it is faced with the target task. We call them actuator policies because these policies perform low-level control skills instead of making the highest level decision in the target task. We assume that the target task can be solved by a sequential execution of a subset of the actuator policies. An \textit{decider agent} needs to be trained, which controls the scheduling of the actuator policies.
 
 This paradigm is related to hierarchical reinforcement learning (HRL), which focuses on learning and utilizing closed-loop partial policy / skills to solve a complex task. However, our case is different from the standard setting of HRL. The standard HRL setting assumes that the agent needs to extract the useful closed-loop partial policy from the original target task. However, we focus on extracting and reusing partial policies from other tasks.
 
@@ -83,15 +83,17 @@ The primary research question that we would like to study is:
     \textit{Can we develop an agent that can achieve sufficient performance (in terms of total episode reward) in the reinforcement learning environments defined in section \ref{sec_env} within a feasible training time, with an RL model that doesn't rely on domain-specific techniques  (including reward shaping, manual definition of policy hierarchy, manual / heuristic methods to define sub-goals, or manual criteria on the switching of actuator policies), with or without a predefined set of source tasks?}
 
 
-We will first answer the question on whether a hierarchical architecture is necessary: \textit{Can a contemporary flat reinforcement learning method solve the proposed environments?}
+We will first answer the question on whether a hierarchical architecture is necessary: 
+
+\textbf{Research Question 1: }\textit{Can a contemporary flat reinforcement learning method solve the proposed environments?}
 
 
 We will then answer the question on whether an end-to-end hierarchical reinforcement learning can solve this:
-A model that solves the question needs to address two issues: reusing the policies learned in source tasks and solving the target task.
+A model that solves the question needs to address two issues: reusing the policies learned in source tasks and solving the target task. The two issues lead to the following two research questions respectively:
 
-To solve the first issue, we need to answer the question of \textit{Can a trained actuator policy achieve an acceptable performance (in terms of the expected total return of the original source task) in a target environment, which might have different initial state distribution?}.
+\textbf{Research Question 2.1: }\textit{Can a trained actuator policy achieve an acceptable performance (in terms of the expected total return of the original source task) in a target environment, which might have different initial state distribution?}.
 
-To address the second issue, we will answer the question of \textit{Can a decider agent be developed to solve the target tasks defined in \ref{sec_env} given the trained actuators policies, without other domain-specific designs?}.
+\textbf{Research Question 2.1: }\textit{Can a decider agent be developed to solve the target tasks defined in \ref{sec_env} given the trained actuators policies, without other domain-specific designs?}.
 
 % \section{Thesis Outline and Contributions}
 % The remainder of this thesis is structured as follows. TODO
