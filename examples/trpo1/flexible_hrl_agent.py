@@ -46,16 +46,18 @@ class FlexibleHrlAgent(Agent):
         self.full_tasks = full_tasks
         self.current_policy_id = None
         self.is_initial_step = 0
-        self._switcher_input_q = queue.Queue(maxsize=1)
-        self._switcher_output_q = queue.Queue(maxsize=1)
-        self._actuator_input_q = queue.Queue(maxsize=1)
-        self._actuator_output_q = queue.Queue(maxsize=1)
-        self._actuator_loop_thread = threading.Thread(target=self._actuator_loop,
-                                                      name="actuator_loop_{}".format(self.id))
-        self._actuator_loop_thread.start()
-        self._switcher_loop_thread = threading.Thread(target=self._switcher_loop,
-                                                      name="switcher_loop_{}".format(self.id))
-        self._switcher_loop_thread.start()
+        self.async_predict = False
+        if self.async_predict:
+            self._switcher_input_q = queue.Queue(maxsize=1)
+            self._switcher_output_q = queue.Queue(maxsize=1)
+            self._actuator_input_q = queue.Queue(maxsize=1)
+            self._actuator_output_q = queue.Queue(maxsize=1)
+            self._actuator_loop_thread = threading.Thread(target=self._actuator_loop,
+                                                          name="actuator_loop_{}".format(self.id))
+            self._actuator_loop_thread.start()
+            self._switcher_loop_thread = threading.Thread(target=self._switcher_loop,
+                                                          name="switcher_loop_{}".format(self.id))
+            self._switcher_loop_thread.start()
 
     def update_meta_status(self, should_switch):
         self.current_policy_id = None if should_switch else self.current_policy_id
@@ -94,12 +96,15 @@ class FlexibleHrlAgent(Agent):
         else:
             decision, decider_model_info = None, None
         wrapped_obs = self.wrap_meta_obs(observation)
-        # should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
-        # action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
-        self._switcher_input_q.put(wrapped_obs, block=True)
-        self._actuator_input_q.put(observation, block=True)
-        should_switch, switcher_model_info = self._switcher_output_q.get(block=True)
-        action, leaf_model_info = self._actuator_output_q.get(block=True)
+
+        if self.async_predict:
+            self._switcher_input_q.put(wrapped_obs, block=True)
+            self._actuator_input_q.put(observation, block=True)
+            should_switch, switcher_model_info = self._switcher_output_q.get(block=True)
+            action, leaf_model_info = self._actuator_output_q.get(block=True)
+        else:
+            should_switch, switcher_model_info = self.switcher.predict(wrapped_obs, pid=self.id)
+            action, leaf_model_info = self.sub_policies[self.current_policy_id].predict(observation, pid=self.id)
         self.memory.append_hrl_state(wrapped_obs, should_switch, switcher_model_info, decision, decider_model_info,
                                      self.id,
                                      leaf_id=self.current_policy_id, leaf_action=action,
