@@ -18,23 +18,25 @@ Most reinforcement learning study is based on the problem formulation of Markov 
 The agent and environments interact during a finite sequence of discrete time steps, $t=0,1,2,3,...$. At each time step t, the agent receives an observation of the environment's \textit{state}, $s \in S$ and selects an \textit{action} $a \in A$. The agent receives a numerical reward $r$, and also the next state $s^\prime$.  A finite-horizon discounted Markov decision process (MDP) is defined by the tuple $(S,A,P,r,\rho_0,\gamma) $ where the $\rho_0 : S \mapsto \mathbb{R}$ is the initial state distribution, $P(s^\prime|s,a) : S \times A \mapsto \mathbb{R}$ is the distribution describing the state transition dynamics, $r : S \times A \mapsto \mathbb{R}$ is the expected reward function, and $\gamma \in (0,1]$ is the discount factor.
 
 Let $\pi : S \times A \mapsto [0,1] $ denote a policy, following are definitions of the action value function $Q_\pi $, the value function $V_\pi $ and the advantage function $A_\pi $:
-$$ Q_\pi(s_t,a_t) = \mathbb{E}_{s_{t+1},a_{t+1},\ldots}
-\big[ \sum_{l=0}^\infty r(s_{t}) \big],$$
-$$ V_\pi(s_t) = \mathbb{E}_{a_{t},s_{t+1},a_{t+1},\ldots}
-\big[ \sum_{l=0}^\infty r(s_{t}) \big],$$
+\begin{align}
+Q_\pi(s_t,a_t) &= \mathbb{E}_{s_{t+1},a_{t+1},\ldots}
+\big[ \sum_{l=0}^\infty r(s_{t}) \big], \\
+V_\pi(s_t) &= \mathbb{E}_{a_{t},s_{t+1},a_{t+1},\ldots}
+\big[ \sum_{l=0}^\infty r(s_{t}) \big],\\
+A_\pi (s,a) &= Q_\pi (s,a) - V_\pi (s), \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0 
+\end{align}
 
-$$ A_\pi (s,a) = Q_\pi (s,a) - V_\pi (s), \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0 $$
 
 %%TODO: think about where I can put this section
 %\subsection{Hierarchical reinforcement learning based on transferred policies from a set of source tasks}\label{sec_hier_trans}
 
 
 
-\section{Scope of study}
-Realistic robot control problems in reinforcement learning involves many sources of complexity. However, we are only concerned with some of the typical problems.
-This study focus on a set of reinforcement learning problems with multi-modality state space and continuous action space. We also specifically study some problems with not only the previously mentioned properties, but also with sparse reward functions.
+\section{Scope of Study}
+Realistic robot control problems in reinforcement learning involve many sources of complexity. However, we are only concerned with some of the typical problems.
+We focus on a set of reinforcement learning problems with multi-modality state space and continuous action space. We also specifically study some problems with not only the previously mentioned properties, but also with sparse reward functions.
 
-\subsection{Multi-modality state space}
+\subsection{Multi-modality State Space}
 
 The state spaces of a vast majority of the problems in previous reinforcement learning studies are in single-modality, such as a low-dimensional vector of internal game state or locomotion sensor signal, or a single high dimensional image stream. Most recent works in reinforcement learning for continuous control focus on the RL tasks with low-dimensional state input only~\cite{duan2016benchmarking}. Some study~\cite{wu2017scalable} also tried to handle tasks with a single image-input but in limited complexity.
 
@@ -45,15 +47,15 @@ Apart from motion sensor and image sensor, real-world robot agents may have othe
 
 In the context of reinforcement learning, the previously described multi-modality problem is significantly more complex than single-modality problems. The reason is that the feature of image observations is much more difficult to learn than the motion sensor signals. End-to-end reinforcement learning methods would typically prioritize the low-dimensional input in the initial phase of training, and get stuck until the agent is able to extract useful information from the image input. The local-minimum problem in this case is more challenging than the cases in supervised learning, because the generation of training samples are also controlled by the agent's acting policy.
 
-\subsection{Sparse reward function}
-The sparse / delayed reward signal problem has been one of the major problems in reinforcement learning domains for the past 20 years. The reinforcement learning problems with sparse rewards refer to the environments where informative reward signals are very rare. For example, the agent in such environments may just receive a constant negative reward at most timesteps but only receives a positive reward when some specific rare event happens. The agent not be able to learn anything about a good policy if it has not triggered event, or the agent may not be able to improve further if it has already stopped exploring the environment after experienced the informative events. The core problem is how the agent can perform efficient exploration in the environment.
+\subsection{Sparse Reward Function}
+The sparse / delayed reward signal problem has been one of the major problems in reinforcement learning domains for the past 20 years. The reinforcement learning problems with sparse rewards refer to the environments where informative reward signals are very rare. For example, the agent in such environments may just receive a constant negative reward at most timesteps but only receives a positive reward when some specific rare event happens. The agent not be able to learn anything about a good policy if it has never triggered such events that generate reward signal. Apart from that, the agent may not be able to improve further after experienced such events if it has already been very conservative in the degree of exploration. The core problem is how the agent can perform efficient exploration in the environment.
 
 Many methods have been proposed to solve the sparse reward problem in environments. However, none of the methods are able to solve the general case. Some of them could only solve special cases of reinforcement learning problems, that are far from practical problems, while the others require a tremendous amount of domain-specific engineering component.
 
 A smooth and informative reward function can generally make the training of reinforcement learning agents easier. Theoretically, any reinforcement learning problems when given a reward function that is informative enough could be solved easily by contemporary methods. However, such a reward function itself is rarely accessible in real-world environments. Reward shaping~\cite{ng1999policy} techniques may be used to improve the reward function, but such methods usually also relies on domain-specific engineering. In our study, we try to solve several realistic sparse environments without the application of reward shaping.
 
 
-\subsection{Assumptions on relationship of tasks}
+\subsection{Assumptions on Relationship of Tasks}
 Apart from the objective to solve sparse multi-modal reinforcement learning problems with end-to-end reinforcement learning problems, we are also particularly interested in a paradigm, where the objective is to solve a \textit{target task } given a set of \textit{source tasks}. The policies that solve the source tasks, namely the \textit{actuator policies}, are available to the agent when it is faced with the target task. We assume that the target task can be solved by a sequential execution of a subset of the actuator policies. An \textit{decider agent} needs to be trained, which controls the scheduling of the actuator policies.
 
 This paradigm is related to hierarchical reinforcement learning (HRL), which focuses on learning and utilizing closed-loop partial policy / skills to solve a complex task. However, our case is different from the standard setting of HRL. The standard HRL setting assumes that the agent needs to extract the useful closed-loop partial policy from the original target task. However, we focus on extracting and reusing partial policies from other tasks.
@@ -87,9 +89,9 @@ We will first answer the question on whether a hierarchical architecture is nece
 We will then answer the question on whether an end-to-end hierarchical reinforcement learning can solve this:
 A model that solves the question needs to address two issues: reusing the policies learned in source tasks and solving the target task.
 
-To solve the first issue, we need to answer the question of "\textit{Can a trained actuator policy achieve an acceptable performance (in terms of the expected total return of the original source task) in a target environment, which might have different initial state distribution?}".
+To solve the first issue, we need to answer the question of \textit{Can a trained actuator policy achieve an acceptable performance (in terms of the expected total return of the original source task) in a target environment, which might have different initial state distribution?}.
 
-To address the second issue, we will answer the question of "\textit{Can a decider agent be developed to solve the target tasks defined in \ref{sec_env} given the trained actuators policies, without other domain-specific designs?}".
+To address the second issue, we will answer the question of \textit{Can a decider agent be developed to solve the target tasks defined in \ref{sec_env} given the trained actuators policies, without other domain-specific designs?}.
 
 % \section{Thesis Outline and Contributions}
 % The remainder of this thesis is structured as follows. TODO

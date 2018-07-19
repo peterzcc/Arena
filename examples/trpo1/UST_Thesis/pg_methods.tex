@@ -49,7 +49,7 @@ The fourth step computes the maximum step-size $\beta= \sqrt{2\delta_{KL}/s^TAs}
 
 The method is able to solve some simple robot control tasks in \cite{openaigym} within a few millions of training samples. However, both the computation of the Hessian matrix and the conjugate gradient algorithm are infeasible for a neural network model with nontrivial size.
 
-\subsection{Kronecker-factored Trust Region}
+\subsection{Kronecker-factored Trust Region Policy Gradient}
 The work of \cite{wu2017scalable} proposes to reduce the computation time solving the natural gradient by Kronecker-factored approximation method. The method is named Actor-critic  Kronecker-factored Trust Region method (ACKTR).
 The Fisher Information Matrix $F=\mathbb{E}[\nabla_\theta L \nabla_\theta L^T]$, where $L=\log\pi(a|s)$ is used here to approximate the Riemannian metric tensor.
 The matrix is approximated by:

@@ -1,26 +1,26 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
 \section{Target Environments}\label{sec_env}
-\subsection{Summary of environment design}
-We propose and develop a set of tasks that are representatives of deep reinforcement learning environments with continuous action space, multi-modal state space and sparse reward functions. The design of the robot physical systems are based on the 3D robot environments~\cite{roboschool_2018} in OpenAI Gym~\cite{openaigym}. The external environments and reward functions of the target tasks are different from the original environments in OpenAI Gym. There are three classes of 3D robot agents in the environments OpenAI Gym: Ant, Humanoid and Swimmer. The "Ant" agent is a quadruped robot with 8-dimensional action space, the "Humanoid" agent is a humanoid robot with 16-dimensional action space, and the "Swimmer" agent is a worm-like robot with 2-dimensinoal action space.  The three agents are showed in Figure~\ref{fig_agent_ant}, Figure~\ref{fig_agent_humanoid} and Figure~\ref{fig_agent_swimmer}.
+\subsection{Summary of Environment Design}
+We propose and develop a set of tasks that are representatives of deep reinforcement learning environments with continuous action space, multi-modal state space and sparse reward functions. The design of the robot physical systems are based on the 3D robot environments~\cite{roboschool_2018} in OpenAI Gym~\cite{openaigym}. The external environments and reward functions of the target tasks are different from the original environments in OpenAI Gym. There are three classes of 3D robot agents in the environments OpenAI Gym: Ant, Humanoid and Swimmer. The Ant agent is a quadruped robot with 8-dimensional action space, the Humanoid agent is a humanoid robot with 16-dimensional action space, and the Swimmer agent is a worm-like robot with 2-dimensinoal action space.  The three agents are showed in Figure~\ref{fig_agent_ant}, Figure~\ref{fig_agent_humanoid} and Figure~\ref{fig_agent_swimmer}.
 
-We mainly focus on different tasks based on the "Ant" agent, because the agent has the capability of solving a rich variety of high-level tasks, while the learning of agent's basic control skills are reasonably but not too challenging. 
-Compared to the "Ant" agent, the "Swimmer" agent is too simple and its capability of solving hierarchical tasks is limited. The "Humanoid" agent's on the other hand, is much more unstable physical system compared to "Ant", and poses too much difficulty on its basic locomotion skills.
+We mainly focus on different tasks based on the Ant agent, because the agent has the capability of solving a rich variety of high-level tasks, while the learning of agent's basic control skills are reasonably but not too challenging. 
+Compared to the Ant agent, the Swimmer agent is too simple and its capability of solving hierarchical tasks is limited. The Humanoid agent's on the other hand, is much more unstable physical system compared to Ant, and poses too much difficulty on its basic locomotion skills.
 \begin{figure}[H]
 	\includegraphics[width=0.5\textwidth]{images/agent_ant.png}
 	\centering
-	\caption{The "Ant" agent}\label{fig_agent_ant}
+	\caption{The Ant agent}\label{fig_agent_ant}
 \end{figure}
 
 \begin{figure}[H]
 	\includegraphics[width=0.5\textwidth]{images/agent_humanoid.png}
 	\centering
-	\caption{The "Humanoid" agent}\label{fig_agent_humanoid}
+	\caption{The Humanoid agent}\label{fig_agent_humanoid}
 \end{figure}
 \begin{figure}[H]
 	\includegraphics[width=0.5\textwidth]{images/agent_swimmer.png}
 	\centering
-	\caption{The "Swimmer" agent}\label{fig_agent_swimmer}
+	\caption{The Swimmer agent}\label{fig_agent_swimmer}
 \end{figure}
 %To provide a consistent comparison with other studies, the development of 
 \input{chapter3_env_ant.tex}

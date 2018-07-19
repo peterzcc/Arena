@@ -1,7 +1,7 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
 
-\subsection{Detailed environment specification}
+\subsection{Detailed Environment Specifications}
 We provide a detailed description of the experiment environments in this section. All of the environments are based on the "Ant" task~\cite{openaigym}. In the original "Ant" task, the agent receives a 111-dimensional state input and produces a 8-dimensional action output. The agent's state consists of a 13-dimensional vector that contains robots pose information, a 14-dimensional vector that represents its velocity information, and a 84-dimensional vector that contains contact force information. The information about the absolute position of the agent is not provided.
 
 For the proposed environments, the agent receives not only the 111-dimensional observation about the robot's locomotion status, but also a $64\times 64\times 1$ dimensional grayscale image observation. A sample image observation is shown in Figure~\ref{fig_ant_imgobs}.
