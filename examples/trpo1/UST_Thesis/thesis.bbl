@@ -90,6 +90,11 @@ J.~Schulman, P.~Moritz, S.~Levine, M.~Jordan, and P.~Abbeel, ``High-dimensional
   continuous control using generalized advantage estimation,'' \emph{arXiv
   preprint arXiv:1506.02438}, 2015.
 
+\bibitem{williams1992simple}
+R.~J. Williams, ``Simple statistical gradient-following algorithms for
+  connectionist reinforcement learning,'' \emph{Machine learning}, vol.~8, no.
+  3-4, pp. 229--256, 1992.
+
 \bibitem{schulman2015trust}
 J.~Schulman, S.~Levine, P.~Moritz, M.~I. Jordan, and P.~Abbeel, ``Trust region
   policy optimization,'' \emph{CoRR, abs/1502.05477}, 2015,

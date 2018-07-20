@@ -17,15 +17,16 @@ Reinforcement learning~\cite{sutton1998reinforcement} is the problem of learning
 Most reinforcement learning study is based on the problem formulation of Markov Decision Processes (MDPs). MDP is a framework defining the problem of learning from interaction. The learner is called the \textit{agent}. Everything outside that interacts with the agent is called the \textit{environment}.
 The agent and environments interact during a finite sequence of discrete time steps, $t=0,1,2,3,...$. At each time step t, the agent receives an observation of the environment's \textit{state}, $s \in S$ and selects an \textit{action} $a \in A$. The agent receives a numerical reward $r$, and also the next state $s^\prime$.  A finite-horizon discounted Markov decision process (MDP) is defined by the tuple $(S,A,P,r,\rho_0,\gamma) $ where the $\rho_0 : S \mapsto \mathbb{R}$ is the initial state distribution, $P(s^\prime|s,a) : S \times A \mapsto \mathbb{R}$ is the distribution describing the state transition dynamics, $r : S \times A \mapsto \mathbb{R}$ is the expected reward function, and $\gamma \in (0,1]$ is the discount factor.
 
-Let $\pi : S \times A \mapsto [0,1] $ denote a policy, following are definitions of the action value function $Q_\pi $, the value function $V_\pi $ and the advantage function $A_\pi $:
+Let $\pi : S \times A \mapsto [0,1] $ denote a policy, following are definitions of the action-value function $Q_\pi $, the value function $V_\pi $ and the advantage function $A_\pi $:
 \begin{align}
-Q_\pi(s_t,a_t) &= \mathbb{E}_{s_{t+1},a_{t+1},\ldots}
-\big[ \sum_{l=0}^\infty r(s_{t}) \big], \\
+Q_\pi(s_t,a) &= \mathbb{E}_{s_{t+1},a_{t+1},\ldots}
+\big[ \sum_{l=0}^\infty \gamma^l r(s_{t}) \big], \\
 V_\pi(s_t) &= \mathbb{E}_{a_{t},s_{t+1},a_{t+1},\ldots}
-\big[ \sum_{l=0}^\infty r(s_{t}) \big],\\
-A_\pi (s,a) &= Q_\pi (s,a) - V_\pi (s), \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0 
+\big[ \sum_{l=0}^\infty \gamma^l  r(s_{t}) \big],\\
+& \ \ \ \ \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0  \\
+A_\pi (s,a) &= Q_\pi (s,a) - V_\pi (s), 
 \end{align}
-
+The action-value function $Q$ estimates the average total discounted reward following the policy $\pi$ after taking the action $a$ at the current state $s_t$. The value function $V$ estimates the average total discounted reward following the policy $\pi$ both at the current state and in the future. The advantage function $A$ is the difference between $Q$ and $V$, which indicates the advantage of taking the action $a$ at the current state over the policy $\pi$.
 
 %%TODO: think about where I can put this section
 %\subsection{Hierarchical reinforcement learning based on transferred policies from a set of source tasks}\label{sec_hier_trans}
