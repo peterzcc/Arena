@@ -21,59 +21,51 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: reference.bib
-Repeated entry---line 154 of file reference.bib
- : @article{mankowitz2018unicorn
- :                              ,
-I'm skipping whatever remains of this entry
-Repeated entry---line 287 of file reference.bib
- : @article{vezhnevets2017feudal
- :                              ,
-I'm skipping whatever remains of this entry
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
 Warning--empty journal in mcgovern2001automatic
 
 Done.
-You've used 39 entries,
+You've used 40 entries,
             4087 wiz_defined-function locations,
-            1032 strings with 15119 characters,
-and the built_in function-call counts, 26400 in all, are:
-= -- 1992
-> -- 845
-< -- 156
-+ -- 442
-- -- 173
-* -- 1242
-:= -- 3958
-add.period$ -- 78
-call.type$ -- 39
+            1034 strings with 15426 characters,
+and the built_in function-call counts, 27373 in all, are:
+= -- 2047
+> -- 912
+< -- 158
++ -- 474
+- -- 189
+* -- 1296
+:= -- 4079
+add.period$ -- 80
+call.type$ -- 40
 change.case$ -- 41
 chr.to.int$ -- 372
-cite$ -- 40
-duplicate$ -- 1962
-empty$ -- 2164
-format.name$ -- 205
-if$ -- 6104
+cite$ -- 41
+duplicate$ -- 2028
+empty$ -- 2242
+format.name$ -- 224
+if$ -- 6333
 int.to.chr$ -- 0
-int.to.str$ -- 39
-missing$ -- 387
-newline$ -- 147
-num.names$ -- 39
-pop$ -- 1005
+int.to.str$ -- 40
+missing$ -- 409
+newline$ -- 150
+num.names$ -- 40
+pop$ -- 1067
 preamble$ -- 2
 purify$ -- 0
 quote$ -- 2
-skip$ -- 1999
+skip$ -- 2070
 stack$ -- 0
 substring$ -- 913
-swap$ -- 1469
-text.length$ -- 32
+swap$ -- 1525
+text.length$ -- 34
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 39
+type$ -- 40
 warning$ -- 1
-while$ -- 95
-width$ -- 41
-write$ -- 372
-(There were 2 error messages)
+while$ -- 96
+width$ -- 42
+write$ -- 381
+(There was 1 warning)

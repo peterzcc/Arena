@@ -55,7 +55,9 @@ J.~Heinrich and D.~Silver, ``Deep reinforcement learning from self-play in
 
 \bibitem{openai_2018}
 \BIBentryALTinterwordspacing
-OpenAI, ``Openai five,'' Jun 2018. [Online]. Available:
+S.~Zhang, H.~Pondé, G.~Brockman, R.~Józefowicz, J.~Pachocki, D.~Farhi,
+  J.~Raiman, C.~Dennison, M.~Petrov, P.~Dębiak, F.~Wolski, J.~Tang, S.~Sidor,
+  and B.~Chan, ``Openai five,'' Jun 2018. [Online]. Available:
   \url{https://blog.openai.com/openai-five/}
 \BIBentrySTDinterwordspacing
 
@@ -188,7 +190,7 @@ A.~Vezhnevets, V.~Mnih, S.~Osindero, A.~Graves, O.~Vinyals, J.~Agapiou
 
 \bibitem{roboschool_2018}
 \BIBentryALTinterwordspacing
-OpenAI, ``Roboschool,'' Jun 2018. [Online]. Available:
+O.~Klimov and J.~Schulman, ``Roboschool,'' Jun 2018. [Online]. Available:
   \url{https://blog.openai.com/roboschool/}
 \BIBentrySTDinterwordspacing
 
@@ -207,14 +209,18 @@ C.~Villani, \emph{Topics in optimal transportation}.\hskip 1em plus 0.5em minus
 
 \bibitem{chafai}
 \BIBentryALTinterwordspacing
-D.~CHAFAÏ, ``Wasserstein distance between two gaussians.'' [Online].
-  Available:
+D.~Chafai, ``Wasserstein distance between two gaussians.'' [Online]. Available:
   \url{http://djalil.chafai.net/blog/2010/04/30/wasserstein-distance-between-two-gaussians/}
 \BIBentrySTDinterwordspacing
 
 \bibitem{kingma2014adam}
 D.~P. Kingma and J.~Ba, ``Adam: A method for stochastic optimization,''
   \emph{arXiv preprint arXiv:1412.6980}, 2014.
+
+\bibitem{rlintro_sutton1998reinforcement}
+R.~S. Sutton and A.~G. Barto, \emph{Reinforcement learning: An
+  introduction}.\hskip 1em plus 0.5em minus 0.4em\relax MIT press Cambridge,
+  1998, vol.~1, no.~1.
 
 \bibitem{tobin2017domain}
 J.~Tobin, W.~Zaremba, and P.~Abbeel, ``Domain randomization and generative

@@ -86,12 +86,14 @@ We can define the unnormalized generalized advantage estimator as a exponentiall
 &= \sum_{d=0}^{k-1} \dv_{t_i} \gamma^{t_{i+d}-t_i} \sum_{b=0}^{k-1} \lambda^{t_{i+b}-t_i}
 \label{eq:gaelam1}
 \end{align}
-The normalized generalized advantage estimater is then given by:
+The normalized generalized advantage estimator is then given by:
 \begin{align}
 \hata_{t_i}^{GAE(\lambda)}
 = \frac{\hata_{t_i}^{GAE_{unorm}(\lambda)}}{\sum_{b=0}^{k-1} \lambda^{t_{i+b}-t_i}}
 \end{align}
-However, the unormalized GAE estimator is usually used in practice instead of the normalized one, with a postprocessing step of batch normalization to adjust the scale and bias of the advantages. 
+The unormalized GAE estimator is usually used in practice instead of the normalized one, with a postprocessing step of batch normalization to adjust the scale and bias of the advantages.
+
+This technique is an adaption of the generalized advantage estimation method~\cite{schulman2015high} in the context of hierarchical reinforcement learning, and originates from the idea of eligibility trace~\cite{rlintro_sutton1998reinforcement}. The goal of the proposed GAE estimator for hierarchical reinforcement learning is to provide an effective variance reduction scheme for the corresponding optimization procedures.
 
 \subsection{Training of the Switcher Policy}
 We train the switcher agent using a flat reinforcement learning method with respective to the return of the target task. However, an extra loss term is added so that the switcher network will be encouraged to produce termination signals less frequently.

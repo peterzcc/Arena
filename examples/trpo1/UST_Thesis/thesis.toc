@@ -39,7 +39,7 @@
 \contentsline {subsection}{\numberline {3.5.3}Training of the Switcher Policy}{29}{subsection.3.5.3}
 \contentsline {section}{\numberline {3.6}Training of the Actuator Policies}{30}{section.3.6}
 \contentsline {subsection}{\numberline {3.6.1}Effective Training of Actuator Policies}{30}{subsection.3.6.1}
-\contentsline {subsection}{\numberline {3.6.2}Domain Randomization by Cross-sampling Initial States}{30}{subsection.3.6.2}
+\contentsline {subsection}{\numberline {3.6.2}Domain Randomization by Cross-sampling Initial States}{31}{subsection.3.6.2}
 \contentsline {subsection}{\numberline {3.6.3}Synchronous Scheduling of Actuator Learning}{31}{subsection.3.6.3}
 \contentsline {chapter}{\numberline {4}Experiments}{32}{chapter.4}
 \contentsline {section}{\numberline {4.1}Experiments on the Basic Task \textit {move0}}{32}{section.4.1}
@@ -47,10 +47,11 @@
 \contentsline {subsection}{\numberline {4.2.1}Conventional Flat reinforcement Learning Methods}{35}{subsection.4.2.1}
 \contentsline {subsection}{\numberline {4.2.2}Experiment on Exceptional Advantage Regularization}{36}{subsection.4.2.2}
 \contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Gaussian Mixture Policy Model}{46}{subsection.4.2.3}
-\contentsline {section}{\numberline {4.3}Hierarchical Reinforcement Learning Methods for Multi-modality and Sparse environments}{47}{section.4.3}
+\contentsline {section}{\numberline {4.3}Experiments on Hierarchical Reinforcement Learning Methods for Multi-modality and Sparse environments}{47}{section.4.3}
 \contentsline {subsection}{\numberline {4.3.1}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{47}{subsection.4.3.1}
 \contentsline {subsection}{\numberline {4.3.2}Training the Decider Agent}{49}{subsection.4.3.2}
 \contentsline {subsubsection}{Phase 1: Decision policy training}{50}{section*.1}
 \contentsline {subsubsection}{Phase 2: Switcher policy training}{50}{section*.2}
+\contentsline {section}{\numberline {4.4}Conclusion on Experiment Results}{55}{section.4.4}
 \contentsline {chapter}{\numberline {5}Discussion}{58}{chapter.5}
 \contentsline {chapter}{Reference}{60}{chapter.5}
