@@ -363,8 +363,8 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
         env = ConstDirSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
                                       f_gen_obj=random_direction8,
                                       subtask_dirs=subtask_dirs,
-                                      catch_range=0.75,
-                                      obj_dist=1.5,
+                                      catch_range=0.5,
+                                      obj_dist=1.25,
                                       use_sparse_reward=True,
                                       goal_reward=1.0,
                                       regenerate_goals=False)
