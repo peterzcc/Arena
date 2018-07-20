@@ -89,19 +89,20 @@ CUDA_VISIBLE_DEVICES=0,3 ./attack_gpu.sh
 CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 10240 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO --regulation-k 50.0 --min-prob 0.00001
 CUDA_VISIBLE_DEVICES=3,0,1,2 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 10240 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO --regulation-k 50.0 --min-prob 0.00001
 CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 10240 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO --regulation-k 50.0 --min-prob 0.00001
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w32 --dir ../exp_6 ../exp_7 ../exp_8  --label 1 2 3
 
 2mux1
 CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
 CUDA_VISIBLE_DEVICES=1,2,3,0 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
-CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
-disprun python3.6 ~/Arena/examples/trpo1/plot.py -w200 --dir ../exp_17 ../exp_18 ../exp_19  --label 1 2 3
+dead CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w32 --dir ../exp_17 ../exp_18 ../exp_19  --label 1 2 3
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w32 --dir ../exp_17
 local:
 
 record:
 disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env reachreg --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 
-python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env constdirreachreg --withimg 1 --nfeat 16 --load-model 0 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env constdirreachreg --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
 
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
