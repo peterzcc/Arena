@@ -48,7 +48,7 @@ class ConstDirSingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.n_bombs = 0
         self.activity_range = activity_range
         self.f_gen_obj = f_gen_obj
-        self.object = None
+        self.object = np.zeros((3,), dtype=np.float32)
         self.with_state_task = with_state_task
         self.use_sparse_reward = use_sparse_reward
         self.fix_goal = use_sparse_reward
@@ -75,20 +75,23 @@ class ConstDirSingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.obs_max_dist = obj_max_dist
         self.regenerate_goals = regenerate_goals
         self.goal_reward = goal_reward
+        self._reset_dir()
         mujoco_env.MujocoEnv.__init__(self, file_path, frame_skip=frame_skip)
         utils.EzPickle.__init__(self)
 
     def _reset(self):
+        self._reset_dir()
+        self.initial_pos = None
         super(ConstDirSingleGatherEnv, self)._reset()
         return self._get_obs()
 
-    def _reset_objects(self):
+    def _reset_dir(self):
         direction = self.f_gen_obj()
         self.dirs[0, :] = direction / np.sqrt(direction.dot(direction))
-        assert np.any(self.dirs[0])
-        self.object = np.zeros((3,), dtype=np.float32)
-        self.update_initial_pos()
-        self.object[0:2] = self.obj_dist * self.dirs[0] + self.initial_pos[0:2]
+        self.object[0:2] = self.obj_dist * self.dirs[0]
+
+        # assert np.any(self.dirs[0])
+        # self.object = np.zeros((3,), dtype=np.float32)
 
     def _get_obs(self):
         # return sensor data along with data about itself
@@ -126,7 +129,7 @@ class ConstDirSingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def _step(self, action):
         if self.initial_pos is None:
-            self._reset_objects()
+            self.set_current_as_initial_pos()
         obs, in_rw, done, info_ant = self._ant_step(action)
         if done:
             return self._get_obs(), -10, done, info_ant
@@ -137,7 +140,8 @@ class ConstDirSingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             if np.sum((pos[:2] - self.object[:2]) ** 2) < self.catch_range ** 2:
                 reward = self.goal_reward
                 if self.regenerate_goals:
-                    self._reset_objects()
+                    self._reset_dir()
+                    self.set_current_as_initial_pos()
                 else:
                     done = True
             # elif np.max(np.abs(com[:2])) > 5:
@@ -148,7 +152,8 @@ class ConstDirSingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         if self.reset_goal_prob != 0:
             assert not self.fix_goal
             if np.random.rand() < self.reset_goal_prob:
-                self.initial_pos = None
+                self._reset_dir()
+                self.set_current_as_initial_pos()
 
         self.update_object_position(pos)
         return obs, reward, done, info_ant
@@ -189,7 +194,7 @@ class ConstDirSingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                 np.clip(self.model.data.cfrc_ext, -1, 1).flat,
             ])
 
-    def update_initial_pos(self):
+    def set_current_as_initial_pos(self):
         self.initial_pos = self.get_body_com("torso")[0:2].copy()
 
     def reset_model(self):

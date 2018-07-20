@@ -43,6 +43,7 @@ class PolicyGradientModel(ModelWithCritic):
                  f_target_kl=None,
                  lr=0.0001,
                  critic_lr=0.0003,
+                 scale_beta=1.0,
                  npass=1,
                  minibatch_size=64,
                  multi_update=False,
@@ -152,6 +153,7 @@ class PolicyGradientModel(ModelWithCritic):
                                     is_switcher_with_init_len=is_switcher_with_init_len,
                                     initializer=initializer,
                                     lr=critic_lr,
+                                    scale_beta=scale_beta,
                                     name=self.name)
         if hasattr(self.act_space, "low"):
             if use_mix:

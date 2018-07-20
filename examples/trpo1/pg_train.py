@@ -58,6 +58,8 @@ def main():
                         help='minibatch size')
     parser.add_argument('--vlr', required=False, default=0.0003, type=float,
                         help='learning rate of the critic')
+    parser.add_argument('--scale-beta', required=False, default=1.0, type=float,
+                        help='scale beta of critic')
     parser.add_argument('--clip-gradient', default=True, type=bool, help='whether to clip the gradient')
     parser.add_argument('--gpu', required=False, type=int, default=0,
                         help='Running Context.')
@@ -254,7 +256,8 @@ def main():
                                 normalize_wass=args.normalize_wass,
                                 switcher_time_weight=args.switcher_time_weight,
                                 regulation_k=args.regulation_k,
-                                min_prob=args.min_prob)
+                                min_prob=args.min_prob,
+                                scale_beta=args.scale_beta)
 
     def create_dict_shared_params():
         if args.initial_state_dir is not None:

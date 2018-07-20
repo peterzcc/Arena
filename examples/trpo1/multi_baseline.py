@@ -20,6 +20,7 @@ class MultiBaseline(object):
                  initializer=ScalingOrth,
                  minibatch_size=256,
                  lr=0.0003,
+                 scale_beta=1.0,
                  cnn_trainable=True,
                  f_build_cnn=None,
                  is_switcher_with_init_len=0):
@@ -35,6 +36,7 @@ class MultiBaseline(object):
         self.var_notrain = []
         self.initializer = initializer
         self.name = name
+        self.scale_beta = scale_beta
         with tf.variable_scope(main_scope):
             # add  timestep
             self.state_input = tf.placeholder(tf.float32, shape=(None,) + observation_space[0].shape, name="x")
@@ -175,7 +177,7 @@ class MultiBaseline(object):
 
         update_scale = True
         if update_scale:
-            beta = 1.0
+            beta = self.scale_beta
             new_mu = feed[self.y].mean()
             new_sigma = feed[self.y].std()
             if self.curr_mean_value is None:
