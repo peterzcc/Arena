@@ -63,6 +63,13 @@ def random_cont_direction():
     return np.array([np.cos(a), np.sin(a)])
 
 
+def random_direction8():
+    directions_8 = np.array([0, 1, 2, 3, 4, 5, 6, 7]) * np.pi / 4.
+    choice = np.random.randint(0, 8)
+    a = directions_8[choice]
+    return np.array([np.cos(a), np.sin(a)])
+
+
 def x_for_back():
     choice = np.random.randint(0, 2) * 2
     return DIRECTIONS[choice, :]
@@ -80,10 +87,9 @@ task_8_joint = OrderedDict(move0_task8=x_forward_obj, move1_task8=x_backward_obj
                            move4_task8=v_11, move5_task8=v_n1n1, move6_task8=v_1n1, move7_task8=v_n11)
 dir_funcs_task8 = list(task8.values())
 
-
-def random_direction8():
-    choice = np.random.randint(0, len(dir_funcs_task8))
-    return dir_funcs_task8[choice]()
+# def random_direction8():
+#     choice = np.random.randint(0, len(dir_funcs_task8))
+#     return dir_funcs_task8[choice]()
 
 
 hrl_move2d8 = OrderedDict(move2d8=random_direction8, **task8)
