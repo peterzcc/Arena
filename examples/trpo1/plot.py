@@ -30,6 +30,8 @@ def main():
     parser.add_argument('--dataname', default="Reward", type=str, help='name')
     parser.add_argument('--dir', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
     parser.add_argument('--label', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
+    parser.add_argument('--xaxis', nargs='+', help='x axis', type=str, required=False, default="timestep (million)")
+    parser.add_argument('--yaxis', nargs='+', help='y axis', type=str, required=False, default="total reward")
 
     args = parser.parse_args()
     dirs = ["."] if args.dir == "" else args.dir
@@ -54,6 +56,8 @@ def main():
         plt.legend(labels, loc='best')
     # x1, x2, y1, y2 = plt.axis()
     # plt.axis((x1, x2, np.maximum(y1, -1000.), y2))
+    plt.xlabel(args.xaxis)
+    plt.ylabel(args.yaxis)
     plt.savefig('vis_train' + '.pdf', bbox_inches='tight')
     # plt.show()
     plt.clf()
