@@ -4,7 +4,7 @@
 \subsection{Hierarchical Reinforcement Learning Architecture}
 We propose a two-level hierarchical model to solve the target problems. The hierarchical model consists of a top-level decider agent and a set of bottom-level actuator agents. The actuator agents' policies is a mapping from the state to the primary action space, and are trained in the source-task environments. The actuator policies are fixed during the training of the target task.
 
-The decider agent takes an action at every time-step. It may either decide which actuator-policy should be executed, or continue using the current actuator policy that is decided earlier. Therefore, assume there are $n_a$ sub-policies, the action space of the decider agent is actually an $(n_a+1)$-discrete action space. The overalll decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
+The decider agent takes an action at every time-step. It may either decide which actuator-policy should be executed, or continue using the current actuator policy that is decided earlier. Therefore, assume there are $n_a$ sub-policies, the action space of the decider agent is actually an $(n_a+1)$-discrete action space. The overall decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
 
 The observation space of the decider agent consists of 2 parts, the original multi-modal state and the meta state. The meta state contains information about the current sub-policy being executed and the number of time-steps since the last decision has been made.
 
@@ -96,7 +96,7 @@ The unormalized GAE estimator is usually used in practice instead of the normali
 This technique is an adaption of the generalized advantage estimation method~\cite{schulman2015high} in the context of hierarchical reinforcement learning, and originates from the idea of eligibility trace~\cite{rlintro_sutton1998reinforcement}. The goal of the proposed GAE estimator for hierarchical reinforcement learning is to provide an effective variance reduction scheme for the corresponding optimization procedures.
 
 \subsection{Training of the Switcher Policy}
-We train the switcher agent using a flat reinforcement learning method with respective to the return of the target task. However, an extra loss term is added so that the switcher network will be encouraged to produce termination signals less frequently.
+We train the switcher agent using a flat reinforcement learning method with respect to the return of the target task. However, an extra loss term is added so that the switcher network will be encouraged to produce termination signals less frequently.
 \begin{align}
 J'(\theta_s) = J'(\theta_s) + \mathbb{E}[\pi_s(s)]
 \end{align}
