@@ -5,7 +5,8 @@ import os
 import numpy as np
 import gym
 from arena.games.cust_control.single_gather_env import SingleGatherEnv
-from pg_train import random_cont_direction
+from arena.games.cust_control.env_library import task8
+import cv2
 from gym.monitoring import VideoRecorder
 
 
@@ -21,7 +22,8 @@ class RandomAgent(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
-    parser.add_argument('env_id', nargs='?', default='CartPole-v0', help='Select the environment to run')
+    # parser.add_argument('env_id', nargs='?', default='CartPole-v0', help='Select the environment to run')
+    parser.add_argument('--env', default="ant", type=str, help='env')
     args = parser.parse_args()
 
     # Call `undo_logger_setup` if you want to undo Gym's logger setup
@@ -52,6 +54,12 @@ if __name__ == '__main__':
     #                       f_gen_obj=random_cont_direction,
     #                       use_sparse_reward=True,
     #                       obj_dist=1.0)
+    env_name = args.env
+    env = SingleGatherEnv(file_path=os.getcwd() + "/../../arena/games/cust_control/cust_ant.xml", with_state_task=False,
+                          init_height=500,
+                          init_width=500,
+                          f_gen_obj=task8[env_name],
+                          reset_goal_prob=0, )
     outdir = './random-agent-results'
 
     # env = GatherEnv()
@@ -60,7 +68,7 @@ if __name__ == '__main__':
     # directory, including one with existing data -- all monitor files
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
-    env = gym.make(args.env_id)
+    # env = gym.make(args.env_id)
 
     # env = wrappers.Monitor(env, directory=outdir, force=True)
     # env = ComplexWrapper(env, max_episode_length=1000,
@@ -75,15 +83,17 @@ if __name__ == '__main__':
 
     while True:
         ob = env.reset()
-        recorder = VideoRecorder(env, path=outdir + ".mp4")
+        # recorder = VideoRecorder(env, path=outdir + ".mp4")
+        i = 0
         while True:
             action = agent.act(ob, reward, done)
-            # image = env.render(mode='rgb_array')
-            recorder.capture_frame()
-            # cv2.imwrite("image.jpg", image)
+            image = env.render(mode='rgb_array')
+            # recorder.capture_frame()
+            cv2.imwrite("image.jpg", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
             ob, reward, done, _ = env.step(action)
-            if done:
-                recorder.close()
+            i += 1
+            if done or i % 10 == 0:
+                # recorder.close()
                 input("Press Enter to continue...")
                 break
                 # Note there's no env.render() here. But the environment still can open window and

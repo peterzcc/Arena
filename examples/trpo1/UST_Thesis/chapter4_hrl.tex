@@ -93,7 +93,7 @@ The experiment result on the performance during the training of the switcher pol
 
 The average execution length of the decision policies is plotted in Figure~\ref{fig:rec_dynamicg8_avesubt}. The agent manages to find a better switcher policy since the average execution length becomes around $10$ when the performance reaches the highest level at 30 million training steps. It means that the decision frequency of the decision policy is reduced. It can also be seen that the average execution length increases suddenly to the maximum value 500 after that.
 
-Therefore, the training of switcher policy beneficial in the sense that the agent can maintain a good performance. The frequency of invoking decision policy is also reduced.
+The training of switcher policy beneficial in the sense that the agent can maintain a good performance and also reduce the decision frequency of the decision policy. A video recording of the agent can be viewed at  the website: [\url{https://youtu.be/ytW7rTpgRAs}].
 %TODO: explain this
 \begin{figure}[!htbp]
 	\centering
@@ -121,7 +121,6 @@ Therefore, the switcher policy is able to improve the reinforcement learning per
 	\caption{Switcher policy training performance of the task reachcont, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 32 episodes}
 	\label{fig:rec_reachcont_switcher}
 \end{figure}
-
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{rec_180711_reachcont_switcher_subt}
@@ -129,7 +128,7 @@ Therefore, the switcher policy is able to improve the reinforcement learning per
 	\label{fig:rec_reachcont_switcher_subt}
 \end{figure}
 
-The performance of the reachcontreg switcher policy is shown in Figure~\ref{rec_switcher_reachcontreg} and the average execution length of actuator policies is shown in Figure~\ref{rec_switcher_subt_reachcontreg}. The best performance, which as 95, surpasses the final performance of 70 in phase 1. The average execution length is 1.0 when the performance reaches the highest level. This means that temporal abstraction is infeasible for this task. However, the training also follows a pattern that the performance degrades in the later phase of training when the average execution length begins increase.
+The performance of the reachcontreg switcher policy is shown in Figure~\ref{rec_switcher_reachcontreg} and the average execution length of actuator policies is shown in Figure~\ref{rec_switcher_subt_reachcontreg}. A video recording of the agent can be viewed at the website:  [\url{https://youtu.be/Y0uHEpJ7Cck}]. The best performance, which as 95, surpasses the final performance of 70 in phase 1. The average execution length is 1.0 when the performance reaches the highest level. This means that temporal abstraction is infeasible for this task. However, the training also follows a pattern that the performance degrades in the later phase of training when the average execution length begins increase.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{rec_180719_switcher_reachcontreg}

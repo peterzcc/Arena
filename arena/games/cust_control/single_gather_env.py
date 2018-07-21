@@ -330,7 +330,7 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             cam_scale=0.6,
             obj_max_dist=2.0,  # 2.5
             regenerate_goals=False,
-            goal_reward=1.0,
+            goal_reward=1.0, init_height=64, init_width=64,
             *args, **kwargs
     ):
         self.n_apples = 1
@@ -350,6 +350,8 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self.subtasks_dirs = subtask_dirs
         self.use_internal_reward = use_internal_reward
         self.init_noise = init_noise
+        self.init_height = init_height
+        self.init_width = init_width
         if subtask_dirs is None:
             self.dirs = np.array([[0.0, 0.0]])
             self.info_sample = {}
@@ -474,6 +476,21 @@ class SingleGatherEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                 self.model.data.qvel.flat,
                 np.clip(self.model.data.cfrc_ext, -1, 1).flat,
             ])
+
+    def _render(self, mode='human', close=False):
+        if close:
+            if self.viewer is not None:
+                self._get_viewer().finish()
+                self.viewer = None
+            return
+
+        if mode == 'rgb_array':
+            self._get_viewer(visible=False, init_height=self.init_height, init_width=self.init_width).render()
+            data, width, height = \
+                self._get_viewer(visible=False, init_height=self.init_height, init_width=self.init_width).get_image()
+            return np.fromstring(data, dtype='uint8').reshape(height, width, 3)[::-1, :, :]
+        elif mode == 'human':
+            self._get_viewer().loop_once()
 
     def reset_model(self):
         if self.initial_state is None:

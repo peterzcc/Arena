@@ -32,7 +32,7 @@ Specifically, when $P$ and $Q$ are Gaussian distributions with mean $m_1,m_2$ an
     W_2^2(P,Q) = \Vert m_1-m_2\Vert_2^2 +\mathrm{Tr}\left(\Sigma_1+\Sigma_2-2(\Sigma_1^{1/2}\Sigma_2\Sigma_1^{1/2})^{1/2}\right)
 \end{equation}
 
-The problem is solved by performing gradient updates iteratively following the natural gradient with the Rianmanian metric as $W_2$ metric:
+The problem is solved by performing gradient updates iteratively following the natural gradient with the Riemannian metric as $W_2$ metric:
 
 \begin{equation}
     s=H_\theta\left( \overline{W_2^2}(\pi_{old},\pi) \right)^{-1}g := A^{-1}g
