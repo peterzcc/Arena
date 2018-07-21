@@ -4,8 +4,8 @@
 \contentsline {chapter}{Acknowledgments}{iv}{Doc-Start}
 \contentsline {chapter}{Table of Contents}{v}{Doc-Start}
 \contentsline {chapter}{List of Figures}{viii}{Doc-Start}
-\contentsline {chapter}{List of Tables}{xi}{Doc-Start}
-\contentsline {chapter}{Abstract}{xii}{Doc-Start}
+\contentsline {chapter}{List of Tables}{xii}{Doc-Start}
+\contentsline {chapter}{Abstract}{xiii}{Doc-Start}
 \contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}
 \contentsline {section}{\numberline {1.1}Overview}{1}{section.1.1}
 \contentsline {section}{\numberline {1.2}Background in Reinforcement Learning (RL)}{2}{section.1.2}
@@ -48,10 +48,11 @@
 \contentsline {subsection}{\numberline {4.2.2}Experiment on Exceptional Advantage Regularization}{36}{subsection.4.2.2}
 \contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Gaussian Mixture Policy Model}{40}{subsection.4.2.3}
 \contentsline {section}{\numberline {4.3}Experiments on Hierarchical Reinforcement Learning Methods for Multi-modality and Sparse environments}{45}{section.4.3}
-\contentsline {subsection}{\numberline {4.3.1}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{45}{subsection.4.3.1}
-\contentsline {subsection}{\numberline {4.3.2}Training the Decider Agent}{47}{subsection.4.3.2}
-\contentsline {subsubsection}{Phase 1: Decision policy training}{48}{section*.23}
-\contentsline {subsubsection}{Phase 2: Switcher policy training}{48}{section*.26}
-\contentsline {section}{\numberline {4.4}Conclusion on Experiment Results}{55}{section.4.4}
-\contentsline {chapter}{\numberline {5}Discussion}{56}{chapter.5}
-\contentsline {chapter}{Reference}{58}{chapter.5}
+\contentsline {subsection}{\numberline {4.3.1}Performance of flat reinforcement learning solutions}{45}{subsection.4.3.1}
+\contentsline {subsection}{\numberline {4.3.2}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{45}{subsection.4.3.2}
+\contentsline {subsection}{\numberline {4.3.3}Training the Decider Agent}{49}{subsection.4.3.3}
+\contentsline {subsubsection}{Phase 1: Decision policy training}{50}{section*.25}
+\contentsline {subsubsection}{Phase 2: Switcher policy training}{52}{section*.29}
+\contentsline {section}{\numberline {4.4}Conclusion on Experiment Results}{60}{section.4.4}
+\contentsline {chapter}{\numberline {5}Discussion}{62}{chapter.5}
+\contentsline {chapter}{Reference}{64}{chapter.5}

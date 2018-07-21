@@ -22,7 +22,7 @@ where $v_g=v \cdot g_0$ is the "forward reward", which rewards the agent for mov
 
 Apart from "move0", a set of similar tasks with different target directions are denoted as "move1", "move2", "move3", ..., "move7". These tasks are the same as "move0" except that the goal direction is different. The image observation is actually redundant for all these low-level tasks, because the agent only needs to move toward one specific direction in their corresponding environments.
 
-Apart from these simple task, we also propose several tasks that are more complex. We propose several multi-modality environments such as "moveg2", "moveg4", "moveg8", "movecont", "dynamicg8", "dynamiccont". These tasks require the agent to learn not only from the state representation but also the image representation. We also propose sparse multi-modality environments, such as "reachcont". The agent receives sparse reward signals in these environments compared with the previous environments. The target direction or location is represented by a sphere object and can be seen in the image observation.
+Apart from these simple task, we also propose several tasks that are more complex. We propose several multi-modality environments such as "moveg2", "movecont", "dynamicg8". These tasks require the agent to learn not only from the state representation but also the image representation. We also propose sparse multi-modality environments, such as "reachcont". The agent receives sparse reward signals in these environments compared with the previous environments. The target direction or location is represented by a sphere object and can be seen in the image observation.
 The set of all the proposed environments are described in details in table \ref{table_ant_envs}.
 
 
@@ -50,14 +50,15 @@ move6 & velocity: $g_6=(\sqrt{2}/2,-\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move towar
 move7 & velocity: $g_7=(-\sqrt{2}/2,\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\ 
 \hline 
 moveg2 & velocity samples from: $\{g_0,g_1\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
-moveg4 & velocity samples from: $\{g_0,g_1,g_2,g_3\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
-moveg8 & velocity samples from: $\{g_0,g_1, \dots,g_7\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
-movecont & velocity samples from a continuous range of all unit directions&$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
-dynamicg8 &  velocity samples from: $\{g_0,g_1, \dots,g_7\}$ &$ v_g-c_p-c_c$  & the target direction is re-sampled with probability 0.005 at each time-step  \\ \hline
-dynamiccont & velocity samples from a continuous range of all unit directions &$ v_g-c_p-c_c$  & the target direction is re-sampled with probability 0.005 at each time-step  \\ \hline
-reachg4 & position samples from $\{g_0,g_1,g_2,g_3\}$ & $I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & The agent is terminated when reaching a target position\\ \hline
-reachcont & position samples from the unit circle & $I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & The episode is terminated when reaching a target position\\ \hline
-reachcontreg & position samples from the unit circle & $5I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & A new target is sampled when the agent has reached the target position\\ \hline
+%moveg4 & velocity samples from: $\{g_0,g_1,g_2,g_3\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
+%moveg8 & velocity samples from: $\{g_0,g_1, \dots,g_7\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
+movecont & velocity samples from the unit circle&$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
+dynamicg8 &  velocity samples from: $\{g_0,g_1, \dots,g_7\}$ &$ v_g$  & the target direction is re-sampled with probability 0.005 at each time-step  \\ \hline
+%dynamiccont & velocity samples from a continuous range of all unit directions &$ v_g$  & the target direction is re-sampled with probability 0.005 at each time-step  \\ \hline
+%reachg4 & position samples from $\{g_0,g_1,g_2,g_3\}$ & $I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & The agent is terminated when reaching a target position\\ \hline
+reachcont & position samples from the unit circle & $I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & the episode is terminated when reaching a target position\\ \hline
+reachcontreg & position samples from the unit circle & $5I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & a new target is sampled and the episode continuous once the target position is reached\\ \hline
+constdirreachreg & target direction samples from: $\{g_0,g_1, \dots,g_7\}$ & $5I(x_g > 1) - 0.01$  & a reward is given once the agent has moved toward the target direction for a constant distance, then a new target is sampled\\ \hline
 \end{tabular}
 \end{center}
  \caption{Summary of Ant-based environments}
