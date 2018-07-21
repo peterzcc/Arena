@@ -89,7 +89,7 @@ if __name__ == '__main__':
             action = agent.act(ob, reward, done)
             image = env.render(mode='rgb_array')
             # recorder.capture_frame()
-            cv2.imwrite("image.jpg", cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+            cv2.imwrite("{}.jpg".format(args.env), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
             ob, reward, done, _ = env.step(action)
             i += 1
             if done or i % 10 == 0:
