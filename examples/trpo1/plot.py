@@ -53,7 +53,7 @@ def main():
             max_id = exceeds[0] if len(exceeds) != 0 else len(x)
             x = x[:max_id]
             y = y[:max_id]
-        plt.plot(x, y, linewidth=0.5, alpha=0.8)
+        plt.plot(x, y, linewidth=0.5, alpha=args.a)
     if labels[0] is not None:
         plt.legend(labels, loc='best')
     # x1, x2, y1, y2 = plt.axis()
