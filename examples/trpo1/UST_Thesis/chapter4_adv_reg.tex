@@ -22,7 +22,7 @@ The average Standard Deviation of the policy distribution during training is vis
 \begin{figure}[!htbp]
 	\includegraphics[width=\textwidth]{images/rec_180609_std_ent_reg.pdf}
 	\centering
-	\caption{Logarithm of average standard deviation of the policy of agents in Figure~\ref{rec_ent_reg}, the horizontal axis is the number of million timesteps.}\label{rec_std_ent_reg}
+	\caption{Average standard deviation of the policy of agents in Figure~\ref{rec_ent_reg}, the horizontal axis is the number of million timesteps.}\label{rec_std_ent_reg}
 \end{figure}
 
 \subsection{Experiment on Exceptional Advantage Regularization}
@@ -39,53 +39,76 @@ The experiment result on the average total reward of an normal ACKTR agent witho
 \end{figure}
 
 \begin{figure}[!htbp]
-	\includegraphics[width=0.7\textwidth]{images/rec_stat_moveg2_meanrt.pdf}
+	\includegraphics[width=0.7\textwidth]{images/rec_180528_meanrt_statlog.pdf}
 	\centering
 	\caption{The avearge reward per time-step of ACKTR agent on the moveg2 task, the horizontal axis is the number of training batches}\label{rec_stat_moveg2_meanrt}
 \end{figure}
 
 \begin{figure}[!htbp]
-	\includegraphics[width=0.7\textwidth]{images/rec_stat_moveg2_std.pdf}
+\label{key}	\includegraphics[width=0.7\textwidth]{images/rec_180528_std_statlog.pdf}
 	\centering
-	\caption{The logarithm of avearge standard deviation of ACKTR agent's policy on the moveg2 task, the horizontal axis is the number of training batches}\label{rec_stat_moveg2_std}
+	\caption{The avearge standard deviation of ACKTR agent's policy on the moveg2 task, the horizontal axis is the number of training batches}\label{rec_stat_moveg2_std}
 \end{figure}
 The distribution of advantage values at the first epoch (epoch 0) is shown in Figure~\ref{vis_stats_0}. It can be seen that the advantage values are distributed uniformly because the critic model is just initialized. Figure~\ref{vis_stats_3000} shows the distribution at epoch 3000. It can be seen that after the critic model has been trained for some time, the marginal distribution advantage value tend to follow a normal distribution with zero mean.  Figure~\ref{vis_stats_4900} shows the distribution of advantage values at epoch 4900. The advantage values are likely to have a positive bias at some samples with low log-likelihood  when the agent in this case, where the agent just managed to escape from a local minimum.  
 
 A large number of samples with low likelihood but positive advantage value indicates that it might be beneficial to the agent it the degree of exploration is be increased. However, figure~\ref{rec_stat_moveg2_std} on the change of average standard deviation shows that the agent actually keep decreasing the standard deviations of its policy even at this case. Therefore, the application of a exceptional advantage regularization term, aims to solve this problem.
-
 \begin{figure}[!htbp]
-	\includegraphics[width=\textwidth]{images/vis_stats_0.pdf}
 	\centering
-	\caption{The distribution of advantage values of the ACKTR agent at batch 0 on the moveg2 task, the horizontal axis is the log-likelihood value}
-	\label{vis_stats_0}
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{vis_stats_0}
+		\caption{Epoch 0}
+			\label{vis_stats_0}
+	\end{subfigure}%
+	~ 
+	\begin{subfigure}[t]{0.5\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{vis_stats_3000}
+		\caption{Epoch 3000}
+			\label{vis_stats_3000}
+	\end{subfigure}
+	~ 
+	\begin{subfigure}[t]{0.7\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{vis_stats_4900}
+		\caption{Epoch 4900}
+		\label{vis_stats_4900}
+	\end{subfigure}
+	\caption{The distribution of advantage values of the ACKTR agent at epoch 0, 3000 and 4900 respectively. The horizontal axis is the log-likelihood value}
 \end{figure}
-
-\begin{figure}[!htbp]
-	\includegraphics[width=\textwidth]{images/vis_stats_3000.pdf}
-	\centering
-	\caption{The distribution of advantage values of the ACKTR agent at batch 300 on the moveg2 task, the horizontal axis is the log-likelihood value}
-	\label{vis_stats_3000}
-\end{figure}
-
-\begin{figure}[!htbp]
-	\includegraphics[width=\textwidth]{images/vis_stats_4900.pdf}
-	\centering
-	\caption{The distribution of advantage values of the ACKTR agent at batch 4900 on the moveg2 task, the horizontal axis is the log-likelihood value}
-	\label{vis_stats_4900}
-\end{figure}
+%\begin{figure}[!htbp]
+%	\includegraphics[width=\textwidth]{images/vis_stats_0.pdf}
+%	\centering
+%	\caption{The distribution of advantage values of the ACKTR agent at batch 0 on the moveg2 task, the horizontal axis is the log-likelihood value}
+%	\label{vis_stats_0}
+%\end{figure}
+%
+%\begin{figure}[!htbp]
+%	\includegraphics[width=\textwidth]{images/vis_stats_3000.pdf}
+%	\centering
+%	\caption{The distribution of advantage values of the ACKTR agent at batch 300 on the moveg2 task, the horizontal axis is the log-likelihood value}
+%	\label{vis_stats_3000}
+%\end{figure}
+%
+%\begin{figure}[!htbp]
+%	\includegraphics[width=\textwidth]{images/vis_stats_4900.pdf}
+%	\centering
+%	\caption{The distribution of advantage values of the ACKTR agent at batch 4900 on the moveg2 task, the horizontal axis is the log-likelihood value}
+%	\label{vis_stats_4900}
+%\end{figure}
 
 The performance of exceptional advantage regularization (EAR) technique is tested on the 'movecont' task. We keep the same neural network configuration as in section \ref{sec_multi_modal_flat}, with the modification that the EAR technique is used.
 The experiment result on the performance of an ACKTR agent with different weights exceptional advantage regularization is shown in Figure~\ref{rec_adv_reg}. The average standard deviation of the policies is also shown in Figure~\ref{rec_std_adv_reg}. All the agents are trained with batch-size 2560 and KL-divergence constraint 0.0003. The weight-0 agent is the same as the original ACKTR agent without any exploration regularization, and it could only achieve a total reward of around 2000 at the end of training. The agent with exceptional advantage regularization weight 0.04 can improve rapidly in the early phase before 40 million timestep, but gets stuck at around 3500. This shows that the exceptional advantage regularization method might cause adverse effect on the final performance. The agent with exceptional advantage regularization weight 0.01 achieves the best final performance. Its average standard deviation shows that the agent manages to increase its policy entropy and re-explore the environment after it has escaped from a local minimum.
 \begin{figure}[!htbp]
-	\includegraphics[width=\textwidth]{images/rec_adv_reg.pdf}
+	\includegraphics[width=\textwidth]{images/rec_180606_adv_reg.pdf}
 	\centering
-	\caption{Performance of agents with different exceptional advantage regularization weights, the $x$-axis is the number of million time-steps and the $y$-axis is the total episode reward averaged over the last 32 episodes}\label{rec_adv_reg}
+	\caption{Performance of agents with different exceptional advantage regularization weights, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 32 episodes}\label{rec_adv_reg}
 \end{figure}
 
 \begin{figure}[!htbp]
-	\includegraphics[width=\textwidth]{images/rec_std_adv_reg.pdf}
+	\includegraphics[width=\textwidth]{images/rec_180606_std_adv_reg.pdf}
 	\centering
-	\caption{The logarithm of avearge standard deviation of agents with different exceptional advantage regularization weights, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 32 episodes}\label{rec_std_adv_reg}
+	\caption{The avearge standard deviation of agents with different exceptional advantage regularization weights, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 32 episodes}\label{rec_std_adv_reg}
 \end{figure}
 
 \subsection{Experiment on Robust Concentric Gaussian Mixture Policy Model}

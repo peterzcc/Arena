@@ -120,7 +120,8 @@ LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 rsync -avP dy2:/home/data/czeng/Arena/examples/trpo1/rec_180721_reachcontdirr1 .
 
 disprun python3.6 $WS/plot.py -w20 --dir ../exp_27 ../exp_28 --label w=3e-3 w=1e-2 -a0.1
-
+python3.6 $WS/plot.py -w200
+python3.6 $WS/visualize_log.py --dataname subpolicy_len
 
 i +=0
 

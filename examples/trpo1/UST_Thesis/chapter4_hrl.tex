@@ -17,17 +17,17 @@ We proposed that the domain randomization by cross-sampling initial states metho
 The experiment result on the performance of all the actuator agents is plotted in Figure~\ref{rec_8task_training}. It can be seen that of the actuator agents get stuck at sub-optimal performance levels. 
 
 \begin{figure}[!htbp]
-	\includegraphics[width=\textwidth]{images/rec_8task_training.pdf}
+	\includegraphics[width=\textwidth]{images/rec_180617_joint8.pdf}
 	\centering
-	\caption{Performance of actuator agents with domain randomization by cross-sampling initial states, the $x$-axis is the number of million time-steps and the $y$-axis is the total episode reward averaged over the last 200 episodes}\label{rec_8task_training}
+	\caption{Performance of actuator agents with domain randomization by cross-sampling initial states, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 200 episodes}\label{rec_8task_training}
 \end{figure}
 
 Therefore, the proposed synchronous scheduling of actuator learning method aims to prevent this problem. The experiment results of the technique is shown in Figure \ref{rec_sync_training}. In this experiment, the policy training of the actuator agents who outperforms the global lowest-performance by 1000 is paused until all other actuator agents outperform this agent. The result shows that all the actuator agents are able to reach a final performance of around 6000 although their performance diverge initially. This has verified that the proposed method can successfully prevent any actuator agents getting stuck at sub-optimal performance levels. 
 
 \begin{figure}[!htbp]
-	\includegraphics[width=\textwidth]{images/rec_sync_training.pdf}
+	\includegraphics[width=\textwidth]{images/rec_180619_sync.pdf}
 	\centering
-	\caption{Performance of actuator agents using synchronous scheduling of actuator learning , the $x$-axis is the number of million time-steps and the $y$-axis is the total episode reward averaged over the last 200 episodes}\label{rec_sync_training}
+	\caption{Performance of actuator agents using synchronous scheduling of actuator learning , the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 200 episodes}\label{rec_sync_training}
 \end{figure}
 
 Therefore the learning of source tasks is successfully solved by the proposed technique of domain randomization by cross-sampling initial states with synchronous scheduling of actuator learning method.
@@ -43,16 +43,16 @@ The performance of the experiment on the training of decision policy on task rea
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth]{rec_dynamicg8_decider_subt10}
-\caption{Decision policy training performance of the task dynamicg8, the $x$-axis is the number of million time-steps and the $y$-axis is the total episode reward averaged over the last 32 episodes}
+\includegraphics[width=\linewidth]{rec_180630_dynamicg8_exp37}
+\caption{Decision policy training performance of the task dynamicg8, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 32 episodes}
 \label{fig:rec_dynamicg8_decider_subt10}
 \end{figure}
 
 
 \begin{figure}
 \centering
-\includegraphics[width=1\linewidth]{rec_reachc05_decider_subt10.pdf}
-\caption{Decision policy training performance of the task reachcont, the $x$-axis is the number of million time-steps and the $y$-axis is the total episode reward averaged over the last 200 episodes}
+\includegraphics[width=1\linewidth]{rec_0702_reacc05_decider_exp2.pdf}
+\caption{Decision policy training performance of the task reachcont, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 200 episodes}
 \label{fig:rec_reachc05_decider_subt10}
 \end{figure}
 
@@ -66,17 +66,18 @@ The experiment result on the performance during the training of switcher policy 
 The average execution length of the decision policies is plotted in Figure~\ref{fig:rec_dynamicg8_avesubt}. The agent manages to find a better switcher policy since the final average execution length becomes around $10$ while it was around $5$ in phase 1. It means that the time scale of the decision policy is reduced.
 
 Therefore, the training of switcher policy beneficial in the sense that the agent can maintain a good performance. The frequency of invoking decision policy is also reduced.
+%TODO: explain this
 \begin{figure}[!htbp]
 	\centering
-	\includegraphics[width=\linewidth]{rec_dynamicg8_switcher}
-	\caption{Switcher policy training performance of the task dynamicg8, the $x$-axis is the number of million time-steps and the $y$-axis is the total episode reward averaged over the last 32 episodes}
+	\includegraphics[width=\linewidth]{rec_180707_dynamicg8_switcher_wo_subt_subpolicy_len}
+	\caption{Switcher policy training performance of the task dynamicg8, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 200 episodes}
 	\label{fig:rec_dynamicg8_switcher}
 \end{figure}
 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{rec_dynamicg8_avesubt}
-	\caption{Average execution length of the actions of decision policies of the task dynamicg8, the $x$-axis is the number of million time-steps and the $y$-axis is the decision policy's average execution length of the last batch.}
+	\caption{Average execution length of the actions of decision policies of the task dynamicg8, the horizontal axis is the number of million time-steps and the vertical axis is the decision policy's average execution length of the last batch.}
 	\label{fig:rec_dynamicg8_avesubt}
 \end{figure}
 
@@ -88,15 +89,15 @@ Therefore, the switcher policy is able to improve the reinforcement learning per
 
 \begin{figure}[!htbp]
 	\centering
-	\includegraphics[width=\linewidth]{rec_reachcont_switcher}
-	\caption{Switcher policy training performance of the task reachcont, the $x$-axis is the number of million time-steps and the $y$-axis is the total episode reward averaged over the last 32 episodes}
+	\includegraphics[width=\linewidth]{rec_180711_reachcont_switcher}
+	\caption{Switcher policy training performance of the task reachcont, the horizontal axis is the number of million time-steps and the vertical axis is the total episode reward averaged over the last 32 episodes}
 	\label{fig:rec_reachcont_switcher}
 \end{figure}
 
 \begin{figure}[!htbp]
 	\centering
-	\includegraphics[width=\linewidth]{rec_reachcont_switcher_subt}
-	\caption{Average execution length of the actions of decision policies of the task reachcont, the $x$-axis is the number of million time-steps and the $y$-axis is the decision policy's average execution length of the last batch.}
+	\includegraphics[width=\linewidth]{rec_180711_reachcont_switcher_subt}
+	\caption{Average execution length of the actions of decision policies of the task reachcont, the horizontal axis is the number of million time-steps and the vertical axis is the decision policy's average execution length of the last batch.}
 	\label{fig:rec_reachcont_switcher_subt}
 \end{figure}
 
