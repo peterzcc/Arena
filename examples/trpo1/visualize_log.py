@@ -89,7 +89,7 @@ def get_loss(dir, mode=None, name="", extra_str="move1", use_epoch=False):
     #     plt.plot(t_array[starting_point:l_data], loss_list[starting_point:l_data], '.', markersize=1.0)
     # else:
     #     plt.plot(np.array(list(range(len(loss_list) - starting_point))), loss_list[starting_point:])
-    log_scale_names = ["kl", "std"]
+    log_scale_names = ["kl"]
     if dataname in log_scale_names:
         ys = np.array(np.log10(np.array(loss_list).astype(np.float32) + 1e-6))
     else:
@@ -122,6 +122,10 @@ def main():
     parser.add_argument('--label', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
     parser.add_argument('--extra', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
     parser.add_argument('--shape', required=False, type=str, default="line", help='dot or line')
+    parser.add_argument('--xaxis', nargs='+', help='x axis', type=str, required=False, default="timestep (million)")
+    parser.add_argument('--yaxis', nargs='+', help='y axis', type=str, required=False, default="")
+    parser.add_argument('--a', '-a', required=False, type=float, default=0.8,
+                        help='alpha')
     args, unknown = parser.parse_known_args()
     dirs = ["."] if args.dir == "" else args.dir
     labels = [None] if args.label == "" else args.label
@@ -140,11 +144,17 @@ def main():
             x = x[:max_id]
             y = y[:max_id]
         if args.shape == "line":
-            plt.plot(x, y, linewidth=0.5)
+            plt.plot(x, y, linewidth=0.5, alpha=args.a)
         else:
             plt.plot(x, y, '.', markersize=1.0)
     if labels[0] is not None:
         plt.legend(labels, loc='best')
+    plt.xlabel(args.xaxis)
+    if args.yaxis == "":
+        yaxis = args.dataname
+    else:
+        yaxis = args.yaxis
+    plt.ylabel(yaxis)
     plt.savefig('vis_{}.pdf'.format(args.dataname), bbox_inches='tight')
     plt.clf()
 

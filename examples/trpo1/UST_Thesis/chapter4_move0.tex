@@ -22,16 +22,16 @@ We'd also like to compare the learning performance of the ACKTR method across di
 
 We'd also like to verify if the proposed W-KTR method is less prune to local minimum on the task "move0". The experiment results comparing the performance of W-KTR agents with different learning rates is shown in Figure~\ref{fig_wass_const_tune}. The result shows that none of the W-KTR agents gets stuck at the local minimum around 3000, and their final performance can reach a total return of around 6000. However, the W-KTR agent appears to have a much slower rate of improvement on the performance before 50 million time-steps.
 \begin{figure}[!htbp]
-	\includegraphics[width=0.7\textwidth]{images/rec_wass_const_tune}
+	\includegraphics[width=0.7\textwidth]{rec_180608_wass_const}
 	\centering
 	\caption{Performance of W-KTR agents with different W2-metric constraints. All the agents are trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 20 episodes and the horizontal axis is the number of million time-steps}\label{fig_wass_const_tune}
 \end{figure}
 
 We also test if applying a decaying Wasserstein constraint at the early phase of training will improve the learning performance. The experiment of a W-KTR agent with a decaying W-2 constraint from 0.02 to 0.00003 in the first 15 million time-steps is shown in Figure~\ref{fig_wass_decay}. The agent can achieve a more efficient learning performance in the first 50 million time-steps. However, the drawback of this method is that more hyper-parameters need to be tuned.
 \begin{figure}[!htbp]
-	\includegraphics[width=0.7\textwidth]{images/rec_wass_decay}
+	\includegraphics[width=0.7\textwidth]{rec_180608_wass_decay}
 	\centering
-	\caption{Performance of a W-KTR agent with a decaying W2-metric from 0.02 to 0.00003 in the first 15 million time-steps. The agent is trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 200 episodes and the horizontal axis is the number of million time-steps}\label{fig_wass_decay}
+	\caption{Performance of a W-KTR agent with a decaying W2-metric from 0.02 to 0.00003 in the first 15 million time-steps. The agent is trained with batch-size 4000 and 20 parallel agents. The vertical axis is the total return averaged over the recent 20 episodes and the horizontal axis is the number of million time-steps}\label{fig_wass_decay}
 \end{figure}
 
 The experiment results show that the proposed W-KTR algorithm is able to achieve the same level of final performance as the contemporary state-of-art methods. The major drawback is that the algorithm does not perform well in training time. The decaying learning rate feature of KL-divergence based trust region algorithms is able to achieve a proper performance improvement rate in the early phase of training.
