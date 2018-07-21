@@ -103,12 +103,13 @@ disprun python3.6 $WS/visualize_log.py --dataname subpolicy_len --dir ../exp_22 
 local:
 
 record:
-disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env reachreg --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env dynamic2d5task8joint --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env constdirreachr1 --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
 
 disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env constdirreachreg --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
 
-disprun python3.6 $WS/plot.py -w20 --dir ../move1 ../move2 ../move3  --label run1 run2 run3
+disprun python3.6 $WS/
+plot.py -w20 --dir ../move1 ../move2 ../move3  --label run1 run2 run3
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 
