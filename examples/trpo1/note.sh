@@ -90,6 +90,7 @@ CUDA_VISIBLE_DEVICES=1,2,3,0 disprun python3.6 pg_train.py --env constdirreachre
 CUDA_VISIBLE_DEVICES=2,3,0,1 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO --regulation-k 50.0 --min-prob 0.001
 
 disprun python3.6 ~/Arena/examples/trpo1/plot.py -w32 --dir ../exp_10 ../exp_11 ../exp_12  --label 1 2 3
+disprun python3.6 ~/Arena/examples/trpo1/plot.py -w32 --dir ../exp_20 ../exp_21 --label 1 2
 
 1mux1
 CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 10240 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.00003 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 10 --npret -1  --loss PPO --regulation-k 50.0 --min-prob 0.00001
@@ -116,7 +117,10 @@ disprun python3.6 $WS/plot.py -w20 --dir ../move1 ../move2 ../move3  --label run
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 
-import matplotlib.pyplot as plt
+rsync -avP dy2:/home/data/czeng/Arena/examples/trpo1/rec_180721_reachcontdirr1 .
+
+disprun python3.6 $WS/plot.py -w20 --dir ../exp_27 ../exp_28 --label w=3e-3 w=1e-2
+
 
 i +=0
 

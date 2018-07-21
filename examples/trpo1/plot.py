@@ -32,6 +32,8 @@ def main():
     parser.add_argument('--label', nargs='+', help='<Required> Set flag', type=str, required=False, default="")
     parser.add_argument('--xaxis', nargs='+', help='x axis', type=str, required=False, default="timestep (million)")
     parser.add_argument('--yaxis', nargs='+', help='y axis', type=str, required=False, default="total reward")
+    parser.add_argument('--a', '-a', required=False, type=float, default=0.8,
+                        help='alpha')
 
     args = parser.parse_args()
     dirs = ["."] if args.dir == "" else args.dir
