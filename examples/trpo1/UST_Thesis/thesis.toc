@@ -46,12 +46,12 @@
 \contentsline {section}{\numberline {4.2}Experiment on Flat Reinforcement Learning Solutions to Multi-modality Tasks}{35}{section.4.2}
 \contentsline {subsection}{\numberline {4.2.1}Conventional Flat reinforcement Learning Methods}{35}{subsection.4.2.1}
 \contentsline {subsection}{\numberline {4.2.2}Experiment on Exceptional Advantage Regularization}{36}{subsection.4.2.2}
-\contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Gaussian Mixture Policy Model}{46}{subsection.4.2.3}
-\contentsline {section}{\numberline {4.3}Experiments on Hierarchical Reinforcement Learning Methods for Multi-modality and Sparse environments}{47}{section.4.3}
-\contentsline {subsection}{\numberline {4.3.1}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{47}{subsection.4.3.1}
-\contentsline {subsection}{\numberline {4.3.2}Training the Decider Agent}{49}{subsection.4.3.2}
-\contentsline {subsubsection}{Phase 1: Decision policy training}{50}{section*.1}
-\contentsline {subsubsection}{Phase 2: Switcher policy training}{50}{section*.2}
+\contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Gaussian Mixture Policy Model}{40}{subsection.4.2.3}
+\contentsline {section}{\numberline {4.3}Experiments on Hierarchical Reinforcement Learning Methods for Multi-modality and Sparse environments}{45}{section.4.3}
+\contentsline {subsection}{\numberline {4.3.1}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{45}{subsection.4.3.1}
+\contentsline {subsection}{\numberline {4.3.2}Training the Decider Agent}{47}{subsection.4.3.2}
+\contentsline {subsubsection}{Phase 1: Decision policy training}{48}{section*.23}
+\contentsline {subsubsection}{Phase 2: Switcher policy training}{48}{section*.26}
 \contentsline {section}{\numberline {4.4}Conclusion on Experiment Results}{55}{section.4.4}
-\contentsline {chapter}{\numberline {5}Discussion}{58}{chapter.5}
-\contentsline {chapter}{Reference}{60}{chapter.5}
+\contentsline {chapter}{\numberline {5}Discussion}{56}{chapter.5}
+\contentsline {chapter}{Reference}{58}{chapter.5}
