@@ -113,6 +113,7 @@ disprun python3.6 $WS/plot.py -w20 --dir ../exp_27 ../exp_28 --label w=3e-3 w=1e
 python3.6 $WS/plot.py -w200
 python3.6 $WS/visualize_log.py --dataname subpolicy_len
 
+detex thesis.tex > thesis.txt
 i +=0
 
 i +=1;plt.figure(0);plt.imshow(x[i,:,:],cmap="gray");plt.figure(1);plt.imshow(recon[i,:,:,0],cmap="gray");plt.figure(2);plt.imshow(np.reshape(features[i,:,:,:],(7,7,1)),cmap="gray")
