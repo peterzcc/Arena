@@ -70,7 +70,7 @@ The performance of the training of decision policy on task reachcont is shown in
 \label{fig:rec_reachc05_decider_subt10}
 \end{figure}
 
-The performance of the training of decision policy on task reachcontreg is shown in Figure~\ref{rec_reachcontreg}. The task appears to be more difficult than reachcont because the episode length is much longer. The hierarchical reinforcement learning agent still manages to solve the task at the end.
+The performance of the training of decision policy on task reachcontreg is shown in Figure~\ref{rec_reachcontreg}. The task appears to be more difficult than reachcont because the episode length is much longer. The hierarchical reinforcement learning agent still manages to solve the task in the end.
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=1\linewidth]{rec_180719_reachcont_2.pdf}
@@ -93,7 +93,7 @@ The performance of the training of the switcher policy on the task dynamicg8 is 
 
 The average execution length of the decision policies is shown in Figure~\ref{fig:rec_dynamicg8_avesubt}. The average execution length becomes around $10$ when the performance reaches the highest level at 30 million training steps, compared to around $4.5$ in phase 1. Therefore, the decision frequency of the decision policy is reduced. It can also be seen that the average execution length suddenly increases to the maximum value 500 after 30 million training steps.
 
-The training of switcher policy is beneficial in the sense that the agent can improve its performance and also reduce the decision frequency of the decision policy. A video recording of the agent with best performance can be watched at  the website: [\url{https://youtu.be/ytW7rTpgRAs}].
+The training of switcher policy is beneficial in the sense that the agent can improve its performance and also reduce the decision frequency of the decision policy. A video recording of the agent with the highest performance can be watched at  the website: [\url{https://youtu.be/ytW7rTpgRAs}].
 
 \begin{figure}[!htbp]
 	\centering
@@ -143,6 +143,6 @@ The performance of the reachcontreg switcher policy is shown in Figure~\ref{rec_
 	\label{rec_switcher_subt_reachcontreg}
 \end{figure}
 
-One reason that the performance degrades in the late phase of switcher policy training could be due to the regularization term that penalize the termination of actuator policy. The term could have a stronger impact at the late phase of training, where the scale of the advantage term in the reinforcement learning loss decreases.
+One reason that the performance degrades in the late phase of switcher policy training could be due to the regularization term that penalizes the termination of the current actuator policy. The term could have a stronger impact at the late phase of training, where the scale of the advantage term in the reinforcement learning loss decreases.
 
-The above experiment results show that it is feasible to train a switcher policy that controls the scheduling intervals of the decision policy in an end-to-end manner. However, a better penalty term on frequent actuator policy termination needs be designed to prevent the degradation of performance in the late phase of training. 
+The above experiment results show that it is feasible to train a switcher policy that controls the scheduling intervals of the decision policy in an end-to-end manner. However, the proposed regularization term does not appear to be an optimal choice. 

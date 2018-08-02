@@ -2,7 +2,7 @@
 %!TEX root = ./thesis.tex
 \section{Flexible-scheduling Hierarchical Method}
 \subsection{Hierarchical Reinforcement Learning Architecture}
-We propose a two-level hierarchical reinforcement learning method, namely flexible-scheduling hierarchical method, to solve the target problems with multi-modal state sapce and sparse rewards. The hierarchical model consists of a top-level decider agent and a set of bottom-level actuator agents. The actuator policies are mappings from the state to the primary action space. They are trained in the source-task environments and fixed when solving the target task.
+We propose a two-level hierarchical reinforcement learning method, namely flexible-scheduling hierarchical method, to solve the target problems with multi-modal state space and sparse rewards. The hierarchical model consists of a top-level decider agent and a set of bottom-level actuator agents. The actuator policies are mappings from the state to the primary action space. They are trained in the source-task environments and fixed when solving the target task.
 
 The decider agent takes an action at every time-step. It may either decide which actuator-policy should be executed, or continue using the current actuator policy that has been decided earlier. Therefore, assume there are $n_a$ sub-policies, the action space of the decider agent is actually an $(n_a+1)$-discrete action space. The overall decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
 

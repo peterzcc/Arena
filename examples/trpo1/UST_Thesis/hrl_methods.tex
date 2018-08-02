@@ -35,7 +35,7 @@ A generalized form of the Bellman optimality equation is then proposed:
     V_O^*(s) = \max_{o \in O_s} \big[ R(s,o)+\sum_{s'}P(s' \lvert s,o) V_O^*(s') \big]
 \end{equation}
 % The optimal policies over options are in general suboptimal policies in the original MDP when some of the primitive actions are not available as 1-step options.
-The option framework proposes a formulation of hierarchical reinforcement learning and connects it to SMDP theory. The authors also propose the method for training the policy over options. However, the question on how the hierarchy of options is developed are not answered.
+The option framework proposes a formulation of hierarchical reinforcement learning and connects it to SMDP theory. The authors also propose the method for training the policy over options. However, the question on how the hierarchy of options is developed is not answered.
 
 \subsection{Modulated Hierarchical Controller}
 The study of \cite{heess2016learning} applies hierarchical reinforcement learning in deep reinforcement learning for continuous control problems. They propose a two-level hierarchical agent architecture consisting of a high-level (HL) policy and a low-level (LL) policy. The high-level policy produces a modulation signal which the low-level agent then takes as part of its input. The architecture is demonstrated in Figure~\ref{review_moduler_arch}.
