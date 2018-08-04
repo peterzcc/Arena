@@ -417,6 +417,11 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               f_gen_obj=random_cont_direction,
                               forward_scale=1.0,
                               reset_goal_prob=0, )
+    elif env_name == "stateflatcont2d":
+        env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=True,
+                              f_gen_obj=random_cont_direction,
+                              forward_scale=1.0,
+                              reset_goal_prob=0)
     elif env_name.startswith(NOISE):
         init_noise = float(env_name[len(NOISE):])
         env = SingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
