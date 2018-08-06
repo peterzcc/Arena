@@ -342,10 +342,11 @@ def make_env(env_name, withimg, T=1000, pid=0, initial_state_dir=None):
                               use_sparse_reward=True,
                               goal_reward=5.0,
                               regenerate_goals=True)
-    elif env_name == list(hrl_constdirreachreg.keys())[0]:
+    elif env_name == list(hrl_constdirreachreg.keys())[0] or env_name == "stateconstdirreachreg":
         num_frame = 3
         subtask_dirs = np.stack([v() for (k, v) in list(task8.items())], axis=0)
-        env = ConstDirSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=False,
+        with_state_task = (env_name == "stateconstdirreachreg")
+        env = ConstDirSingleGatherEnv(file_path=cwd + "/cust_ant.xml", with_state_task=with_state_task,
                                       f_gen_obj=random_direction8,
                                       subtask_dirs=subtask_dirs,
                                       catch_range=0.75,
