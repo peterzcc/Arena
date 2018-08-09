@@ -272,7 +272,7 @@ def main():
             other_paths = None
         dict_memory_shared_params = dict(initial_state_path=initial_state_path,
                                          other_paths=other_paths,
-                                         at_random=args.rand_mem)
+                                         save_initial_state_at_random=args.rand_mem)
         return dict_memory_shared_params
 
     def pg_shared_params():
