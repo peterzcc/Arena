@@ -138,17 +138,22 @@ class H5Ermemory(Ermemory):
             self.sample_cache = None
             return None
 
-    def insert(self, x, ave_R=None):
+    def insert(self, x, ave_R=None, at_random=False):
         n = x.shape[0]
-        if self.data_top + n > self.max_count:
-            self.data_top = 0
-        slc = np.s_[self.data_top:(self.data_top + n)]
-        # with h5py.File(self.path, 'r+', swmr=True) as f:
+        if self.data_count < self.max_count:
+            at_random = False
+        if at_random:
+            insert_pos = np.random.randint(self.max_count - n)
+        else:
+            if self.data_top + n > self.max_count:
+                self.data_top = 0
+            insert_pos = self.data_top
+            self.data_top += n
+        slc = np.s_[insert_pos:(insert_pos + n)]
         f = self.f
         self._push_data(x, slc, n, f)
         self.data_count = min(self.max_count, self.data_count + n)
         self._push_count(f)
-        self.data_top += n
 
         if ave_R is not None:
             self._save_ave_R(f, ave_R)

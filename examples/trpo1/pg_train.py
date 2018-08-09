@@ -136,6 +136,8 @@ def main():
 
     parser.add_argument('--render', default="off", type=str, help='rendoer option')
     parser.add_argument("--savestats", default=False, type=str2bool, nargs='?', const=True, help='savestats')
+    parser.add_argument('--rand-mem', default=False, type=str2bool, nargs='?',
+                        const=False, )
     parser.add_argument("--debug", default=False, type=str2bool, nargs='?', const=True, help='debug')
     args = parser.parse_args()
 
@@ -269,7 +271,8 @@ def main():
             initial_state_path = None
             other_paths = None
         dict_memory_shared_params = dict(initial_state_path=initial_state_path,
-                                         other_paths=other_paths)
+                                         other_paths=other_paths,
+                                         at_random=args.rand_mem)
         return dict_memory_shared_params
 
     def pg_shared_params():

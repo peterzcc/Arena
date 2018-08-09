@@ -71,7 +71,8 @@ class DictMemory(object):
                  num_actors=1,
                  f_check_batch=None,
                  initial_state_path=None,
-                 other_paths=None):
+                 other_paths=None,
+                 save_initial_state_at_random=False):
         logging.debug("dict memory args:\n {}".format(locals()))
         self.gamma = gamma
         self.lam = lam
@@ -116,10 +117,12 @@ class DictMemory(object):
                                          max_size=INITIAL_STATE_MAX_NUM)
                 self.state_readers.append(this_reader)
             self.obs_to_saved_data = obs_to_saved_data
+            self.save_initial_state_at_random = save_initial_state_at_random
         else:
             self.state_recorder = None
             self.state_readers = []
             self.obs_to_saved_data = None
+            self.save_initial_state_at_random = None
 
     def append_state(self, observation, action, info, pid=0,
                      leaf_id=None, leaf_action=None, leaf_model_info=None, curr_time_step=None):
@@ -603,7 +606,8 @@ class DictMemory(object):
 
         # save state data
         if self.initial_state_path is not None:
-            self.state_recorder.insert(self.obs_to_saved_data(obs), ave_R=Experiment.global_return.value)
+            self.state_recorder.insert(self.obs_to_saved_data(obs), ave_R=Experiment.global_return.value,
+                                       at_random=self.save_initial_state_at_random)
             Experiment.other_global_returns = [state_reader.get_ave_R() for state_reader in self.state_readers]
         return result
 

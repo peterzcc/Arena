@@ -76,7 +76,8 @@ class PolicyGradientModel(ModelWithCritic):
                  joint_training_return_diff=1000.,
                  regulation_k=50.0,
                  switcher_time_weight=1.0,
-                 min_prob=0.001
+                 min_prob=0.001,
+                 sync_perf=False
                  ):
         ModelWithCritic.__init__(self, observation_space, action_space)
         self.ob_space = observation_space
@@ -342,6 +343,7 @@ class PolicyGradientModel(ModelWithCritic):
 
         self.joint_training_return_diff = joint_training_return_diff
         self.waiting_for_other_actuators = False
+        self.sync_perf = sync_perf
 
 
 
@@ -743,7 +745,8 @@ class PolicyGradientModel(ModelWithCritic):
         else:
             feed, mean_t_reward, feed_critic = None, None, None
 
-        self.check_if_wait_for_other_actuators()
+        if self.sync_perf:
+            self.check_if_wait_for_other_actuators()
         if self.should_train and self.f_train_this_epoch(self.n_update) and not self.waiting_for_other_actuators:
 
             if Experiment.is_terminated:

@@ -83,24 +83,11 @@ tmux send-keys -t 0 "echo 'OK'"
 CUDA_VISIBLE_DEVICES=0,2,3 ./contact_czeng_if_you_need_gpu.sh
 CUDA_VISIBLE_DEVICES=0,3 ./attack_gpu.sh
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 1 --npret -1  --loss PPO --regulation-k 50.0 --min-prob 0.001
 
 0mux1
-dead CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env stateflatcont2d --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001 --npass 2 --loss TRAD
-CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env stateflatcont2d --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env stateflatcont2d --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.003 --vlr 0.001 --npass 2 --loss TRAD
 
-CUDA_VISIBLE_DEVICES=0,1,2,3 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 20480 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 0 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 0 --load-leaf 1 --train-leaf 0 --train-decider 1 --train-switcher 0 --switcher-length 1 --npret -1  --loss PPO --regulation-k 50.0 --min-prob 0.001
-
-
-disprun python3.6 $WS/plot.py -w32 --dir ../exp_16 ../exp_17 ../exp_18 --label 1 2 3
 1mux1
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env stateflatcont2d --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env stateflatcont2d --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env stateflatcont2d --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD
 
-CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatcont2d --rl-method ACKTR_ADAM --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --kl 0.001 --vlr 0.001 --npass 2 --loss TRAD --use-mix true
-disprun python3.6 $WS/plot.py -w32 --dir ../exp_19
 
 2mux1
 CUDA_VISIBLE_DEVICES=2,3,0 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 5120 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO --switcher-k 0.01 --switcher-time-weight 0.0  --regulation-k 50.0 --min-prob 0.0001
@@ -115,7 +102,7 @@ CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatcont2d --rl-metho
 record:
 disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env dynamic2d5task8joint --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 
-disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env constdirreachreg --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env stateconstdirreachreg --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
 
 disprun python3.6 $WS/
 plot.py -w20 --dir ../move1 ../move2 ../move3  --label run1 run2 run3
