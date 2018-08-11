@@ -83,19 +83,34 @@ tmux send-keys -t 0 "echo 'OK'"
 CUDA_VISIBLE_DEVICES=0,2,3 ./contact_czeng_if_you_need_gpu.sh
 CUDA_VISIBLE_DEVICES=0,3 ./attack_gpu.sh
 
+Reacher-v1
+HalfCheetah-v1
+Hopper-v1
+Swimmer-v1
+Walker2d-v1
+Humanoid-v1
+InvertedPendulum-v1
+InvertedDoublePendulum-v1
 
 0mux1
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env Reacher-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env HalfCheetah-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env Hopper-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env Swimmer-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env Walker2d-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env Humanoid-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env InvertedPendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env InvertedDoublePendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
 
 1mux1
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
 
-
+disprun python3.6 $WS/plot.py -w200 --dir ../exp_1 ../exp_2 ../exp_3 ../exp_4
 2mux1
-CUDA_VISIBLE_DEVICES=2,3,0 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 5120 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO --switcher-k 0.01 --switcher-time-weight 0.0  --regulation-k 50.0 --min-prob 0.0001
-CUDA_VISIBLE_DEVICES=3,0,2 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 5120 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO --switcher-k 0.03 --switcher-time-weight 0.0  --regulation-k 50.0 --min-prob 0.0001
-dead CUDA_VISIBLE_DEVICES=0,2,3 disprun python3.6 pg_train.py --env constdirreachreg --rl-method PG --nactor 32 --batch-size 5120 --withimg 1 --nfeat 16 --load-dir models_jointly_trained --load-model 1 --vlr 0.001 --npass 2 --minibatch-size 128 --lr 0.0001 --multi-update 1 --norm-gae 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 1 --switcher-length 10 --npret -1  --loss PPO --switcher-k 0.1 --switcher-time-weight 0.0  --regulation-k 50.0 --min-prob 0.0001
 
-disprun python3.6 $WS/plot.py -w200 --dir ../exp_13 ../exp_14
-disprun python3.6 $WS/visualize_log.py --dataname subpolicy_len  --dir ../exp_13 ../exp_14
 local:
 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatcont2d --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --lr 0.0001 --multi-update 1 --vlr 0.001 --npass 2 --loss PPO --use-mix true
 
@@ -104,8 +119,7 @@ disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --en
 
 disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env stateconstdirreachreg --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
 
-disprun python3.6 $WS/
-plot.py -w20 --dir ../move1 ../move2 ../move3  --label run1 run2 run3
+disprun python3.6 $WS/plot.py -w20 --dir ../move1 ../move2 ../move3  --label run1 run2 run3
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 
