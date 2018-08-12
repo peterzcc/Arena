@@ -87,28 +87,33 @@ Reacher-v1
 HalfCheetah-v1
 Hopper-v1
 Swimmer-v1
-Walker2d-v1
-Humanoid-v1
+bad Walker2d-v1
+ongoing Humanoid-v1
 InvertedPendulum-v1
-InvertedDoublePendulum-v1
+bad InvertedDoublePendulum-v1
 
 0mux1
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env Reacher-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env HalfCheetah-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env Hopper-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
-CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env Swimmer-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+dead CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env Reacher-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+dead CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env HalfCheetah-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+dead CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env Hopper-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+dead CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env Swimmer-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
 CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env Walker2d-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
 CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env Humanoid-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env InvertedPendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+dead CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env InvertedPendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
 CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env InvertedDoublePendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+disprun python3.6 $WS/plot.py -w32
 
 1mux1
-CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
-CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
-CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
-CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env move0 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env Walker2d-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env Humanoid-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env InvertedDoublePendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env Walker2d-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env Humanoid-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env InvertedDoublePendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0001 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env Walker2d-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=2 python3.6 pg_train.py --env Humanoid-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
+CUDA_VISIBLE_DEVICES=3 python3.6 pg_train.py --env InvertedDoublePendulum-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.0003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.01
 
-disprun python3.6 $WS/plot.py -w200 --dir ../exp_1 ../exp_2 ../exp_3 ../exp_4
 2mux1
 
 local:
