@@ -32,7 +32,7 @@ class Actuator(object):
         if self.render_option == RenderOption.record:
             from gym.monitoring import VideoRecorder
             self.video_encoder = VideoRecorder(self.env,
-                                               path="./video_{}_thd{}.mp4".format(env_args["env_name"], self.id))
+                                               path="./video_{}.mp4".format(env_args["env_name"]))
 
         root = logging.getLogger()
         root.setLevel(logging.DEBUG)
