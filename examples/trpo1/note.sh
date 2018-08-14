@@ -135,12 +135,31 @@ local:
 CUDA_VISIBLE_DEVICES=1 disprun python3.6 pg_train.py --env flatcont2d --rl-method PG --nactor 32 --batch-size 2560 --withimg 1 --nfeat 16 --load-model 0 --lr 0.0001 --multi-update 1 --vlr 0.001 --npass 2 --loss PPO --use-mix true
 
 record:
-disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env flatcont2d --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+emacs ~/gym/gym/envs/mujoco/mujoco_env.py
+self._get_viewer(visible=False,init_height=640,init_width=640).render()
+Reacher-v1
+HalfCheetah-v1
+Hopper-v1
+Swimmer-v1
+bad Walker2d-v1
+ongoing Humanoid-v1
+InvertedPendulum-v1
+bad InvertedDoublePendulum-v1
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env Reacher-v1 --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 
 disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env stateconstdirreachreg --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-length 10
 disprun python3.6 pg_train.py --nactor 1 --num-steps 5000 --batch-size 5000 --env flatcont2d --withimg 1 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 
 disprun python3.6 $WS/plot.py -w20 --dir ../move1 ../move2 ../move3  --label run1 run2 run3
+
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env Reacher-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env HalfCheetah-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env Hopper-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env Swimmer-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env Walker2d-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env Humanoid-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env InvertedPendulum-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
+disprun python3.6 pg_train.py --nactor 1 --num-steps 1000 --batch-size 1000 --env InvertedDoublePendulum-v1 --withimg 0 --nfeat 16 --load-model 1 --load-leaf 1 --train-leaf 0 --train-decider 0 --train-switcher 0 --render record --load-dir models_test --switcher-time-weight 0.0
 
 LD_PRELOAD="${M2WS}/lib/faketime/libfaketime.so.1" FAKETIME="2020-01-01" bash
 
