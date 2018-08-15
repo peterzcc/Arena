@@ -25,7 +25,7 @@ The option framework \cite{sutton1999between} is one of the earliest studies in 
 An option is Markov if its policy is Markov. Semi-Markov options, on the other hand, are options whose policies not only take the current state as input, but also are based on the state history since initiation of the current option. A policy over options \(\mu \) selects option \(o\) in state \(s\) with probability \(\mu(s,o)\). 
 %The concept of multi-step model is proposed as a generalization of single-step models. 
 For any option \(o\), let \(E(o,s,t)\) denote the event of the option $o$ initialized in state $s$ at time $t$. The return of the multi-step model is defined as:
-\[ R(s,o)=E\{r_{t+1}+\gamma r_{t+2}+\ldots+\gamma^{t+\tau} r_{t+\tau} \lvert E(o,s,t\} \]
+\[ R(s,o)=E\{r_{t+1}+\gamma r_{t+2}+\ldots+\gamma^{t+\tau} r_{t+\tau} \lvert E(o,s,t)\} \]
 where $t+\tau$ is the termination time of $o$. The state transition model for the option is:
 \[P(s' \lvert s,o)=\sum_{\tau=1}^{\infty} p(s',\tau) \gamma^\tau \]
 for all states \(s' \in S \), where \( p(s',\tau) \) denotes the probability that the option terminates after \(\tau\) steps and results in the state \(s'\).
@@ -95,7 +95,7 @@ The definitions of internal auxiliary rewards are based on predefined goal state
 \begin{equation}
 r_g(s,a)=
 \begin{cases}
-\delta_g(s),& \text{if } d(s,g)\\
+\delta_g(s),& \text{if } d(s,g)< \epsilon\\
 0,              & \text{else}
 \end{cases}
 \end{equation}
