@@ -45,14 +45,14 @@
 \contentsline {section}{\numberline {4.1}Experiments on the Basic Task \textit {move0}}{33}{section.4.1}
 \contentsline {section}{\numberline {4.2}Experiment on Flat Reinforcement Learning Solutions to Multi-modality Tasks}{36}{section.4.2}
 \contentsline {subsection}{\numberline {4.2.1}Conventional Flat reinforcement Learning Methods}{36}{subsection.4.2.1}
-\contentsline {subsection}{\numberline {4.2.2}Experiment on Exceptional Advantage Regularization}{37}{subsection.4.2.2}
-\contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Gaussian Mixture Policy Model}{41}{subsection.4.2.3}
-\contentsline {section}{\numberline {4.3}Experiments on the Flexible-scheduling Hierarchical Method}{45}{section.4.3}
-\contentsline {subsection}{\numberline {4.3.1}Performance of flat reinforcement learning solutions}{46}{subsection.4.3.1}
-\contentsline {subsection}{\numberline {4.3.2}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{46}{subsection.4.3.2}
-\contentsline {subsection}{\numberline {4.3.3}Training the Decider Agent}{51}{subsection.4.3.3}
-\contentsline {subsubsection}{Phase 1: Decision policy training}{51}{section*.26}
-\contentsline {subsubsection}{Phase 2: Switcher policy training}{51}{section*.30}
-\contentsline {section}{\numberline {4.4}Conclusion on Experiment Results}{62}{section.4.4}
-\contentsline {chapter}{\numberline {5}Discussion}{63}{chapter.5}
-\contentsline {chapter}{Reference}{65}{chapter.5}
+\contentsline {subsection}{\numberline {4.2.2}Experiment on Exceptional Advantage Regularization}{38}{subsection.4.2.2}
+\contentsline {subsection}{\numberline {4.2.3}Experiment on Robust Concentric Gaussian Mixture Policy Model}{42}{subsection.4.2.3}
+\contentsline {section}{\numberline {4.3}Experiments on the Flexible-scheduling Hierarchical Method}{46}{section.4.3}
+\contentsline {subsection}{\numberline {4.3.1}Performance of flat reinforcement learning solutions}{47}{subsection.4.3.1}
+\contentsline {subsection}{\numberline {4.3.2}Training the Actuator Agents with Domain Randomization by Cross-sampling Initial States}{47}{subsection.4.3.2}
+\contentsline {subsection}{\numberline {4.3.3}Training the Decider Agent}{52}{subsection.4.3.3}
+\contentsline {subsubsection}{Phase 1: Decision policy training}{52}{section*.27}
+\contentsline {subsubsection}{Phase 2: Switcher policy training}{52}{section*.31}
+\contentsline {section}{\numberline {4.4}Conclusion on Experiment Results}{63}{section.4.4}
+\contentsline {chapter}{\numberline {5}Discussion}{64}{chapter.5}
+\contentsline {chapter}{Reference}{66}{chapter.5}

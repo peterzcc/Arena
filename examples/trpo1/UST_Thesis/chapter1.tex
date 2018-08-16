@@ -19,14 +19,21 @@ The agent and environments interact during a finite sequence of discrete time st
 Let $\pi : S \times A \mapsto [0,1] $ denote a policy, the following equations are definitions of the action-value function $Q_\pi $, the value function $V_\pi $ and the advantage function $A_\pi $:
 \begin{align}
 Q_\pi(s_t,a) &= \mathbb{E}_{s_{t+1},a_{t+1},\ldots}
-\big[ \sum_{l=0}^\infty \gamma^l r(s_{t}) \big], \\
+\big[ \sum_{l=0}^\infty \gamma^l r(s_{t+l},a_{t+l}) \big], \\
 V_\pi(s_t) &= \mathbb{E}_{a_{t},s_{t+1},a_{t+1},\ldots}
-\big[ \sum_{l=0}^\infty \gamma^l  r(s_{t}) \big],\\
+\big[ \sum_{l=0}^\infty \gamma^l  r(s_{t+l},a_{t+l}) \big],\\
 & \ \ \ \ \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0  \\
 A_\pi (s,a) &= Q_\pi (s,a) - V_\pi (s), 
 \end{align}
 The action-value function $Q$ estimates the discounted total reward following the policy $\pi$ after taking the action $a$ at the current state $s_t$. The value function $V$ estimates the discounted total reward following the policy $\pi$ both at the current state and in the future. The advantage function $A$ is the difference between $Q$ and $V$, which indicates how much better is taking the action $a$ than sampling an action from the current policy $\pi$.
-
+The following recursive definitions hold:
+\begin{align}
+Q_\pi(s_t,a) &= \mathbb{E}_{s_{t+1}}
+\big[ r + \gamma V_\pi(s_{t+1}) \big], \\
+V_\pi(s_t) &= \mathbb{E}_{a_{t},s_{t+1}}
+\big[ r + \gamma V_\pi(s_{t+1}) \big],\\
+& \ \ \ \ \text{where } a_t \sim \pi (a_t|s_t), \text{for } t \geq 0  \\
+\end{align}
 
 
 

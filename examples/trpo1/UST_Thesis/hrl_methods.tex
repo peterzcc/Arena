@@ -34,6 +34,10 @@ A generalized form of the Bellman optimality equation is then proposed:
 \begin{equation}
     V_O^*(s) = \max_{o \in O_s} \big[ R(s,o)+\sum_{s'}P(s' \lvert s,o) V_O^*(s') \big]
 \end{equation}
+The one-step Q-learning for a policy over options is given by:
+\begin{equation}
+    Q(s,o) \gets Q(s,o)+ \alpha \big[ R(s,o)+\gamma^k \max_{o'} Q(s',o')  - Q(s,o)\big]
+\end{equation}
 % The optimal policies over options are in general suboptimal policies in the original MDP when some of the primitive actions are not available as 1-step options.
 The option framework proposes a formulation of hierarchical reinforcement learning and connects it to SMDP theory. The authors also propose the method for training the policy over options. However, the question on how the hierarchy of options is developed is not answered.
 
@@ -101,7 +105,7 @@ r_g(s,a)=
 \end{equation}
 The parameter $\theta$ of the intentions is trained with the aggregation of loss of all the reward functions:
 \begin{align}
-\mathcal{L}(\theta)  = \mathcal{L}(\theta;M) +\sum_{k=1}^{|A|} (\mathcal{\theta;A_K})
+\mathcal{L}(\theta)  = \mathcal{L}(\theta;M) +\sum_{k=1}^{|A|} \mathcal{L}(\theta;A_K)
 \end{align}
 Where $M$ is the MDP with the original reward function and $A=\{A_1,\dots,A_k\}$ is the set of MDPs with internal auxiliary rewards. The training of the intention parameter is formulated as a multi-task RL problem.
 The high-level scheduler policy is the trained using an off-policy policy gradient method with $\theta$ being fixed.

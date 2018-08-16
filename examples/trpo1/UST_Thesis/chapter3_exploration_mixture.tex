@@ -3,13 +3,18 @@
 \section{Efficient Exploration Through Robust Concentric Gaussian Mixture Policy}
 Apart from the EAR method for exploration, we propose to use an alternative probability distribution type, namely Robust Concentric Gaussian Mixture, instead of a diagonal Gaussian policy used in previous works.
 
-The proposed policy distribution, namely Robust Concentric Gaussian Mixture (RCGM) Policy, is a mixture of two Gaussian distributions:
+The proposed policy distribution, namely Robust Concentric Gaussian Mixture (RCGM) Policy, is a mixture of two Gaussian distributions,
 \begin{align}
 \pi (a|s) = (1-\alpha_{ex})\mathcal{N}(\mu,\Sigma) + \alpha_{ex} \mathcal{N}(\mu,q_{ex}\Sigma)
 \end{align}
 where the constant $\alpha_{ex}$ is the weight of second distribution. The weight $\alpha_{ex}$ can take a value in the range of $(0,1)$, such as $0.05$, and the constant $q_{ex} \in (1,)$, for example can be $5$, controls the variance of the second deviation. The larger $q_{ex}$ is, the higher the likelihood will be in the tails of the distribution. The resulting distribution actually has the same number of trainable parameters as the first component, since both $\alpha_{ex}$ are set to fixed parameters.
 
-The KL-divergence of two RCGM policy does not have a closed form expression even for this special case. However, an empirical estimation of the KL-divergence can still be computed based on the training samples. Apart from that, the Wasserstein-2 distance between two RCGM policy can be given by:
+The KL-divergence of two RCGM policy does not have a closed form expression even for this special case. An empirical estimation can be used to approximate the KL-divergence ~\cite{hershey2007approximat}:%TODO: fix citation
+\begin{align}
+
+\end{align}
+
+However, an empirical estimation of the KL-divergence can still be computed based on the training samples. Apart from that, the Wasserstein-2 distance between two RCGM policy can be given by:
 \begin{align}&W_2^2(\pi_{0}(a|\mu_0,\Sigma_0), \pi_{1}(a|\mu_1,\Sigma_1) =  \\ \nonumber
 & \ \ \ \ (1-\alpha_{ex})
 W_2^2\big(\mathcal{N}(\mu_0,\Sigma_0), \mathcal{N}(\mu_1,\Sigma_1)\big)

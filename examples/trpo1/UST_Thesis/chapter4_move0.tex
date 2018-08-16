@@ -35,3 +35,58 @@ We also test if applying a decaying Wasserstein constraint at the early phase of
 \end{figure}
 
 The experiment results show that the proposed W-KTR algorithm is able to achieve the same level of final performance as the contemporary state-of-art methods. The major drawback is that the algorithm has a long training time due to the slow rate of performance improvement at the early phase. On the contrary, the decaying learning rate feature of KL-divergence based trust region algorithms is able to achieve a good rate of performance improvement in the early phase of training.
+
+The performance of the W-KTR method on several other continuous control environments are shown in Figure \ref{fig:wktr_bench}.
+\begin{figure}[!htbp]
+	\centering
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_halfcheetah}
+		\caption{HalfCheetah}
+	\end{subfigure}%
+	~ 
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_hopper}
+		\caption{Hopper}
+	\end{subfigure}
+	~ 
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_inverteddoublependulum}
+		\caption{InvertedDoublePendulum}
+	\end{subfigure}
+	~ 
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_invertedpendulum}
+		\caption{InvertedPendulum}
+	\end{subfigure}
+	~ 
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_reacher}
+		\caption{Reacher}
+	\end{subfigure}
+	~ 
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_swimmer}
+		\caption{Swimmer}
+	\end{subfigure}
+	~ 
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_walker}
+		\caption{Walker}
+	\end{subfigure}
+	~ 
+	\begin{subfigure}[t]{0.4\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{rec_wktr_humanoid}
+		\caption{Humanoid}
+	\end{subfigure}
+
+	\caption{The performance of W-KTR on several benchmark environments}
+	\label{fig:wktr_bench}
+\end{figure}
