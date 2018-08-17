@@ -11,7 +11,7 @@ where the constant $\alpha_{ex}$ is the weight of second distribution. The weigh
 
 The KL-divergence of two RCGM policy does not have a closed form expression even for this special case. An empirical estimation can be used to approximate the KL-divergence ~\cite{hershey2007approximat}:%TODO: fix citation
 \begin{align}
-
+KL(p, q) \approx\mathbb{E}_{x\sim p} \log [ \left(p(x)/q(x)\right) ]
 \end{align}
 
 However, an empirical estimation of the KL-divergence can still be computed based on the training samples. Apart from that, the Wasserstein-2 distance between two RCGM policy can be given by:
