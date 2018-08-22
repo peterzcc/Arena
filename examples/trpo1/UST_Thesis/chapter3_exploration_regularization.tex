@@ -3,9 +3,9 @@
 \section{Efficient Exploration Through Exceptional Advantage Regularization}\label{sec_method_expadv_reg}
 One of the challenges with multi-modal state-space robot environments is to simultaneously learn features from different sources of state inputs.
 
-The state spaces of the studied problems have two modalities: the locomotion sensor signal and the image observation. The complexity in learning the features from the two inputs is different. The learning of motion sensor signal features is usually trivial while the learning of image features takes much more time. The agent would get stuck at a local minimum after it has learned the features of the locomotion state vectors but still haven't learned anything from the image input.
+The state spaces of the studied problems have two modalities: the locomotion sensor signal and the image observation. The complexity in learning the features from the two inputs is different. The learning of motion sensor signal features is usually trivial while the learning of image features takes much more time. The agent would get stuck at a local minimum after it has learned the features of the locomotion state vectors but still without learning anything from the image input.
 
-As far as we know, the distribution type of the continuous stochastic policy in reinforcement learning is usually chosen to be a normal distribution with diagonal covariance matrices in the previous studies of on-policy policy gradient methods. We have observed a phenomenon in the training process of policy gradient methods that, the variance of policy is extremely unlikely to be increased, even when the agent has just escaped from a local minimum. This phenomenon leads to in-efficiency in exploration. Therefore, a regulation method is necessary to encourage the agent to perform exploration without hurting the reinforcement learning performance.
+As far as we know, the distribution type of the continuous stochastic policy in reinforcement learning is usually chosen to be a normal distribution with diagonal covariance matrices in the previous studies of on-policy policy gradient methods. We have observed a phenomenon in the training process of policy gradient methods that, the variance of policy is extremely unlikely to be increased, even when the agent has just escaped from a local minimum. This phenomenon leads to inefficiency in exploration. Therefore, a regulation method is necessary to encourage the agent to perform exploration without hurting the reinforcement learning performance.
 
 A conventional regularization method to encourage exploration is entropy regularization:
 
@@ -19,7 +19,7 @@ The entropy of a normal distribution $\mathcal{N}(\mu,\Sigma)$ is defined as:
 	H(\pi) =  \frac{1}{2} \ln \mathrm{det}(2\pi e \Sigma)
 \end{align}
 
-If the policy distribution is a normal distribution with diagonal covariance matrix, the entropy regularization basically introduces a constant bias to the gradient of the logarithm of variance parameters. As a result, the entropy regularization method is usually hard to tune so that the agent can efficiently perform exploration without significant degradation on the reinforcement learning performance.
+If the policy distribution is a normal distribution with diagonal covariance matrix, the entropy regularization basically introduces a constant bias to the gradient of the logarithm of variance parameters. As a result, the entropy regularization method is usually hard to tune so that the agent can efficiently perform exploration without significant degradation in the reinforcement learning performance.
 
 We propose a novel method, namely  Exceptional Advantage Regularization, that can encourage exploration. We add a term, namely Exceptional Advantage Regularization loss (EAR), to the gradient of the variance parameters:
 \begin{align}

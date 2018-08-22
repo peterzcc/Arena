@@ -1,13 +1,13 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
 \section{Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization Method }
-As is reported in \cite{henderson2017matters}, the result of the current state-of-art deep reinforcement learning methods for continuous control, including TRPO, ACKTR, PPO and DDPG are difficult to be reproduced, due to they're heavily influenced by a variety of factors including random seed, neural network architecture, activation functions of neural network layers and even software implementation. This fact has reduced the reliability of these methods, and introduces difficulty in comparing their performance.
+As reported in \cite{henderson2017matters}, the result of the current state-of-the-art deep reinforcement learning methods for continuous control, including TRPO, ACKTR, PPO and DDPG are difficult to reproduce, due to the fact that they are heavily influenced by a variety of factors including random seed, neural network architecture, activation functions of neural network layers and even software implementation. This phenomenon has reduced the reliability of these methods, and introduces difficulty in comparing their performance.
 
-Particularly, the reproducibility problem with trust region methods including TRPO and ACKTR could be due to the training gets stuck in local minimum states. These trust region methods have a naturally decreasing learning rate due to the use of KL-divergence measure. 
+In particular, the reproducibility problem with trust region methods including TRPO and ACKTR could be due to the training becoming stuck in local minimum states. These trust region methods have a naturally decreasing learning rate due to the use of the KL-divergence measure. 
 
 We propose a new policy optimization method, namely Wasserstein Actor Critic Kronecker-factored Trust Region Policy Optimization (W-KTR), in order to achieve a better performance in terms of the agent's final performance, total training time and reproducibility.
 
-The proposed W-KTR method focus on the problem scope of deep reinforcement learning for continuous control, specifically robot control problems. The physical meaning of action of these environments usually stands for mechanics-related physical quantity, such as motor torque and target motor phase. However, the traditional KL-divergence based trust region algorithms may not be suitable for these problems. Because the KL-divergence only focuses on the intersection of policy distributions that may not be a good measure of the deviation of policy with continuous action spaces. A small perturbation in the mean value of a policy with Gaussian distribution from 1.0 to 1.01 will lead to a large KL-divergence when the variance has a small value such as 0.003. However, the perturbation may not lead to a significant difference in reality.
+The proposed W-KTR method focuses on the problem scope of deep reinforcement learning for continuous control, specifically robot control problems. The physical meaning of the action of these environments usually stands for mechanics-related physical quantity, such as motor torque and target motor phase. However, the traditional KL-divergence based trust region algorithms may not be suitable for these problems. Since the KL-divergence only focuses on the intersection of policy distributions, it may not be a good measure of the deviation of policy with continuous action spaces. A small perturbation in the mean value of a policy with Gaussian distribution from 1.0 to 1.01 will lead to a large KL-divergence when the variance has a small value such as 0.003. However, the perturbation may not lead to a significant difference in reality.
 
 Therefore, we propose to use the Wasserstein metric to measure the deviation of the policy updates. The Wasserstein metric as a trust region criteria has also been studied in previous literatures~\cite{tolstikhin2017wasserstein}. We reformulate the trust region policy optimization problem as follows:
 \begin{equation}
@@ -32,7 +32,7 @@ Specifically, when $P$ and $Q$ are Gaussian distributions with mean $m_1,m_2$ an
     W_2^2(P,Q) = \Vert m_1-m_2\Vert_2^2 +\mathrm{Tr}\left(\Sigma_1+\Sigma_2-2(\Sigma_1^{1/2}\Sigma_2\Sigma_1^{1/2})^{1/2}\right)
 \end{equation}
 
-The problem is solved by performing gradient updates iteratively following the natural gradient with the Riemannian metric as $W_2$ metric:
+The problem is solved by performing gradient updates iteratively following the natural gradient with the Riemannian metric as the $W_2$ metric:
 
 \begin{equation}
     s=H_\theta\left( \overline{W_2^2}(\pi_{old},\pi) \right)^{-1}g := A^{-1}g
@@ -55,4 +55,4 @@ W_2^2(P,Q) = \Vert \text{vec}[m_1,diag(\Sigma_1^{1/2})]-\text{vec}[m_2,diag(\Sig
 \end{equation}
 The solution of this kind of expressions can then be computed using the Kronecker-factor approximation technique~\cite{wu2017scalable}.
 
-The policy is then updated following the gradient direction $s$ with ADAM stochastic optimization algorithm~\cite{kingma2014adam}. The step size is adjusted in an adaptive manner according to the resulting $W_2$ distance at each training step.
+The policy is then updated following the gradient direction $s$ with the ADAM stochastic optimization algorithm~\cite{kingma2014adam}. The step size is adjusted in an adaptive manner according to the resulting $W_2$ distance at each training step.

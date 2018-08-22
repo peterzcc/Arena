@@ -4,11 +4,11 @@
 \subsection{Hierarchical Reinforcement Learning Architecture}
 We propose a two-level hierarchical reinforcement learning method, namely flexible-scheduling hierarchical method, to solve the target problems with multi-modal state space and sparse rewards. The hierarchical model consists of a top-level decider agent and a set of bottom-level actuator agents. The actuator policies are mappings from the state to the primary action space. They are trained in the source-task environments and fixed when solving the target task.
 
-The decider agent takes an action at every time-step. It may either decide which actuator-policy should be executed, or continue using the current actuator policy that has been decided earlier. Therefore, assume there are $n_a$ sub-policies, the action space of the decider agent is actually an $(n_a+1)$-discrete action space. The overall decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
+The decider agent takes an action at every time-step. It may either decide which actuator-policy should be executed, or continue using the current actuator policy that has been decided earlier. Therefore, assuming there are $n_a$ sub-policies, the action space of the decider agent is actually an $(n_a+1)$-discrete action space. The overall decision-making process of the decider agent is shown in Algorithm~\ref{hrl_decision_proc}.
 
 The observation space of the decider agent consists of 2 parts, the original multi-modal state and the meta state. The meta state contains information about which actuator policy is currently being executed.
 
-The decider agent is parameterized by two policy networks, $\theta_s$ and $\theta_d$. The network $\theta_s$, namely switcher policy, outputs a scalar value that indicates whether the agent should simply continue using the current acting actuator policy, or terminate the current actuator policy and make the decision on the selection of actuator policy again. 
+The decider agent is parameterized by two policy networks, $\theta_s$ and $\theta_d$. The network $\theta_s$, namely the switcher policy, outputs a scalar value that indicates whether the agent should simply continue using the current acting actuator policy, or terminate the current actuator policy and make the decision on the selection of actuator policy again. 
 The network $\theta_d$, namely the decider policy, outputs an $n_a$-discrete action space. The output of the network represents the decision on the selection of the acting actuator policy. 
 
 
@@ -34,7 +34,7 @@ We propose a generalized advantage estimation method for the decider agent of th
 
 Assume that a decider agent makes decisions at time $t_1,t_2,\dots$, then the execution length of the corresponding actuator policies are $l_i = t_{i+1} - t_i, i=1,2,\dots$.
 
-The definition of reward of the decider action at $t_i$ is given by:
+The definition of the reward for the decider action at $t_i$ is given by:
 \begin{align}
 \bar{r}_{t_i} \defeq
  \sum_{l=0}^{t_{i+1}-t_i-1}
@@ -68,7 +68,7 @@ Then the k-step advantage estimation is given by:
 + \gamma^{t_{i+k}-t_i} V(s_{t_{i+k}})-V(s_t) 
 \end{split}
 \end{align}
-We can define the unnormalized generalized advantage estimator as a exponentially-weighted sum of these k-step advantage estimators~\cite{schulman2015high}:
+We can define the unnormalized generalized advantage estimator as an exponentially-weighted sum of these k-step advantage estimators~\cite{schulman2015high}:
 \begin{align}
 \hata_{t_i}^{GAE_{unnorm}(\lambda)}
 &\defeq  \hata_{t_i}^{(1)} + \lambda^{t_{i+1}-t_i}  \hata_{t_i}^{(2)} + \lambda^{t_{i+2}-t_i} \hata_{t_i}^{(3)} + \dots + \lambda^{t_{i+k-1}-t_i} \hata_{t_i}^{(k)} \nonumber \\

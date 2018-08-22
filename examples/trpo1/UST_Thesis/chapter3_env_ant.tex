@@ -14,13 +14,13 @@ For the proposed environments, the agent receives not only the 111-dimensional m
 	\caption{A sample image observation of the target environments}
 \end{figure}\label{fig_ant_imgobs}
 
-A basic task, namely move0, is similar to the Ant environment in OpenAI Gym~\cite{openaigym}. The difference is that the state space has an extra image input. The agent is required to move toward a specific direction $g_0=(1,0)$, and the reward at each time-step is given by:
+A basic task, namely move0, is similar to the Ant environment in OpenAI Gym~\cite{openaigym}. The difference is that the state space has an extra image input. The agent is required to move in a specific direction $g_0=(1,0)$, and the reward at each time-step is given by:
 \begin{align}
 r = v_g + 1-c_p-c_c
 \end{align}
-where $v_g=v \cdot g_0$ is the forward reward, which rewards the agent for moving toward the target direction. A sphere object presents in the environments at a constant distance from the robot agent to represent the target direction.  $c_p$ is the control cost, which is the power that the agent is consuming, and $c_c$ is the contact cost, which penalizes the agent for collisions. The episode terminates when the agent enters the unrecoverable state of being upside-down, or if the episode length reaches 1000 time-steps.
+where $v_g=v \cdot g_0$ is the forward reward, which rewards the agent for moving in the target direction. A spherical object presents in the environments at a constant distance from the robot agent to represent the target direction.  $c_p$ is the control cost, which is the power that the agent is consuming, and $c_c$ is the contact cost, which penalizes the agent for collisions. The episode terminates when the agent enters the unrecoverable state of being upside-down, or if the episode length reaches 1000 time-steps.
 
-Apart from move0, a set of similar tasks with different target directions are denoted as move1, move2, move3, ..., move7. These tasks are similar to move0 because the goal direction is different. The image observation is actually redundant for all these low-level tasks, because the agent only needs to move toward one specific direction in their corresponding environments. Snapshots of these source tasks are shown in Figure~\ref{fig:task8}.
+Apart from move0, a set of similar tasks with different target directions are denoted as move1, move2, move3, ..., move7. These tasks are similar to move0 because the goal direction is different. The image observation is actually redundant for all these low-level tasks, because the agent only needs to move in one specific direction in their corresponding environments. Snapshots of these source tasks are shown in Figure~\ref{fig:task8}.
 \begin{figure}[!htbp]
 	\centering
 	\begin{subfigure}[t]{0.3\textwidth}
@@ -75,7 +75,7 @@ Apart from move0, a set of similar tasks with different target directions are de
 	\label{fig:task8}
 \end{figure}
 
-Apart from these simple task, we also propose a set of tasks with more complexity. We propose several multi-modal state-space environments such as moveg2, movecont, dynamicg8. These tasks require the agent to learn not only from the state representation but also the image representation. We also propose sparse-reward multi-modal state-space environments, such as reachcont. The agent receives sparse reward signals in these environments. The target direction or location is represented by a sphere object and can be seen in the image observation.
+Apart from these simple task, we also propose a set of tasks with more complexity. We propose several multi-modal state-space environments such as moveg2, movecont, dynamicg8. These tasks require the agent to learn not only from the state representation but also the image representation. We also propose sparse-reward multi-modal state-space environments, such as reachcont. The agent receives sparse reward signals in these environments. The target direction or location is represented by a spherical object and can be seen in the image observation.
 The set of all the proposed environments are described in details in table \ref{table_ant_envs}.
 
 
@@ -86,21 +86,21 @@ The set of all the proposed environments are described in details in table \ref{
 \hline
 Task name & Goal & Reward  &  Description \\
 \hline\hline
-move0 & velocity: $g_0=(1,0)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\
+move0 & velocity: $g_0=(1,0)$ &$ v_g+1-c_p-c_c$  & move in a target direction \\
 \hline
-move1 & velocity: $g_1=(-1,0)$ &$ v_g+1-c_p-c_c$  & move toward a target direction\\
+move1 & velocity: $g_1=(-1,0)$ &$ v_g+1-c_p-c_c$  & move in a target direction\\
 \hline
-move2 & velocity: $g_2=(0,1)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\
+move2 & velocity: $g_2=(0,1)$ &$ v_g+1-c_p-c_c$  & move in a target direction \\
 \hline
-move3 & velocity: $g_3=(0,-1)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\ 
+move3 & velocity: $g_3=(0,-1)$ &$ v_g+1-c_p-c_c$  & move in a target direction \\ 
 \hline 
-move4 & velocity: $g_4=(\sqrt{2}/2,\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\ 
+move4 & velocity: $g_4=(\sqrt{2}/2,\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move in a target direction \\ 
 \hline 
-move5 & velocity: $g_5=(-\sqrt{2}/2,-\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\ 
+move5 & velocity: $g_5=(-\sqrt{2}/2,-\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move in a target direction \\ 
 \hline 
-move6 & velocity: $g_6=(\sqrt{2}/2,-\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\ 
+move6 & velocity: $g_6=(\sqrt{2}/2,-\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move in a target direction \\ 
 \hline 
-move7 & velocity: $g_7=(-\sqrt{2}/2,\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move toward a target direction \\ 
+move7 & velocity: $g_7=(-\sqrt{2}/2,\sqrt{2}/2)$ &$ v_g+1-c_p-c_c$  & move in a target direction \\ 
 \hline 
 moveg2 & velocity samples from: $\{g_0,g_1\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
 %moveg4 & velocity samples from: $\{g_0,g_1,g_2,g_3\}$ &$ v_g+1-c_p-c_c$  & each episode has a random sampled target direction \\ \hline
@@ -111,7 +111,7 @@ dynamicg8 &  velocity samples from: $\{g_0,g_1, \dots,g_7\}$ &$ v_g$  & the targ
 %reachg4 & position samples from $\{g_0,g_1,g_2,g_3\}$ & $I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & The agent is terminated when reaching a target position\\ \hline
 reachcont & position samples from the unit circle & $I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & the episode is terminated when reaching a target position\\ \hline
 reachcontreg & position samples from the unit circle & $5I(\lVert x-g\rVert_2^2<0.5) - 0.01$  & a new target is sampled and the episode continuous once the target position is reached\\ \hline
-constdirreachreg & target direction samples from: $\{g_0,g_1, \dots,g_7\}$ & $5I(x_g > 1) - 0.01$  & a reward is given once the agent has moved toward the target direction for a constant distance, then a new target is sampled\\ \hline
+constdirreachreg & target direction samples from: $\{g_0,g_1, \dots,g_7\}$ & $5I(x_g > 1) - 0.01$  & a reward is given once the agent has moved in the target direction for a constant distance, then a new target is sampled\\ \hline
 \end{tabular}
 \end{center}
  \caption{Summary of Ant-based environments}
