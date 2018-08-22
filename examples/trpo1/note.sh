@@ -91,9 +91,10 @@ bad Walker2d-v1
 ongoing Humanoid-v1
 InvertedPendulum-v1
 bad InvertedDoublePendulum-v1
+disprun python3.6 $WS/plot.py -w200
 
+/home/peterzeng/dy2/Arena/examples/trpo1/rec_180809_constdirreachreg_decider_1
 0mux1
-
 5
 use dead CUDA_VISIBLE_DEVICES=0 python3.6 pg_train.py --env Reacher-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
 use dead CUDA_VISIBLE_DEVICES=1 python3.6 pg_train.py --env HalfCheetah-v1 --rl-method ACKTR_ADAM --nactor 20 --batch-size 4000 --withimg 0 --nfeat 0 --load-model 0 --kl 0.00003 --vlr 0.001  --npass 2 --loss TRAD_WASS --decrease-with-initial 0.02
