@@ -217,6 +217,12 @@ D.~Chafai, ``Wasserstein distance between two gaussians.'' [Online]. Available:
 D.~P. Kingma and J.~Ba, ``Adam: A method for stochastic optimization,''
   \emph{arXiv preprint arXiv:1412.6980}, 2014.
 
+\bibitem{hershey2007approximat}
+J.~R. Hershey and P.~A. Olsen, ``Approximating the kullback leibler divergence
+  between gaussian mixture models,'' in \emph{Acoustics, Speech and Signal
+  Processing, 2007. ICASSP 2007. IEEE International Conference on},
+  vol.~4.\hskip 1em plus 0.5em minus 0.4em\relax IEEE, 2007, pp. IV--317.
+
 \bibitem{rlintro_sutton1998reinforcement}
 R.~S. Sutton and A.~G. Barto, \emph{Reinforcement learning: An
   introduction}.\hskip 1em plus 0.5em minus 0.4em\relax MIT press Cambridge,

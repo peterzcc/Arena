@@ -27,45 +27,45 @@ Database file #1: reference.bib
 Warning--empty journal in mcgovern2001automatic
 
 Done.
-You've used 40 entries,
+You've used 41 entries,
             4087 wiz_defined-function locations,
-            1034 strings with 15426 characters,
-and the built_in function-call counts, 27373 in all, are:
-= -- 2047
-> -- 912
-< -- 158
-+ -- 474
-- -- 189
-* -- 1296
-:= -- 4079
-add.period$ -- 80
-call.type$ -- 40
-change.case$ -- 41
-chr.to.int$ -- 372
-cite$ -- 41
-duplicate$ -- 2028
-empty$ -- 2242
-format.name$ -- 224
-if$ -- 6333
+            1041 strings with 15665 characters,
+and the built_in function-call counts, 28251 in all, are:
+= -- 2117
+> -- 928
+< -- 167
++ -- 481
+- -- 191
+* -- 1338
+:= -- 4206
+add.period$ -- 83
+call.type$ -- 41
+change.case$ -- 42
+chr.to.int$ -- 393
+cite$ -- 42
+duplicate$ -- 2089
+empty$ -- 2321
+format.name$ -- 227
+if$ -- 6543
 int.to.chr$ -- 0
-int.to.str$ -- 40
-missing$ -- 409
-newline$ -- 150
-num.names$ -- 40
-pop$ -- 1067
+int.to.str$ -- 41
+missing$ -- 419
+newline$ -- 153
+num.names$ -- 41
+pop$ -- 1091
 preamble$ -- 2
 purify$ -- 0
 quote$ -- 2
-skip$ -- 2070
+skip$ -- 2137
 stack$ -- 0
-substring$ -- 913
-swap$ -- 1525
-text.length$ -- 34
+substring$ -- 962
+swap$ -- 1576
+text.length$ -- 36
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 40
+type$ -- 41
 warning$ -- 1
-while$ -- 96
-width$ -- 42
-write$ -- 381
+while$ -- 101
+width$ -- 43
+write$ -- 391
 (There was 1 warning)
