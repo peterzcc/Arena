@@ -9,7 +9,7 @@ The proposed policy distribution, namely Robust Concentric Gaussian Mixture (RCG
 \end{align}
 where the constant $\alpha_{ex}$ is the weight of second distribution. The weight $\alpha_{ex}$ can take a value in the range of $(0,1)$, such as $0.05$, and the constant $q_{ex} \in (1,)$, for example can be $5$, controls the variance of the second deviation. The larger $q_{ex}$ is, the higher the likelihood it will be in the tails of the distribution. The resulting distribution actually has the same number of trainable parameters as the first component, since both $\alpha_{ex}$ are set to fixed parameters.
 
-The KL-divergence of two RCGM policy does not have a closed form expression even for this special case. An empirical estimation can be used to approximate the KL-divergence ~\cite{hershey2007approximat}:%TODO: fix citation
+The KL-divergence of two RCGM policy does not have a closed form expression even for this special case. An empirical estimation can be used to approximate the KL-divergence ~\cite{hershey2007approximat}:
 \begin{align}
 KL(p, q) \approx\mathbb{E}_{x\sim p} \log [ \left(p(x)/q(x)\right) ]
 \end{align}
