@@ -78,7 +78,7 @@ The detailed structure of the agent is shown in Figure~\ref{review_mlsh_arch}. T
 \begin{figure}[h]
 	\includegraphics[width=0.5\textwidth]{review_mlsh_setup.png}
 	\centering
-	\caption{The agent setup of the modulated controller~\cite{frans2017meta},$\theta$ represents the master policy, which selects
+	\caption{The agent setup of the modulated controller~\cite{frans2017meta}, $\theta$ represents the master policy, which selects
 		a sub-policy to be active. In the diagram, $\phi_3$ is the active sub-policy, and actions are taken according
 		to its output.}\label{review_mlsh_arch}
 \end{figure}
@@ -112,7 +112,7 @@ Where $M$ is the MDP with the original reward function and $A=\{A_1,\dots,A_k\}$
 The high-level scheduler policy is the trained using an off-policy policy gradient method with $\theta$ being fixed.
 The method manages to solve the object grasping and stacking problems in a robot-arm environment. 
 
-One limitation of SAC-X is that the method relies on predefined auxiliary MDPs. Proposing auxiliary MDPs could be solved by using heuristic algorithms, but such heuristic algorithms are only available for some special problems. Apart from that, the method limits the definition of auxiliary MDPs to be goal-directed tasks, which is impractical for the more realistic high-dimensional state-space problems.
+One limitation of SAC-X is that the method relies on predefined auxiliary MDPs. Proposing auxiliary MDPs could be solved by using heuristic algorithms, but such heuristic algorithms are only available for some special problems. Apart from that, the method limits the definition of auxiliary MDPs to be goal-directed tasks, which is impractical for the more realistic problems with high-dimensional state spaces.
 
 
 \subsection{Other Methods Targeting at Environments with Sparse Reward Function}

@@ -1,7 +1,7 @@
 %!TEX program = xelatex
 %!TEX root = ./thesis.tex
 \section{Efficient Exploration Through Exceptional Advantage Regularization}\label{sec_method_expadv_reg}
-One of the challenges with multi-modal state-space robot environments is to simultaneously learn features from different sources of state inputs.
+One of the challenges of robot control tasks with multi-modal state spaces is to simultaneously learn features from different sources of state inputs.
 
 The state spaces of the studied problems have two modalities: the locomotion sensor signal and the image observation. The complexity in learning the features from the two inputs is different. The learning of motion sensor signal features is usually trivial while the learning of image features takes much more time. The agent would get stuck at a local minimum after it has learned the features of the locomotion state vectors but still without learning anything from the image input.
 

@@ -22,7 +22,7 @@ The average Standard Deviation of the policy distribution during training is vis
 \begin{figure}[!htbp]
 	\includegraphics[width=\textwidth]{images/rec_180609_std_ent_reg.pdf}
 	\centering
-	\caption{Average standard deviation of the policy of agents in Figure~\ref{rec_ent_reg}, the horizontal axis is the number of million timesteps.}\label{rec_std_ent_reg}
+	\caption{Average standard deviation of the policy of agents in Figure~\ref{rec_ent_reg}. The horizontal axis is the number of million timesteps.}\label{rec_std_ent_reg}
 \end{figure}
 
 \subsection{Experiment on Exceptional Advantage Regularization}\label{sec_exp_adv_reg}
@@ -47,7 +47,7 @@ The experiment result on the average total reward of a normal ACKTR agent withou
 \begin{figure}[!htbp]
 \label{key}	\includegraphics[width=0.7\textwidth]{images/rec_180528_std_statlog.pdf}
 	\centering
-	\caption{The average standard deviation of the ACKTR agent's policy on the moveg2 task, the horizontal axis is the number of training batches}\label{rec_stat_moveg2_std}
+	\caption{The average standard deviation of the ACKTR agent's policy on the moveg2 task. The horizontal axis is the number of training batches}\label{rec_stat_moveg2_std}
 \end{figure}
 The distribution of advantage values at the first epoch (epoch 0) is shown in Figure~\ref{vis_stats_0}. It can be seen that the advantage values are distributed uniformly because the critic model is just initialized. Figure~\ref{vis_stats_3000} shows the distribution at epoch 3000. It can be seen that after the critic model has been trained for some time, the marginal distribution advantage value tend to follow a normal distribution with zero mean.  Figure~\ref{vis_stats_4900} shows the distribution of advantage values at epoch 4900. The advantage values are likely to have a positive bias at some samples with low log-likelihood  when the agent just managed to escape from a local minimum.  
 

@@ -75,7 +75,7 @@ Apart from move0, a set of similar tasks with different target directions are de
 	\label{fig:task8}
 \end{figure}
 
-Apart from these simple task, we also propose a set of tasks with more complexity. We propose several multi-modal state-space environments such as moveg2, movecont, dynamicg8. These tasks require the agent to learn not only from the state representation but also the image representation. We also propose sparse-reward multi-modal state-space environments, such as reachcont. The agent receives sparse reward signals in these environments. The target direction or location is represented by a spherical object and can be seen in the image observation.
+Apart from these simple task, we also propose a set of tasks with more complexity. We propose several tasks with multi-modal state spaces such as moveg2, movecont, dynamicg8. These tasks require the agent to learn not only from the state representation but also the image representation. We also propose several more challenging tasks which has sparse reward fucntions, such as reachcont. The agent receives sparse reward signals in these environments. The target direction or location is represented by a spherical object and can be seen in the image observation.
 The set of all the proposed environments are described in details in table \ref{table_ant_envs}.
 
 
@@ -114,5 +114,5 @@ reachcontreg & position samples from the unit circle & $5I(\lVert x-g\rVert_2^2<
 constdirreachreg & target direction samples from: $\{g_0,g_1, \dots,g_7\}$ & $5I(x_g > 1) - 0.01$  & a reward is given once the agent has moved in the target direction for a constant distance, then a new target is sampled\\ \hline
 \end{tabular}
 \end{center}
- \caption{Summary of Ant-based environments}
+ \caption{Specification of the tasks}
 \end{table}\label{table_ant_envs}
